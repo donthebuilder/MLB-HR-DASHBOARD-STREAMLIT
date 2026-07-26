@@ -604,12 +604,25 @@ HRW_MAP = {
     "cold": ("🧊", "#60a5fa"),
 }
 
+# The five game picks, in the order they're shown: TOP, HR, HIT, HRR, TB.
+# "CONTACT" is the bot's internal key for what the board calls TB -- it stamps
+# game_pick_role="CONTACT" for the total-bases play, so the key has to stay as
+# the bot writes it while the label reads TB like everywhere else in the app.
 GAME_ROLE_LABEL = {
-    "TOP": ("🔥", "Top Pick", "#f97316"),
-    "HR": ("🧨", "HR Pick", "#f87171"),
-    "HIT": ("💠", "Hit Pick", "#a78bfa"),
-    "HRR": ("🏁", "HRR Pick", "#22d3ee"),
-    "CONTACT": ("⚾", "Base Pick", "#34d399"),
+    "TOP": ("🔥", "Top", "#f97316"),
+    "HR": ("🧨", "HR", "#f87171"),
+    "HIT": ("💠", "Hit", "#a78bfa"),
+    "HRR": ("🏁", "HRR", "#22d3ee"),
+    "CONTACT": ("⚾", "TB", "#34d399"),
+}
+GAME_ROLE_ORDER = ("TOP", "HR", "HIT", "HRR", "CONTACT")
+
+# Which score each pick is actually being picked ON. Showing the HR score on a
+# TB pick made the cards look wrong -- the TB guy would sit at 61 next to an
+# HR pick at 96 and read as strictly worse, when he's the best TB play in the
+# game. Each tile now leads with its own category's number.
+GAME_ROLE_SCORE = {
+    "TOP": "hr", "HR": "hr", "HIT": "hit", "HRR": "hrr", "CONTACT": "tb",
 }
 
 
@@ -1110,6 +1123,57 @@ def player_card(
             player_modal(p)
 
 
+def game_pick_tile(p: Dict[str, Any], role: str) -> str:
+    """One game pick as a compact tile.
+
+    The Games tab used to stack full-width player_cards, so a single game ran
+    five screens deep and comparing its picks meant scrolling back and forth.
+    These sit side by side: the whole game reads at a glance, and the detail
+    that was on the wide card lives in the modal a click away.
+    """
+    emoji, label, color = GAME_ROLE_LABEL[role]
+    kind = GAME_ROLE_SCORE.get(role, "hr")
+    score = score_for(p, kind)
+    grade = grade_for(p, kind)
+
+    hrw = HRW_MAP.get(txt(p, "hrw_zone"))
+    flags = ""
+    if p.get("weak_spot_flag"):
+        flags += "<span title='Weak spot'>⭐</span>"
+    if is_aligned(p):
+        flags += "<span title='Aligned'>🧩</span>"
+    if nn(p, "last5_hr") > 0:
+        flags += f"<span style='color:{C['orange']}'>L5 {int(nn(p, 'last5_hr'))}HR</span>"
+
+    return (
+        f"<div style='background:rgba(255,255,255,.03);border:1px solid {C['border']};"
+        f"border-top:3px solid {color};border-radius:10px;padding:9px 11px;"
+        f"height:100%'>"
+        f"<div style='display:flex;justify-content:space-between;align-items:center'>"
+        f"<span style='font-size:10px;font-weight:800;letter-spacing:.07em;color:{color}'>"
+        f"{emoji} {label.upper()}</span>"
+        f"<span style='font-size:11px;font-weight:800;color:{color}'>{grade}</span></div>"
+        f"<div style='font-size:13px;font-weight:700;line-height:1.25;margin:5px 0 1px'>"
+        f"{name_of(p)}</div>"
+        f"<div style='font-size:9.5px;color:{C['text3']};margin-bottom:6px'>"
+        f"spot {p.get('lineup_spot', '—')} · {txt(p, 'bats', default='?')}HB · "
+        f"{int(nn(p, 'season_hr'))} HR</div>"
+        f"<div style='font-family:{NUM_FONT};font-size:24px;font-weight:800;"
+        f"line-height:1'>{score:.0f}"
+        f"<span style='font-size:9px;color:{C['text3']};font-weight:600;"
+        f"margin-left:4px'>{label.upper()}</span></div>"
+        f"{bar('HR', hr_score(p), 100, '#f97316')}"
+        f"{bar('HRR', prod_score(p), 100, '#22d3ee')}"
+        f"{bar('HIT', hit_score(p), 100, '#a78bfa')}"
+        f"{bar('TB', tb_score(p), 100, '#34d399')}"
+        + (f"<div style='font-size:9.5px;color:{hrw[1]};margin-top:5px'>"
+           f"{hrw[0]} HRW {nn(p, 'hrw_score'):.0f}</div>" if hrw else "")
+        + (f"<div style='font-size:9.5px;display:flex;gap:6px;margin-top:4px;"
+           f"color:{C['text3']}'>{flags}</div>" if flags else "")
+        + "</div>"
+    )
+
+
 def rows_to_df(rows: List[Dict[str, Any]], cols: List[str]) -> pd.DataFrame:
     df = pd.DataFrame(rows)
     return df[[c for c in cols if c in df.columns]]
@@ -1517,13 +1581,27 @@ with tab_games:
 
     st.divider()
 
+    # Game Score per game, so the header can carry the same number the ranking
+    # chart above is sorted by -- otherwise you rank games by Game Score, then
+    # open one and have no idea what its score was.
+    game_score_by_pk = {
+        pk: float(pd.Series([
+            pd.Series([hr_score(x), prod_score(x), nn(x, "hrw_score"),
+                       nn(x, "damage_conversion_score")]).median()
+            for x in rows
+        ]).median())
+        for pk, rows in by_game.items()
+    }
+
     for gpk, gp in order:
         head = max(gp, key=hr_score)
         conf = "✅" if head.get("lineup_confirmed") else "◻︎"
+        gs = game_score_by_pk.get(gpk, 0.0)
         with st.expander(
-            f"{conf}  {team_of(head)} vs {opp_of(head)} · {txt(head, 'venue_name')} · "
-            f"top HR {hr_score(head):.0f} · {txt(head, 'pitcher_name')} "
-            f"({txt(head, 'pitcher_throws')}) HR/9 {nn(head, 'pitcher_hr9'):.2f}"
+            f"{conf}  {team_of(head)} vs {opp_of(head)}   ·   Game Score {gs:.1f}   ·   "
+            f"top HR {hr_score(head):.0f}   ·   {txt(head, 'venue_name')}   ·   "
+            f"{txt(head, 'pitcher_name')} ({txt(head, 'pitcher_throws')}) "
+            f"HR/9 {nn(head, 'pitcher_hr9'):.2f}"
         ):
             e = st.columns(6)
             e[0].metric("Temp", f"{nn(head, 'weather_temp_f'):.0f}°F" if head.get("weather_temp_f") else "—")
@@ -1548,17 +1626,40 @@ with tab_games:
                     picked.setdefault(r, []).append(p)
 
             if picked:
-                total = sum(len(v) for v in picked.values())
-                st.markdown(f"**Game picks** ({total})")
-                for r in ("TOP", "HR", "HIT", "HRR", "CONTACT"):
-                    for p in sorted(picked.get(r, []), key=hr_score, reverse=True):
-                        emoji, label, color = GAME_ROLE_LABEL[r]
-                        player_card(p, left_label=f"{emoji} {label.upper()}",
-                                    left_color=color, open_key=f"g{gpk}")
+                # Flattened in role order first, so the row always reads
+                # TOP, HR, HIT, HRR, TB left to right no matter how many of
+                # each the bot stamped.
+                flat = [
+                    (r, p)
+                    for r in GAME_ROLE_ORDER
+                    for p in sorted(picked.get(r, []),
+                                    key=lambda x, _r=r: score_for(x, GAME_ROLE_SCORE[_r]),
+                                    reverse=True)
+                ]
+                st.markdown(f"**Game picks** ({len(flat)})")
+                # Five across matches the five roles. Wider rows squeeze the
+                # names onto three lines; narrower ones stop the game fitting
+                # on a screen, which was the whole problem being fixed.
+                per_row = 5
+                for start in range(0, len(flat), per_row):
+                    chunk = flat[start:start + per_row]
+                    cols = st.columns(per_row)
+                    for col, (r, p) in zip(cols, chunk):
+                        with col:
+                            st.markdown(game_pick_tile(p, r), unsafe_allow_html=True)
+                            if st.button("Details", width="stretch",
+                                         key=f"gt_{gpk}_{r}_{p.get('player_id')}"):
+                                player_modal(p)
             else:
                 st.caption("No stamped game picks for this game — showing top HR scores.")
-                for p in sorted(gp, key=hr_score, reverse=True)[:4]:
-                    player_card(p, open_key=f"g{gpk}")
+                top4 = sorted(gp, key=hr_score, reverse=True)[:5]
+                cols = st.columns(5)
+                for col, p in zip(cols, top4):
+                    with col:
+                        st.markdown(game_pick_tile(p, "HR"), unsafe_allow_html=True)
+                        if st.button("Details", width="stretch",
+                                     key=f"gf_{gpk}_{p.get('player_id')}"):
+                            player_modal(p)
 
             # Plain table rather than a nested expander: expanders inside
             # expanders render awkwardly and hide the lineup behind a second
