@@ -832,13 +832,54 @@ with tab_games:
     order = sorted(by_game.items(), key=lambda kv: max(hr_score(x) for x in kv[1]), reverse=True)
 
     # Slate-level view first: which games are worth attention at a glance.
+    # Peaks (top HR / top HRR) say "is there a play here"; the averages across
+    # every batter in the game say "is the whole lineup live or is it one guy",
+    # which is what separates a real spot from a single outlier.
     if order:
-        st.markdown("#### Slate at a glance — top HR score by game")
-        chart = pd.DataFrame([{
-            "Game": f"{team_of(max(gp, key=hr_score))} vs {opp_of(max(gp, key=hr_score))}",
-            "Top HR": round(max(hr_score(x) for x in gp), 1),
-        } for _, gp in order]).set_index("Game")
-        st.bar_chart(chart, height=260, color="#f97316")
+        st.markdown("#### Slate at a glance")
+
+        def avg(rows: List[Dict[str, Any]], fn) -> float:
+            vals = [fn(r) for r in rows]
+            vals = [v for v in vals if math.isfinite(v)]
+            return sum(vals) / len(vals) if vals else 0.0
+
+        glance = []
+        for _, gp in order:
+            head = max(gp, key=hr_score)
+            glance.append({
+                "Game": f"{team_of(head)} vs {opp_of(head)}",
+                "Batters": len(gp),
+                "Top HR": round(max(hr_score(x) for x in gp), 1),
+                "Top HRR": round(max(prod_score(x) for x in gp), 1),
+                "Avg HR": round(avg(gp, hr_score), 1),
+                "Avg HRR": round(avg(gp, prod_score), 1),
+                "Avg HRW": round(avg(gp, lambda r: nn(r, "hrw_score")), 1),
+                "Avg DC": round(avg(gp, lambda r: nn(r, "damage_conversion_score")), 1),
+                "Pitcher": txt(head, "pitcher_name"),
+                "P HR/9": round(nn(head, "pitcher_hr9"), 2),
+                "Park HR": round(nn(head, "park_hr_factor", default=1.0), 2),
+            })
+        gdf = pd.DataFrame(glance)
+
+        # Slate-wide averages, so each game reads against the day's baseline.
+        s = st.columns(6)
+        s[0].metric("Games", len(gdf))
+        s[1].metric("Top HR", f"{gdf['Top HR'].max():.0f}")
+        s[2].metric("Top HRR", f"{gdf['Top HRR'].max():.0f}")
+        s[3].metric("Slate avg HR", f"{gdf['Avg HR'].mean():.1f}")
+        s[4].metric("Slate avg HRW", f"{gdf['Avg HRW'].mean():.1f}")
+        s[5].metric("Slate avg DC", f"{gdf['Avg DC'].mean():.1f}")
+
+        metric_choice = st.radio(
+            "Rank games by", ["Top HR", "Top HRR", "Avg HR", "Avg HRR", "Avg HRW", "Avg DC"],
+            horizontal=True,
+        )
+        ranked_games = gdf.sort_values(metric_choice, ascending=False)
+        st.bar_chart(
+            ranked_games.set_index("Game")[[metric_choice]],
+            height=300, color="#f97316", horizontal=True,
+        )
+        st.dataframe(ranked_games, width="stretch", hide_index=True, height=min(520, 40 * len(gdf) + 40))
 
     st.divider()
 
