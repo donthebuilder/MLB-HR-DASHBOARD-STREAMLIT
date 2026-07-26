@@ -41,6 +41,7 @@ GITHUB_REPO = "donthebuilder/MLB-HR-DASHBOARD"
 DATA_BRANCH = "data"
 RAW_BASE = f"https://raw.githubusercontent.com/{GITHUB_REPO}/{DATA_BRANCH}"
 
+REPO_ROOT = Path(__file__).resolve().parent.parent
 OUT_DIR = Path(__file__).resolve().parent / "outputs"
 
 
@@ -93,8 +94,19 @@ def main() -> int:
         return 1
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    dest.write_text(json.dumps(rows), encoding="utf-8")
+    blob = json.dumps(rows)
+    dest.write_text(blob, encoding="utf-8")
     print(f"Wrote {len(rows)} picks to {dest}")
+
+    # Also write the stable path the other slate-consuming bots look for.
+    # spray_cache.find_latest_slate() checks public/data/today_slate.json
+    # first, and hr_companion_cache.py takes --slate pointing at it. Without
+    # this, both died in CI with "No slate file found" because a fresh
+    # checkout has no slate anywhere on disk.
+    stable = REPO_ROOT / "public" / "data" / "today_slate.json"
+    stable.parent.mkdir(parents=True, exist_ok=True)
+    stable.write_text(blob, encoding="utf-8")
+    print(f"Wrote stable slate copy to {stable}")
     return 0
 
 
