@@ -39,7 +39,6 @@ PUBLISH_FILES=(
   tomorrow.txt
   pair_builder_latest.json
   pair_history_summary.json
-  pair_history_cache.json
   hr_companion_latest.json
   results_live.json
   results_live.txt
