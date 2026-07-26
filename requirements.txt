@@ -6,3 +6,8 @@
 streamlit>=1.60.0
 pandas>=2.0.0
 requests>=2.31.0
+
+# Radar, heatmap and candlestick charts. Streamlit's built-in charts only do
+# line/bar/area/scatter, so these three chart types need plotly. It's a pure
+# wheel with no heavy compiled deps, so cold boots stay quick.
+plotly>=5.20.0

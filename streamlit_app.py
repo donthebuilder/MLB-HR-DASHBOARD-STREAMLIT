@@ -35,6 +35,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import pandas as pd
+import plotly.graph_objects as go
 import requests
 import streamlit as st
 
@@ -541,6 +542,128 @@ def pills_html(items: List[Dict[str, str]]) -> str:
     )
 
 
+def stat_table(pairs: List[tuple]) -> None:
+    st.dataframe(
+        pd.DataFrame([{"": k, " ": v} for k, v in pairs]),
+        width="stretch", hide_index=True,
+        height=min(400, 36 * len(pairs) + 38),
+    )
+
+
+# ── PLOTLY HELPERS ──────────────────────────────────────────────────────────
+# One shared dark layout so every chart matches the theme instead of plotly's
+# default white. Transparent backgrounds let the app's own panels show through.
+def _layout(fig: "go.Figure", height: int = 320, title: str = "") -> "go.Figure":
+    fig.update_layout(
+        height=height,
+        title=dict(text=title, font=dict(size=13, color=C["text2"])) if title else None,
+        margin=dict(l=40, r=20, t=40 if title else 20, b=36),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(color=C["text2"], size=11),
+        showlegend=False,
+        xaxis=dict(gridcolor=C["border"], zerolinecolor=C["border"]),
+        yaxis=dict(gridcolor=C["border"], zerolinecolor=C["border"]),
+    )
+    return fig
+
+
+def radar(labels: List[str], values: List[float], color: str = "#f97316",
+          title: str = "", height: int = 320, rng: float = 100.0,
+          second: Optional[tuple] = None) -> None:
+    """Closed-loop radar. `second` is an optional (label, values, colour) overlay
+    so two profiles can be compared on the same axes."""
+    fig = go.Figure()
+
+    def rgba(hex_colr: str, alpha: float) -> str:
+        h = hex_colr.lstrip("#")
+        if len(h) != 6:
+            return f"rgba(148,163,184,{alpha})"
+        r, g, b = (int(h[i:i + 2], 16) for i in (0, 2, 4))
+        return f"rgba({r},{g},{b},{alpha})"
+
+    def trace(vals, colr, nm):
+        return go.Scatterpolar(
+            r=list(vals) + [vals[0]], theta=labels + [labels[0]],
+            fill="toself", name=nm,
+            line=dict(color=colr, width=2),
+            fillcolor=rgba(colr, 0.22),
+        )
+
+    fig.add_trace(trace(values, color, "This player"))
+    if second:
+        fig.add_trace(trace(second[1], second[2], second[0]))
+        fig.update_layout(showlegend=True)
+    fig.update_layout(
+        polar=dict(
+            bgcolor="rgba(0,0,0,0)",
+            radialaxis=dict(visible=True, range=[0, rng], gridcolor=C["border"],
+                            tickfont=dict(size=9, color=C["text3"])),
+            angularaxis=dict(gridcolor=C["border"], tickfont=dict(size=10, color=C["text2"])),
+        ),
+    )
+    _layout(fig, height, title)
+    fig.update_layout(margin=dict(l=50, r=50, t=48 if title else 24, b=30))
+    st.plotly_chart(fig, width="stretch")
+
+
+def heatmap(df: pd.DataFrame, title: str = "", height: int = 340,
+            fmt: str = "{:.0f}", reverse: bool = False) -> None:
+    """Rows x columns matrix. Orange = hot (high) by default; set reverse when
+    a high number is bad for the hitter (e.g. pitcher strikeout metrics)."""
+    if df.empty:
+        st.caption("Not enough data for this heatmap.")
+        return
+    scale = [[0, "#0b1220"], [0.5, "#7c4a12"], [1, "#f97316"]]
+    if reverse:
+        scale = [[0, "#f97316"], [0.5, "#7c4a12"], [1, "#0b1220"]]
+    fig = go.Figure(go.Heatmap(
+        z=df.values, x=list(df.columns), y=list(df.index),
+        colorscale=scale, showscale=True,
+        colorbar=dict(thickness=10, tickfont=dict(size=9, color=C["text3"])),
+        text=[[fmt.format(v) if pd.notna(v) else "" for v in row] for row in df.values],
+        texttemplate="%{text}", textfont=dict(size=10),
+        hovertemplate="%{y} · %{x}: %{z:.2f}<extra></extra>",
+    ))
+    _layout(fig, height, title)
+    st.plotly_chart(fig, width="stretch")
+
+
+def candles(df: pd.DataFrame, date_col: str, val_col: str, title: str = "",
+            height: int = 340, unit: str = "") -> None:
+    """Candlesticks over a per-event value, grouped by date.
+
+    Maps naturally onto batted-ball data: each day's candle opens at the
+    first batted ball of that day, closes at the last, and the wick spans the
+    day's weakest to hardest contact. A tall green candle is a day the hitter
+    got hotter as it went; long upper wicks mean he had it in him.
+    """
+    d = df.dropna(subset=[val_col]).copy()
+    if d.empty or date_col not in d.columns:
+        st.caption("Not enough batted-ball data for a candlestick view.")
+        return
+    d = d.sort_values(date_col)
+    g = d.groupby(date_col)[val_col]
+    agg = pd.DataFrame({
+        "open": g.first(), "close": g.last(), "high": g.max(), "low": g.min(),
+        "n": g.count(),
+    }).reset_index()
+    if agg.empty:
+        st.caption("Not enough batted-ball data for a candlestick view.")
+        return
+    fig = go.Figure(go.Candlestick(
+        x=agg[date_col], open=agg["open"], high=agg["high"],
+        low=agg["low"], close=agg["close"],
+        increasing=dict(line=dict(color=C["green"]), fillcolor=C["green"]),
+        decreasing=dict(line=dict(color=C["red"]), fillcolor=C["red"]),
+        hovertext=[f"{n} batted ball{'s' if n != 1 else ''}" for n in agg["n"]],
+    ))
+    fig.update_layout(xaxis_rangeslider_visible=False)
+    _layout(fig, height, title)
+    fig.update_yaxes(title_text=unit)
+    st.plotly_chart(fig, width="stretch")
+
+
 def tags_html(tags: Any, limit: int = 6) -> str:
     if isinstance(tags, str):
         tags = [t.strip() for t in tags.split(",") if t.strip()]
@@ -838,47 +961,78 @@ with tab_games:
     if order:
         st.markdown("#### Slate at a glance")
 
-        def avg(rows: List[Dict[str, Any]], fn) -> float:
-            vals = [fn(r) for r in rows]
-            vals = [v for v in vals if math.isfinite(v)]
-            return sum(vals) / len(vals) if vals else 0.0
+        def med(vals: List[float]) -> float:
+            vals = sorted(v for v in vals if math.isfinite(v))
+            if not vals:
+                return 0.0
+            n = len(vals)
+            return vals[n // 2] if n % 2 else (vals[n // 2 - 1] + vals[n // 2]) / 2
+
+        def player_score(p: Dict[str, Any]) -> float:
+            """One number per hitter: the median of his four HR-relevant scores.
+
+            Median rather than mean on purpose -- a hitter with three strong
+            marks and one weak one still reads strong, and a single inflated
+            score can't drag the whole thing up on its own.
+            """
+            return med([
+                hr_score(p), prod_score(p),
+                nn(p, "hrw_score"), nn(p, "damage_conversion_score"),
+            ])
 
         glance = []
         for _, gp in order:
             head = max(gp, key=hr_score)
             glance.append({
                 "Game": f"{team_of(head)} vs {opp_of(head)}",
+                # Median of every hitter's composite = the game's HR-chance
+                # score. Reads "how live is this lineup", not "who's the one guy".
+                "Game Score": round(med([player_score(x) for x in gp]), 1),
                 "Batters": len(gp),
                 "Top HR": round(max(hr_score(x) for x in gp), 1),
                 "Top HRR": round(max(prod_score(x) for x in gp), 1),
-                "Avg HR": round(avg(gp, hr_score), 1),
-                "Avg HRR": round(avg(gp, prod_score), 1),
-                "Avg HRW": round(avg(gp, lambda r: nn(r, "hrw_score")), 1),
-                "Avg DC": round(avg(gp, lambda r: nn(r, "damage_conversion_score")), 1),
+                "Med HR": round(med([hr_score(x) for x in gp]), 1),
+                "Med HRR": round(med([prod_score(x) for x in gp]), 1),
+                "Med HRW": round(med([nn(x, "hrw_score") for x in gp]), 1),
+                "Med DC": round(med([nn(x, "damage_conversion_score") for x in gp]), 1),
                 "Pitcher": txt(head, "pitcher_name"),
                 "P HR/9": round(nn(head, "pitcher_hr9"), 2),
                 "Park HR": round(nn(head, "park_hr_factor", default=1.0), 2),
             })
-        gdf = pd.DataFrame(glance)
+        gdf = pd.DataFrame(glance).sort_values("Game Score", ascending=False)
 
-        # Slate-wide averages, so each game reads against the day's baseline.
         s = st.columns(6)
         s[0].metric("Games", len(gdf))
-        s[1].metric("Top HR", f"{gdf['Top HR'].max():.0f}")
-        s[2].metric("Top HRR", f"{gdf['Top HRR'].max():.0f}")
-        s[3].metric("Slate avg HR", f"{gdf['Avg HR'].mean():.1f}")
-        s[4].metric("Slate avg HRW", f"{gdf['Avg HRW'].mean():.1f}")
-        s[5].metric("Slate avg DC", f"{gdf['Avg DC'].mean():.1f}")
+        s[1].metric("Best game score", f"{gdf['Game Score'].max():.1f}")
+        s[2].metric("Slate median", f"{gdf['Game Score'].median():.1f}")
+        s[3].metric("Top HR", f"{gdf['Top HR'].max():.0f}")
+        s[4].metric("Top HRR", f"{gdf['Top HRR'].max():.0f}")
+        s[5].metric("Med DC", f"{gdf['Med DC'].median():.1f}")
 
         metric_choice = st.radio(
-            "Rank games by", ["Top HR", "Top HRR", "Avg HR", "Avg HRR", "Avg HRW", "Avg DC"],
+            "Rank games by",
+            ["Game Score", "Top HR", "Top HRR", "Med HR", "Med HRR", "Med HRW", "Med DC"],
             horizontal=True,
         )
         ranked_games = gdf.sort_values(metric_choice, ascending=False)
         st.bar_chart(
             ranked_games.set_index("Game")[[metric_choice]],
-            height=300, color="#f97316", horizontal=True,
+            height=320, color="#f97316", horizontal=True,
         )
+        st.caption(
+            "Game Score = median across every hitter of that hitter's median "
+            "HR / HRR / HRW / DC. Higher = more of the lineup is live for a homer."
+        )
+
+        # Heatmap: every game against every metric at once, so a game that's
+        # strong across the board separates visually from one carried by a
+        # single column.
+        hm = ranked_games.set_index("Game")[
+            ["Game Score", "Med HR", "Med HRR", "Med HRW", "Med DC", "Top HR", "Top HRR"]
+        ]
+        heatmap(hm, "Game x metric — hotter is better for hitters",
+                height=max(280, 26 * len(hm) + 90), fmt="{:.0f}")
+
         st.dataframe(ranked_games, width="stretch", hide_index=True, height=min(520, 40 * len(gdf) + 40))
 
     st.divider()
@@ -985,24 +1139,31 @@ with tab_leaders:
             if pull_rate(p) * 100 >= min_pull
             and launch_angle(p) >= min_la
             and recent375(p) >= min_375]
+    # Everyone who has a value for this stat, not a top-N slice -- the table
+    # below is the full board; only the chart is capped, because 200+ bars is
+    # unreadable rather than informative.
     lead = sorted(((p, getter(p)) for p in pool), key=lambda x: x[1], reverse=True)
-    lead = [(p, v) for p, v in lead if math.isfinite(v) and v > 0][:25]
+    lead = [(p, v) for p, v in lead if math.isfinite(v) and v > 0]
 
     if not lead:
         st.info("Not enough data for this leaderboard yet.")
     else:
-        st.caption(f"Top {len(lead)} by {stat}")
+        chart_n = st.slider("Players in chart", 10, min(60, len(lead)),
+                            min(25, len(lead)), step=5)
+        st.caption(f"{len(lead)} players ranked by {stat} — chart shows top {chart_n}, table shows all")
         st.bar_chart(
             pd.DataFrame([{"Player": f"{name_of(p)} ({team_of(p)})", stat: round(v, 3)}
-                          for p, v in lead]).set_index("Player"),
-            height=520, color="#a78bfa", horizontal=True,
+                          for p, v in lead[:chart_n]]).set_index("Player"),
+            height=max(320, 18 * chart_n), color="#a78bfa", horizontal=True,
         )
         st.dataframe(pd.DataFrame([{
             "#": i, "Player": name_of(p) + (" 🧩" if is_aligned(p) else ""),
             "Team": f"{team_of(p)} vs {opp_of(p)}", "Role": tier_role(p),
             stat: fmt.format(v),
+            "HR": round(hr_score(p), 1), "HRR": round(prod_score(p), 1),
+            "Spot": p.get("lineup_spot"), "Pitcher": txt(p, "pitcher_name"),
         } for i, (p, v) in enumerate(lead, start=1)]),
-            width="stretch", hide_index=True, height=560)
+            width="stretch", hide_index=True, height=620)
 
 # ── PITCHERS ────────────────────────────────────────────────────────────────
 def group_pitchers(pool: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -1025,6 +1186,10 @@ def group_pitchers(pool: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             "team": opp_of(p), "facing": team_of(p),
             "venue": txt(p, "venue_name"), "game_time": p.get("game_time"),
             "confirmed": False, "lineup": [],
+            # Keep one representative batter row: every pitcher_* field is
+            # identical across the lineup facing him, so this is the cheapest
+            # way to reach the full pitcher profile without a second lookup.
+            "row": p,
         })
         if p.get("lineup_confirmed"):
             e["confirmed"] = True
@@ -1040,46 +1205,146 @@ with tab_pitchers:
     if not pitchers:
         st.info("No pitcher data found yet.")
     else:
-        sort_by = st.selectbox("Sort by", ["Most weak spots", "Highest HR/9", "Highest WHIP", "Game time"])
+        sort_by = st.selectbox(
+            "Sort by",
+            ["Most weak spots", "Highest HR/9", "Highest WHIP", "Most hittable (attack)",
+             "Worst barrel rate", "Game time"],
+        )
         if sort_by == "Highest HR/9":
             pitchers.sort(key=lambda e: -e["hr9"])
         elif sort_by == "Highest WHIP":
             pitchers.sort(key=lambda e: -e["whip"])
+        elif sort_by == "Most hittable (attack)":
+            pitchers.sort(key=lambda e: -nn(e["row"], "pitcher_attack_score"))
+        elif sort_by == "Worst barrel rate":
+            pitchers.sort(key=lambda e: -nn(e["row"], "pitcher_barrel_allowed"))
         elif sort_by == "Game time":
             pitchers.sort(key=lambda e: str(e["game_time"] or ""))
 
-        st.caption(f"{len(pitchers)} starters · expand to see the opposing lineup")
+        # Slate-wide comparison first: which starters are most attackable.
+        pdf = pd.DataFrame([{
+            "Pitcher": e["pitcher_name"],
+            "Attack": round(nn(e["row"], "pitcher_attack_score"), 1),
+            "HR/9": round(e["hr9"], 2),
+            "WHIP": round(e["whip"], 2),
+            "Barrel%": round(nn(e["row"], "pitcher_barrel_allowed") * 100, 1),
+            "HardHit%": round(nn(e["row"], "pitcher_hardhit_allowed") * 100, 1),
+            "Meatball%": round(nn(e["row"], "pitcher_meatball_pct") * 100, 1),
+            "PullAir%": round(nn(e["row"], "pitcher_pullair_allowed_pct") * 100, 1),
+            "Weak spots": e["weak_spots"],
+        } for e in pitchers]).set_index("Pitcher")
+        heatmap(pdf[["Attack", "Barrel%", "HardHit%", "Meatball%", "PullAir%"]],
+                "Starter vulnerability — hotter is better for hitters",
+                height=max(280, 26 * len(pdf) + 90))
+
+        st.caption(f"{len(pitchers)} starters · expand for the full profile")
         for e in pitchers:
+            r = e["row"]
             star = f" · ⭐ {e['weak_spots']} weak spot{'s' if e['weak_spots'] != 1 else ''}" if e["weak_spots"] else ""
+            tag = txt(r, "pitcher_attack_tag")
             with st.expander(
                 f"{e['pitcher_name']} ({e['throws']}HP) · {e['team']} vs {e['facing']} · "
-                f"HR/9 {e['hr9']:.2f} · WHIP {e['whip']:.2f}{star}"
+                f"HR/9 {e['hr9']:.2f} · WHIP {e['whip']:.2f} · Attack "
+                f"{nn(r, 'pitcher_attack_score'):.0f}{star}  {tag}"
             ):
-                m = st.columns(5)
-                m[0].metric("ERA", f"{e['era']:.2f}")
-                m[1].metric("HR/9", f"{e['hr9']:.2f}")
-                m[2].metric("WHIP", f"{e['whip']:.2f}")
-                m[3].metric("K/9", f"{e['k9']:.2f}" if e["k9"] else "—")
-                m[4].metric("Weak side", e["weak_side"] or "—")
-                if e["attack"]:
-                    st.caption(f"Attack profile: {e['attack']}")
-                if e["xbh_lhb"] is not None or e["xbh_rhb"] is not None:
-                    st.caption(f"XBH allowed — vs LHB {e['xbh_lhb'] or '—'} · vs RHB {e['xbh_rhb'] or '—'}")
+                m = st.columns(6)
+                m[0].metric("ERA", f"{e['era']:.2f}", f"L3 {nn(r, 'pitcher_l3_era'):.2f}")
+                m[1].metric("HR/9", f"{e['hr9']:.2f}", f"L3 {nn(r, 'pitcher_l3_hr9'):.2f}")
+                m[2].metric("WHIP", f"{e['whip']:.2f}", f"L3 {nn(r, 'pitcher_l3_whip'):.2f}")
+                m[3].metric("K/9", f"{e['k9']:.2f}")
+                m[4].metric("K rate", pct(nn(r, "pitcher_k_rate")))
+                m[5].metric("FB velo", f"{nn(r, 'pitcher_fb_velo_delta'):+.2f}",
+                            txt(r, "pitcher_fb_velo_status", default=""))
 
-                st.dataframe(pd.DataFrame([{
+                v1, v2 = st.columns([1, 1])
+                with v1:
+                    # 0-100 scaling so contact quality, mistake rate and raw
+                    # HR/9 sit on one axis. Bigger shape = easier to take deep.
+                    axes = ["Attack", "Barrel", "Hard hit", "Meatball", "Pull air", "HR/9"]
+                    vals = [
+                        min(100, nn(r, "pitcher_attack_score")),
+                        min(100, nn(r, "pitcher_barrel_allowed") * 100 * 6),
+                        min(100, nn(r, "pitcher_hardhit_allowed") * 100 * 1.8),
+                        min(100, nn(r, "pitcher_meatball_pct") * 100 * 3),
+                        min(100, nn(r, "pitcher_pullair_allowed_pct") * 100 * 1.6),
+                        min(100, e["hr9"] * 33),
+                    ]
+                    radar(axes, vals, C["orange"], "Vulnerability profile", height=300)
+                with v2:
+                    st.markdown("**Contact allowed**")
+                    stat_table([
+                        ("EV allowed", f"{nn(r, 'pitcher_ev_allowed'):.1f} mph"),
+                        ("Barrel %", pct(nn(r, "pitcher_barrel_allowed"))),
+                        ("Hard hit %", pct(nn(r, "pitcher_hardhit_allowed"))),
+                        ("Fly-ball %", pct(nn(r, "pitcher_fb_rate"))),
+                        ("Pull-air %", pct(nn(r, "pitcher_pullair_allowed_pct"))),
+                        ("375+ / 400+ allowed", f"{int(nn(r, 'pitcher_375_allowed'))} / {int(nn(r, 'pitcher_400_allowed'))}"),
+                        ("BABIP", f"{nn(r, 'pitcher_babip'):.3f}"),
+                        ("Statcast BBE", f"{int(nn(r, 'pitcher_statcast_bbe'))}"),
+                    ])
+
+                s1, s2 = st.columns(2)
+                with s1:
+                    st.markdown("**Command / swing profile**")
+                    stat_table([
+                        ("Meatball %", pct(nn(r, "pitcher_meatball_pct"))),
+                        ("Whiff %", pct(nn(r, "pitcher_whiff_pct"))),
+                        ("SwStr %", pct(nn(r, "pitcher_swstr_pct"))),
+                        ("Putaway %", pct(nn(r, "pitcher_putaway_pct"))),
+                        ("1st-pitch strike %", pct(nn(r, "pitcher_first_pitch_strike_pct"))),
+                        ("Spot damage", f"{nn(r, 'pitcher_spot_damage_score'):.0f} ({txt(r, 'pitcher_spot_damage_label', default='—')})"),
+                        ("Zone damage", f"{nn(r, 'pitcher_zone_damage_score'):.0f} ({txt(r, 'pitcher_zone_damage_label', default='—')})"),
+                    ])
+                with s2:
+                    st.markdown("**Platoon splits**")
+                    weak = txt(r, "pitcher_weak_side", default="—")
+                    stat_table([
+                        ("Weak side", weak or "—"),
+                        ("HR/9 vs LHB", f"{nn(r, 'pitcher_hr9_vs_lhb'):.2f}"),
+                        ("HR/9 vs RHB", f"{nn(r, 'pitcher_hr9_vs_rhb'):.2f}"),
+                        ("HR vs LHB / RHB", f"{int(nn(r, 'pitcher_hr_vs_lhb'))} / {int(nn(r, 'pitcher_hr_vs_rhb'))}"),
+                        ("XBH vs LHB / RHB", f"{e['xbh_lhb'] or '—'} / {e['xbh_rhb'] or '—'}"),
+                        ("Side SLG / OPS", f"{nn(r, 'pitcher_side_slug'):.3f} / {nn(r, 'pitcher_side_ops'):.3f}"),
+                        ("Mix vs LHB", txt(r, "pitcher_primary_mix_vs_lhb", default="—")),
+                        ("Mix vs RHB", txt(r, "pitcher_primary_mix_vs_rhb", default="—")),
+                    ])
+
+                usage = r.get("pitcher_pitch_usage_pct") or r.get("pitcher_arsenal") or {}
+                if isinstance(usage, dict) and usage:
+                    st.markdown(f"**Arsenal** — {txt(r, 'pitcher_arsenal_summary')}")
+                    st.bar_chart(pd.DataFrame({"usage %": usage}), height=240, color="#f97316")
+                    if txt(r, "pitcher_mistake_pitch_v31"):
+                        st.caption(f"Mistake pitch: {txt(r, 'pitcher_mistake_pitch_v31')}"
+                                   + ("  ·  matches this hitter's damage pitch"
+                                      if r.get("pitcher_mistake_match") else ""))
+
+                st.markdown(f"**Opposing lineup ({len(e['lineup'])})**")
+                ldf = pd.DataFrame([{
                     "Spot": b.get("lineup_spot"), "Batter": name_of(b),
                     "B": txt(b, "bats", default="?"),
                     "⭐": "⭐" if b.get("weak_spot_flag") else "",
-                    "🎯": "🎯" if nn(b, "pitch_type_match_score") > 0 else "",
+                    "🎯": "🎯" if nn(b, "pitch_type_match_score") >= 80 else "",
                     "HR": round(hr_score(b), 1), "HRR": round(prod_score(b), 1),
+                    "Hit": round(hit_score(b), 1), "PMix": round(pmix_score(b), 1),
+                    "DC": round(nn(b, "damage_conversion_score"), 1),
                     "Role": tier_role(b),
-                } for b in e["lineup"]]), width="stretch", hide_index=True)
+                } for b in e["lineup"]])
+                st.dataframe(ldf, width="stretch", hide_index=True)
 
-                arsenal = load_detail("pitcher", e["pitcher_id"])
-                mix = (arsenal.get("pitcher_pitch_mix") or {}).get("usage") or {}
-                if mix:
-                    st.caption("Pitch usage")
-                    st.bar_chart(pd.DataFrame({"usage %": mix}))
+                # Lineup-spot heatmap: shows at a glance where in the order
+                # this starter is most exposed.
+                if "Spot" in ldf.columns and ldf["Spot"].notna().any():
+                    lh = ldf.dropna(subset=["Spot"]).copy()
+                    lh["Spot"] = lh["Spot"].astype(int).astype(str)
+                    lh = lh.set_index("Spot")[["HR", "HRR", "Hit", "PMix", "DC"]]
+                    heatmap(lh, "Threat by lineup spot", height=max(240, 26 * len(lh) + 90))
+
+                bp = txt(r, "bullpen_quality")
+                if bp:
+                    st.caption(
+                        f"Bullpen behind him: {bp} · ERA {nn(r, 'bullpen_era'):.2f} · "
+                        f"HR/9 {nn(r, 'bullpen_hr9'):.2f} · WHIP {nn(r, 'bullpen_whip'):.2f}"
+                    )
 
 # ── HITS / HRR ──────────────────────────────────────────────────────────────
 with tab_hitshrr:
@@ -1183,6 +1448,8 @@ with tab_results:
         ]), width="stretch", hide_index=True, height=520)
 
 # ── PLAYER DETAIL ───────────────────────────────────────────────────────────
+# Modelled on the old PlayerModal: identity header, pill row, then sub-tabs
+# (Overview / EV Log / Pitch / Spray) instead of one long scroll.
 with tab_player:
     if not view:
         st.info("No players match these filters.")
@@ -1192,125 +1459,410 @@ with tab_player:
         idx = st.selectbox("Player", range(len(opts)), format_func=lambda i: labels[i])
         p = opts[idx]
 
-        st.markdown(f"### {name_of(p)} {'🧩' if is_aligned(p) else ''}")
+        rc = role_config(p)
+        role_label, role_color = rc if rc else (tier_role(p), tier_color(tier_role(p)))
+        hrw = HRW_MAP.get(txt(p, "hrw_zone"))
+
+        st.markdown(f"### {name_of(p)}")
         st.caption(
-            f"{team_of(p)} vs {opp_of(p)} · bats {txt(p, 'bats', default='?')} · "
-            f"spot {p.get('lineup_spot', '—')} · "
-            f"{'confirmed' if p.get('lineup_confirmed') else 'projected'} lineup · "
-            f"{txt(p, 'venue_name')}"
+            f"{team_of(p)} vs {opp_of(p)} · Lineup #{p.get('lineup_spot', '—')} · "
+            f"{txt(p, 'bats', default='?')}HB · vs {txt(p, 'pitcher_name', default='TBD')} "
+            f"({txt(p, 'pitcher_throws', default='?')}HP) · {txt(p, 'venue_name')}"
         )
 
-        d = st.columns(6)
-        d[0].metric("HR", f"{hr_score(p):.0f}", grade_for(p, "hr"))
-        d[1].metric("HRR", f"{prod_score(p):.0f}")
-        d[2].metric("Hit", f"{hit_score(p):.0f}")
-        d[3].metric("TB", f"{tb_score(p):.0f}")
-        d[4].metric("HRW", f"{nn(p, 'hrw_score'):.0f}")
-        d[5].metric("Damage", f"{nn(p, 'damage_conversion_score'):.0f}")
+        head_pills = bubble(txt(p, "final_hr_role")[:1] or "•", role_label, role_color)
+        head_pills += bubble("", f"Grade {grade_for(p, 'hr')}", C["text2"])
+        if hrw:
+            head_pills += bubble(hrw[0], f"HRW {nn(p, 'hrw_score'):.0f}", hrw[1])
+        if nn(p, "last5_hr") > 0:
+            head_pills += bubble("", f"L5 {int(nn(p, 'last5_hr'))}HR", C["orange"])
+        if txt(p, "matchup_label"):
+            head_pills += bubble("", txt(p, "matchup_label"), C["cyan"])
+        if hard_hit(p) > 0:
+            head_pills += bubble("", f"HH {hard_hit(p) * 100:.0f}%", C["green"])
+        if p.get("weak_spot_flag"):
+            head_pills += bubble("⭐", "Weak Spot", C["yellow"])
+        if is_aligned(p):
+            head_pills += bubble("🧩", "Aligned", C["purple"])
+        st.markdown(head_pills, unsafe_allow_html=True)
 
-        st.markdown(pills_html(signal_pills(p) + ([risk_pill(p)] if risk_pill(p) else [])),
-                    unsafe_allow_html=True)
-
-        if st.button("➕ Add to slip"):
+        a1, a2, a3 = st.columns([1, 1, 4])
+        if a1.button("➕ Add to slip", width="stretch"):
             st.session_state.slip.append(f"{name_of(p)} — {txt(p, 'best_bet_type', default='HR')}")
-        if st.button("⭐ Add to watchlist"):
+            st.rerun()
+        if a2.button("⭐ Watch", width="stretch"):
             if name_of(p) not in st.session_state.watch:
                 st.session_state.watch.append(name_of(p))
                 persist_watch()
                 st.rerun()
 
-        cA, cB = st.columns(2)
-        with cA:
-            st.markdown("**Season / recent**")
-            st.dataframe(pd.DataFrame([
-                {"Stat": "Season AVG", "Value": f"{nn(p, 'season_avg'):.3f}"},
-                {"Stat": "Season OPS", "Value": f"{nn(p, 'season_ops'):.3f}"},
-                {"Stat": "Season ISO", "Value": f"{nn(p, 'season_iso'):.3f}"},
-                {"Stat": "Season HR / PA", "Value": f"{int(nn(p, 'season_hr'))} / {int(nn(p, 'season_pa'))}"},
-                {"Stat": "HR per PA", "Value": f"{nn(p, 'hr_per_pa'):.4f} ({txt(p, 'hr_pa_tier')})"},
-                {"Stat": "Games since HR", "Value": f"{int(nn(p, 'games_since_last_hr'))}"},
-                {"Stat": "L5", "Value": f"{int(nn(p, 'last5_hits'))}H / {int(nn(p, 'last5_hr'))}HR / {int(nn(p, 'last5_xbh'))}XBH"},
-                {"Stat": "K rate", "Value": pct(nn(p, "season_k_rate"))},
-            ]), width="stretch", hide_index=True)
-        with cB:
-            st.markdown("**Batted ball / matchup**")
-            st.dataframe(pd.DataFrame([
-                {"Stat": "Avg EV", "Value": f"{avg_ev(p):.1f}"},
-                {"Stat": "Max EV", "Value": f"{max_ev(p):.1f}"},
-                {"Stat": "Launch angle", "Value": f"{launch_angle(p):.1f}°"},
-                {"Stat": "Hard hit / Barrel", "Value": f"{pct(hard_hit(p))} / {pct(barrel_rate(p))}"},
-                {"Stat": "Pull rate", "Value": pct(pull_rate(p))},
-                {"Stat": "350+ / 375+ / 400+", "Value": f"{int(recent350(p))} / {int(recent375(p))} / {int(recent400(p))}"},
-                {"Stat": "Pitcher", "Value": f"{txt(p, 'pitcher_name')} ({txt(p, 'pitcher_throws')})"},
-                {"Stat": "Pitcher HR/9 · WHIP", "Value": f"{nn(p, 'pitcher_hr9'):.2f} · {nn(p, 'pitcher_whip'):.2f}"},
-            ]), width="stretch", hide_index=True)
-
-        for label, key in (("Why this HR score", "hr_reason"), ("Pitch fit", "pitch_fit_summary"),
-                           ("Park fit", "park_fit_summary"), ("Risk", "risk_reason"),
-                           ("Advanced", "advanced_reason")):
-            if txt(p, key):
-                st.markdown(f"**{label}** — {txt(p, key)}")
-
         detail = load_detail("batter", p.get("player_id"))
-        spray = detail.get("spray_chart") or []
-        if spray:
-            st.markdown(f"**Batted balls ({len(spray)} tracked)**")
-            sdf = pd.DataFrame(spray)
-            for col in ("ev", "launch_angle", "distance", "hc_x", "hc_y"):
-                if col in sdf.columns:
-                    sdf[col] = pd.to_numeric(sdf[col], errors="coerce")
+        # spray_chart is the canonical batted-ball list; contact_log and
+        # batted_ball_log were byte-identical copies, so they're aliases here.
+        bbe = detail.get("spray_chart") or []
 
-            g1, g2 = st.columns(2)
-            with g1:
-                st.caption("Spray map — where the ball landed")
-                if {"hc_x", "hc_y"}.issubset(sdf.columns):
-                    # Statcast hit coords: home plate sits at (125.42, 198.27)
-                    # and y grows downward, so shift to the plate and flip y to
-                    # get a normal field orientation (CF up, LF left).
-                    field = sdf.dropna(subset=["hc_x", "hc_y"]).copy()
-                    field["x"] = field["hc_x"] - 125.42
-                    field["y"] = 198.27 - field["hc_y"]
-                    st.scatter_chart(field, x="x", y="y", height=330,
-                                     color="event" if "event" in field.columns else None,
-                                     size="distance" if "distance" in field.columns else None)
-                else:
-                    st.caption("No hit coordinates in this sample.")
-            with g2:
-                st.caption("Launch angle vs distance")
-                if {"launch_angle", "distance"}.issubset(sdf.columns):
-                    st.scatter_chart(sdf, x="launch_angle", y="distance", height=330,
-                                     color="event" if "event" in sdf.columns else None)
+        ov, evlog, pitchtab, spraytab = st.tabs(
+            ["📊 Overview", "⚡ EV Log", "🎯 Pitch", "💦 Spray"]
+        )
 
-            if "lane" in sdf.columns:
-                st.caption("Batted balls by field lane")
-                lane_counts = sdf["lane"].replace("", "—").value_counts()
-                st.bar_chart(pd.DataFrame({"batted balls": lane_counts}),
-                             height=220, color="#34d399")
+        with ov:
+            o1, o2 = st.columns(2)
+            with o1:
+                st.markdown("**MODEL SCORES**")
+                stat_table([
+                    ("HR Score", f"{hr_score(p):.1f}"),
+                    ("HRR Score", f"{prod_score(p):.1f}"),
+                    ("Hit Score", f"{hit_score(p):.1f}"),
+                    ("TB Score", f"{tb_score(p):.1f}"),
+                    ("Pitch Mix", f"{pmix_score(p):.1f}"),
+                    ("Damage Conversion", f"{nn(p, 'damage_conversion_score'):.1f}"),
+                ])
+                st.markdown("**RECENT DISTANCE**")
+                stat_table([
+                    ("350+ count", f"{int(recent350(p))}"),
+                    ("375+ count", f"{int(recent375(p))}"),
+                    ("400+ count", f"{int(recent400(p))}"),
+                    ("Ideal HR %", f"{ihr_val(p) * 100:.1f}%"),
+                ])
+                st.markdown("**SPLITS**")
+                stat_table([
+                    ("vs RHP", f"{nn(p, 'avg_vs_rhp'):.3f}"),
+                    ("vs LHP", f"{nn(p, 'avg_vs_lhp'):.3f}"),
+                    ("L5 Hits", f"{int(nn(p, 'last5_hits'))}"),
+                    ("L5 HR", f"{int(nn(p, 'last5_hr'))}"),
+                    ("L5 XBH", f"{int(nn(p, 'last5_xbh'))}"),
+                ])
+            with o2:
+                st.markdown("**BATTED BALL**")
+                stat_table([
+                    ("Avg EV", f"{avg_ev(p):.1f} mph"),
+                    ("Max EV", f"{max_ev(p):.1f} mph"),
+                    ("Barrel %", f"{barrel_rate(p) * 100:.0f}%"),
+                    ("Hard Hit %", f"{hard_hit(p) * 100:.0f}%"),
+                    ("Launch Angle", f"{launch_angle(p):.1f}°"),
+                    ("Pull %", f"{pull_rate(p) * 100:.0f}%"),
+                ])
+                st.markdown("**SEASON**")
+                stat_table([
+                    ("AVG", f"{nn(p, 'season_avg'):.3f}"),
+                    ("HR", f"{int(nn(p, 'season_hr'))}"),
+                    ("PA", f"{int(nn(p, 'season_pa'))}"),
+                    ("K Rate", f"{nn(p, 'season_k_rate') * 100:.0f}%"),
+                    ("BABIP", f"{nn(p, 'babip'):.3f}"),
+                    ("Games since HR", f"{int(nn(p, 'games_since_last_hr'))}"),
+                ])
+                st.markdown("**OPPOSING PITCHER**")
+                stat_table([
+                    ("Name", txt(p, "pitcher_name", default="—")),
+                    ("Throws", txt(p, "pitcher_throws", default="—")),
+                    ("HR/9", f"{nn(p, 'pitcher_hr9'):.1f}"),
+                    ("WHIP", f"{nn(p, 'pitcher_whip'):.2f}"),
+                    ("P-BABIP", f"{nn(p, 'pitcher_babip'):.3f}"),
+                ])
 
-            show = [c for c in ["date", "pitch_type", "event", "bb_type", "ev",
-                                "launch_angle", "distance", "lane", "spray_side"]
-                    if c in sdf.columns]
-            st.dataframe(sdf[show].head(60), width="stretch", hide_index=True, height=300)
-        else:
-            st.caption(
-                "No batted-ball detail published for this player yet — the detail "
-                "files land with the next bot run."
-            )
+            # Radar of the six model scores, with the slate median overlaid so
+            # the shape reads as "vs everyone else today", not in a vacuum.
+            axes = ["HR", "HRR", "Hit", "TB", "PMix", "DC"]
+            mine = [hr_score(p), prod_score(p), hit_score(p), tb_score(p),
+                    pmix_score(p), nn(p, "damage_conversion_score")]
+            slate_med = [
+                float(pd.Series([hr_score(x) for x in players]).median()),
+                float(pd.Series([prod_score(x) for x in players]).median()),
+                float(pd.Series([hit_score(x) for x in players]).median()),
+                float(pd.Series([tb_score(x) for x in players]).median()),
+                float(pd.Series([pmix_score(x) for x in players]).median()),
+                float(pd.Series([nn(x, "damage_conversion_score") for x in players]).median()),
+            ]
+            radar(axes, mine, role_color, "Model score profile vs slate median",
+                  height=360, second=("Slate median", slate_med, C["text3"]))
+
+            for label, key in (("Why this HR score", "hr_reason"),
+                               ("Pitch fit", "pitch_fit_summary"),
+                               ("Park fit", "park_fit_summary"),
+                               ("Risk", "risk_reason")):
+                if txt(p, key):
+                    st.markdown(f"**{label}** — {txt(p, key)}")
+
+        # ── EV LOG ──────────────────────────────────────────────────────────
+        with evlog:
+            if not bbe:
+                st.info("No batted-ball detail published for this player yet.")
+            else:
+                edf = pd.DataFrame(bbe)
+                for col in ("ev", "launch_angle", "distance", "pitch_velocity"):
+                    if col in edf.columns:
+                        edf[col] = pd.to_numeric(edf[col], errors="coerce")
+                if "date" in edf.columns:
+                    edf = edf.sort_values("date", ascending=False)
+
+                f1, f2, f3, f4 = st.columns(4)
+                limit = f1.radio("Sample", [10, 15, 25, 50], index=2, horizontal=True)
+                arm = f2.radio("Arm", ["All", "RHP", "LHP"], horizontal=True)
+                pitches = sorted({str(x) for x in edf.get("pitch_type", pd.Series(dtype=str)).dropna()})
+                pick_pitch = f3.selectbox("Pitch", ["All pitches"] + pitches)
+                only = f4.selectbox("Show", ["All results", "Home runs", "Barrels",
+                                             "Hard hit (95+)", "375+ ft"])
+
+                q = edf
+                if arm != "All" and "arm" in q.columns:
+                    q = q[q["arm"].astype(str).str.upper().str.startswith(arm[0])]
+                if pick_pitch != "All pitches" and "pitch_type" in q.columns:
+                    q = q[q["pitch_type"].astype(str) == pick_pitch]
+                if only == "Home runs" and "is_hr" in q.columns:
+                    q = q[q["is_hr"].astype(bool)]
+                elif only == "Barrels" and "is_barrel" in q.columns:
+                    q = q[q["is_barrel"].astype(bool)]
+                elif only == "Hard hit (95+)" and "ev" in q.columns:
+                    q = q[q["ev"] >= 95]
+                elif only == "375+ ft" and "distance" in q.columns:
+                    q = q[q["distance"] >= 375]
+                q = q.head(int(limit))
+
+                k = st.columns(5)
+                k[0].metric("BBE shown", len(q))
+                if "ev" in q.columns and len(q):
+                    k[1].metric("Avg EV", f"{q['ev'].mean():.1f}")
+                    k[2].metric("Max EV", f"{q['ev'].max():.1f}")
+                if "distance" in q.columns and len(q):
+                    k[3].metric("Max dist", f"{q['distance'].max():.0f}")
+                if "is_hr" in q.columns:
+                    k[4].metric("HRs", int(q["is_hr"].astype(bool).sum()))
+
+                show = [c for c in ["date", "pitcher", "arm", "pitch_name", "ev",
+                                    "launch_angle", "distance", "pitch_velocity",
+                                    "result", "trajectory"] if c in q.columns]
+                disp = q[show].rename(columns={
+                    "date": "Date", "pitcher": "Pitcher", "arm": "Arm",
+                    "pitch_name": "Pitch", "ev": "EV", "launch_angle": "Angle",
+                    "distance": "Dist", "pitch_velocity": "Velo",
+                    "result": "Result", "trajectory": "Traj",
+                })
+
+                # Rendered as HTML rather than a styled DataFrame: pandas'
+                # .style accessor needs jinja2, which isn't guaranteed on
+                # Streamlit Cloud. This also reproduces the old EV Log's
+                # per-cell colouring exactly -- EV green 95+ / red 85 and
+                # under, distance green 375+ / red 300 and under.
+                def cell(v: Any, kind: str = "") -> str:
+                    try:
+                        fv = float(v)
+                    except (TypeError, ValueError):
+                        return "<td>—</td>"
+                    if not math.isfinite(fv):
+                        return "<td>—</td>"
+                    colr = ""
+                    if kind == "ev":
+                        colr = C["green"] if fv >= 95 else C["red"] if fv <= 85 else ""
+                        shown = f"{fv:.1f}"
+                    elif kind == "dist":
+                        colr = C["green"] if fv >= 375 else C["red"] if fv <= 300 else ""
+                        shown = f"{fv:.0f}"
+                    else:
+                        shown = f"{fv:.0f}"
+                    style = f" style='color:{colr};font-weight:700'" if colr else ""
+                    return f"<td{style}>{shown}</td>"
+
+                rows_html = []
+                for _, r in q.iterrows():
+                    hr_mark = " 🔴" if r.get("is_hr") else ""
+                    rows_html.append(
+                        "<tr>"
+                        f"<td>{r.get('date', '')}</td>"
+                        f"<td>{r.get('pitcher', '')}</td>"
+                        f"<td>{r.get('arm', '')}</td>"
+                        f"<td style='color:{C['cyan']}'>{r.get('pitch_name', '')}</td>"
+                        + cell(r.get("ev"), "ev")
+                        + cell(r.get("launch_angle"))
+                        + cell(r.get("distance"), "dist")
+                        + cell(r.get("pitch_velocity"))
+                        + f"<td>{r.get('result', '')}{hr_mark}</td>"
+                        f"<td style='color:{C['text3']}'>{r.get('trajectory', '')}</td>"
+                        "</tr>"
+                    )
+                st.markdown(
+                    "<div style='max-height:440px;overflow:auto;border:1px solid "
+                    f"{C['border']};border-radius:12px'>"
+                    f"<table style='width:100%;border-collapse:collapse;"
+                    f"font-family:{NUM_FONT};font-size:11px'>"
+                    f"<thead><tr style='position:sticky;top:0;background:{C['bg3']};"
+                    f"color:{C['text3']};text-align:left'>"
+                    "<th>Date</th><th>Pitcher</th><th>Arm</th><th>Pitch</th><th>EV</th>"
+                    "<th>Angle</th><th>Dist</th><th>Velo</th><th>Result</th><th>Traj</th>"
+                    "</tr></thead><tbody>" + "".join(rows_html) + "</tbody></table></div>",
+                    unsafe_allow_html=True,
+                )
+                st.caption("EV green 95+ · red 85− | Dist green 375+ · red 300− | 🔴 home run")
+
+                st.markdown("**Contact quality by day**")
+                cc1, cc2 = st.columns(2)
+                with cc1:
+                    candles(edf, "date", "ev", "Exit velocity", unit="mph")
+                with cc2:
+                    candles(edf, "date", "distance", "Distance", unit="ft")
+                st.caption(
+                    "Each candle is one day: opens on that day's first batted ball, "
+                    "closes on its last, wick spans weakest to hardest contact."
+                )
+
+        # ── PITCH ───────────────────────────────────────────────────────────
+        with pitchtab:
+            prof = detail.get("batter_pitch_type_profile") or {}
+            summary = detail.get("pitch_type_summary") or prof.get("pitch_type_summary")
+            if isinstance(summary, list) and summary:
+                sdf = pd.DataFrame(summary)
+                cols = [c for c in ["pitch_type", "seen", "bbe", "avg_ev", "avg_la",
+                                    "max_dist", "hr", "hr_per_bbe", "xbh",
+                                    "hard_hit_pct", "hard_hit_rate"] if c in sdf.columns]
+                st.markdown("**By pitch type**")
+                # Heatmap normalises each metric to 0-100 across the pitch
+                # types so they're comparable on one colour scale -- raw
+                # avg_ev (~90) and hr_per_bbe (~0.03) can't share an axis.
+                metrics = [c for c in ["avg_ev", "avg_la", "max_dist", "hr_per_bbe",
+                                       "hard_hit_rate", "hard_hit_pct",
+                                       "barrel_like_rate", "good_contact_rate"]
+                           if c in sdf.columns]
+                if metrics and "pitch_type" in sdf.columns:
+                    hm = sdf.set_index("pitch_type")[metrics].apply(pd.to_numeric, errors="coerce")
+                    norm = hm.copy()
+                    for c in norm.columns:
+                        lo, hi = norm[c].min(), norm[c].max()
+                        norm[c] = 50.0 if hi == lo else (norm[c] - lo) / (hi - lo) * 100
+                    heatmap(norm.round(0), "Damage by pitch type (0-100 within each column)",
+                            height=max(240, 30 * len(norm) + 90))
+                st.dataframe(sdf[cols], width="stretch", hide_index=True)
+            else:
+                st.info("No pitch-type profile published for this player yet.")
+
+            arsenal = load_detail("pitcher", p.get("pitcher_id"))
+            mix = (arsenal.get("pitcher_pitch_mix") or {}).get("usage") or {}
+            if mix:
+                st.markdown(f"**{txt(p, 'pitcher_name')} — pitch usage**")
+                st.bar_chart(pd.DataFrame({"usage %": mix}), height=240, color="#f97316")
+
+        # ── SPRAY ───────────────────────────────────────────────────────────
+        with spraytab:
+            if not bbe:
+                st.info("No spray data published for this player yet.")
+            else:
+                sdf = pd.DataFrame(bbe)
+                for col in ("hc_x", "hc_y", "distance", "ev", "launch_angle"):
+                    if col in sdf.columns:
+                        sdf[col] = pd.to_numeric(sdf[col], errors="coerce")
+                g1, g2 = st.columns(2)
+                with g1:
+                    st.caption("Spray map")
+                    if {"hc_x", "hc_y"}.issubset(sdf.columns):
+                        fld = sdf.dropna(subset=["hc_x", "hc_y"]).copy()
+                        fld["x"] = fld["hc_x"] - 125.42
+                        fld["y"] = 198.27 - fld["hc_y"]
+                        st.scatter_chart(fld, x="x", y="y", height=340,
+                                         color="result" if "result" in fld.columns else None,
+                                         size="distance" if "distance" in fld.columns else None)
+                with g2:
+                    st.caption("Launch angle vs distance")
+                    if {"launch_angle", "distance"}.issubset(sdf.columns):
+                        st.scatter_chart(sdf, x="launch_angle", y="distance", height=340,
+                                         color="result" if "result" in sdf.columns else None)
+                if "lane" in sdf.columns:
+                    st.caption("By field lane")
+                    st.bar_chart(
+                        pd.DataFrame({"batted balls": sdf["lane"].replace("", "—").value_counts()}),
+                        height=220, color="#34d399")
 
 # ── WATCHLIST ───────────────────────────────────────────────────────────────
+def watch_card_html(p: Dict[str, Any]) -> str:
+    """Compact grid card: badges, score + grade top-right, pills, stat line."""
+    rc = role_config(p)
+    role_label, role_color = rc if rc else (tier_role(p), tier_color(tier_role(p)))
+    hrw = HRW_MAP.get(txt(p, "hrw_zone"))
+    score = nn(p, "top_board_score_v2") or hr_score(p)
+
+    badges = ""
+    if hrw:
+        badges += hrw[0]
+    if p.get("weak_spot_flag"):
+        badges += "⭐"
+    if is_aligned(p):
+        badges += "🧩"
+    if nn(p, "pitch_type_match_score") >= 80:
+        badges += "🎯"
+
+    pills = bubble("", role_label, role_color)
+    if txt(p, "best_use"):
+        pills += bubble("", txt(p, "best_use")[:22], C["text2"])
+    if is_aligned(p):
+        pills += bubble("🧩", "Aligned Signals", C["purple"])
+    extra = ""
+    if txt(p, "matchup_label"):
+        extra += bubble("", txt(p, "matchup_label"), C["cyan"])
+    if nn(p, "pitch_type_match_score") >= 80:
+        extra += bubble("", f"PMix: {txt(p, 'best_damage_pitch_v31', default='fit')}", C["cyan"])
+    if pull_rate(p) >= 0.6:
+        extra += bubble("", f"Pull {pull_rate(p) * 100:.0f}%", C["green"])
+    if nn(p, "last5_hr") >= 2:
+        extra += bubble("", f"L5 {int(nn(p, 'last5_hr'))}HR", C["orange"])
+
+    return (
+        f"<div style='background:{C['bg2']};border:1px solid {C['border']};"
+        f"border-left:3px solid {role_color};border-radius:12px;padding:10px 12px;"
+        f"margin-bottom:10px;height:100%'>"
+        f"<div style='display:flex;justify-content:space-between;align-items:flex-start'>"
+        f"<div style='min-width:0'>"
+        f"<div style='font-size:13px;font-weight:700'>{badges} {name_of(p)}</div>"
+        f"<div style='font-size:10px;color:{C['text3']};font-family:{NUM_FONT}'>"
+        f"{team_of(p)} vs {opp_of(p)} · {p.get('lineup_spot', '—')} · "
+        f"{txt(p, 'bats', default='?')}</div></div>"
+        f"<div style='text-align:right;flex-shrink:0'>"
+        f"<div style='font-size:20px;font-weight:800;color:{role_color};"
+        f"font-family:{NUM_FONT};line-height:1'>{score:.0f}</div>"
+        f"<div style='font-size:10px;color:{C['text3']}'>{grade_for(p, 'hr')}</div>"
+        f"</div></div>"
+        f"<div style='margin:6px 0 4px'>{pills}</div>"
+        f"<div style='margin-bottom:6px'>{extra}</div>"
+        f"<div style='font-size:10px;color:{C['text3']};font-family:{NUM_FONT}'>"
+        f"BA {nn(p, 'season_avg'):.3f} · HR {int(nn(p, 'season_hr'))} · "
+        f"K {nn(p, 'season_k_rate') * 100:.0f}% · BABIP {nn(p, 'babip'):.3f} · "
+        f"WHIP {nn(p, 'pitcher_whip'):.1f}</div>"
+        f"</div>"
+    )
+
+
 with tab_watch:
     if not st.session_state.watch:
         st.info("No players on your watchlist yet — add them from the Player tab.")
     else:
-        watched = [p for p in players if name_of(p) in st.session_state.watch]
-        st.caption(f"{len(watched)} players watched")
-        for p in sorted(watched, key=hr_score, reverse=True):
-            player_card(p)
-        st.caption("Saved in the page URL — bookmark it and the list comes back.")
-        if st.button("Clear watchlist"):
+        watched = sorted(
+            [p for p in players if name_of(p) in st.session_state.watch],
+            key=hr_score, reverse=True,
+        )
+        hdr_l, hdr_r = st.columns([4, 1])
+        hdr_l.markdown(f"### Watchlist\n{len(watched)} saved")
+        if hdr_r.button("Clear All", width="stretch"):
             st.session_state.watch = []
             persist_watch()
             st.rerun()
+
+        # Four across, like the old grid.
+        per_row = 4
+        for i in range(0, len(watched), per_row):
+            cols = st.columns(per_row)
+            for col, p in zip(cols, watched[i:i + per_row]):
+                with col:
+                    st.markdown(watch_card_html(p), unsafe_allow_html=True)
+                    b1, b2 = st.columns([3, 1])
+                    if b1.button("+ Add to Slip", key=f"slip_{name_of(p)}_{i}",
+                                 width="stretch"):
+                        st.session_state.slip.append(
+                            f"{name_of(p)} — {txt(p, 'best_bet_type', default='HR')}")
+                        st.rerun()
+                    if b2.button("★", key=f"unwatch_{name_of(p)}_{i}", width="stretch",
+                                 help="Remove from watchlist"):
+                        st.session_state.watch = [
+                            w for w in st.session_state.watch if w != name_of(p)]
+                        persist_watch()
+                        st.rerun()
+
+        st.caption("Saved in the page URL — bookmark it and the list comes back.")
 
 # ── BOT REPORT ──────────────────────────────────────────────────────────────
 with tab_bot:
