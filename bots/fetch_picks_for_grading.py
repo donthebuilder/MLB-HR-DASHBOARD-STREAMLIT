@@ -26,6 +26,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -37,8 +38,13 @@ try:
 except Exception:  # pragma: no cover
     PHOENIX = None
 
-GITHUB_REPO = "donthebuilder/MLB-HR-DASHBOARD"
-DATA_BRANCH = "data"
+# Derive the repo from the Actions environment rather than hardcoding it.
+# GITHUB_REPOSITORY is always set by GitHub Actions ("owner/name"), so this
+# follows the repo it's actually running in. The previous hardcoded value
+# still pointed at the OLD repo after the migration, so every fetch 404'd
+# and took the spray-cache and companion jobs down with it.
+GITHUB_REPO = os.environ.get("GITHUB_REPOSITORY", "").strip() or "donthebuilder/MLB-HR-DASHBOARD-STREAMLIT"
+DATA_BRANCH = os.environ.get("DATA_BRANCH", "data").strip() or "data"
 RAW_BASE = f"https://raw.githubusercontent.com/{GITHUB_REPO}/{DATA_BRANCH}"
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
