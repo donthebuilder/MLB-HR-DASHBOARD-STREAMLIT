@@ -1,13 +1,14 @@
+# Palette lifted verbatim from the old site's lib/theme.js so the Streamlit
+# build matches what the Next.js dashboard looked like.
 [theme]
 base = "dark"
-primaryColor = "#f5a524"
-backgroundColor = "#0d1117"
-secondaryBackgroundColor = "#161b22"
-textColor = "#e6edf3"
+primaryColor = "#f97316"          # C.orange
+backgroundColor = "#09090b"       # C.bg
+secondaryBackgroundColor = "#111113"  # C.bg2
+textColor = "#f4f4f5"             # C.text
+font = "sans serif"
 
 [server]
-# The app fetches its data over HTTPS from the data branch, so it never needs
-# to serve large local files. Keeps memory well under the Cloud limit.
 maxUploadSize = 5
 
 [browser]
