@@ -1343,13 +1343,16 @@ if not players:
 
 with st.sidebar:
     teams = sorted({team_of(p) for p in players if team_of(p)})
-    team_pick = st.multiselect("Team", teams)
-    query = st.text_input("Search player / pitcher", "")
-    lane_label = st.selectbox("Lane", [lbl for _, lbl in LANES])
+    # Explicit keys so the "Reset filters" button below can clear them all in
+    # one go -- without keys Streamlit auto-generates names that can't be
+    # popped from session_state.
+    team_pick = st.multiselect("Team", teams, key="f_team")
+    query = st.text_input("Search player / pitcher", "", key="f_query")
+    lane_label = st.selectbox("Lane", [lbl for _, lbl in LANES], key="f_lane")
     lane_key = next(k for k, lbl in LANES if lbl == lane_label)
-    min_hr = st.slider("Min HR score", 0, 100, 0, step=5)
-    confirmed_only = st.checkbox("Confirmed lineups only")
-    aligned_only = st.checkbox("🧩 Aligned only")
+    min_hr = st.slider("Min HR score", 0, 100, 0, step=5, key="f_minhr")
+    confirmed_only = st.checkbox("Confirmed lineups only", key="f_conf")
+    aligned_only = st.checkbox("🧩 Aligned only", key="f_aligned")
     st.divider()
 
     # Auto-refresh. The old site polled every 45s while games were live and
@@ -1413,29 +1416,66 @@ def apply_filters(pool: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
 view = apply_filters(players)
 
+# A filter combination that matches nobody used to leave every tab showing
+# "No players match these filters" with no hint as to WHICH filter did it or
+# how to undo it -- easy to hit with Aligned-only plus a min HR score, and it
+# looks exactly like the data failing to load.
+_active_filters = [
+    lbl for lbl, on in (
+        (f"Team: {', '.join(team_pick)}" if team_pick else "", bool(team_pick)),
+        (f"Search: “{query}”", bool(query)),
+        (f"Min HR ≥ {min_hr}", bool(min_hr)),
+        ("Confirmed lineups only", bool(confirmed_only)),
+        ("Aligned only", bool(aligned_only)),
+        (f"Lane: {lane_key}", lane_key != "all"),
+    ) if on
+]
+if _active_filters:
+    with st.sidebar:
+        st.caption("**Active filters** — " + " · ".join(_active_filters))
+        if st.button("↩︎ Reset filters", width="stretch", key="resetfilters"):
+            for k in ("f_team", "f_query", "f_minhr", "f_conf", "f_aligned", "f_lane"):
+                st.session_state.pop(k, None)
+            st.rerun()
+
 # ── HEADER ──────────────────────────────────────────────────────────────────
-h1, h2 = st.columns([3, 2])
-with h1:
-    st.title(f"{slate.capitalize()}'s Slate")
-    games = len({p.get("game_pk") for p in players})
-    st.caption(f"{games} games · {len(players)} hitters · {len(view)} after filters")
-with h2:
-    hrs = [hr_score(p) for p in players]
-    m = st.columns(4)
-    m[0].metric("HR 80+", sum(1 for x in hrs if x >= 80))
-    m[1].metric("HR 90+", sum(1 for x in hrs if x >= 90))
-    m[2].metric("🧩 Aligned", sum(1 for p in players if is_aligned(p)))
-    m[3].metric("Confirmed", sum(1 for p in players if p.get("lineup_confirmed")))
+# Metrics sit BELOW the title on their own full-width row. They used to share
+# a two-column split with it, and because st.title is so much taller than a
+# metric, the numbers rendered level with the top of the page and got clipped
+# by the header bar -- every screenshot showed "HR 80+" cut in half.
+st.title(f"{slate.capitalize()}'s Slate")
+games = len({p.get("game_pk") for p in players})
+filtered_out = len(players) - len(view)
+st.caption(
+    f"{games} games · {len(players)} hitters"
+    + (f" · **{filtered_out} hidden by filters**" if filtered_out else "")
+)
+
+hrs = [hr_score(p) for p in players]
+m = st.columns(6)
+m[0].metric("Games", games)
+m[1].metric("Hitters", len(view))
+m[2].metric("HR 80+", sum(1 for x in hrs if x >= 80))
+m[3].metric("HR 90+", sum(1 for x in hrs if x >= 90))
+m[4].metric("🧩 Aligned", sum(1 for p in players if is_aligned(p)))
+m[5].metric("✅ Confirmed", sum(1 for p in players if p.get("lineup_confirmed")))
+
+st.divider()
 
 # Tab order matches the old site's lib/theme.js TABS list, so muscle memory
 # carries over. Player is new: Streamlit has no modal, so what used to be
 # PlayerModal is a tab instead.
+#
+# Labels are kept SHORT on purpose. At 16 tabs the full names ("Pair History",
+# "Scoreboard", "Watchlist") overflowed the strip, so Streamlit collapsed the
+# tail behind a scroll arrow -- Spray and Guide were unreachable without
+# noticing the little chevron. These fit on one row.
 (tab_games, tab_board, tab_due, tab_hitshrr, tab_pitchers, tab_pairs, tab_bot,
  tab_pools, tab_pairhist, tab_scoreboard, tab_leaders, tab_results, tab_player,
  tab_watch, tab_spray, tab_guide) = st.tabs([
-    "🗓️ Games", "🏆 HR Board", "💣 Due Board", "💥 Hits & HRR", "⚾ Pitchers",
-    "🎯 Pairs", "🤖 Bot", "🧩 Pools", "🧬 Pair History", "📊 Scoreboard",
-    "🥇 Leaders", "✅ Results", "🔍 Player", "⭐ Watchlist", "💦 Spray", "📖 Guide",
+    "🗓️ Games", "🏆 HR", "💣 Due", "💥 Hits", "⚾ Pitchers",
+    "🎯 Pairs", "🤖 Bot", "🧩 Pools", "🧬 History", "📊 Board",
+    "🥇 Leaders", "✅ Results", "🔍 Player", "⭐ Watch", "💦 Spray", "📖 Guide",
 ])
 
 # ── BOARD ───────────────────────────────────────────────────────────────────
@@ -1557,15 +1597,59 @@ with tab_games:
             horizontal=True,
         )
         ranked_games = gdf.sort_values(metric_choice, ascending=False)
-        hbar(
-            ranked_games["Game"].tolist(),
-            ranked_games[metric_choice].tolist(),
-            f"Games ranked by {metric_choice}",
-            ref=float(ranked_games[metric_choice].median()), ref_label="slate median",
-        )
+
+        rl, rr = st.columns([3, 2])
+        with rl:
+            hbar(
+                ranked_games["Game"].tolist(),
+                ranked_games[metric_choice].tolist(),
+                f"Games ranked by {metric_choice}",
+                ref=float(ranked_games[metric_choice].median()), ref_label="slate median",
+            )
+        with rr:
+            # Radar of the top games across every metric at once. The bar chart
+            # answers "which game is best on ONE metric"; this answers "what
+            # SHAPE is that game" -- a game that's 50 on everything and a game
+            # carried by a single 96 both rank high on a bar and look nothing
+            # alike here. Slate median is drawn as a filled baseline so a
+            # game's edges read as above or below par without doing the maths.
+            radar_axes = ["Game Score", "Med HR", "Med HRR", "Med HRW", "Med DC", "Top HR"]
+            top_n = ranked_games.head(3)
+            fig = go.Figure()
+            fig.add_trace(go.Scatterpolar(
+                r=[float(gdf[a].median()) for a in radar_axes] + [float(gdf[radar_axes[0]].median())],
+                theta=radar_axes + [radar_axes[0]],
+                fill="toself", name="slate median",
+                line=dict(color=C["text3"], width=1, dash="dot"),
+                fillcolor="rgba(148,163,184,0.10)",
+            ))
+            ramp = [C["orange"], C["cyan"], C["purple"]]
+            for i, (_, row) in enumerate(top_n.iterrows()):
+                fig.add_trace(go.Scatterpolar(
+                    r=[float(row[a]) for a in radar_axes] + [float(row[radar_axes[0]])],
+                    theta=radar_axes + [radar_axes[0]],
+                    name=str(row["Game"]), line=dict(color=ramp[i % len(ramp)], width=2),
+                ))
+            fig.update_layout(
+                polar=dict(
+                    bgcolor="rgba(0,0,0,0)",
+                    radialaxis=dict(visible=True, range=[0, 100], gridcolor=C["border"],
+                                    tickfont=dict(size=8, color=C["text3"])),
+                    angularaxis=dict(gridcolor=C["border"],
+                                     tickfont=dict(size=9, color=C["text2"])),
+                ),
+            )
+            _layout(fig, 360, f"Top 3 by {metric_choice} — shape vs slate")
+            fig.update_layout(showlegend=True,
+                              legend=dict(orientation="h", y=-0.12, x=0,
+                                          font=dict(size=9), bgcolor="rgba(0,0,0,0)"))
+            st.plotly_chart(fig, width="stretch")
+
         st.caption(
             "Game Score = median across every hitter of that hitter's median "
-            "HR / HRR / HRW / DC. Higher = more of the lineup is live for a homer."
+            "HR / HRR / HRW / DC. Higher = more of the lineup is live for a homer. "
+            "On the radar, a wide even shape is a live lineup top to bottom; a "
+            "single long spike is one hitter carrying the game."
         )
 
         # Heatmap: every game against every metric at once, so a game that's
@@ -1626,30 +1710,30 @@ with tab_games:
                     picked.setdefault(r, []).append(p)
 
             if picked:
-                # Flattened in role order first, so the row always reads
-                # TOP, HR, HIT, HRR, TB left to right no matter how many of
-                # each the bot stamped.
-                flat = [
-                    (r, p)
-                    for r in GAME_ROLE_ORDER
-                    for p in sorted(picked.get(r, []),
-                                    key=lambda x, _r=r: score_for(x, GAME_ROLE_SCORE[_r]),
-                                    reverse=True)
-                ]
+                # Exactly one pick per role: TOP, HR, HIT, HRR, TB -- five
+                # tiles, one row, always the same five columns in the same
+                # order. The bot stamps TWO players for HIT and HRR, which is
+                # why this used to spill to a second row and give some games
+                # seven cards and others five; the extras are the runners-up
+                # and they're all still in the lineup table below. Keeping the
+                # best of each by that role's OWN score, not by HR score --
+                # the second HIT pick often out-scores the first on HR while
+                # being the worse hit play.
+                flat = []
+                for r in GAME_ROLE_ORDER:
+                    cands = picked.get(r) or []
+                    if cands:
+                        flat.append(
+                            (r, max(cands, key=lambda x, _r=r: score_for(x, GAME_ROLE_SCORE[_r])))
+                        )
                 st.markdown(f"**Game picks** ({len(flat)})")
-                # Five across matches the five roles. Wider rows squeeze the
-                # names onto three lines; narrower ones stop the game fitting
-                # on a screen, which was the whole problem being fixed.
-                per_row = 5
-                for start in range(0, len(flat), per_row):
-                    chunk = flat[start:start + per_row]
-                    cols = st.columns(per_row)
-                    for col, (r, p) in zip(cols, chunk):
-                        with col:
-                            st.markdown(game_pick_tile(p, r), unsafe_allow_html=True)
-                            if st.button("Details", width="stretch",
-                                         key=f"gt_{gpk}_{r}_{p.get('player_id')}"):
-                                player_modal(p)
+                cols = st.columns(5)
+                for col, (r, p) in zip(cols, flat):
+                    with col:
+                        st.markdown(game_pick_tile(p, r), unsafe_allow_html=True)
+                        if st.button("Details", width="stretch",
+                                     key=f"gt_{gpk}_{r}_{p.get('player_id')}"):
+                            player_modal(p)
             else:
                 st.caption("No stamped game picks for this game — showing top HR scores.")
                 top4 = sorted(gp, key=hr_score, reverse=True)[:5]
@@ -1661,11 +1745,31 @@ with tab_games:
                                      key=f"gf_{gpk}_{p.get('player_id')}"):
                             player_modal(p)
 
-            # Plain table rather than a nested expander: expanders inside
-            # expanders render awkwardly and hide the lineup behind a second
-            # click for no benefit.
-            st.markdown(f"**Full lineup ({len(gp)})**")
-            st.dataframe(pd.DataFrame([{
+            # Lineups are split by team. Both clubs used to share one table
+            # sorted by batting order, so it ran 1,1,2,2,3,3... -- two
+            # different #3 hitters facing two different pitchers on adjacent
+            # rows. You had to read the Team column on every line to know
+            # whose order you were looking at.
+            teams_here = sorted({team_of(p) for p in gp if team_of(p)})
+            st.markdown("**Lineups**")
+            if len(teams_here) > 1:
+                pick_team = st.radio(
+                    "Lineup", teams_here + ["Both"], horizontal=True,
+                    key=f"lu_{gpk}", label_visibility="collapsed",
+                )
+            else:
+                pick_team = teams_here[0] if teams_here else "Both"
+
+            lineup_rows = gp if pick_team == "Both" else [
+                p for p in gp if team_of(p) == pick_team
+            ]
+            opp_pitcher = txt(
+                max(lineup_rows, key=hr_score) if lineup_rows else head, "pitcher_name"
+            )
+            if pick_team != "Both" and opp_pitcher:
+                st.caption(f"{pick_team} vs {opp_pitcher} · {len(lineup_rows)} hitters")
+
+            lineup_tbl = pd.DataFrame([{
                 "Spot": p.get("lineup_spot"), "Player": name_of(p),
                 "Team": team_of(p), "B": txt(p, "bats", default="?"),
                 "Role": tier_role(p), "HR": round(hr_score(p), 1),
@@ -1674,12 +1778,21 @@ with tab_games:
                 "DC": round(nn(p, "damage_conversion_score"), 1),
                 "Due": round(nn(p, "hr_due_score"), 1),
                 "⭐": "⭐" if p.get("weak_spot_flag") else "",
-            } for p in sorted(gp, key=lambda x: nn(x, "lineup_spot", default=99.0))]),
-                width="stretch", hide_index=True)
+            } for p in sorted(lineup_rows,
+                              key=lambda x: (team_of(x),
+                                             nn(x, "lineup_spot", default=99.0)))])
+            # Team column is noise once you've filtered to one club.
+            if pick_team != "Both" and "Team" in lineup_tbl.columns:
+                lineup_tbl = lineup_tbl.drop(columns=["Team"])
+            st.dataframe(lineup_tbl, width="stretch", hide_index=True)
 
 # ── SCOREBOARD ──────────────────────────────────────────────────────────────
 with tab_scoreboard:
-    st.caption(f"{len(view)} batters · sortable — click any column header")
+    st.subheader("Scoreboard")
+    st.caption(
+        f"Every one of the {len(view)} hitters on the slate, all scores in one "
+        "sortable grid. Click any column header to sort by it."
+    )
     board = [{
         "Player": name_of(p), "Team": team_of(p), "Opp": opp_of(p),
         "Role": tier_role(p), "HR": round(hr_score(p), 1),
@@ -2094,7 +2207,11 @@ with tab_due:
 
 # ── HITS / HRR ──────────────────────────────────────────────────────────────
 with tab_hitshrr:
-    st.caption("Production and contact profiles — hits, runs, RBI, extra bases.")
+    st.subheader("Hits & HRR")
+    st.caption(
+        "The non-homer plays: base-hit floor, total bases, and HRR "
+        "(runs + RBI). Use this when the HR board is thin."
+    )
     hh1, hh2 = st.columns([2, 1])
     hh_kind = hh1.radio("Type", ["HRR (runs + RBI)", "Hit (base-hit floor)", "Base / XBH"], horizontal=True)
     hh_n = hh2.number_input("Show", 5, 100, 30, step=5, key="hhn")
@@ -2237,6 +2354,11 @@ with tab_pools:
 # schedule since the migration, but nothing in the app ever read it -- there
 # was no tab, so the whole dataset was invisible. This is the search over it.
 with tab_pairhist:
+    st.subheader("Pair History")
+    st.caption(
+        "Which two hitters have actually gone deep on the SAME DAY this "
+        "season — built from real HR events, not projections."
+    )
     hist = load_json("public/data/current/pair_history_summary.json") or {}
     top_pairs = hist.get("top_pairs") or []
 
@@ -2318,26 +2440,119 @@ with tab_results:
         st.info(f"No {which.lower()} results yet — grading runs after games finish.")
     else:
         rdf = pd.DataFrame(rrows)
-        st.caption(f"{res.get('label', '')} · {res.get('date', '')} · {len(rdf)} graded picks")
+        for c in ("got_hr", "got_base_hit", "got_xbh", "actual_hr", "actual_hits",
+                  "actual_tb", "actual_rbi", "actual_runs", "hr_score", "rank"):
+            if c in rdf.columns:
+                rdf[c] = pd.to_numeric(rdf[c], errors="coerce").fillna(0)
+
+        graded_mask = (rdf["grade"].astype(str).str.upper() != "PENDING"
+                       if "grade" in rdf.columns else pd.Series(True, index=rdf.index))
+        n_graded, n_pending = int(graded_mask.sum()), int((~graded_mask).sum())
+
+        st.caption(f"{res.get('label', '')} · {res.get('date', '')} · {len(rdf)} picks tracked")
+
+        # An all-PENDING board used to render as a wall of zeros that looked
+        # like the model went 0-for-120. It didn't -- the games hadn't
+        # started. Say so plainly before showing a single number.
+        if n_graded == 0:
+            st.info(
+                f"All {n_pending} picks are still **PENDING** — no game on this "
+                "slate has started yet. Hit rates fill in as games go final; "
+                "grading runs hourly from 11am Phoenix."
+            )
+
         k = st.columns(5)
-        k[0].metric("Graded", len(rdf))
+        k[0].metric("Picks", len(rdf), delta=f"{n_graded} settled" if n_graded else None)
         for i, (lbl, col) in enumerate(
             [("HRs", "got_hr"), ("Base hits", "got_base_hit"), ("XBH", "got_xbh")], start=1
         ):
-            k[i].metric(lbl, int(pd.to_numeric(rdf.get(col, 0), errors="coerce").fillna(0).sum()))
-        if "got_hr" in rdf.columns and len(rdf):
-            rate = pd.to_numeric(rdf["got_hr"], errors="coerce").fillna(0).mean()
-            k[4].metric("HR hit rate", f"{rate * 100:.1f}%")
+            k[i].metric(lbl, int(rdf.get(col, pd.Series(dtype=float)).sum()))
+        # Rate over SETTLED picks only. Dividing by every pick including the
+        # unplayed ones dragged the hit rate to 0.0% all afternoon and made a
+        # good slate look like a disaster.
+        if "got_hr" in rdf.columns and n_graded:
+            rate = rdf.loc[graded_mask, "got_hr"].mean()
+            k[4].metric("HR hit rate", f"{rate * 100:.1f}%",
+                        help=f"Of the {n_graded} settled picks.")
+        else:
+            k[4].metric("HR hit rate", "—", help="Fills in once games go final.")
 
         if "grade" in rdf.columns:
-            st.markdown("##### Grade breakdown")
-            st.dataframe(rdf["grade"].value_counts().rename_axis("grade").reset_index(name="count"),
-                         width="stretch", hide_index=True)
-        st.dataframe(rows_to_df(rrows, [
-            "name", "team", "pick_type", "bet_type", "rank", "hr_score",
-            "actual_hr", "actual_hits", "actual_tb", "actual_rbi", "actual_runs",
-            "grade", "outcome_text", "game_status",
-        ]), width="stretch", hide_index=True, height=520)
+            gc = rdf["grade"].astype(str).str.upper().value_counts()
+            gl, gr = st.columns([2, 3])
+            with gl:
+                # Grades on a fixed good-to-bad colour scale rather than the
+                # value-count table that was here. PENDING is deliberately
+                # grey, not green -- it's not an outcome.
+                GRADE_COLOR = {
+                    "HR": C["green"], "WIN": C["green"], "HIT": "#4cb96a",
+                    "XBH": "#7fd894", "PARTIAL": C["yellow"],
+                    "MISS": C["red"], "LOSS": C["red"], "PENDING": C["text3"],
+                }
+                fig = go.Figure(go.Bar(
+                    x=gc.values, y=gc.index, orientation="h",
+                    marker_color=[GRADE_COLOR.get(g, C["cyan"]) for g in gc.index],
+                    text=gc.values, textposition="outside",
+                    textfont=dict(size=10, color=C["text2"]),
+                ))
+                _layout(fig, max(200, 34 * len(gc) + 80), "Grade breakdown")
+                fig.update_xaxes(showgrid=False, showticklabels=False)
+                st.plotly_chart(fig, width="stretch")
+            with gr:
+                if n_graded:
+                    # Did the model's ranking actually predict anything? Hit
+                    # rate by score band answers that in one look; the raw
+                    # table never did.
+                    g = rdf.loc[graded_mask].copy()
+                    g["band"] = pd.cut(g["hr_score"], [0, 40, 55, 70, 85, 101],
+                                       labels=["<40", "40-55", "55-70", "70-85", "85+"],
+                                       right=False)
+                    by_band = g.groupby("band", observed=True)["got_hr"].agg(["mean", "size"])
+                    by_band = by_band[by_band["size"] > 0]
+                    if len(by_band):
+                        hbar([f"{b}  (n={int(r['size'])})" for b, r in by_band.iterrows()],
+                             [float(r["mean"]) * 100 for _, r in by_band.iterrows()],
+                             "HR hit rate by model score band", fmt="{:.0f}%")
+                        st.caption(
+                            "If the model is working, these climb left to right."
+                        )
+                else:
+                    st.caption("Hit-rate-by-score-band appears once picks settle.")
+
+        # Settled picks first — the whole point of opening this tab is seeing
+        # what cashed, and those rows were previously buried under 100+
+        # PENDING lines sorted by rank.
+        sort_key = rdf["grade"].astype(str).str.upper().eq("PENDING").astype(int)
+        rdf = rdf.assign(_pending=sort_key).sort_values(
+            ["_pending", "actual_hr", "actual_tb"],
+            ascending=[True, False, False],
+        ).drop(columns=["_pending"])
+
+        show_only = st.radio(
+            "Show", ["All", "Settled only", "Hit a HR", "Pending"],
+            horizontal=True, key="resfilter",
+        )
+        v = rdf
+        if show_only == "Settled only":
+            v = rdf[rdf["grade"].astype(str).str.upper() != "PENDING"]
+        elif show_only == "Hit a HR":
+            v = rdf[rdf.get("got_hr", 0) > 0]
+        elif show_only == "Pending":
+            v = rdf[rdf["grade"].astype(str).str.upper() == "PENDING"]
+
+        if v.empty:
+            st.caption("Nothing matches that filter yet.")
+        else:
+            st.dataframe(rows_to_df(v.to_dict("records"), [
+                "name", "team", "pick_type", "bet_type", "rank", "hr_score",
+                "actual_hr", "actual_hits", "actual_tb", "actual_rbi", "actual_runs",
+                "grade", "outcome_text",
+            ]), width="stretch", hide_index=True, height=480)
+            st.download_button(
+                "⬇️ CSV", v.to_csv(index=False).encode(),
+                f"mlb_results_{which.lower()}_{res.get('date', '')}.csv",
+                "text/csv", key="rescsv",
+            )
 
 # ── PLAYER DETAIL ───────────────────────────────────────────────────────────
 # Modelled on the old PlayerModal: identity header, pill row, then sub-tabs
@@ -2824,7 +3039,12 @@ def watch_card_html(p: Dict[str, Any]) -> str:
 
 with tab_watch:
     if not st.session_state.watch:
-        st.info("No players on your watchlist yet — add them from the Player tab.")
+        st.info(
+            "No players on your watchlist yet. Add them with the ⭐ Watch "
+            "button on the Player tab, or from any player pop-up. Your list "
+            "is saved in the page URL, so bookmarking or sharing that link "
+            "carries the same players with it."
+        )
     else:
         watched = sorted(
             [p for p in players if name_of(p) in st.session_state.watch],
