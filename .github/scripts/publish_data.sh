@@ -73,6 +73,9 @@ stage_local() {
   # The app fetches ONE of these (~82 KB) only when a player is opened, so
   # this never affects normal page load.
   [ -d "$SRC/data/current/detail" ] && cp -r "$SRC/data/current/detail" "$STAGE/public/data/current/" || true
+  # Situational splits (day/night, home/away, day-of-week, win/loss), one
+  # small file per hitter, fetched on demand by the Player tab.
+  [ -d "$SRC/data/current/splits" ] && cp -r "$SRC/data/current/splits" "$STAGE/public/data/current/" || true
   return 0
 }
 
@@ -94,6 +97,10 @@ carry_forward() {
   # would publish a tree with no detail/ and break every player detail view.
   [ -d "$PREV/public/data/current/detail" ] && [ ! -d "$STAGE/public/data/current/detail" ] \
     && cp -r "$PREV/public/data/current/detail" "$STAGE/public/data/current/" || true
+  # Same reasoning for splits: only the slate workflows rebuild them, so a
+  # grading run must carry them forward or the Splits tab goes blank.
+  [ -d "$PREV/public/data/current/splits" ] && [ ! -d "$STAGE/public/data/current/splits" ] \
+    && cp -r "$PREV/public/data/current/splits" "$STAGE/public/data/current/" || true
   return 0
 }
 
