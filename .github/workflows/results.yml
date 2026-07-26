@@ -64,6 +64,32 @@ jobs:
       - name: Grade live results
         run: python bots/live_results_tracker.py --date auto --live
 
+      # The Results tab's "Final" view was permanently empty because nothing
+      # ever produced results_final.json. live_results_tracker decides which
+      # file to write from `live_mode`, and live_mode is forced True whenever
+      # --date is auto/today/live -- so `--date auto --final-only` would STILL
+      # have written results_live.json. The date has to be passed explicitly.
+      #
+      # It's read back off the breakdown file that the fetch step just wrote
+      # rather than computed here, because "today" in Phoenix is not "today"
+      # in UTC for the 1am/3am Phoenix crons, and the slate on the data branch
+      # is whichever one the last Today run published.
+      #
+      # --final-only skips games still in progress, so the 7pm run grades the
+      # handful that are done and each later run overwrites with a fuller set;
+      # by the 3am run every game is final.
+      - name: Grade final results
+        run: |
+          D=$(ls bots/outputs/mlb_breakdown_today_*.json 2>/dev/null \
+              | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' | sort -u | tail -1)
+          if [ -z "$D" ]; then
+            echo "No breakdown file found — nothing to grade as final."
+            exit 0
+          fi
+          echo "Final-grading slate $D"
+          python bots/live_results_tracker.py --date "$D" --final-only
+        continue-on-error: true
+
       - name: Save SQLite cache
         uses: actions/cache/save@v4
         with:
