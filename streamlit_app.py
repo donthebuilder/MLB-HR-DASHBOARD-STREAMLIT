@@ -65,16 +65,30 @@ RAW_BASE = f"https://raw.githubusercontent.com/{GITHUB_REPO}/{DATA_BRANCH}"
 CACHE_TTL = 300
 REPO_ROOT = Path(__file__).resolve().parent
 
-# Palette copied verbatim from the old site's lib/theme.js — same hexes, so
-# the Streamlit build reads as the same product rather than a lookalike.
+# Palette matched to the trading terminal look: near-black chrome, a single
+# green ramp for magnitude, red reserved for genuinely bad, orange and purple
+# as the two accent lines (same roles they play on a chart's moving averages).
 C = {
-    "bg": "#09090b", "bg2": "#111113", "bg3": "#18181b",
+    "bg": "#0b0e11", "bg2": "#131722", "bg3": "#1b2130",
     "glass": "rgba(255,255,255,0.045)",
-    "border": "rgba(255,255,255,0.09)", "border2": "rgba(255,255,255,0.15)",
-    "text": "#f4f4f5", "text2": "#a1a1aa", "text3": "#71717a",
-    "orange": "#f97316", "yellow": "#f59e0b", "cyan": "#22d3ee",
-    "green": "#4ade80", "red": "#f87171", "purple": "#a78bfa", "blue": "#60a5fa",
+    "border": "rgba(255,255,255,0.09)", "border2": "rgba(255,255,255,0.16)",
+    "text": "#d1d4dc", "text2": "#a3a6af", "text3": "#787b86",
+    "orange": "#f5a623", "yellow": "#f5a623", "cyan": "#22d3ee",
+    "green": "#26a65b", "red": "#ef5350", "purple": "#7b68ee", "blue": "#2962ff",
 }
+
+# Heat ramp: DARK green = low/bad, LIGHT green = high/good. One hue means the
+# eye reads brightness as magnitude instead of trying to decode a rainbow.
+GREEN_SCALE = [
+    [0.00, "#06251a"],
+    [0.25, "#0b4b30"],
+    [0.50, "#12783f"],
+    [0.75, "#4cb96a"],
+    [1.00, "#b7f7c9"],
+]
+# Same ramp inverted, for metrics where a high number is bad for the hitter.
+GREEN_SCALE_R = [[1 - stop, colr] for stop, colr in reversed(GREEN_SCALE)]
+
 NUM_FONT = "'Roboto Mono','SF Mono','Cascadia Mono',Menlo,Consolas,monospace"
 
 st.markdown(
@@ -614,15 +628,13 @@ def heatmap(df: pd.DataFrame, title: str = "", height: int = 340,
     if df.empty:
         st.caption("Not enough data for this heatmap.")
         return
-    scale = [[0, "#0b1220"], [0.5, "#7c4a12"], [1, "#f97316"]]
-    if reverse:
-        scale = [[0, "#f97316"], [0.5, "#7c4a12"], [1, "#0b1220"]]
+    scale = GREEN_SCALE_R if reverse else GREEN_SCALE
     fig = go.Figure(go.Heatmap(
         z=df.values, x=list(df.columns), y=list(df.index),
         colorscale=scale, showscale=True,
         colorbar=dict(thickness=10, tickfont=dict(size=9, color=C["text3"])),
         text=[[fmt.format(v) if pd.notna(v) else "" for v in row] for row in df.values],
-        texttemplate="%{text}", textfont=dict(size=10),
+        texttemplate="%{text}", textfont=dict(size=10, color="#dfe6e9"),
         hovertemplate="%{y} · %{x}: %{z:.2f}<extra></extra>",
     ))
     _layout(fig, height, title)
@@ -913,7 +925,7 @@ with tab_board:
             st.bar_chart(
                 pd.DataFrame([{"Player": name_of(p), kind_label: round(score_for(p, kind), 1)}
                               for p in ranked[:15]]).set_index("Player"),
-                height=300, color="#f97316", horizontal=True,
+                height=300, color=C["orange"], horizontal=True,
             )
         with v2:
             st.markdown("**Score distribution — whole slate**")
@@ -924,7 +936,7 @@ with tab_board:
             bins = pd.cut(series, bins=range(0, 105, 5), right=False)
             hist = bins.value_counts().sort_index()
             hist.index = [f"{int(iv.left)}" for iv in hist.index]
-            st.bar_chart(pd.DataFrame({"players": hist}), height=300, color="#22d3ee")
+            st.bar_chart(pd.DataFrame({"players": hist}), height=300, color=C["cyan"])
             st.caption(f"median {series.median():.0f} · max {series.max():.0f}")
 
     for i, p in enumerate(ranked[:15], start=1):
@@ -1017,7 +1029,7 @@ with tab_games:
         ranked_games = gdf.sort_values(metric_choice, ascending=False)
         st.bar_chart(
             ranked_games.set_index("Game")[[metric_choice]],
-            height=320, color="#f97316", horizontal=True,
+            height=320, color=C["orange"], horizontal=True,
         )
         st.caption(
             "Game Score = median across every hitter of that hitter's median "
@@ -1154,7 +1166,7 @@ with tab_leaders:
         st.bar_chart(
             pd.DataFrame([{"Player": f"{name_of(p)} ({team_of(p)})", stat: round(v, 3)}
                           for p, v in lead[:chart_n]]).set_index("Player"),
-            height=max(320, 18 * chart_n), color="#a78bfa", horizontal=True,
+            height=max(320, 18 * chart_n), color=C["purple"], horizontal=True,
         )
         st.dataframe(pd.DataFrame([{
             "#": i, "Player": name_of(p) + (" 🧩" if is_aligned(p) else ""),
@@ -1312,7 +1324,7 @@ with tab_pitchers:
                 usage = r.get("pitcher_pitch_usage_pct") or r.get("pitcher_arsenal") or {}
                 if isinstance(usage, dict) and usage:
                     st.markdown(f"**Arsenal** — {txt(r, 'pitcher_arsenal_summary')}")
-                    st.bar_chart(pd.DataFrame({"usage %": usage}), height=240, color="#f97316")
+                    st.bar_chart(pd.DataFrame({"usage %": usage}), height=240, color=C["orange"])
                     if txt(r, "pitcher_mistake_pitch_v31"):
                         st.caption(f"Mistake pitch: {txt(r, 'pitcher_mistake_pitch_v31')}"
                                    + ("  ·  matches this hitter's damage pitch"
@@ -1331,13 +1343,51 @@ with tab_pitchers:
                 } for b in e["lineup"]])
                 st.dataframe(ldf, width="stretch", hide_index=True)
 
-                # Lineup-spot heatmap: shows at a glance where in the order
-                # this starter is most exposed.
+                # Two different questions, so two separate heatmaps.
+                #
+                # (1) TODAY'S HITTERS: the model scores of whoever is batting
+                #     in each spot right now. This is about the men, not the
+                #     pitcher -- it was previously mislabelled "Threat by
+                #     lineup spot", which implied the pitcher's own history.
                 if "Spot" in ldf.columns and ldf["Spot"].notna().any():
                     lh = ldf.dropna(subset=["Spot"]).copy()
                     lh["Spot"] = lh["Spot"].astype(int).astype(str)
                     lh = lh.set_index("Spot")[["HR", "HRR", "Hit", "PMix", "DC"]]
-                    heatmap(lh, "Threat by lineup spot", height=max(240, 26 * len(lh) + 90))
+                    heatmap(lh, "Today's hitters by lineup spot (model scores)",
+                            height=max(240, 26 * len(lh) + 90))
+
+                # (2) THE PITCHER'S OWN HISTORY: how he has actually been
+                #     damaged by each spot in the order, from
+                #     pitcher_lineup_spot_damage. This is the real "which
+                #     spot hurts him" answer.
+                spot_dmg = (load_detail("pitcher", e["pitcher_id"])
+                            .get("pitcher_lineup_spot_damage") or {})
+                if isinstance(spot_dmg, dict) and spot_dmg:
+                    sd = pd.DataFrame([{
+                        "Spot": str(v.get("spot", k)),
+                        "Damage": nn(v, "damage_score"),
+                        "SLG": nn(v, "slg") * 100,
+                        "ISO": nn(v, "iso") * 100,
+                        "HR rate": nn(v, "hr_rate") * 100,
+                        "Hard hit": nn(v, "hard_hit_rate") * 100,
+                        "Barrel": nn(v, "barrel_rate") * 100,
+                        "_pa": nn(v, "pa"),
+                        "_label": txt(v, "label", default=""),
+                    } for k, v in sorted(spot_dmg.items(), key=lambda kv: str(kv[0]))
+                        if isinstance(v, dict)])
+                    if not sd.empty:
+                        heatmap(
+                            sd.set_index("Spot")[
+                                ["Damage", "SLG", "ISO", "HR rate", "Hard hit", "Barrel"]],
+                            f"{e['pitcher_name']} — damage allowed BY lineup spot (his own history)",
+                            height=max(260, 26 * len(sd) + 90),
+                        )
+                        worst = sd.sort_values("Damage", ascending=False).iloc[0]
+                        st.caption(
+                            f"Most damaged in spot #{worst['Spot']} "
+                            f"({worst['_label']}, {int(worst['_pa'])} PA). "
+                            "SLG/ISO/rates shown ×100 so they share the colour scale."
+                        )
 
                 bp = txt(r, "bullpen_quality")
                 if bp:
@@ -1737,7 +1787,7 @@ with tab_player:
             mix = (arsenal.get("pitcher_pitch_mix") or {}).get("usage") or {}
             if mix:
                 st.markdown(f"**{txt(p, 'pitcher_name')} — pitch usage**")
-                st.bar_chart(pd.DataFrame({"usage %": mix}), height=240, color="#f97316")
+                st.bar_chart(pd.DataFrame({"usage %": mix}), height=240, color=C["orange"])
 
         # ── SPRAY ───────────────────────────────────────────────────────────
         with spraytab:
@@ -1767,7 +1817,7 @@ with tab_player:
                     st.caption("By field lane")
                     st.bar_chart(
                         pd.DataFrame({"batted balls": sdf["lane"].replace("", "—").value_counts()}),
-                        height=220, color="#34d399")
+                        height=220, color=C["green"])
 
 # ── WATCHLIST ───────────────────────────────────────────────────────────────
 def watch_card_html(p: Dict[str, Any]) -> str:
