@@ -1,0 +1,14 @@
+[theme]
+base = "dark"
+primaryColor = "#f5a524"
+backgroundColor = "#0d1117"
+secondaryBackgroundColor = "#161b22"
+textColor = "#e6edf3"
+
+[server]
+# The app fetches its data over HTTPS from the data branch, so it never needs
+# to serve large local files. Keeps memory well under the Cloud limit.
+maxUploadSize = 5
+
+[browser]
+gatherUsageStats = false
