@@ -51,7 +51,17 @@ jobs:
       - name: Run pair history cache
         run: |
           export MLB_DASHBOARD_DIR="$GITHUB_WORKSPACE"
+          # pair_history_cache.py's copy_to_site() refuses to write unless the
+          # target looks like the website repo -- it checks for public/ or
+          # app/. Neither exists in a fresh CI checkout: app/ went away with
+          # Next.js, and public/data is gitignored so public/ isn't tracked at
+          # all. So it printed "Website repo not found", kept the summary in
+          # bots/outputs, and the publish step below found nothing to publish.
+          # Every nightly run went green and shipped nothing for two weeks.
+          mkdir -p public/data
           python bots/pair_history_cache.py
+          echo "--- public/data after run ---"
+          ls -la public/data
 
       - name: Save pair history cache
         if: always()
