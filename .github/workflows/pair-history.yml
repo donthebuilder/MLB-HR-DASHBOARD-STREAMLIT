@@ -1,0 +1,76 @@
+name: Pair History Bot
+# Phoenix is UTC-7 year-round (no DST).
+# Runs at: 12:15am Phoenix time.
+on:
+  schedule:
+    - cron: '15 7 * * *'   # 12:15am PHX
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pair-history-bot
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r bots/requirements.txt
+
+      # STREAMLIT MIGRATION (2026-07-25): this job used to commit public/data
+      # and bots/outputs to main after every run. It now carries its cache
+      # between runs with actions/cache instead -- same incremental behavior,
+      # no repo growth, nothing pushed to main.
+      - name: Restore pair history cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            public/data/pair_history_cache.json
+            public/data/pair_history_summary.json
+            bots/pair_history_cache.json
+            bots/pair_history_summary.json
+          key: pair-history-${{ github.run_id }}
+          restore-keys: |
+            pair-history-
+
+      - name: Run pair history cache
+        run: |
+          export MLB_DASHBOARD_DIR="$GITHUB_WORKSPACE"
+          python bots/pair_history_cache.py
+
+      - name: Save pair history cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            public/data/pair_history_cache.json
+            public/data/pair_history_summary.json
+            bots/pair_history_cache.json
+            bots/pair_history_summary.json
+          key: pair-history-${{ github.run_id }}
+
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pair-history-logs-${{ github.run_id }}
+          path: |
+            outputs/
+            bots/outputs/
+          if-no-files-found: ignore
+          retention-days: 7

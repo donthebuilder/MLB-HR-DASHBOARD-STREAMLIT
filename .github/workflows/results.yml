@@ -1,0 +1,68 @@
+name: MLB HR Bot — Grade Results (data branch only)
+
+on:
+  schedule:
+    # UTC times = 7pm, 9pm, 11pm, 1am, 3am Phoenix (Phoenix is UTC-7 year-round)
+    # Spread across when games actually finish — early games done by ~9pm,
+    # West coast night games can run past midnight Phoenix time.
+    - cron: "0 2,4,6,8,10 * * *"
+  workflow_dispatch: {}
+
+concurrency:
+  group: mlb-data-publish
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  grade-results:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install deps
+        run: pip install -r bots/requirements.txt
+
+      # Same corrected cache path as the picks workflow -- bots/cache.db
+      # never existed, so this cache was doing nothing.
+      - name: Restore SQLite cache
+        uses: actions/cache@v4
+        with:
+          path: bots/mlb_hr_cache.sqlite
+          key: sqlite-cache-${{ github.run_id }}
+          restore-keys: |
+            sqlite-cache-
+
+      # The grader reads its picks from bots/outputs/, which is empty in a
+      # fresh CI checkout. This pulls the published slate off the data branch
+      # and writes it where the grader looks.
+      - name: Fetch published picks
+        run: python bots/fetch_picks_for_grading.py --date today
+
+      # FIXED: this step used to call `python bots/grade_results.py`, a file
+      # that does not exist in this repo -- the grader is
+      # bots/live_results_tracker.py. Every scheduled run had been failing on
+      # that line, which is why the Results tab never showed fresh grades.
+      - name: Grade live results
+        run: python bots/live_results_tracker.py --date auto --live
+
+      - name: Save SQLite cache
+        uses: actions/cache/save@v4
+        with:
+          path: bots/mlb_hr_cache.sqlite
+          key: sqlite-cache-${{ github.run_id }}
+
+      - name: Publish to data branch
+        run: bash .github/scripts/publish_data.sh "Graded results"

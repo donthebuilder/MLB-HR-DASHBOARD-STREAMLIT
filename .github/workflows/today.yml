@@ -1,0 +1,77 @@
+name: MLB HR Bot — Today (data branch only)
+
+on:
+  schedule:
+    # UTC times = 5am, 8am, 11am, 1pm, 3pm, 4pm, 5pm, 6pm Phoenix (Phoenix is UTC-7 year-round)
+    - cron: "0 0,1,12,15,18,20,22,23 * * *"
+  workflow_dispatch: {}
+
+# The data branch is force-pushed as a single commit, so two publishing runs
+# must never overlap. Grading and the tomorrow bot share this group.
+concurrency:
+  group: mlb-data-publish
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      OWM_API_KEY: ${{ secrets.OWM_API_KEY }}
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      # Bot deps only. The root requirements.txt is now the Streamlit app's
+      # (light) dependency list so Streamlit Cloud boots fast; pybaseball and
+      # friends live in bots/requirements.txt.
+      - name: Install deps
+        run: pip install -r bots/requirements.txt
+
+      # Cache path now matches what the bot actually uses:
+      # mlb_dashboard.py -> DB_PATH = ROOT_DIR / "mlb_hr_cache.sqlite", where
+      # ROOT_DIR is the script's own folder. The old bots/cache.db path was
+      # never read or written, so the cache was silently a no-op every run.
+      - name: Restore SQLite cache
+        uses: actions/cache@v4
+        with:
+          path: bots/mlb_hr_cache.sqlite
+          key: sqlite-cache-${{ github.run_id }}
+          restore-keys: |
+            sqlite-cache-
+
+      # bots/today_bot.py was replaced by bots/mlb_dashboard.py. It builds one
+      # slate per invocation and writes public/data itself (today.json,
+      # today.txt, current/, history/, index.json, pair_builder_latest.json),
+      # including pulling confirmed lineups inline -- which is why the old
+      # standalone "Check lineups" step is gone. Nothing consumed the
+      # lineups.json it produced.
+      - name: Run scoring bot (today)
+        run: python bots/mlb_dashboard.py --today
+
+      # Shrinks the 76 MB slate JSON to ~3 MB for the Streamlit app by
+      # dropping the per-player raw logs the dashboard never reads. Only the
+      # slim file is published; the full one stays on the runner.
+      - name: Build slim payload for Streamlit
+        run: python bots/make_slim.py
+
+      - name: Save SQLite cache
+        uses: actions/cache/save@v4
+        with:
+          path: bots/mlb_hr_cache.sqlite
+          key: sqlite-cache-${{ github.run_id }}
+
+      - name: Publish to data branch
+        run: bash .github/scripts/publish_data.sh "Today slate"

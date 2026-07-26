@@ -1,0 +1,76 @@
+name: HR Companion Cache Bot
+# Phoenix is UTC-7 year-round (no DST).
+# Runs at: 12:45am Phoenix time — after spray cache.
+on:
+  schedule:
+    - cron: '45 7 * * *'   # 12:45am PHX
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hr-companion-bot
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r bots/requirements.txt
+
+      # This job reads a slate file out of bots/outputs/, which is empty in a
+      # fresh CI checkout now that bots/outputs is gitignored. Pull the
+      # published slate off the data branch first, same as the grader does.
+      - name: Fetch published slate
+        run: python bots/fetch_picks_for_grading.py --date today
+
+      - name: Restore companion cache
+        uses: actions/cache@v4
+        with:
+          path: bots/outputs/hr_companion_cache.json
+          key: hr-companion-${{ github.run_id }}
+          restore-keys: |
+            hr-companion-
+
+      - name: Run HR companion cache
+        run: |
+          SLATE=$(ls -t bots/outputs/*today*.json 2>/dev/null | head -1)
+          if [ -z "$SLATE" ]; then
+            echo "No slate file found — skipping."
+            exit 0
+          fi
+          echo "Building HR companion cache from $SLATE"
+          python bots/hr_companion_cache.py --slate "$SLATE"
+
+      # STREAMLIT MIGRATION (2026-07-25): replaces the old commit+push to
+      # main, which added the whole of public/data and bots/outputs to the
+      # repo every night.
+      - name: Save companion cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: bots/outputs/hr_companion_cache.json
+          key: hr-companion-${{ github.run_id }}
+
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hr-companion-logs-${{ github.run_id }}
+          path: bots/outputs/
+          if-no-files-found: ignore
+          retention-days: 7

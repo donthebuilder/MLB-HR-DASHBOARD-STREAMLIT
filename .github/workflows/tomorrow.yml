@@ -1,0 +1,64 @@
+name: MLB HR Bot — Tomorrow (data branch only)
+
+on:
+  schedule:
+    - cron: "5 7 * * *"   # 12:05am Phoenix (07:05 UTC)
+  workflow_dispatch: {}
+
+concurrency:
+  group: mlb-data-publish
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  run-tomorrow-bot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      OWM_API_KEY: ${{ secrets.OWM_API_KEY }}
+      RAPIDAPI_KEY: ${{ secrets.RAPIDAPI_KEY }}
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install deps
+        run: pip install -r bots/requirements.txt
+
+      - name: Restore SQLite cache
+        uses: actions/cache@v4
+        with:
+          path: bots/mlb_hr_cache.sqlite
+          key: sqlite-cache-${{ github.run_id }}
+          restore-keys: |
+            sqlite-cache-
+
+      - name: Run scoring bot (tomorrow)
+        run: python bots/mlb_dashboard.py --tomorrow
+
+      - name: Build slim payload for Streamlit
+        run: python bots/make_slim.py
+
+      - name: Save SQLite cache
+        uses: actions/cache/save@v4
+        with:
+          path: bots/mlb_hr_cache.sqlite
+          key: sqlite-cache-${{ github.run_id }}
+
+      # REWRITTEN: this job used to `git add -A` and push the entire slate
+      # output to `main` on every run, with a rebase-retry loop. That is what
+      # committed 20+ GB of JSON into the repo's history and broke the
+      # Streamlit Cloud clone. It now publishes the same way every other bot
+      # job does -- small files, data branch, single orphan commit, never main.
+      - name: Publish to data branch
+        run: bash .github/scripts/publish_data.sh "Tomorrow slate"

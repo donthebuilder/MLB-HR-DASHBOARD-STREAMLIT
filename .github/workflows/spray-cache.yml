@@ -1,0 +1,67 @@
+name: Spray Cache Bot
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Adjust to your existing staggered schedule alongside your other bots
+    - cron: '0 13 * * *'
+
+# STREAMLIT MIGRATION (2026-07-25): dropped from `write` to `read`. This job
+# no longer pushes anything -- see the cache note below.
+permissions:
+  contents: read
+
+jobs:
+  # BUGFIX (kept): both passes run in ONE job with ONE checkout, so pass 2
+  # sees pass 1's on-disk output directly instead of racing it from a second
+  # checkout the way the old two-job version did.
+  #
+  # STREAMLIT MIGRATION (2026-07-25): this job used to `git add public/data/
+  # bots/outputs/` and push to main daily. Those directories hold tens of
+  # thousands of per-player cache files; committing them every day is a big
+  # part of how the repo reached 20+ GB and became too slow for Streamlit
+  # Cloud to clone. The cache now persists via actions/cache -- the bot gets
+  # the same warm-start benefit, the repo doesn't grow, and nothing is ever
+  # pushed to main.
+  build_spray_cache:
+    runs-on: ubuntu-latest
+    timeout-minutes: 28
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r bots/requirements.txt
+
+      - name: Restore spray/zone cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            public/data/zone_cache
+            public/data/pitch
+          key: spray-cache-${{ github.run_id }}
+          restore-keys: |
+            spray-cache-
+
+      - name: Run spray_cache.py (pass 1)
+        run: python bots/spray_cache.py
+
+      - name: Run spray_cache.py (pass 2 — mop up any leftover cold-cache players)
+        run: python bots/spray_cache.py
+
+      - name: Save spray/zone cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            public/data/zone_cache
+            public/data/pitch
+          key: spray-cache-${{ github.run_id }}

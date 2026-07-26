@@ -1,0 +1,41 @@
+name: Backtest Report
+
+# Manual trigger only — run from the Actions tab whenever you want
+# a fresh tier-segmented backtest across your graded_results files.
+on:
+  workflow_dispatch:
+    inputs:
+      since:
+        description: 'Only include files dated on/after this YYYY-MM-DD (leave blank for all files)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  backtest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run backtest_report.py
+        run: |
+          if [ -n "${{ github.event.inputs.since }}" ]; then
+            python bots/backtest_report.py --dir public/data --since "${{ github.event.inputs.since }}" --out-dir .
+          else
+            python bots/backtest_report.py --dir public/data --out-dir .
+          fi
+
+      - name: Upload backtest summary as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backtest-summary
+          path: backtest_summary.json
+          retention-days: 30
