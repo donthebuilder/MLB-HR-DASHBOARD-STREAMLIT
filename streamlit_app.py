@@ -202,6 +202,18 @@ def load_slate(label: str) -> List[Dict[str, Any]]:
 
 
 @st.cache_data(ttl=CACHE_TTL, show_spinner=False)
+def load_splits(player_id: Any, slate_label: str = "today") -> Dict[str, Any]:
+    """Day/night, home/away, day-of-week and win/loss splits for one hitter.
+
+    Built by bots/player_splits.py from MLB's gameLog endpoint -- the scoring
+    bot itself only carries vs-RHP/LHP, so none of this exists in the slate.
+    """
+    if player_id in (None, ""):
+        return {}
+    return load_json(f"public/data/current/splits/{slate_label}/{player_id}.json") or {}
+
+
+@st.cache_data(ttl=CACHE_TTL, show_spinner=False)
 def load_detail(kind: str, ident: Any, slate_label: str = "today") -> Dict[str, Any]:
     """One player's or pitcher's heavy logs. ~82 KB, fetched only on demand.
 
@@ -597,7 +609,7 @@ GAME_ROLE_LABEL = {
     "HR": ("🧨", "HR Pick", "#f87171"),
     "HIT": ("💠", "Hit Pick", "#a78bfa"),
     "HRR": ("🏁", "HRR Pick", "#22d3ee"),
-    "CONTACT": ("⚾", "Contact Anchor", "#34d399"),
+    "CONTACT": ("⚾", "Base Pick", "#34d399"),
 }
 
 
@@ -711,6 +723,56 @@ def radar(labels: List[str], values: List[float], color: str = "#f97316",
     )
     _layout(fig, height, title)
     fig.update_layout(margin=dict(l=50, r=50, t=48 if title else 24, b=30))
+    st.plotly_chart(fig, width="stretch")
+
+
+def hbar(labels: List[str], values: List[float], title: str = "",
+         height: Optional[int] = None, fmt: str = "{:.1f}",
+         ref: Optional[float] = None, ref_label: str = "median",
+         subtitles: Optional[List[str]] = None) -> None:
+    """Horizontal ranked bars — the readable replacement for st.bar_chart.
+
+    st.bar_chart gives no value labels, doesn't reliably preserve sort order,
+    and paints every bar one flat colour, so a 14-game ranking came out as an
+    unreadable stack of same-coloured strips. This sorts descending, shades
+    each bar along the green ramp by its own value, prints the number at the
+    end of the bar, and can drop a reference line for the median.
+    """
+    if not labels:
+        st.caption("Nothing to chart.")
+        return
+    order = sorted(zip(labels, values), key=lambda x: x[1])  # plotly draws bottom-up
+    lab = [a for a, _ in order]
+    val = [b for _, b in order]
+    lo, hi = min(val), max(val)
+    span = (hi - lo) or 1.0
+
+    # Brightest = best. Sampled from the same ramp the heatmaps use.
+    ramp = ["#0b4b30", "#12783f", "#2f9e52", "#4cb96a", "#7fd894", "#b7f7c9"]
+    colors = [ramp[min(len(ramp) - 1, int((v - lo) / span * len(ramp)))] for v in val]
+
+    fig = go.Figure(go.Bar(
+        x=val, y=lab, orientation="h",
+        marker=dict(color=colors, line=dict(width=0)),
+        text=[fmt.format(v) for v in val],
+        textposition="outside",
+        textfont=dict(size=11, color=C["text"], family=NUM_FONT),
+        hovertemplate="%{y}: %{x:.1f}<extra></extra>",
+        cliponaxis=False,
+    ))
+    if ref is not None:
+        fig.add_vline(x=ref, line=dict(color=C["text3"], width=1, dash="dot"),
+                      annotation_text=f"{ref_label} {ref:.1f}",
+                      annotation_position="top",
+                      annotation_font=dict(size=10, color=C["text3"]))
+    h = height or max(220, 30 * len(lab) + 70)
+    _layout(fig, h, title)
+    fig.update_xaxes(showgrid=False, zeroline=False, showticklabels=False,
+                     range=[0, hi * 1.18])
+    fig.update_yaxes(showgrid=False, zeroline=False,
+                     tickfont=dict(size=11, color=C["text2"]))
+    fig.update_layout(margin=dict(l=8, r=54, t=40 if title else 12, b=8),
+                      bargap=0.28)
     st.plotly_chart(fig, width="stretch")
 
 
@@ -840,6 +902,19 @@ def player_modal(p: Dict[str, Any]) -> None:
                  pmix_score(p), nn(p, "damage_conversion_score")],
           role_color, "Score profile", height=300)
 
+    msp = load_splits(p.get("player_id"), slate)
+    if msp:
+        with st.expander("📅 Situational splits"):
+            for key, title in (("day_night", "Day vs Night"),
+                               ("home_away", "Home vs Away"),
+                               ("win_loss", "Wins vs Losses")):
+                d = msp.get(key) or {}
+                if d:
+                    st.markdown(f"**{title}**")
+                    st.dataframe(
+                        pd.DataFrame(d).T[["G", "PA", "HR", "AVG", "OBP", "SLG", "OPS", "ISO"]],
+                        width="stretch")
+
     if txt(p, "simple_reason_1"):
         st.caption(txt(p, "simple_reason_1"))
     if txt(p, "hr_reason"):
@@ -947,6 +1022,47 @@ def player_card(
 def rows_to_df(rows: List[Dict[str, Any]], cols: List[str]) -> pd.DataFrame:
     df = pd.DataFrame(rows)
     return df[[c for c in cols if c in df.columns]]
+
+
+def render_splits(p: Dict[str, Any], slate_label: str) -> None:
+    """Four split families, each as a table plus a heatmap of the rate stats."""
+    sp = load_splits(p.get("player_id"), slate_label)
+    if not sp:
+        st.info(
+            "No situational splits published for this hitter yet — they land "
+            "with the next **Player Splits** workflow run."
+        )
+        return
+
+    st.caption(
+        f"{int(nn(sp, 'games_logged'))} games logged · season {sp.get('season', '')}"
+    )
+    families = [
+        ("day_night", "Day vs Night"),
+        ("home_away", "Home vs Away"),
+        ("win_loss", "Team Wins vs Losses"),
+        ("day_of_week", "By Day of Week"),
+    ]
+    for key, title in families:
+        data = sp.get(key) or {}
+        if not data:
+            continue
+        st.markdown(f"**{title}**")
+        df = pd.DataFrame(data).T
+        order = [c for c in ["G", "PA", "AB", "H", "HR", "XBH", "RBI", "R",
+                             "BB", "K", "AVG", "OBP", "SLG", "OPS", "ISO",
+                             "HR/PA", "K%"] if c in df.columns]
+        st.dataframe(df[order], width="stretch")
+        rate = [c for c in ["AVG", "OBP", "SLG", "OPS", "ISO", "HR/PA"] if c in df.columns]
+        if rate and len(df) > 1:
+            hm = df[rate].astype(float).copy()
+            # Scale each column 0-100 within itself: OPS (~.800) and HR/PA
+            # (~.04) can't share one colour scale raw.
+            for c in hm.columns:
+                lo, hi = hm[c].min(), hm[c].max()
+                hm[c] = 50.0 if hi == lo else (hm[c] - lo) / (hi - lo) * 100
+            heatmap(hm.round(0), f"{title} — relative strength",
+                    height=max(200, 30 * len(hm) + 90))
 
 
 # ── SIDEBAR ─────────────────────────────────────────────────────────────────
@@ -1087,8 +1203,8 @@ with h2:
 # ── BOARD ───────────────────────────────────────────────────────────────────
 with tab_board:
     c1, c2 = st.columns([2, 1])
-    kind_label = c1.selectbox("Board type", ["HR", "HRR", "Hit", "TB (Contact)"])
-    kind = {"HR": "hr", "HRR": "hrr", "Hit": "hit", "TB (Contact)": "tb"}[kind_label]
+    kind_label = c1.selectbox("Board type", ["HR", "HRR", "Hit", "TB (Base)"])
+    kind = {"HR": "hr", "HRR": "hrr", "Hit": "hit", "TB (Base)": "tb"}[kind_label]
     top_n = c2.number_input("Show top", 5, 200, 25, step=5)
 
     ranked = sorted(view, key=lambda p: score_for(p, kind), reverse=True)[: int(top_n)]
@@ -1098,12 +1214,11 @@ with tab_board:
     if ranked:
         v1, v2 = st.columns([3, 2])
         with v1:
-            st.markdown(f"**Top 15 by {kind_label} score**")
-            st.bar_chart(
-                pd.DataFrame([{"Player": name_of(p), kind_label: round(score_for(p, kind), 1)}
-                              for p in ranked[:15]]).set_index("Player"),
-                height=300, color=C["orange"], horizontal=True,
-            )
+            hbar([name_of(p) for p in ranked[:15]],
+                 [round(score_for(p, kind), 1) for p in ranked[:15]],
+                 f"Top 15 by {kind_label} score",
+                 ref=float(pd.Series([score_for(x, kind) for x in players]).median()),
+                 ref_label="slate median")
         with v2:
             st.markdown("**Score distribution — whole slate**")
             # Binned with pandas rather than st.plotly_chart: plotly isn't in
@@ -1204,9 +1319,11 @@ with tab_games:
             horizontal=True,
         )
         ranked_games = gdf.sort_values(metric_choice, ascending=False)
-        st.bar_chart(
-            ranked_games.set_index("Game")[[metric_choice]],
-            height=320, color=C["orange"], horizontal=True,
+        hbar(
+            ranked_games["Game"].tolist(),
+            ranked_games[metric_choice].tolist(),
+            f"Games ranked by {metric_choice}",
+            ref=float(ranked_games[metric_choice].median()), ref_label="slate median",
         )
         st.caption(
             "Game Score = median across every hitter of that hitter's median "
@@ -1347,11 +1464,10 @@ with tab_leaders:
         chart_n = st.slider("Players in chart", 10, min(60, len(lead)),
                             min(25, len(lead)), step=5)
         st.caption(f"{len(lead)} players ranked by {stat} — chart shows top {chart_n}, table shows all")
-        st.bar_chart(
-            pd.DataFrame([{"Player": f"{name_of(p)} ({team_of(p)})", stat: round(v, 3)}
-                          for p, v in lead[:chart_n]]).set_index("Player"),
-            height=max(320, 18 * chart_n), color=C["purple"], horizontal=True,
-        )
+        hbar([f"{name_of(p)} ({team_of(p)})" for p, _ in lead[:chart_n]],
+             [round(v, 3) for _, v in lead[:chart_n]],
+             f"Top {chart_n} — {stat}",
+             fmt="{:.3f}" if lead[0][1] < 5 else "{:.1f}")
         st.dataframe(pd.DataFrame([{
             "#": i, "Player": name_of(p) + (" 🧩" if is_aligned(p) else ""),
             "Team": f"{team_of(p)} vs {opp_of(p)}", "Role": tier_role(p),
@@ -1654,12 +1770,11 @@ with tab_due:
 
         v1, v2 = st.columns([3, 2])
         with v1:
-            st.bar_chart(
-                pd.DataFrame([{"Player": f"{name_of(p)} ({team_of(p)})",
-                               "Due score": round(nn(p, "hr_due_score"), 1)}
-                              for p in ranked_due[:15]]).set_index("Player"),
-                height=320, color=C["orange"], horizontal=True,
-            )
+            hbar([f"{name_of(p)} ({team_of(p)})" for p in ranked_due[:15]],
+                 [round(nn(p, "hr_due_score"), 1) for p in ranked_due[:15]],
+                 "Most overdue",
+                 ref=float(pd.Series([nn(x, "hr_due_score") for x in players]).median()),
+                 ref_label="slate median")
         with v2:
             hm = pd.DataFrame([{
                 "Player": name_of(p),
@@ -1706,9 +1821,9 @@ with tab_due:
 with tab_hitshrr:
     st.caption("Production and contact profiles — hits, runs, RBI, extra bases.")
     hh1, hh2 = st.columns([2, 1])
-    hh_kind = hh1.radio("Type", ["HRR (runs + RBI)", "Hit (base-hit floor)", "TB / XBH"], horizontal=True)
+    hh_kind = hh1.radio("Type", ["HRR (runs + RBI)", "Hit (base-hit floor)", "Base / XBH"], horizontal=True)
     hh_n = hh2.number_input("Show", 5, 100, 30, step=5, key="hhn")
-    k = {"HRR (runs + RBI)": "hrr", "Hit (base-hit floor)": "hit", "TB / XBH": "tb"}[hh_kind]
+    k = {"HRR (runs + RBI)": "hrr", "Hit (base-hit floor)": "hit", "Base / XBH": "tb"}[hh_kind]
 
     hh = sorted(view, key=lambda p: score_for(p, k), reverse=True)[: int(hh_n)]
     st.dataframe(pd.DataFrame([{
@@ -1857,8 +1972,9 @@ with tab_player:
         # batted_ball_log were byte-identical copies, so they're aliases here.
         bbe = detail.get("spray_chart") or []
 
-        ov, evlog, pitchtab, spraytab = st.tabs(
-            ["📊 Overview", "⚡ EV Log", "🎯 Pitch", "💦 Spray"]
+        ov, evlog, pitchtab, spraytab, splitstab, zonetab = st.tabs(
+            ["📊 Overview", "⚡ EV Log", "🎯 Pitch", "💦 Spray",
+             "📅 Splits", "🔥 Zones & Maps"]
         )
 
         with ov:
@@ -2151,6 +2267,83 @@ with tab_player:
                         height=220, color=C["green"])
 
 # ── WATCHLIST ───────────────────────────────────────────────────────────────
+        # ── SPLITS ──────────────────────────────────────────────────────────
+        with splitstab:
+            render_splits(p, slate)
+
+        # ── ZONES & MAPS ────────────────────────────────────────────────────
+        with zonetab:
+            st.markdown("**Where this pitcher gets hurt**")
+            pdet = load_detail("pitcher", p.get("pitcher_id"), slate)
+
+            # Order zones (top 1-3 / middle 4-6 / bottom 7-9) come straight
+            # from the bot as pitcher_lineup_zone_damage.
+            zd = pdet.get("pitcher_lineup_zone_damage") or {}
+            if isinstance(zd, dict) and zd:
+                zrows = []
+                for k, v in zd.items():
+                    if not isinstance(v, dict):
+                        continue
+                    zrows.append({
+                        "Zone": f"{str(k).title()} ({'-'.join(str(x) for x in (v.get('spots') or []))})",
+                        "Damage": nn(v, "damage_score"), "SLG": nn(v, "slg") * 100,
+                        "ISO": nn(v, "iso") * 100, "HR rate": nn(v, "hr_rate") * 100,
+                        "Hard hit": nn(v, "hard_hit_rate") * 100,
+                        "Barrel": nn(v, "barrel_rate") * 100,
+                        "_pa": int(nn(v, "pa")), "_label": txt(v, "label"),
+                    })
+                if zrows:
+                    zdf = pd.DataFrame(zrows).set_index("Zone")
+                    heatmap(zdf[["Damage", "SLG", "ISO", "HR rate", "Hard hit", "Barrel"]],
+                            "Damage allowed by batting-order zone", height=260)
+                    worst = zdf.sort_values("Damage", ascending=False).iloc[0]
+                    st.caption(
+                        f"Most damaged in the {zdf['Damage'].idxmax()} of the order "
+                        f"({worst['_label']}, {int(worst['_pa'])} PA). "
+                        "Rate stats ×100 to share the colour scale."
+                    )
+            else:
+                st.caption("No batting-order zone data for this pitcher.")
+
+            # Spray-density map: the closest thing to a hot-zone map the data
+            # supports. A true strike-zone heat map needs plate_x/plate_z per
+            # pitch, which the bot doesn't currently collect -- only landing
+            # coordinates (hc_x/hc_y), which is where the ball ended up.
+            st.markdown("**Batted-ball density map**")
+            bmap = load_detail("batter", p.get("player_id"), slate).get("spray_chart") or []
+            if bmap:
+                mdf = pd.DataFrame(bmap)
+                for c in ("hc_x", "hc_y", "distance", "ev", "launch_angle"):
+                    if c in mdf.columns:
+                        mdf[c] = pd.to_numeric(mdf[c], errors="coerce")
+                if {"hc_x", "hc_y"}.issubset(mdf.columns):
+                    fld = mdf.dropna(subset=["hc_x", "hc_y"]).copy()
+                    fld["x"] = fld["hc_x"] - 125.42
+                    fld["y"] = 198.27 - fld["hc_y"]
+                    # Bin the field into a grid and count -- that turns the
+                    # scatter into an actual density map.
+                    fld["xb"] = pd.cut(fld["x"], bins=8)
+                    fld["yb"] = pd.cut(fld["y"], bins=8)
+                    grid = (fld.pivot_table(index="yb", columns="xb", values="x",
+                                            aggfunc="count", observed=False)
+                            .fillna(0).iloc[::-1])
+                    grid.index = [f"{int(iv.mid)}" for iv in grid.index]
+                    grid.columns = [f"{int(iv.mid)}" for iv in grid.columns]
+                    heatmap(grid, "Where he hits the ball (count per field cell)",
+                            height=340)
+                if "lane" in mdf.columns and "distance" in mdf.columns:
+                    lane = mdf.groupby("lane").agg(
+                        balls=("lane", "size"),
+                        avg_dist=("distance", "mean"),
+                        avg_ev=("ev", "mean") if "ev" in mdf.columns else ("distance", "mean"),
+                    )
+                    lane = lane[lane.index != ""]
+                    if not lane.empty:
+                        heatmap(lane.round(1), "By field lane", height=240, fmt="{:.0f}")
+            else:
+                st.caption("No batted-ball detail for this hitter yet.")
+
+
 def watch_card_html(p: Dict[str, Any]) -> str:
     """Compact grid card: badges, score + grade top-right, pills, stat line."""
     rc = role_config(p)
