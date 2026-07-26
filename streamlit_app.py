@@ -64,30 +64,63 @@ RAW_BASE = f"https://raw.githubusercontent.com/{GITHUB_REPO}/{DATA_BRANCH}"
 CACHE_TTL = 300
 REPO_ROOT = Path(__file__).resolve().parent
 
-# Palette ported from lib/theme.js
+# Palette copied verbatim from the old site's lib/theme.js — same hexes, so
+# the Streamlit build reads as the same product rather than a lookalike.
 C = {
-    "orange": "#f59e0b", "cyan": "#22d3ee", "purple": "#a78bfa",
-    "green": "#34d399", "red": "#f87171", "blue": "#60a5fa",
-    "yellow": "#fbbf24", "text2": "#9aa4b2", "text3": "#6b7280",
+    "bg": "#09090b", "bg2": "#111113", "bg3": "#18181b",
+    "glass": "rgba(255,255,255,0.045)",
+    "border": "rgba(255,255,255,0.09)", "border2": "rgba(255,255,255,0.15)",
+    "text": "#f4f4f5", "text2": "#a1a1aa", "text3": "#71717a",
+    "orange": "#f97316", "yellow": "#f59e0b", "cyan": "#22d3ee",
+    "green": "#4ade80", "red": "#f87171", "purple": "#a78bfa", "blue": "#60a5fa",
 }
+NUM_FONT = "'Roboto Mono','SF Mono','Cascadia Mono',Menlo,Consolas,monospace"
 
 st.markdown(
-    """
+    f"""
     <style>
-      .block-container {padding-top: 1.4rem; padding-bottom: 3rem;}
-      [data-testid="stMetricValue"] {font-size: 1.4rem;}
-      .pick-card {
-        border: 1px solid rgba(250,250,250,.14); border-radius: 10px;
-        padding: .7rem .95rem; margin-bottom: .55rem;
-        background: rgba(255,255,255,.03);
-      }
-      .pill {
+      .block-container {{padding-top: 1.2rem; padding-bottom: 3rem; max-width: 1400px;}}
+
+      /* Numbers in a mono face, as on the old site — keeps score columns
+         aligned and stops digits from wobbling between rows. */
+      [data-testid="stMetricValue"], .num {{
+        font-family: {NUM_FONT}; font-size: 1.35rem; letter-spacing: -.02em;
+      }}
+      [data-testid="stMetricLabel"] {{
+        text-transform: uppercase; letter-spacing: .06em;
+        font-size: .68rem; color: {C['text3']};
+      }}
+      [data-testid="stMetric"] {{
+        background: {C['bg2']}; border: 1px solid {C['border']};
+        border-radius: 12px; padding: .6rem .8rem;
+      }}
+
+      h1 {{letter-spacing: -.02em; font-weight: 800;}}
+      h4 {{color: {C['text2']}; font-size: .95rem; letter-spacing: .01em;}}
+
+      .pick-card {{
+        border: 1px solid {C['border']}; border-radius: 12px;
+        padding: .7rem .95rem; margin-bottom: .55rem; background: {C['bg2']};
+      }}
+      .pill {{
         display:inline-block; padding:2px 9px; margin:2px 4px 2px 0;
-        border-radius:999px; font-size:.72rem; font-weight:700;
-        border:1px solid currentColor;
-      }
-      .muted {opacity:.72; font-size:.85rem;}
-      .grade {font-weight:800; font-size:1.05rem;}
+        border-radius:999px; font-size:.7rem; font-weight:700;
+        border:1px solid currentColor; font-family: {NUM_FONT};
+      }}
+      .muted {{color: {C['text3']}; font-size: .82rem;}}
+      .grade {{font-weight:800; font-size:1.05rem; font-family: {NUM_FONT};}}
+
+      /* Tabs: understated until active, then an orange underline. */
+      .stTabs [data-baseweb="tab-list"] {{gap: 2px; border-bottom: 1px solid {C['border']};}}
+      .stTabs [data-baseweb="tab"] {{
+        height: 40px; padding: 0 14px; background: transparent;
+        color: {C['text3']}; font-size: .86rem; font-weight: 600;
+      }}
+      .stTabs [aria-selected="true"] {{color: {C['text']}; border-bottom: 2px solid {C['orange']};}}
+
+      .stDataFrame {{border: 1px solid {C['border']}; border-radius: 12px;}}
+      section[data-testid="stSidebar"] {{background: {C['bg2']}; border-right: 1px solid {C['border']};}}
+      .stExpander {{border: 1px solid {C['border']} !important; border-radius: 12px !important;}}
     </style>
     """,
     unsafe_allow_html=True,
@@ -607,8 +640,21 @@ def rows_to_df(rows: List[Dict[str, Any]], cols: List[str]) -> pd.DataFrame:
 # ── SIDEBAR ─────────────────────────────────────────────────────────────────
 if "slip" not in st.session_state:
     st.session_state.slip = []
+
+# Watchlist persistence. The old site used localStorage, which Streamlit can't
+# reach without a custom component, so the list lives in the URL query string
+# instead: it survives reloads, and the URL can be bookmarked or sent to
+# someone else with the same players already selected.
 if "watch" not in st.session_state:
-    st.session_state.watch = []
+    raw = st.query_params.get("watch", "")
+    st.session_state.watch = [w for w in raw.split("|") if w] if raw else []
+
+
+def persist_watch() -> None:
+    if st.session_state.watch:
+        st.query_params["watch"] = "|".join(st.session_state.watch)
+    elif "watch" in st.query_params:
+        del st.query_params["watch"]
 
 with st.sidebar:
     st.markdown("### ⚾ MLB HR Dashboard")
@@ -639,11 +685,42 @@ with st.sidebar:
     confirmed_only = st.checkbox("Confirmed lineups only")
     aligned_only = st.checkbox("🧩 Aligned only")
     st.divider()
+
+    # Auto-refresh. The old site polled every 45s while games were live and
+    # every 5 min otherwise; live_mode is the same flag live_results_tracker.py
+    # writes, so the cadence tracks reality instead of guessing.
+    _res = load_json("public/data/current/results_live.json") or {}
+    live_now = _res.get("live_mode") is True
+    auto = st.checkbox("🔄 Auto-refresh", value=False,
+                       help="45s while games are live, 5 min otherwise")
+    if live_now:
+        st.caption("🔴 Games in progress")
+
+    if auto:
+        # Deliberately a timed page reload rather than st.fragment: a fragment
+        # that clears the cache and calls st.rerun re-enters itself and spins
+        # the app in a tight loop (it hung the test harness outright). A plain
+        # reload is bounded, and the 5-min cache TTL means the reload picks up
+        # new bot output without hammering GitHub.
+        interval_ms = (45 if live_now else 300) * 1000
+        # st.html with unsafe_allow_javascript is the current API here --
+        # st.components.v1.html is deprecated, and st.iframe only takes a src
+        # URL, not inline markup.
+        st.html(
+            "<script>setTimeout(function(){window.parent.location.reload();},"
+            f"{interval_ms});</script>",
+            unsafe_allow_javascript=True,
+        )
+
     if st.session_state.slip:
         st.markdown(f"**🎟️ Slip ({len(st.session_state.slip)})**")
         for item in st.session_state.slip:
             st.caption(f"• {item}")
-        if st.button("Clear slip", width="stretch"):
+        sc1, sc2 = st.columns(2)
+        sc1.download_button("⬇️ Export", "\n".join(st.session_state.slip).encode(),
+                            file_name=f"slip_{slate}.txt", mime="text/plain",
+                            width="stretch")
+        if sc2.button("Clear", width="stretch"):
             st.session_state.slip = []
             st.rerun()
     st.caption(f"{len(players)} players · cache {CACHE_TTL // 60} min")
@@ -684,14 +761,19 @@ with h2:
     m[2].metric("🧩 Aligned", sum(1 for p in players if is_aligned(p)))
     m[3].metric("Confirmed", sum(1 for p in players if p.get("lineup_confirmed")))
 
-tabs = st.tabs([
-    "🏆 Board", "🗓️ Games", "📊 Scoreboard", "🥇 Leaders", "⚾ Pitchers",
-    "💥 Hits/HRR", "🎯 Pairs", "🧩 Pools", "✅ Results", "🔍 Player",
-    "⭐ Watchlist", "🤖 Bot Report", "📖 Guide",
+# Tab order matches the old site's lib/theme.js TABS list, so muscle memory
+# carries over. Player is new: Streamlit has no modal, so what used to be
+# PlayerModal is a tab instead.
+(tab_games, tab_board, tab_hitshrr, tab_pitchers, tab_pairs, tab_bot,
+ tab_pools, tab_scoreboard, tab_leaders, tab_results, tab_player,
+ tab_watch, tab_spray, tab_guide) = st.tabs([
+    "🗓️ Games", "🏆 HR Board", "💥 Hits & HRR", "⚾ Pitchers", "🎯 Pairs",
+    "🤖 Bot", "🧩 Pools", "📊 Scoreboard", "🥇 Leaders", "✅ Results",
+    "🔍 Player", "⭐ Watchlist", "💦 Spray", "📖 Guide",
 ])
 
 # ── BOARD ───────────────────────────────────────────────────────────────────
-with tabs[0]:
+with tab_board:
     c1, c2 = st.columns([2, 1])
     kind_label = c1.selectbox("Board type", ["HR", "HRR", "Hit", "TB (Contact)"])
     kind = {"HR": "hr", "HRR": "hrr", "Hit": "hit", "TB (Contact)": "tb"}[kind_label]
@@ -743,7 +825,7 @@ with tabs[0]:
                            file_name=f"mlb_{slate}_{kind}_board.csv", mime="text/csv")
 
 # ── GAMES ───────────────────────────────────────────────────────────────────
-with tabs[1]:
+with tab_games:
     by_game: Dict[Any, List[Dict[str, Any]]] = {}
     for p in view:
         by_game.setdefault(p.get("game_pk"), []).append(p)
@@ -813,7 +895,7 @@ with tabs[1]:
                     width="stretch", hide_index=True)
 
 # ── SCOREBOARD ──────────────────────────────────────────────────────────────
-with tabs[2]:
+with tab_scoreboard:
     st.caption(f"{len(view)} batters · sortable — click any column header")
     board = [{
         "Player": name_of(p), "Team": team_of(p), "Opp": opp_of(p),
@@ -850,7 +932,7 @@ LEADER_STATS = {
     "HR per PA": (lambda p: nn(p, "hr_per_pa"), "{:.4f}"),
 }
 
-with tabs[3]:
+with tab_leaders:
     l1, l2, l3, l4 = st.columns([2, 1, 1, 1])
     stat = l1.selectbox("Rank by", list(LEADER_STATS))
     min_pull = l2.number_input("Min Pull %", 0, 100, 0, step=5)
@@ -912,7 +994,7 @@ def group_pitchers(pool: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return sorted(by.values(), key=lambda e: (-e["weak_spots"], -e["hr9"]))
 
 
-with tabs[4]:
+with tab_pitchers:
     pitchers = group_pitchers(view)
     if not pitchers:
         st.info("No pitcher data found yet.")
@@ -959,7 +1041,7 @@ with tabs[4]:
                     st.bar_chart(pd.DataFrame({"usage %": mix}))
 
 # ── HITS / HRR ──────────────────────────────────────────────────────────────
-with tabs[5]:
+with tab_hitshrr:
     st.caption("Production and contact profiles — hits, runs, RBI, extra bases.")
     hh1, hh2 = st.columns([2, 1])
     hh_kind = hh1.radio("Type", ["HRR (runs + RBI)", "Hit (base-hit floor)", "TB / XBH"], horizontal=True)
@@ -983,7 +1065,7 @@ with tabs[5]:
 # ── PAIRS / POOLS ───────────────────────────────────────────────────────────
 pair_payload = load_json("public/data/current/pair_builder_latest.json") or {}
 
-with tabs[6]:
+with tab_pairs:
     pairs = pair_payload.get("recommended_pairs") or []
     if not pairs:
         st.info("No pair builder output published yet for this slate.")
@@ -1004,7 +1086,7 @@ with tabs[6]:
                     "season_hr", "hr_per_pa", "pitcher_name", "pitcher_throws", "pitcher_hr9",
                 ]), width="stretch", hide_index=True)
 
-with tabs[7]:
+with tab_pools:
     p4 = pair_payload.get("pools_4man") or []
     p6 = pair_payload.get("pools_6man") or []
     if not p4 and not p6:
@@ -1028,7 +1110,7 @@ with tabs[7]:
                 ]), width="stretch", hide_index=True)
 
 # ── RESULTS ─────────────────────────────────────────────────────────────────
-with tabs[8]:
+with tab_results:
     which = st.radio("Results view", ["Live", "Final"], horizontal=True)
     rel = f"public/data/current/results_{'live' if which == 'Live' else 'final'}.json"
     res = load_json(rel) or {}
@@ -1060,7 +1142,7 @@ with tabs[8]:
         ]), width="stretch", hide_index=True, height=520)
 
 # ── PLAYER DETAIL ───────────────────────────────────────────────────────────
-with tabs[9]:
+with tab_player:
     if not view:
         st.info("No players match these filters.")
     else:
@@ -1093,6 +1175,8 @@ with tabs[9]:
         if st.button("⭐ Add to watchlist"):
             if name_of(p) not in st.session_state.watch:
                 st.session_state.watch.append(name_of(p))
+                persist_watch()
+                st.rerun()
 
         cA, cB = st.columns(2)
         with cA:
@@ -1173,7 +1257,7 @@ with tabs[9]:
             )
 
 # ── WATCHLIST ───────────────────────────────────────────────────────────────
-with tabs[10]:
+with tab_watch:
     if not st.session_state.watch:
         st.info("No players on your watchlist yet — add them from the Player tab.")
     else:
@@ -1181,12 +1265,14 @@ with tabs[10]:
         st.caption(f"{len(watched)} players watched")
         for p in sorted(watched, key=hr_score, reverse=True):
             player_card(p)
+        st.caption("Saved in the page URL — bookmark it and the list comes back.")
         if st.button("Clear watchlist"):
             st.session_state.watch = []
+            persist_watch()
             st.rerun()
 
 # ── BOT REPORT ──────────────────────────────────────────────────────────────
-with tabs[11]:
+with tab_bot:
     txt_report = load_text(f"public/data/current/{slate}.txt") or load_text(f"public/data/{slate}.txt")
     if not txt_report:
         st.info("No text report published for this slate yet.")
@@ -1200,8 +1286,58 @@ with tabs[11]:
         else:
             st.code(txt_report, language="text")
 
+# ── SPRAY (full slate) ──────────────────────────────────────────────────────
+with tab_spray:
+    st.caption(
+        "Batted-ball spray across the slate. Detail is fetched per player "
+        "(~82 KB each), so pick a handful rather than loading everyone."
+    )
+    top_pool = sorted(view, key=hr_score, reverse=True)[:40]
+    picks = st.multiselect(
+        "Players", range(len(top_pool)),
+        default=list(range(min(3, len(top_pool)))),
+        format_func=lambda i: f"{name_of(top_pool[i])} ({team_of(top_pool[i])}) — HR {hr_score(top_pool[i]):.0f}",
+    )
+    frames = []
+    for i in picks:
+        pl = top_pool[i]
+        det = load_detail("batter", pl.get("player_id"))
+        for e in (det.get("spray_chart") or []):
+            e = dict(e)
+            e["player"] = name_of(pl)
+            frames.append(e)
+
+    if not frames:
+        st.info(
+            "No spray data for the selected players yet. Detail files publish "
+            "with the next bot run."
+        )
+    else:
+        sp = pd.DataFrame(frames)
+        for col in ("hc_x", "hc_y", "distance", "ev", "launch_angle"):
+            if col in sp.columns:
+                sp[col] = pd.to_numeric(sp[col], errors="coerce")
+        c1, c2 = st.columns(2)
+        with c1:
+            st.caption("Spray map")
+            if {"hc_x", "hc_y"}.issubset(sp.columns):
+                fld = sp.dropna(subset=["hc_x", "hc_y"]).copy()
+                fld["x"] = fld["hc_x"] - 125.42
+                fld["y"] = 198.27 - fld["hc_y"]
+                st.scatter_chart(fld, x="x", y="y", color="player", height=380,
+                                 size="distance" if "distance" in fld.columns else None)
+        with c2:
+            st.caption("Exit velocity vs distance")
+            if {"ev", "distance"}.issubset(sp.columns):
+                st.scatter_chart(sp, x="ev", y="distance", color="player", height=380)
+        st.dataframe(
+            sp[[c for c in ["player", "date", "pitch_type", "event", "bb_type",
+                            "ev", "launch_angle", "distance", "lane"] if c in sp.columns]],
+            width="stretch", hide_index=True, height=320,
+        )
+
 # ── GUIDE ───────────────────────────────────────────────────────────────────
-with tabs[12]:
+with tab_guide:
     # The bot already writes a full legend at the end of every report, so this
     # stays in sync with the model automatically instead of drifting out of
     # date the way a hardcoded copy in the front end would.
