@@ -831,6 +831,80 @@ def candles(df: pd.DataFrame, date_col: str, val_col: str, title: str = "",
     st.plotly_chart(fig, width="stretch")
 
 
+def bbe_frame(bbe: Any) -> pd.DataFrame:
+    """Batted-ball list -> numeric DataFrame, newest first."""
+    if not bbe:
+        return pd.DataFrame()
+    df = pd.DataFrame(bbe)
+    for col in ("ev", "launch_angle", "distance", "pitch_velocity"):
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
+    if "date" in df.columns:
+        df = df.sort_values("date", ascending=False)
+    return df
+
+
+def contact_log_html(df: pd.DataFrame, max_height: int = 440) -> str:
+    """The old site's colour-coded contact log, as raw HTML.
+
+    Rendered by hand rather than through pandas' `.style` accessor because
+    that needs jinja2, which isn't guaranteed to be installed on Streamlit
+    Cloud -- the whole tab used to disappear behind an ImportError. Thresholds
+    match the old EV Log exactly: EV green 95+ / red 85-, distance green
+    375+ / red 300-.
+    """
+    if df is None or df.empty:
+        return ""
+
+    def cell(v: Any, kind: str = "") -> str:
+        try:
+            fv = float(v)
+        except (TypeError, ValueError):
+            return "<td>—</td>"
+        if not math.isfinite(fv):
+            return "<td>—</td>"
+        colr = ""
+        if kind == "ev":
+            colr = C["green"] if fv >= 95 else C["red"] if fv <= 85 else ""
+            shown = f"{fv:.1f}"
+        elif kind == "dist":
+            colr = C["green"] if fv >= 375 else C["red"] if fv <= 300 else ""
+            shown = f"{fv:.0f}"
+        else:
+            shown = f"{fv:.0f}"
+        style = f" style='color:{colr};font-weight:700'" if colr else ""
+        return f"<td{style}>{shown}</td>"
+
+    rows_html = []
+    for _, r in df.iterrows():
+        hr_mark = " 🔴" if r.get("is_hr") else ""
+        rows_html.append(
+            "<tr>"
+            f"<td>{r.get('date', '')}</td>"
+            f"<td>{r.get('pitcher', '')}</td>"
+            f"<td>{r.get('arm', '')}</td>"
+            f"<td style='color:{C['cyan']}'>{r.get('pitch_name', '')}</td>"
+            + cell(r.get("ev"), "ev")
+            + cell(r.get("launch_angle"))
+            + cell(r.get("distance"), "dist")
+            + cell(r.get("pitch_velocity"))
+            + f"<td>{r.get('result', '')}{hr_mark}</td>"
+            f"<td style='color:{C['text3']}'>{r.get('trajectory', '')}</td>"
+            "</tr>"
+        )
+    return (
+        f"<div style='max-height:{max_height}px;overflow:auto;border:1px solid "
+        f"{C['border']};border-radius:12px'>"
+        f"<table style='width:100%;border-collapse:collapse;"
+        f"font-family:{NUM_FONT};font-size:11px'>"
+        f"<thead><tr style='position:sticky;top:0;background:{C['bg3']};"
+        f"color:{C['text3']};text-align:left'>"
+        "<th>Date</th><th>Pitcher</th><th>Arm</th><th>Pitch</th><th>EV</th>"
+        "<th>Angle</th><th>Dist</th><th>Velo</th><th>Result</th><th>Traj</th>"
+        "</tr></thead><tbody>" + "".join(rows_html) + "</tbody></table></div>"
+    )
+
+
 def tags_html(tags: Any, limit: int = 6) -> str:
     if isinstance(tags, str):
         tags = [t.strip() for t in tags.split(",") if t.strip()]
@@ -902,18 +976,35 @@ def player_modal(p: Dict[str, Any]) -> None:
                  pmix_score(p), nn(p, "damage_conversion_score")],
           role_color, "Score profile", height=300)
 
-    msp = load_splits(p.get("player_id"), slate)
-    if msp:
-        with st.expander("📅 Situational splits"):
-            for key, title in (("day_night", "Day vs Night"),
-                               ("home_away", "Home vs Away"),
-                               ("win_loss", "Wins vs Losses")):
-                d = msp.get(key) or {}
-                if d:
-                    st.markdown(f"**{title}**")
-                    st.dataframe(
-                        pd.DataFrame(d).T[["G", "PA", "HR", "AVG", "OBP", "SLG", "OPS", "ISO"]],
-                        width="stretch")
+    # Situational splits: charts, and all four families including day of week.
+    # This used to be three raw tables with the weekday breakdown missing
+    # entirely, even though the splits bot has been publishing it all along.
+    if load_splits(p.get("player_id"), slate):
+        with st.expander("📅 Situational splits — day/night, home/away, W/L, weekday"):
+            render_splits(p, slate, compact=True)
+
+    # Contact log. The modal was the one place a player's batted balls
+    # couldn't be seen -- you had to close it, go to the Player tab and
+    # re-find him, which defeats the point of a modal.
+    mbbe = bbe_frame((load_detail("batter", p.get("player_id"), slate) or {}).get("spray_chart"))
+    if not mbbe.empty:
+        with st.expander(f"⚡ Contact log — last {min(20, len(mbbe))} batted balls"):
+            recent = mbbe.head(20)
+            q = st.columns(4)
+            if "ev" in recent.columns:
+                q[0].metric("Avg EV", f"{recent['ev'].mean():.1f}")
+                q[1].metric("Max EV", f"{recent['ev'].max():.1f}")
+            if "distance" in recent.columns:
+                q[2].metric("Max dist", f"{recent['distance'].max():.0f}")
+            if "is_hr" in recent.columns:
+                q[3].metric("HRs", int(recent["is_hr"].astype(bool).sum()))
+            st.markdown(contact_log_html(recent, max_height=300), unsafe_allow_html=True)
+            st.caption("EV green 95+ · red 85− | Dist green 375+ · red 300− | 🔴 home run")
+            cl, cr = st.columns(2)
+            with cl:
+                candles(mbbe, "date", "ev", "Exit velocity by day", height=260, unit="mph")
+            with cr:
+                candles(mbbe, "date", "distance", "Distance by day", height=260, unit="ft")
 
     if txt(p, "simple_reason_1"):
         st.caption(txt(p, "simple_reason_1"))
@@ -1024,8 +1115,98 @@ def rows_to_df(rows: List[Dict[str, Any]], cols: List[str]) -> pd.DataFrame:
     return df[[c for c in cols if c in df.columns]]
 
 
-def render_splits(p: Dict[str, Any], slate_label: str) -> None:
-    """Four split families, each as a table plus a heatmap of the rate stats."""
+# player_splits.py abbreviates ("Mon"), but older payloads spelled the day out.
+# Both are listed so the calendar ordering holds either way; anything that
+# matches neither is left in whatever order the payload had.
+DOW_ORDER = ["Mon", "Monday", "Tue", "Tuesday", "Wed", "Wednesday",
+             "Thu", "Thursday", "Fri", "Friday", "Sat", "Saturday",
+             "Sun", "Sunday"]
+
+SPLIT_FAMILIES = [
+    ("day_night", "Day vs Night"),
+    ("home_away", "Home vs Away"),
+    ("win_loss", "Team Wins vs Losses"),
+    ("day_of_week", "By Day of Week"),
+]
+
+
+def _split_frame(data: Dict[str, Any], key: str) -> Optional[pd.DataFrame]:
+    """Split payload -> DataFrame, with day-of-week in calendar order.
+
+    Sorting matters here: the JSON preserves whatever order the gameLog
+    happened to produce, so without this the weekday chart came out as
+    Thursday, Monday, Saturday... which is unreadable as a trend.
+    """
+    if not data:
+        return None
+    df = pd.DataFrame(data).T
+    if df.empty:
+        return None
+    if key == "day_of_week":
+        present = [d for d in DOW_ORDER if d in df.index]
+        if present:
+            df = df.loc[present]
+    return df
+
+
+def split_chart(df: pd.DataFrame, title: str, height: int = 300) -> None:
+    """Grouped bars for the rate stats, plus a HR/PA line on a second axis.
+
+    Replaces the raw table this used to be. AVG/OBP/SLG/OPS all live in the
+    same .200-1.000 range so they group cleanly on one axis; HR/PA is two
+    orders of magnitude smaller, so it rides its own axis as a line with
+    markers instead of a bar nobody could see.
+    """
+    if go is None or df is None or df.empty:
+        return
+    labels = [str(i) for i in df.index]
+    fig = go.Figure()
+
+    # Light green = good, dark green = bad, matching the rest of the site.
+    series = [("AVG", "#0f6b3c"), ("OBP", "#2f9e52"),
+              ("SLG", "#6fd08c"), ("OPS", "#b7f7c9")]
+    for col, colr in series:
+        if col not in df.columns:
+            continue
+        vals = pd.to_numeric(df[col], errors="coerce")
+        fig.add_trace(go.Bar(
+            name=col, x=labels, y=vals, marker_color=colr,
+            text=[f"{v:.3f}" if pd.notna(v) else "" for v in vals],
+            textposition="outside", textfont=dict(size=9, color=C["text3"]),
+            hovertemplate=f"%{{x}}<br>{col} %{{y:.3f}}<extra></extra>",
+        ))
+
+    hrpa = None
+    for cand in ("HR/PA", "HR_PA", "hr_per_pa"):
+        if cand in df.columns:
+            hrpa = pd.to_numeric(df[cand], errors="coerce")
+            break
+    if hrpa is not None and hrpa.notna().any():
+        fig.add_trace(go.Scatter(
+            name="HR/PA", x=labels, y=hrpa, yaxis="y2", mode="lines+markers",
+            line=dict(color=C["orange"], width=2, dash="dot"),
+            marker=dict(size=7, color=C["orange"]),
+            hovertemplate="%{x}<br>HR/PA %{y:.4f}<extra></extra>",
+        ))
+        fig.update_layout(yaxis2=dict(
+            overlaying="y", side="right", showgrid=False,
+            tickfont=dict(color=C["orange"], size=9),
+            title=dict(text="HR/PA", font=dict(color=C["orange"], size=9)),
+        ))
+
+    fig.update_layout(barmode="group", bargap=0.25, bargroupgap=0.05)
+    _layout(fig, height, title)
+    # _layout hard-disables the legend (most charts on the site are single
+    # series). This one is grouped, so the legend has to come back on after.
+    fig.update_layout(showlegend=True,
+                      legend=dict(orientation="h", y=1.14, x=0,
+                                  font=dict(size=9), bgcolor="rgba(0,0,0,0)"))
+    st.plotly_chart(fig, width="stretch")
+
+
+def render_splits(p: Dict[str, Any], slate_label: str, compact: bool = False) -> None:
+    """Situational splits as charts. `compact` drops the backing tables so the
+    same renderer can be dropped into the player modal without burying it."""
     sp = load_splits(p.get("player_id"), slate_label)
     if not sp:
         st.info(
@@ -1037,32 +1218,25 @@ def render_splits(p: Dict[str, Any], slate_label: str) -> None:
     st.caption(
         f"{int(nn(sp, 'games_logged'))} games logged · season {sp.get('season', '')}"
     )
-    families = [
-        ("day_night", "Day vs Night"),
-        ("home_away", "Home vs Away"),
-        ("win_loss", "Team Wins vs Losses"),
-        ("day_of_week", "By Day of Week"),
-    ]
-    for key, title in families:
-        data = sp.get(key) or {}
-        if not data:
+    for key, title in SPLIT_FAMILIES:
+        df = _split_frame(sp.get(key) or {}, key)
+        if df is None:
             continue
-        st.markdown(f"**{title}**")
-        df = pd.DataFrame(data).T
-        order = [c for c in ["G", "PA", "AB", "H", "HR", "XBH", "RBI", "R",
-                             "BB", "K", "AVG", "OBP", "SLG", "OPS", "ISO",
-                             "HR/PA", "K%"] if c in df.columns]
-        st.dataframe(df[order], width="stretch")
-        rate = [c for c in ["AVG", "OBP", "SLG", "OPS", "ISO", "HR/PA"] if c in df.columns]
-        if rate and len(df) > 1:
-            hm = df[rate].astype(float).copy()
-            # Scale each column 0-100 within itself: OPS (~.800) and HR/PA
-            # (~.04) can't share one colour scale raw.
-            for c in hm.columns:
-                lo, hi = hm[c].min(), hm[c].max()
-                hm[c] = 50.0 if hi == lo else (hm[c] - lo) / (hi - lo) * 100
-            heatmap(hm.round(0), f"{title} — relative strength",
-                    height=max(200, 30 * len(hm) + 90))
+        # Sample size sits above the chart rather than inside it -- a .400 AVG
+        # over 9 PA and one over 200 PA look identical as a bar.
+        if "PA" in df.columns:
+            st.caption(" · ".join(
+                f"**{i}** {int(n(df.loc[i, 'PA']))} PA"
+                + (f", {int(n(df.loc[i, 'HR']))} HR" if "HR" in df.columns else "")
+                for i in df.index
+            ))
+        split_chart(df, title, height=300 if len(df) <= 3 else 340)
+        if not compact:
+            order = [c for c in ["G", "PA", "AB", "H", "HR", "XBH", "RBI", "R",
+                                 "BB", "K", "AVG", "OBP", "SLG", "OPS", "ISO",
+                                 "HR/PA", "K%"] if c in df.columns]
+            with st.expander(f"{title} — full table"):
+                st.dataframe(df[order], width="stretch")
 
 
 # ── SIDEBAR ─────────────────────────────────────────────────────────────────
@@ -1193,11 +1367,11 @@ with h2:
 # carries over. Player is new: Streamlit has no modal, so what used to be
 # PlayerModal is a tab instead.
 (tab_games, tab_board, tab_due, tab_hitshrr, tab_pitchers, tab_pairs, tab_bot,
- tab_pools, tab_scoreboard, tab_leaders, tab_results, tab_player,
+ tab_pools, tab_pairhist, tab_scoreboard, tab_leaders, tab_results, tab_player,
  tab_watch, tab_spray, tab_guide) = st.tabs([
     "🗓️ Games", "🏆 HR Board", "💣 Due Board", "💥 Hits & HRR", "⚾ Pitchers",
-    "🎯 Pairs", "🤖 Bot", "🧩 Pools", "📊 Scoreboard", "🥇 Leaders", "✅ Results",
-    "🔍 Player", "⭐ Watchlist", "💦 Spray", "📖 Guide",
+    "🎯 Pairs", "🤖 Bot", "🧩 Pools", "🧬 Pair History", "📊 Scoreboard",
+    "🥇 Leaders", "✅ Results", "🔍 Player", "⭐ Watchlist", "💦 Spray", "📖 Guide",
 ])
 
 # ── BOARD ───────────────────────────────────────────────────────────────────
@@ -1842,49 +2016,195 @@ with tab_hitshrr:
 # ── PAIRS / POOLS ───────────────────────────────────────────────────────────
 pair_payload = load_json("public/data/current/pair_builder_latest.json") or {}
 
+RISK_COLOR = {"low": C["green"], "lower": C["green"], "medium": C["yellow"],
+              "mid": C["yellow"], "high": C["red"], "higher": C["red"]}
+
+
+def risk_color(risk: Any) -> str:
+    return RISK_COLOR.get(str(risk or "").strip().lower(), C["text3"])
+
+
+def combo_player_html(pl: Dict[str, Any]) -> str:
+    """One player tile inside a pair or pool card.
+
+    Replaces the raw dataframe these used to render as. A table of eleven
+    numeric columns is technically complete and completely unreadable at a
+    glance -- the point of a pair card is to see, in one look, who the two
+    guys are and how hard each of them is hitting.
+    """
+    hr = n(pl.get("hr_score"))
+    hrw = n(pl.get("hrw_score"))
+    spot = pl.get("lineup_spot") or "—"
+    return (
+        f"<div style='flex:1;min-width:190px;background:rgba(255,255,255,.03);"
+        f"border:1px solid {C['border']};border-radius:10px;padding:9px 11px'>"
+        f"<div style='font-size:13px;font-weight:700;line-height:1.2'>"
+        f"{pl.get('name', '?')}</div>"
+        f"<div style='font-size:10px;color:{C['text3']};margin-bottom:6px'>"
+        f"{pl.get('team', '')} vs {pl.get('opponent', '')} · spot {spot} · "
+        f"{int(n(pl.get('season_hr')))} HR</div>"
+        f"{bar('HR', hr, 100, C['orange'])}"
+        f"{bar('HRW', hrw, 100, C['cyan'])}"
+        f"<div style='font-size:10px;color:{C['text3']};margin-top:5px'>"
+        f"vs {pl.get('pitcher_name', 'TBD')} "
+        f"({pl.get('pitcher_throws', '?')}) · HR/9 {n(pl.get('pitcher_hr9')):.2f}</div>"
+        f"</div>"
+    )
+
+
+def combo_card(title: str, subtitle: str, score: float, risk: Any,
+               tags: Any, reason: str, players: List[Dict[str, Any]],
+               accent: str) -> None:
+    """Shared renderer for a pair card and a pool card -- same shape, different
+    player count, so they may as well not drift apart."""
+    tiles = "".join(combo_player_html(pl) for pl in (players or []))
+    st.markdown(
+        f"<div style='border:1px solid {C['border']};border-left:3px solid {accent};"
+        f"border-radius:12px;padding:12px 14px;margin-bottom:12px;"
+        f"background:rgba(255,255,255,.02)'>"
+        f"<div style='display:flex;align-items:baseline;justify-content:space-between;"
+        f"gap:10px;flex-wrap:wrap'>"
+        f"<div><span style='font-size:10px;font-weight:800;letter-spacing:.07em;"
+        f"color:{accent}'>{title}</span>"
+        f"<div style='font-size:15px;font-weight:700;margin-top:2px'>{subtitle}</div></div>"
+        f"<div style='text-align:right'>"
+        f"<div style='font-family:{NUM_FONT};font-size:20px;font-weight:800;"
+        f"line-height:1'>{score:.1f}</div>"
+        f"<div style='font-size:9px;color:{risk_color(risk)};font-weight:700;"
+        f"text-transform:uppercase'>{risk or '—'} risk</div></div></div>"
+        f"<div style='margin:8px 0 4px'>{tags_html(tags, limit=8)}</div>"
+        f"<div style='display:flex;gap:8px;flex-wrap:wrap;margin-top:8px'>{tiles}</div>"
+        + (f"<div style='font-size:11px;color:{C['text3']};font-style:italic;"
+           f"margin-top:9px'>{reason}</div>" if reason else "")
+        + "</div>",
+        unsafe_allow_html=True,
+    )
+
+
 with tab_pairs:
     pairs = pair_payload.get("recommended_pairs") or []
     if not pairs:
         st.info("No pair builder output published yet for this slate.")
     else:
-        st.caption(f"Pair Builder · {pair_payload.get('date', '')} · {len(pairs)} pairs")
-        for p in pairs:
+        ph1, ph2 = st.columns([3, 2])
+        ph1.caption(f"Pair Builder · {pair_payload.get('date', '')} · {len(pairs)} pairs")
+        types = sorted({str(p.get("type", "PAIR")) for p in pairs})
+        pick_type = ph2.selectbox("Type", ["All types"] + types, key="pairtype")
+
+        shown = [p for p in pairs
+                 if pick_type == "All types" or str(p.get("type", "PAIR")) == pick_type]
+
+        # Score comparison up top: which pairs the model actually likes is the
+        # first question, and it was previously only answerable by reading a
+        # score out of every card's subtitle one at a time.
+        if len(shown) > 1:
+            hbar([" + ".join(str(x.get("name", "?")).split()[-1]
+                             for x in (p.get("players") or []))
+                  for p in shown],
+                 [n(p.get("pair_score")) for p in shown],
+                 "Pairs ranked by pair score", fmt="{:.1f}")
+
+        for p in shown:
             names = " + ".join(str(x.get("name", "?")) for x in (p.get("players") or []))
-            st.markdown(
-                f"<div class='pick-card'><b>{p.get('type', 'PAIR')}</b> "
-                f"<span class='muted'>· score {n(p.get('pair_score')):.1f} · risk {p.get('risk', '—')}</span><br>"
-                f"<b>{names}</b><br>{tags_html(p.get('tags'))}"
-                f"<div class='muted'>{p.get('reason', '')}</div></div>",
-                unsafe_allow_html=True,
-            )
-            if p.get("players"):
-                st.dataframe(rows_to_df(p["players"], [
-                    "name", "team", "opponent", "lineup_spot", "hr_score", "hrw_score",
-                    "season_hr", "hr_per_pa", "pitcher_name", "pitcher_throws", "pitcher_hr9",
-                ]), width="stretch", hide_index=True)
+            combo_card(str(p.get("type", "PAIR")), names, n(p.get("pair_score")),
+                       p.get("risk"), p.get("tags"), str(p.get("reason") or ""),
+                       p.get("players") or [], C["purple"])
 
 with tab_pools:
     p4 = pair_payload.get("pools_4man") or []
     p6 = pair_payload.get("pools_6man") or []
     if not p4 and not p6:
         st.info("No pools published yet for this slate.")
-    for title, pools in (("4-man pools", p4), ("6-man pools", p6)):
+    for title, pools, accent in (("4-man pools", p4, C["cyan"]),
+                                 ("6-man pools", p6, C["orange"])):
         if not pools:
             continue
         st.markdown(f"#### {title}")
+        if len(pools) > 1:
+            hbar([str(pool.get("name", "Pool")) for pool in pools],
+                 [n(pool.get("pool_score")) for pool in pools],
+                 f"{title} ranked by pool score", fmt="{:.1f}")
         for pool in pools:
-            st.markdown(
-                f"<div class='pick-card'><b>{pool.get('name', 'Pool')}</b> "
-                f"<span class='muted'>· score {n(pool.get('pool_score')):.1f} · "
-                f"risk {pool.get('risk', '—')}</span><br>{tags_html(pool.get('tags'))}"
-                f"<div class='muted'>{pool.get('reason', '')}</div></div>",
-                unsafe_allow_html=True,
-            )
-            if pool.get("players"):
-                st.dataframe(rows_to_df(pool["players"], [
-                    "name", "team", "opponent", "lineup_spot", "hr_score",
-                    "hrw_score", "season_hr", "pitcher_name", "pitcher_hr9",
-                ]), width="stretch", hide_index=True)
+            plist = pool.get("players") or []
+            combo_card(f"{len(plist)}-MAN POOL", str(pool.get("name", "Pool")),
+                       n(pool.get("pool_score")), pool.get("risk"),
+                       pool.get("tags"), str(pool.get("reason") or ""),
+                       plist, accent)
+
+# ── PAIR HISTORY ────────────────────────────────────────────────────────────
+# The Pair History Bot has been publishing pair_history_summary.json on a
+# schedule since the migration, but nothing in the app ever read it -- there
+# was no tab, so the whole dataset was invisible. This is the search over it.
+with tab_pairhist:
+    hist = load_json("public/data/current/pair_history_summary.json") or {}
+    top_pairs = hist.get("top_pairs") or []
+
+    if not top_pairs:
+        st.info(
+            "No pair history published yet. It's built by the **Pair History "
+            "Bot** workflow — run it from the Actions tab and it'll appear here."
+        )
+    else:
+        hm = st.columns(4)
+        hm[0].metric("Pairs tracked", f"{int(n(hist.get('pair_count'))):,}")
+        hm[1].metric("HR events", f"{int(n(hist.get('hr_event_count'))):,}")
+        hm[2].metric("Games checked", f"{int(n(hist.get('games_checked'))):,}")
+        hm[3].metric("Season", str(hist.get("season", "—")))
+        st.caption(
+            f"{hist.get('start_date', '')} → {hist.get('end_date', '')} · "
+            f"showing top {len(top_pairs)} pairs by same-day HR history"
+        )
+
+        s1, s2, s3 = st.columns([3, 2, 2])
+        query = s1.text_input(
+            "Search by player", placeholder="e.g. Judge, Ohtani, Schwarber",
+            key="phq",
+            help="Matches either player in the pair. Leave blank to see them all.",
+        )
+        min_hits = s2.slider("Min same-day HRs", 1, 10, 2, key="phmin")
+        same_game_only = s3.checkbox("Same game only", key="phsg",
+                                     help="Both HRs hit in the same ballgame.")
+
+        def pair_names(rec: Dict[str, Any]) -> List[str]:
+            return [str(x.get("name") or x.get("player_name") or "")
+                    for x in (rec.get("players") or [])]
+
+        q = (query or "").strip().lower()
+        rows = []
+        for rec in top_pairs:
+            names = pair_names(rec)
+            if q and not any(q in nm.lower() for nm in names):
+                continue
+            same_day = int(n(rec.get("same_day_hr_count_season")))
+            same_game = int(n(rec.get("same_game_hr_count")))
+            if same_day < min_hits:
+                continue
+            if same_game_only and same_game < 1:
+                continue
+            rows.append({
+                "Pair": " + ".join(nm for nm in names if nm),
+                "Teams": " / ".join(
+                    str(x.get("team") or "?") for x in (rec.get("players") or [])),
+                "Same-day HRs": same_day,
+                "Same-game HRs": same_game,
+                "Career": int(n(rec.get("same_day_hr_count_career"))),
+                "Last hit": rec.get("last_same_day_hr") or "—",
+                "Boost": round(n(rec.get("history_boost")), 2),
+            })
+
+        if not rows:
+            st.warning("No pairs match those filters.")
+        else:
+            hdf = pd.DataFrame(rows).sort_values(
+                ["Same-day HRs", "Same-game HRs"], ascending=False)
+            st.caption(f"{len(hdf)} pairs match")
+            hbar(hdf["Pair"].head(15).tolist()[::-1],
+                 hdf["Same-day HRs"].head(15).tolist()[::-1],
+                 "Most frequent same-day HR pairs", fmt="{:.0f}")
+            st.dataframe(hdf, width="stretch", hide_index=True, height=460)
+            st.download_button(
+                "⬇️ CSV", hdf.to_csv(index=False).encode(),
+                "pair_history.csv", "text/csv", key="phcsv")
 
 # ── RESULTS ─────────────────────────────────────────────────────────────────
 with tab_results:
