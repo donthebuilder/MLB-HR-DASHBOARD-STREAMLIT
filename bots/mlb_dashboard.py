@@ -81,13 +81,19 @@ except Exception:
 MLB_BASE = "https://statsapi.mlb.com/api/v1"
 OPEN_METEO = "https://api.open-meteo.com/v1/forecast"
 OWM_BASE   = "https://api.openweathermap.org/data/2.5"
-# SECURITY: previously hardcoded in plaintext. Now read from the OWM_API_KEY
-# env var (set this as a GitHub Actions secret / local env var). The literal
-# fallback below is the key that was exposed in source -- rotate it at
-# https://home.openweathermap.org/api_keys and set the new one as
-# OWM_API_KEY before removing the fallback, since this exact key has already
-# been shared in plaintext in chat history and committed to the repo.
-OWM_API_KEY = os.environ.get("OWM_API_KEY", "8f135bcde3b6e1d859549e8419cc61e8")
+# WEATHER (2026-07-25): Open-Meteo is the only weather source that is
+# actually required. It's free, needs no key, and is already the primary
+# provider in fetch_weather() -- OpenWeatherMap was never more than a
+# fallback for the rare case Open-Meteo returns nothing.
+#
+# The previously hardcoded key was removed outright. It had been committed to
+# the repo and pasted in plaintext in chat, so it must be treated as burned;
+# leaving it as a default meant every run kept using a compromised
+# credential for no benefit. OWM is now strictly opt-in: set the OWM_API_KEY
+# env var (GitHub Actions secret or local env) and the fallback re-enables
+# itself. Leave it unset and the bot runs on Open-Meteo alone, which is the
+# expected configuration.
+OWM_API_KEY = os.environ.get("OWM_API_KEY", "").strip()
 TIMEOUT = 30
 if ZoneInfo is not None:
     TODAY = dt.datetime.now(ZoneInfo("America/Phoenix")).date()
@@ -1615,7 +1621,15 @@ def fetch_weather(lat: float, lon: float, game_time: str, roof: str, team: str =
 
 
 def _fetch_weather_owm(lat: float, lon: float, game_time: str, roof: str, team: str) -> "Optional[WeatherSummary]":
-    """Fetch from OpenWeatherMap 5-day/3-hour forecast endpoint."""
+    """Fetch from OpenWeatherMap 5-day/3-hour forecast endpoint.
+
+    Opt-in only. With no OWM_API_KEY set this returns immediately and the bot
+    runs on Open-Meteo alone -- which is the intended setup, since Open-Meteo
+    is already the primary provider and needs no credentials. Skipping early
+    also avoids firing a guaranteed-401 request at every venue on the slate.
+    """
+    if not OWM_API_KEY:
+        return None
     try:
         # Parse game time to find the closest forecast bucket
         try:
