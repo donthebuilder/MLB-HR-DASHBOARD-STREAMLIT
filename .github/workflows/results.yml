@@ -8,8 +8,14 @@ on:
     - cron: "0 2,4,6,8,10 * * *"
   workflow_dispatch: {}
 
+# One group PER WORKFLOW, not one shared across all of them.
+# GitHub keeps at most a single *pending* run per concurrency group, so a
+# shared group meant each newly queued run cancelled the previously queued
+# one -- that's what silently killed the Tomorrow slate and the Grade Results
+# run. Publishing races are handled in publish_data.sh instead, which
+# re-reads the data branch immediately before it force-pushes.
 concurrency:
-  group: mlb-data-publish
+  group: mlb-results
   cancel-in-progress: false
 
 permissions:

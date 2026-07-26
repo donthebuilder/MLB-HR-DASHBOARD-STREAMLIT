@@ -46,15 +46,17 @@ jobs:
           restore-keys: |
             hr-companion-
 
+      # FIXED: the old `ls bots/outputs/*today*.json` glob never matched --
+      # hr_companion_cache.py's own search globs for "*-today.json" and
+      # "slate_*.json", neither of which the fetch step produces. Point it at
+      # the stable slate path explicitly instead of guessing at filenames.
       - name: Run HR companion cache
         run: |
-          SLATE=$(ls -t bots/outputs/*today*.json 2>/dev/null | head -1)
-          if [ -z "$SLATE" ]; then
-            echo "No slate file found — skipping."
+          if [ ! -s public/data/today_slate.json ]; then
+            echo "No published slate yet — skipping."
             exit 0
           fi
-          echo "Building HR companion cache from $SLATE"
-          python bots/hr_companion_cache.py --slate "$SLATE"
+          python bots/hr_companion_cache.py --slate public/data/today_slate.json
 
       # STREAMLIT MIGRATION (2026-07-25): replaces the old commit+push to
       # main, which added the whole of public/data and bots/outputs to the

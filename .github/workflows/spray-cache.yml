@@ -51,11 +51,18 @@ jobs:
           restore-keys: |
             spray-cache-
 
+      # FIXED: this job failed every run in 29s with "No slate file found."
+      # spray_cache.py needs a slate on disk and a fresh CI checkout has none
+      # (public/data is gitignored). Pull the published slate first; it lands
+      # at public/data/today_slate.json, which find_latest_slate() checks.
+      - name: Fetch published slate
+        run: python bots/fetch_picks_for_grading.py --date today
+
       - name: Run spray_cache.py (pass 1)
-        run: python bots/spray_cache.py
+        run: python bots/spray_cache.py --slate public/data/today_slate.json
 
       - name: Run spray_cache.py (pass 2 — mop up any leftover cold-cache players)
-        run: python bots/spray_cache.py
+        run: python bots/spray_cache.py --slate public/data/today_slate.json
 
       - name: Save spray/zone cache
         if: always()

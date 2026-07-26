@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: pair-history-bot
@@ -63,6 +63,14 @@ jobs:
             bots/pair_history_cache.json
             bots/pair_history_summary.json
           key: pair-history-${{ github.run_id }}
+
+      # The cache above only carries state between runs of THIS job -- the
+      # Streamlit app can't read it. The Pairs tab wants pair_history_summary
+      # .json, so it has to reach the data branch like everything else the app
+      # consumes. Without this the pair-history job ran green every night and
+      # its output went nowhere.
+      - name: Publish to data branch
+        run: bash .github/scripts/publish_data.sh "Pair history"
 
       - name: Upload logs on failure
         if: failure()
