@@ -55,6 +55,13 @@ jobs:
       - name: Build slim payload for Streamlit
         run: python bots/make_slim.py
 
+      # Day/night, home/away, day-of-week and win/loss splits. The
+      # scoring bot only carries vs-RHP/LHP, so these come from MLB's
+      # gameLog endpoint -- one request per hitter, ~2 min for a slate.
+      - name: Build situational splits
+        run: python bots/player_splits.py --slate public/data/current/tomorrow.json --label tomorrow
+        continue-on-error: true
+
       - name: Save SQLite cache
         uses: actions/cache/save@v4
         with:
