@@ -1,0 +1,53 @@
+# ─────────────────────────────────────────────────────────────────────────
+# THE RULE: no generated slate data is ever committed to `main`.
+#
+# The repo hit 20+ GB because bot output (76 MB slate JSONs, 100 MB graded
+# results, tens of thousands of per-player cache files) was being committed
+# every run by several workflows. That is what made Streamlit Cloud time out
+# cloning the repo -- it never got past "Cloning repository...".
+#
+# Data now lives on the `data` branch as a single force-pushed orphan commit
+# containing only the few small files the app reads (see
+# .github/scripts/publish_data.sh). main stays code-only, a few MB.
+# ─────────────────────────────────────────────────────────────────────────
+
+# Bot output and caches — regenerated every run, never source
+public/data/
+bots/outputs/
+bots/*.sqlite
+bots/*.sqlite-journal
+bots/pair_history_cache.json
+bots/pair_history_summary.json
+outputs/
+bot_outputs/
+
+# python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# streamlit
+.streamlit/secrets.toml
+
+# env
+.env
+.env.local
+.env*.local
+
+# editor / OS
+.DS_Store
+.vscode/
+.idea/
+*.swp
+
+# legacy Next.js / Vercel (removed in the Streamlit migration; kept so a
+# stale local build directory can't get committed by accident)
+node_modules
+.next/
+out/
+build
+.vercel
+.pnp
+.pnp.js
