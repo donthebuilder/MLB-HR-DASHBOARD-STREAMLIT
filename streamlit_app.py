@@ -1123,6 +1123,223 @@ def player_card(
             player_modal(p)
 
 
+# Moved above the tab bodies: the Games tab now calls this to show both
+# starters, and tab bodies execute at import time -- leaving the def down
+# in the Pitchers section made it a NameError on first render.
+def group_pitchers(pool: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Port of lib/data.js groupPitchers — one entry per starter with lineup."""
+    by: Dict[Any, Dict[str, Any]] = {}
+    for p in pool:
+        pid = p.get("pitcher_id") or txt(p, "pitcher_name")
+        if not pid:
+            continue
+        e = by.setdefault(pid, {
+            "pitcher_id": p.get("pitcher_id"),
+            "pitcher_name": txt(p, "pitcher_name", default="Unknown"),
+            "throws": txt(p, "pitcher_throws", default="?"),
+            "era": nn(p, "pitcher_era"), "hr9": nn(p, "pitcher_hr9"),
+            "whip": nn(p, "pitcher_whip"), "k9": nn(p, "pitcher_k9"),
+            "weak_side": txt(p, "pitcher_weak_side"),
+            "xbh_lhb": p.get("pitcher_xbh_vs_lhb"), "xbh_rhb": p.get("pitcher_xbh_vs_rhb"),
+            "attack": txt(p, "pitcher_attack_tag"),
+            # The pitcher's own team is the batters' opponent, and vice versa.
+            "team": opp_of(p), "facing": team_of(p),
+            "venue": txt(p, "venue_name"), "game_time": p.get("game_time"),
+            "confirmed": False, "lineup": [],
+            # Keep one representative batter row: every pitcher_* field is
+            # identical across the lineup facing him, so this is the cheapest
+            # way to reach the full pitcher profile without a second lookup.
+            "row": p,
+        })
+        if p.get("lineup_confirmed"):
+            e["confirmed"] = True
+        e["lineup"].append(p)
+    for e in by.values():
+        e["lineup"].sort(key=lambda x: nn(x, "lineup_spot", default=99.0))
+        e["weak_spots"] = sum(1 for x in e["lineup"] if x.get("weak_spot_flag") is True)
+    return sorted(by.values(), key=lambda e: (-e["weak_spots"], -e["hr9"]))
+
+
+# Plain-English definitions, in one place and reused everywhere. Written for
+# someone who has never read a stat line: what the number means, and which
+# direction is good. Every table and metric that uses one of these names
+# points back here rather than assuming the reader already knows.
+SCORE_HELP = {
+    "HR": "Home-run score, 0-100. How likely this hitter is to go deep today. Higher is better.",
+    "HRR": "Home run + Runs score, 0-100. Broader production — runs scored and driven in, not just homers.",
+    "Hit": "Hit score, 0-100. How likely he is to get at least one base hit. This is the safest of the scores.",
+    "TB": "Total-bases score, 0-100. Doubles, triples and homers — extra-base damage rather than singles.",
+    "Damage": "Damage conversion, 0-100. When he does square a ball up, how often it turns into real damage.",
+    "PMix": "Pitch-mix score, 0-100. How well his swing matches the pitches this particular starter throws.",
+    "PMatch": "Pitch-type match, 0-100. Same idea as PMix, focused on his single best pitch type.",
+    "375+": "Batted balls hit 375 feet or more recently. Raw power showing up in games.",
+    "400+": "Batted balls hit 400+ feet recently. Genuine no-doubt distance.",
+    "IHR": "Ideal HR rate — share of his batted balls hit at both the speed and angle that produce homers.",
+    "K%": "Strikeout rate. HIGHER IS WORSE for a hitter — he has to put the ball in play to hit a homer.",
+    "Spot": "Where he bats in the order, 1-9. Earlier spots get more plate appearances.",
+    "P HR/9": "Home runs the opposing starter allows per 9 innings. League average ≈ 1.2; higher is better for hitters.",
+}
+
+GLOSSARY_MD = """
+**The five scores** — all 0–100, all "higher is better", all built by the bot
+from that day's matchup:
+
+| Score | Plain English |
+|---|---|
+| **HR** | Chance he hits a home run today |
+| **HRR** | Chance he scores or drives in runs |
+| **Hit** | Chance he gets at least one base hit — the safest score |
+| **TB** | Chance of extra bases (doubles, triples, homers) |
+| **Damage** | When he connects, how often it actually hurts |
+
+**Reading the colours.** Light green is good, dark green is weak. That holds
+everywhere on the site — charts, heat maps and tables all use the same scale,
+so you never have to check a legend.
+
+**Supporting numbers**
+
+- **PMix / PMatch** — does his swing match what this pitcher throws?
+- **375+ / 400+** — how many balls he's recently hit that far. Real power, in games.
+- **IHR** — share of his contact hit at both the speed *and* angle that make homers.
+- **K%** — strikeout rate. This is the one where **higher is worse**.
+- **HR/9** — homers the opposing starter gives up per 9 innings. Around 1.2 is
+  average, so anything well above that is a pitcher you want to attack.
+
+**The one habit worth having:** always check the sample size before you trust a
+split. A .400 average over 9 plate appearances is noise; over 200 it's a
+player. Anywhere the site shows you a rate, it shows you the PA count next to
+it for exactly this reason.
+"""
+
+
+def hr9_verdict(hr9: float) -> tuple:
+    """Plain-English read on a starter's home-run rate.
+
+    League average sits around 1.2 HR/9. Someone who has never looked at a
+    pitching line has no way to know whether 1.84 is good or bad, so the
+    number is always shown with a word next to it.
+    """
+    if hr9 <= 0:
+        return ("—", C["text3"], "no data")
+    if hr9 >= 1.8:
+        return ("VERY HITTABLE", C["red"], "gives up homers far more than most starters")
+    if hr9 >= 1.4:
+        return ("HITTABLE", "#fb923c", "gives up more homers than average")
+    if hr9 >= 1.0:
+        return ("AVERAGE", C["yellow"], "roughly league-average for homers")
+    if hr9 >= 0.7:
+        return ("TOUGH", "#4cb96a", "harder than most to take deep")
+    return ("VERY TOUGH", C["green"], "one of the hardest starters to homer off")
+
+
+def pitcher_strip(e: Dict[str, Any]) -> str:
+    """Compact starter card: who's pitching and how homer-friendly he is."""
+    verdict, vcolor, _ = hr9_verdict(n(e.get("hr9")))
+    weak = e.get("weak_side") or "—"
+    return (
+        f"<div style='background:rgba(255,255,255,.03);border:1px solid {C['border']};"
+        f"border-left:3px solid {vcolor};border-radius:10px;padding:10px 12px'>"
+        f"<div style='display:flex;justify-content:space-between;align-items:baseline'>"
+        f"<div><span style='font-size:14px;font-weight:700'>{e.get('pitcher_name', 'TBD')}</span>"
+        f"<span style='font-size:10px;color:{C['text3']};margin-left:6px'>"
+        f"{e.get('throws', '?')}HP · {e.get('team', '')}</span></div>"
+        f"<span style='font-size:9px;font-weight:800;letter-spacing:.06em;color:{vcolor}'>"
+        f"{verdict}</span></div>"
+        f"<div style='display:flex;gap:14px;margin-top:7px;font-family:{NUM_FONT}'>"
+        + "".join(
+            f"<div><div style='font-size:8.5px;color:{C['text3']};letter-spacing:.05em'>"
+            f"{lbl}</div><div style='font-size:15px;font-weight:800;color:{colr}'>{val}</div></div>"
+            for lbl, val, colr in (
+                ("HR/9", f"{n(e.get('hr9')):.2f}", vcolor),
+                ("ERA", f"{n(e.get('era')):.2f}", C["text"]),
+                ("WHIP", f"{n(e.get('whip')):.2f}", C["text"]),
+                ("K/9", f"{n(e.get('k9')):.1f}", C["text"]),
+            )
+        )
+        + "</div>"
+        f"<div style='font-size:10px;color:{C['text3']};margin-top:7px'>"
+        f"Weak side: <b style='color:{C['text2']}'>{weak}</b>"
+        + (f" · {e.get('attack')}" if e.get("attack") else "")
+        + (f" · <span style='color:{C['yellow']}'>⭐ {e['weak_spots']} weak spot"
+           f"{'s' if e.get('weak_spots', 0) != 1 else ''} in the order</span>"
+           if e.get("weak_spots") else "")
+        + "</div></div>"
+    )
+
+
+@st.dialog("Pitcher", width="large")
+def pitcher_modal(e: Dict[str, Any]) -> None:
+    """Starter detail without leaving the Games tab.
+
+    Previously the only way to see a pitcher's arsenal or where he gets hurt
+    in the order was to leave, go to the Pitchers tab and find him again.
+    """
+    row = e.get("row") or {}
+    verdict, vcolor, blurb = hr9_verdict(n(e.get("hr9")))
+
+    st.markdown(f"### {e.get('pitcher_name', 'TBD')}")
+    st.caption(
+        f"{e.get('throws', '?')}HP · {e.get('team', '')} vs {e.get('facing', '')} · "
+        f"{e.get('venue', '')}"
+    )
+    st.markdown(
+        f"<span style='font-size:11px;font-weight:800;color:{vcolor}'>{verdict}</span>"
+        f"<span style='font-size:11px;color:{C['text3']}'> — {blurb}</span>",
+        unsafe_allow_html=True,
+    )
+
+    k = st.columns(5)
+    k[0].metric("HR/9", f"{n(e.get('hr9')):.2f}", help="Home runs allowed per 9 innings. League average ≈ 1.2 — higher is better for hitters.")
+    k[1].metric("ERA", f"{n(e.get('era')):.2f}", help="Earned runs per 9 innings. Higher = easier to score on.")
+    k[2].metric("WHIP", f"{n(e.get('whip')):.2f}", help="Walks + hits per inning. Above ~1.30 means traffic on the bases.")
+    k[3].metric("K/9", f"{n(e.get('k9')):.1f}", help="Strikeouts per 9. High K/9 means fewer balls in play, which caps homer chances.")
+    k[4].metric("Weak side", e.get("weak_side") or "—", help="The batter handedness this pitcher struggles with most.")
+
+    if txt(row, "pitcher_arsenal_summary"):
+        st.markdown(f"**Arsenal** — {txt(row, 'pitcher_arsenal_summary')}")
+
+    # Where he gets hurt in the batting order — the "does he get hurt in the
+    # 4-hole" question, answerable right here instead of two tabs away.
+    det = load_detail("pitcher", e.get("pitcher_id"), slate)
+    spots = det.get("pitcher_lineup_spot_damage") or {}
+    if isinstance(spots, dict) and spots:
+        rows = []
+        for k_, v in spots.items():
+            if not isinstance(v, dict):
+                continue
+            try:
+                spot = int(str(k_).strip())
+            except ValueError:
+                continue
+            rows.append({
+                "Spot": spot, "PA": int(n(v.get("pa"))), "HR": int(n(v.get("hr"))),
+                "AVG": round(n(v.get("avg")), 3), "SLG": round(n(v.get("slg")), 3),
+                "OPS": round(n(v.get("ops")), 3),
+            })
+        if rows:
+            sdf = pd.DataFrame(rows).sort_values("Spot")
+            st.markdown("**Where he gets hurt in the order**")
+            hbar([f"{int(r['Spot'])}-hole  ({int(r['PA'])} PA)" for _, r in sdf.iterrows()],
+                 [float(r["OPS"]) for _, r in sdf.iterrows()],
+                 "OPS allowed by lineup spot", fmt="{:.3f}")
+            st.caption(
+                "OPS allowed to each batting-order slot. Longer, lighter bars "
+                "are the spots he's been beaten from. Watch the PA count — a "
+                "big number on 8 plate appearances is noise, not a trend."
+            )
+            st.dataframe(sdf, width="stretch", hide_index=True)
+
+    if e.get("lineup"):
+        st.markdown(f"**Lineup facing him ({len(e['lineup'])})**")
+        st.dataframe(pd.DataFrame([{
+            "Spot": x.get("lineup_spot"), "Player": name_of(x),
+            "B": txt(x, "bats", default="?"), "HR": round(hr_score(x), 1),
+            "HRR": round(prod_score(x), 1), "Hit": round(hit_score(x), 1),
+            "TB": round(tb_score(x), 1),
+            "⭐": "⭐" if x.get("weak_spot_flag") else "",
+        } for x in e["lineup"]]), width="stretch", hide_index=True)
+
+
 def game_pick_tile(p: Dict[str, Any], role: str) -> str:
     """One game pick as a compact tile.
 
@@ -1214,57 +1431,72 @@ def _split_frame(data: Dict[str, Any], key: str) -> Optional[pd.DataFrame]:
 
 
 def split_chart(df: pd.DataFrame, title: str, height: int = 300) -> None:
-    """Grouped bars for the rate stats, plus a HR/PA line on a second axis.
+    """Each split as a deviation from the player's own baseline.
 
-    Replaces the raw table this used to be. AVG/OBP/SLG/OPS all live in the
-    same .200-1.000 range so they group cleanly on one axis; HR/PA is two
-    orders of magnitude smaller, so it rides its own axis as a line with
-    markers instead of a bar nobody could see.
+    This was a grouped bar chart of AVG/OBP/SLG/OPS side by side. It was
+    accurate and hard to read: four bars per bucket, twelve bars for a
+    weekday chart, and the actual question -- "is he BETTER on this day or
+    worse?" -- meant eyeballing tiny differences between adjacent bars and
+    holding the comparison in your head.
+
+    Now there's one row per bucket and one bar per row, drawn left or right
+    of a centre line at the player's overall OPS. Right and light = better
+    than his normal self, left and dark = worse. The raw OPS and the sample
+    size sit on the row, so nothing is lost, and a split with 9 PA is
+    visibly not a split with 200.
     """
-    if go is None or df is None or df.empty:
+    if df is None or df.empty:
         return
-    labels = [str(i) for i in df.index]
-    fig = go.Figure()
+    d = df.copy()
+    if "OPS" not in d.columns:
+        return
+    ops = pd.to_numeric(d["OPS"], errors="coerce")
+    pa = pd.to_numeric(d["PA"], errors="coerce") if "PA" in d.columns else pd.Series(
+        [0] * len(d), index=d.index)
+    hr = pd.to_numeric(d["HR"], errors="coerce") if "HR" in d.columns else pd.Series(
+        [0] * len(d), index=d.index)
 
-    # Light green = good, dark green = bad, matching the rest of the site.
-    series = [("AVG", "#0f6b3c"), ("OBP", "#2f9e52"),
-              ("SLG", "#6fd08c"), ("OPS", "#b7f7c9")]
-    for col, colr in series:
-        if col not in df.columns:
-            continue
-        vals = pd.to_numeric(df[col], errors="coerce")
-        fig.add_trace(go.Bar(
-            name=col, x=labels, y=vals, marker_color=colr,
-            text=[f"{v:.3f}" if pd.notna(v) else "" for v in vals],
-            textposition="outside", textfont=dict(size=9, color=C["text3"]),
-            hovertemplate=f"%{{x}}<br>{col} %{{y:.3f}}<extra></extra>",
-        ))
+    # Baseline is PA-weighted, so it's the player's true overall rate rather
+    # than the average of his buckets -- otherwise a 9-PA Tuesday would pull
+    # the centre line as hard as a 200-PA home split.
+    total_pa = float(pa.sum())
+    base = float((ops * pa).sum() / total_pa) if total_pa else float(ops.mean())
 
-    hrpa = None
-    for cand in ("HR/PA", "HR_PA", "hr_per_pa"):
-        if cand in df.columns:
-            hrpa = pd.to_numeric(df[cand], errors="coerce")
-            break
-    if hrpa is not None and hrpa.notna().any():
-        fig.add_trace(go.Scatter(
-            name="HR/PA", x=labels, y=hrpa, yaxis="y2", mode="lines+markers",
-            line=dict(color=C["orange"], width=2, dash="dot"),
-            marker=dict(size=7, color=C["orange"]),
-            hovertemplate="%{x}<br>HR/PA %{y:.4f}<extra></extra>",
-        ))
-        fig.update_layout(yaxis2=dict(
-            overlaying="y", side="right", showgrid=False,
-            tickfont=dict(color=C["orange"], size=9),
-            title=dict(text="HR/PA", font=dict(color=C["orange"], size=9)),
-        ))
+    labels, deltas, texts, colors, hovers = [], [], [], [], []
+    for idx in d.index:
+        o, p_, h = float(ops.get(idx, 0)), float(pa.get(idx, 0)), float(hr.get(idx, 0))
+        delta = o - base
+        labels.append(f"{idx}   {int(p_)} PA")
+        deltas.append(delta)
+        texts.append(f"{o:.3f}")
+        # Light green above baseline, dark green below -- the site's
+        # convention. Thin sample gets muted so it can't shout.
+        if p_ < 25:
+            colors.append("#3f6b52")
+        else:
+            colors.append("#b7f7c9" if delta >= 0 else "#0f6b3c")
+        hovers.append(
+            f"{idx}<br>OPS {o:.3f} ({delta:+.3f} vs {base:.3f})"
+            f"<br>{int(p_)} PA · {int(h)} HR"
+        )
 
-    fig.update_layout(barmode="group", bargap=0.25, bargroupgap=0.05)
+    fig = go.Figure(go.Bar(
+        x=deltas, y=labels, orientation="h",
+        marker=dict(color=colors),
+        text=texts, textposition="outside",
+        textfont=dict(size=10, color=C["text2"], family=NUM_FONT),
+        hovertext=hovers, hoverinfo="text",
+    ))
+    fig.add_vline(x=0, line=dict(color=C["text3"], width=1, dash="dot"))
+    fig.add_annotation(
+        x=0, y=1.06, yref="paper", text=f"his overall {base:.3f}",
+        showarrow=False, font=dict(size=9, color=C["text3"]),
+    )
+    span = max(0.08, float(max(abs(v) for v in deltas)) * 1.55) if deltas else 0.1
     _layout(fig, height, title)
-    # _layout hard-disables the legend (most charts on the site are single
-    # series). This one is grouped, so the legend has to come back on after.
-    fig.update_layout(showlegend=True,
-                      legend=dict(orientation="h", y=1.14, x=0,
-                                  font=dict(size=9), bgcolor="rgba(0,0,0,0)"))
+    fig.update_xaxes(range=[-span, span], zeroline=False, showticklabels=False,
+                     showgrid=False)
+    fig.update_yaxes(autorange="reversed", tickfont=dict(size=10))
     st.plotly_chart(fig, width="stretch")
 
 
@@ -1280,21 +1512,16 @@ def render_splits(p: Dict[str, Any], slate_label: str, compact: bool = False) ->
         return
 
     st.caption(
-        f"{int(nn(sp, 'games_logged'))} games logged · season {sp.get('season', '')}"
+        f"{int(nn(sp, 'games_logged'))} games logged · season {sp.get('season', '')} — "
+        "bars run right of the line when he hits **better** than his own "
+        "season average in that situation, left when he hits worse. Faded "
+        "bars are under 25 plate appearances: too small to trust."
     )
     for key, title in SPLIT_FAMILIES:
         df = _split_frame(sp.get(key) or {}, key)
         if df is None:
             continue
-        # Sample size sits above the chart rather than inside it -- a .400 AVG
-        # over 9 PA and one over 200 PA look identical as a bar.
-        if "PA" in df.columns:
-            st.caption(" · ".join(
-                f"**{i}** {int(n(df.loc[i, 'PA']))} PA"
-                + (f", {int(n(df.loc[i, 'HR']))} HR" if "HR" in df.columns else "")
-                for i in df.index
-            ))
-        split_chart(df, title, height=300 if len(df) <= 3 else 340)
+        split_chart(df, title, height=max(190, 42 * len(df) + 95))
         if not compact:
             order = [c for c in ["G", "PA", "AB", "H", "HR", "XBH", "RBI", "R",
                                  "BB", "K", "AVG", "OBP", "SLG", "OPS", "ISO",
@@ -1531,6 +1758,26 @@ with tab_board:
 
 # ── GAMES ───────────────────────────────────────────────────────────────────
 with tab_games:
+    # Deliberately collapsed. Someone who already knows the board never opens
+    # it; someone who doesn't would otherwise be looking at "Med HRW 41.5"
+    # with no idea what any of it means or where to start.
+    with st.expander("🆕 New here? Start with this", expanded=False):
+        st.markdown(
+            "**What this site does.** Every morning a bot scores each hitter "
+            "on today's slate for how likely he is to homer, get a hit, or do "
+            "damage. Everything you see is built from that.\n\n"
+            "**How to use this page in 30 seconds:**\n\n"
+            "1. The chart below ranks today's games. Longer, lighter bars are "
+            "better games for hitters.\n"
+            "2. Open the top game. You'll get both starting pitchers and five "
+            "picks — the best home-run bet, the safest hit, and so on.\n"
+            "3. Click **Details** on anyone to see why the bot likes him.\n\n"
+            "**The only rule that matters:** a great-looking rate on a tiny "
+            "sample isn't real. Wherever the site shows a rate, it shows the "
+            "number of plate appearances behind it. Check that first."
+        )
+        st.markdown(GLOSSARY_MD)
+
     by_game: Dict[Any, List[Dict[str, Any]]] = {}
     for p in view:
         by_game.setdefault(p.get("game_pk"), []).append(p)
@@ -1698,6 +1945,24 @@ with tab_games:
                 if txt(head, key):
                     st.caption(f"{label}{txt(head, key)}")
 
+            # BOTH starters, side by side. The header only ever named the
+            # pitcher facing the strongest hitter, so half of every matchup
+            # was invisible -- you could see that CHC's lineup was live
+            # without ever learning who PIT was sending out.
+            st.markdown("**Starting pitchers**")
+            game_arms = group_pitchers(gp)
+            pcols = st.columns(max(1, len(game_arms)))
+            for pc, arm in zip(pcols, game_arms):
+                with pc:
+                    st.markdown(pitcher_strip(arm), unsafe_allow_html=True)
+                    if st.button("Pitcher details", width="stretch",
+                                 key=f"gp_{gpk}_{arm.get('pitcher_id')}"):
+                        pitcher_modal(arm)
+            st.caption(
+                "HR/9 is home runs allowed per 9 innings — league average is "
+                "about 1.2, so higher means easier to take deep."
+            )
+
             # THE GAME PICKS — the bot stamps players per game per role in
             # game_pick_role. Roles are NOT one-per-game: TOP/HR/CONTACT get
             # one each but HIT and HRR get TWO apiece, exactly as the .txt
@@ -1795,16 +2060,66 @@ with tab_scoreboard:
     )
     board = [{
         "Player": name_of(p), "Team": team_of(p), "Opp": opp_of(p),
-        "Role": tier_role(p), "HR": round(hr_score(p), 1),
+        "Spot": p.get("lineup_spot"), "Role": tier_role(p),
+        "HR": round(hr_score(p), 1), "HRR": round(prod_score(p), 1),
+        "Hit": round(hit_score(p), 1), "TB": round(tb_score(p), 1),
         "Damage": round(nn(p, "damage_conversion_score"), 1),
+        "PMix": round(pmix_score(p), 1),
         "PMatch": round(nn(p, "pitch_type_match_score"), 1),
-        "HRR": round(prod_score(p), 1), "Hit": round(hit_score(p), 1),
-        "TB": round(tb_score(p), 1), "PMix": round(pmix_score(p), 1),
         "375+": int(recent375(p)), "400+": int(recent400(p)),
         "IHR": round(ihr_val(p), 3), "K%": round(nn(p, "season_k_rate") * 100, 1),
-        "Spot": p.get("lineup_spot"), "🧩": "🧩" if is_aligned(p) else "",
+        "Pitcher": txt(p, "pitcher_name"),
+        "P HR/9": round(nn(p, "pitcher_hr9"), 2),
+        "🧩": "🧩" if is_aligned(p) else "",
     } for p in view]
-    st.dataframe(pd.DataFrame(board), width="stretch", hide_index=True, height=640)
+    bdf = pd.DataFrame(board)
+
+    if bdf.empty:
+        st.info("No players match your filters — clear them in the sidebar.")
+    else:
+        sb1, sb2, sb3 = st.columns([2, 2, 1])
+        sb_sort = sb1.selectbox(
+            "Sort by", ["HR", "HRR", "Hit", "TB", "Damage", "PMix", "PMatch",
+                        "375+", "400+", "IHR", "K%", "Spot"], key="sbsort",
+        )
+        sb_cols = sb2.multiselect(
+            "Extra columns", ["PMix", "PMatch", "375+", "400+", "IHR", "K%",
+                              "Pitcher", "P HR/9"],
+            default=["375+", "IHR", "Pitcher"], key="sbcols",
+            help="The five scores are always shown. Add the rest as you need them.",
+        )
+        sb_top = sb3.checkbox("Top 50 only", value=False, key="sbtop")
+
+        keep = (["Player", "Team", "Opp", "Spot", "Role",
+                 "HR", "HRR", "Hit", "TB", "Damage"]
+                + [c for c in sb_cols if c not in ("Damage",)] + ["🧩"])
+        keep = list(dict.fromkeys(c for c in keep if c in bdf.columns))
+        out = bdf.sort_values(sb_sort, ascending=(sb_sort == "Spot"))[keep]
+        if sb_top:
+            out = out.head(50)
+
+        # Scores render as in-cell bars rather than bare numbers. On a 260-row
+        # grid a column of decimals gives you nothing at a glance -- you have
+        # to read and compare every one. Bars make the shape of the board
+        # visible while keeping the exact value on the cell.
+        colcfg = {
+            c: st.column_config.ProgressColumn(
+                c, format="%.1f", min_value=0, max_value=100,
+                help=SCORE_HELP.get(c),
+            )
+            for c in ("HR", "HRR", "Hit", "TB", "Damage", "PMix", "PMatch")
+            if c in out.columns
+        }
+        colcfg["Player"] = st.column_config.TextColumn("Player", pinned=True)
+
+        st.dataframe(out, width="stretch", hide_index=True, height=620,
+                     column_config=colcfg)
+        st.download_button(
+            "⬇️ CSV", out.to_csv(index=False).encode(),
+            f"mlb_{slate}_scoreboard.csv", "text/csv", key="sbcsv",
+        )
+        with st.expander("What do these columns mean?"):
+            st.markdown(GLOSSARY_MD)
 
 # ── LEADERS ─────────────────────────────────────────────────────────────────
 LEADER_STATS = {
@@ -1866,40 +2181,6 @@ with tab_leaders:
             width="stretch", hide_index=True, height=620)
 
 # ── PITCHERS ────────────────────────────────────────────────────────────────
-def group_pitchers(pool: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """Port of lib/data.js groupPitchers — one entry per starter with lineup."""
-    by: Dict[Any, Dict[str, Any]] = {}
-    for p in pool:
-        pid = p.get("pitcher_id") or txt(p, "pitcher_name")
-        if not pid:
-            continue
-        e = by.setdefault(pid, {
-            "pitcher_id": p.get("pitcher_id"),
-            "pitcher_name": txt(p, "pitcher_name", default="Unknown"),
-            "throws": txt(p, "pitcher_throws", default="?"),
-            "era": nn(p, "pitcher_era"), "hr9": nn(p, "pitcher_hr9"),
-            "whip": nn(p, "pitcher_whip"), "k9": nn(p, "pitcher_k9"),
-            "weak_side": txt(p, "pitcher_weak_side"),
-            "xbh_lhb": p.get("pitcher_xbh_vs_lhb"), "xbh_rhb": p.get("pitcher_xbh_vs_rhb"),
-            "attack": txt(p, "pitcher_attack_tag"),
-            # The pitcher's own team is the batters' opponent, and vice versa.
-            "team": opp_of(p), "facing": team_of(p),
-            "venue": txt(p, "venue_name"), "game_time": p.get("game_time"),
-            "confirmed": False, "lineup": [],
-            # Keep one representative batter row: every pitcher_* field is
-            # identical across the lineup facing him, so this is the cheapest
-            # way to reach the full pitcher profile without a second lookup.
-            "row": p,
-        })
-        if p.get("lineup_confirmed"):
-            e["confirmed"] = True
-        e["lineup"].append(p)
-    for e in by.values():
-        e["lineup"].sort(key=lambda x: nn(x, "lineup_spot", default=99.0))
-        e["weak_spots"] = sum(1 for x in e["lineup"] if x.get("weak_spot_flag") is True)
-    return sorted(by.values(), key=lambda e: (-e["weak_spots"], -e["hr9"]))
-
-
 with tab_pitchers:
     pitchers = group_pitchers(view)
     if not pitchers:
@@ -2378,7 +2659,13 @@ with tab_pairhist:
             f"showing top {len(top_pairs)} pairs by same-day HR history"
         )
 
-        s1, s2, s3 = st.columns([3, 2, 2])
+        # Cross-reference against today's slate. This is the whole point of
+        # keeping pair history: a duo that has gone deep together nine times
+        # is only actionable if BOTH of them are in a lineup today. Without
+        # this the tab was a season trivia table you had to check by hand.
+        today_names = {name_of(p).lower(): p for p in players}
+
+        s1, s2, s3, s4 = st.columns([3, 2, 2, 2])
         query = s1.text_input(
             "Search by player", placeholder="e.g. Judge, Ohtani, Schwarber",
             key="phq",
@@ -2387,6 +2674,10 @@ with tab_pairhist:
         min_hits = s2.slider("Min same-day HRs", 1, 10, 2, key="phmin")
         same_game_only = s3.checkbox("Same game only", key="phsg",
                                      help="Both HRs hit in the same ballgame.")
+        playing_only = s4.checkbox(
+            "Both playing today", value=True, key="phtoday",
+            help="Only pairs where both hitters are in a lineup on this slate.",
+        )
 
         def pair_names(rec: Dict[str, Any]) -> List[str]:
             return [str(x.get("name") or x.get("player_name") or "")
@@ -2395,7 +2686,7 @@ with tab_pairhist:
         q = (query or "").strip().lower()
         rows = []
         for rec in top_pairs:
-            names = pair_names(rec)
+            names = [nm for nm in pair_names(rec) if nm]
             if q and not any(q in nm.lower() for nm in names):
                 continue
             same_day = int(n(rec.get("same_day_hr_count_season")))
@@ -2404,27 +2695,88 @@ with tab_pairhist:
                 continue
             if same_game_only and same_game < 1:
                 continue
+
+            live = [today_names.get(nm.lower()) for nm in names]
+            both_live = all(x is not None for x in live) and len(live) == 2
+            if playing_only and not both_live:
+                continue
+
             rows.append({
-                "Pair": " + ".join(nm for nm in names if nm),
+                "": "🟢" if both_live else "",
+                "Pair": " + ".join(names),
                 "Teams": " / ".join(
                     str(x.get("team") or "?") for x in (rec.get("players") or [])),
                 "Same-day HRs": same_day,
                 "Same-game HRs": same_game,
                 "Career": int(n(rec.get("same_day_hr_count_career"))),
                 "Last hit": rec.get("last_same_day_hr") or "—",
+                # Today's model scores for each half, so a historically hot
+                # pair that both rate badly today is visibly not a play.
+                "HR today": (round(sum(hr_score(x) for x in live) / 2, 1)
+                             if both_live else None),
                 "Boost": round(n(rec.get("history_boost")), 2),
             })
 
         if not rows:
-            st.warning("No pairs match those filters.")
+            st.warning(
+                "No pairs match those filters."
+                + (" Try unticking **Both playing today** — most historical "
+                   "pairs won't both be in action on any given slate."
+                   if playing_only else "")
+            )
         else:
             hdf = pd.DataFrame(rows).sort_values(
                 ["Same-day HRs", "Same-game HRs"], ascending=False)
-            st.caption(f"{len(hdf)} pairs match")
-            hbar(hdf["Pair"].head(15).tolist()[::-1],
-                 hdf["Same-day HRs"].head(15).tolist()[::-1],
-                 "Most frequent same-day HR pairs", fmt="{:.0f}")
-            st.dataframe(hdf, width="stretch", hide_index=True, height=460)
+            live_n = int((hdf[""] == "🟢").sum())
+            st.caption(
+                f"{len(hdf)} pairs match · **{live_n}** with both hitters in a "
+                "lineup today (🟢)"
+            )
+
+            top15 = hdf.head(15)
+            ch1, ch2 = st.columns(2)
+            with ch1:
+                hbar(top15["Pair"].tolist()[::-1],
+                     top15["Same-day HRs"].tolist()[::-1],
+                     "Most same-day homers together", fmt="{:.0f}")
+            with ch2:
+                live_rows = hdf[hdf["HR today"].notna()].head(15)
+                if len(live_rows):
+                    hbar(live_rows["Pair"].tolist()[::-1],
+                         live_rows["HR today"].tolist()[::-1],
+                         "Today's average HR score — live pairs", fmt="{:.1f}")
+                else:
+                    st.caption(
+                        "No pairs currently have both hitters on the slate, so "
+                        "there's nothing to score for today."
+                    )
+
+            st.dataframe(
+                hdf, width="stretch", hide_index=True, height=440,
+                column_config={
+                    "": st.column_config.TextColumn("Live", width="small",
+                                                    help="🟢 = both hitters play today"),
+                    "HR today": st.column_config.ProgressColumn(
+                        "HR today", format="%.1f", min_value=0, max_value=100,
+                        help="Average of the two hitters' HR scores on this slate.",
+                    ),
+                    "Same-day HRs": st.column_config.NumberColumn(
+                        "Same-day HRs",
+                        help="Times both went deep on the same calendar day this season.",
+                    ),
+                    "Same-game HRs": st.column_config.NumberColumn(
+                        "Same-game HRs",
+                        help="Times both homered in the same ballgame — the rarer, stronger signal.",
+                    ),
+                },
+            )
+            st.caption(
+                "Same-day means both homered somewhere that day. Same-game "
+                "means they did it in the same ballpark, in the same game — "
+                "rarer, and the stronger signal of the two. History is "
+                "context, not a prediction: check today's HR scores before "
+                "acting on it."
+            )
             st.download_button(
                 "⬇️ CSV", hdf.to_csv(index=False).encode(),
                 "pair_history.csv", "text/csv", key="phcsv")
