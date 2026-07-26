@@ -202,11 +202,19 @@ def load_slate(label: str) -> List[Dict[str, Any]]:
 
 
 @st.cache_data(ttl=CACHE_TTL, show_spinner=False)
-def load_detail(kind: str, ident: Any) -> Dict[str, Any]:
-    """One player's or pitcher's heavy logs. ~82 KB, fetched only on demand."""
+def load_detail(kind: str, ident: Any, slate_label: str = "today") -> Dict[str, Any]:
+    """One player's or pitcher's heavy logs. ~82 KB, fetched only on demand.
+
+    Detail lives under a per-slate folder. They used to share one directory,
+    which meant a pitcher starting on both days had today's file overwritten
+    by tomorrow's. Falls back to the old flat path so the app keeps working
+    against a data branch published before that fix.
+    """
     if ident in (None, ""):
         return {}
-    return load_json(f"public/data/current/detail/{kind}_{ident}.json") or {}
+    return (load_json(f"public/data/current/detail/{slate_label}/{kind}_{ident}.json")
+            or load_json(f"public/data/current/detail/{kind}_{ident}.json")
+            or {})
 
 
 # ── FIELD ACCESSORS (port of lib/player.js) ─────────────────────────────────
@@ -433,6 +441,91 @@ def risk_pill(p: Dict[str, Any], kind: str = "hr") -> Optional[Dict[str, str]]:
     if kind == "hr" and prod_score(p) > hr_score(p) + 15:
         return {"label": "Better HRR", "color": C["cyan"]}
     return None
+
+
+# ── "DOES HE GET HURT IN THE N-HOLE?" ───────────────────────────────────────
+# Every batter row carries pitcher_spot_damage_score: the damage this pitcher
+# has allowed in THAT batter's lineup spot. So the slate-wide baseline for
+# each spot can be built from the payload already in memory -- no extra
+# fetches -- and any single answer can be judged three ways at once:
+# against the spot's own history, against the pitcher's other spots, and
+# against what every other starter allows in that same spot today.
+@st.cache_data(ttl=CACHE_TTL, show_spinner=False)
+def spot_baseline(slate_label: str) -> Dict[int, float]:
+    by: Dict[int, List[float]] = {}
+    for r in load_slate(slate_label):
+        sp, v = r.get("lineup_spot"), r.get("pitcher_spot_damage_score")
+        if sp not in (None, "") and v is not None:
+            by.setdefault(int(sp), []).append(float(v))
+    return {k: float(pd.Series(v).median()) for k, v in by.items() if v}
+
+
+def spot_answer(spot_row: Dict[str, Any], all_spots: Dict[str, Any],
+                baseline: Dict[int, float], spot: int) -> Dict[str, Any]:
+    """Verdict for one pitcher in one lineup spot."""
+    dmg = nn(spot_row, "damage_score")
+    pa = int(nn(spot_row, "pa"))
+    label = txt(spot_row, "label", default="Unknown")
+
+    others = [nn(v, "damage_score") for k, v in all_spots.items()
+              if isinstance(v, dict) and str(k) != str(spot)]
+    own_med = float(pd.Series(others).median()) if others else 0.0
+    ranked = sorted(
+        [(int(v.get("spot", k)), nn(v, "damage_score"))
+         for k, v in all_spots.items() if isinstance(v, dict)],
+        key=lambda x: -x[1])
+    rank = next((i for i, (sp, _) in enumerate(ranked, 1) if sp == spot), None)
+
+    league = baseline.get(spot, 0.0)
+
+    # Sample honesty first -- 8 PA can't answer anything, and the labels
+    # themselves get shaky below ~15.
+    if pa < 10:
+        verdict, colr = "NOT ENOUGH DATA", C["text3"]
+    elif label in ("HOT", "WARM") or (dmg >= 50 and dmg > own_med + 12):
+        verdict, colr = "YES — he gets hurt here", C["red"]
+    elif dmg <= 15 or label == "PITCHER ADV":
+        verdict, colr = "NO — pitcher's advantage", C["green"]
+    else:
+        verdict, colr = "NEUTRAL", C["text2"]
+
+    return {
+        "verdict": verdict, "color": colr, "damage": dmg, "pa": pa,
+        "label": label, "rank": rank, "own_med": own_med, "league": league,
+        "vs_own": dmg - own_med, "vs_league": dmg - league,
+        "slg": nn(spot_row, "slg"), "iso": nn(spot_row, "iso"),
+        "hr_rate": nn(spot_row, "hr_rate"), "hard_hit": nn(spot_row, "hard_hit_rate"),
+        "barrel": nn(spot_row, "barrel_rate"), "hr": int(nn(spot_row, "hr")),
+        "reason": txt(spot_row, "reason"),
+    }
+
+
+def render_spot_answer(a: Dict[str, Any], pitcher_name: str, spot: int) -> None:
+    st.markdown(
+        f"<div style='background:{C['bg2']};border:1px solid {C['border']};"
+        f"border-left:4px solid {a['color']};border-radius:12px;padding:14px 16px;"
+        f"margin:6px 0 10px'>"
+        f"<div style='font-size:11px;color:{C['text3']};letter-spacing:.05em'>"
+        f"DOES {pitcher_name.upper()} GET HURT IN THE {spot}-HOLE?</div>"
+        f"<div style='font-size:22px;font-weight:800;color:{a['color']};margin:4px 0 2px'>"
+        f"{a['verdict']}</div>"
+        f"<div style='font-size:11px;color:{C['text2']};font-family:{NUM_FONT}'>"
+        f"damage {a['damage']:.1f} · {a['label']} · {a['pa']} PA · "
+        f"ranks #{a['rank']} of 9 among his own spots</div></div>",
+        unsafe_allow_html=True,
+    )
+    k = st.columns(4)
+    k[0].metric("Damage in spot", f"{a['damage']:.1f}",
+                f"{a['vs_own']:+.1f} vs his other spots")
+    k[1].metric("vs slate median", f"{a['league']:.1f}", f"{a['vs_league']:+.1f}")
+    k[2].metric("SLG / ISO allowed", f"{a['slg']:.3f}", f"ISO {a['iso']:.3f}")
+    k[3].metric("HR / hard-hit", f"{a['hr']} HR", f"HH {a['hard_hit'] * 100:.0f}%")
+    if a["reason"]:
+        st.caption(a["reason"])
+    if a["pa"] < 15:
+        st.caption(
+            f"⚠️ {a['pa']} PA is a thin sample — treat this as a lean, not a read."
+        )
 
 
 LANES = [
@@ -1360,8 +1453,37 @@ with tab_pitchers:
                 #     damaged by each spot in the order, from
                 #     pitcher_lineup_spot_damage. This is the real "which
                 #     spot hurts him" answer.
-                spot_dmg = (load_detail("pitcher", e["pitcher_id"])
+                spot_dmg = (load_detail("pitcher", e["pitcher_id"], slate)
                             .get("pitcher_lineup_spot_damage") or {})
+
+                # Direct answer: pick a spot, get a verdict.
+                if isinstance(spot_dmg, dict) and spot_dmg:
+                    avail = sorted(int(v.get("spot", k)) for k, v in spot_dmg.items()
+                                   if isinstance(v, dict))
+                    if avail:
+                        pick_spot = st.radio(
+                            "Does he get hurt in the …", avail, horizontal=True,
+                            format_func=lambda x: f"{x}-hole",
+                            key=f"spotq_{e['pitcher_id']}",
+                        )
+                        srow = next((v for k, v in spot_dmg.items()
+                                     if isinstance(v, dict)
+                                     and int(v.get("spot", k)) == pick_spot), {})
+                        if srow:
+                            render_spot_answer(
+                                spot_answer(srow, spot_dmg, spot_baseline(slate), pick_spot),
+                                e["pitcher_name"], pick_spot,
+                            )
+                            here = [b for b in e["lineup"]
+                                    if nn(b, "lineup_spot") == pick_spot]
+                            if here:
+                                b = here[0]
+                                st.caption(
+                                    f"Batting {pick_spot} today: **{name_of(b)}** "
+                                    f"({txt(b, 'bats', default='?')}HB) — HR {hr_score(b):.0f} · "
+                                    f"HRR {prod_score(b):.0f} · {tier_role(b)}"
+                                )
+
                 if isinstance(spot_dmg, dict) and spot_dmg:
                     sd = pd.DataFrame([{
                         "Spot": str(v.get("spot", k)),
@@ -1546,7 +1668,7 @@ with tab_player:
                 persist_watch()
                 st.rerun()
 
-        detail = load_detail("batter", p.get("player_id"))
+        detail = load_detail("batter", p.get("player_id"), slate)
         # spray_chart is the canonical batted-ball list; contact_log and
         # batted_ball_log were byte-identical copies, so they're aliases here.
         bbe = detail.get("spray_chart") or []
@@ -1609,6 +1731,31 @@ with tab_player:
                     ("WHIP", f"{nn(p, 'pitcher_whip'):.2f}"),
                     ("P-BABIP", f"{nn(p, 'pitcher_babip'):.3f}"),
                 ])
+
+            # The same spot question, answered automatically for THIS hitter's
+            # own lineup slot -- the version of it you actually care about
+            # when you're looking at a player rather than a pitcher.
+            _spot = p.get("lineup_spot")
+            if _spot not in (None, ""):
+                _sd = (load_detail("pitcher", p.get("pitcher_id"), slate)
+                       .get("pitcher_lineup_spot_damage") or {})
+                _row = next((v for k, v in _sd.items()
+                             if isinstance(v, dict)
+                             and int(v.get("spot", k)) == int(_spot)), {})
+                if _row:
+                    render_spot_answer(
+                        spot_answer(_row, _sd, spot_baseline(slate), int(_spot)),
+                        txt(p, "pitcher_name", default="This pitcher"), int(_spot),
+                    )
+                elif nn(p, "pitcher_spot_damage_score"):
+                    # Detail file missing, but the row itself still carries the
+                    # score and the bot's own reason string.
+                    st.caption(
+                        f"Spot #{int(_spot)} vs {txt(p, 'pitcher_name')}: damage "
+                        f"{nn(p, 'pitcher_spot_damage_score'):.1f} "
+                        f"({txt(p, 'pitcher_spot_damage_label', default='—')}) — "
+                        f"{txt(p, 'pitcher_spot_damage_reason')}"
+                    )
 
             # Radar of the six model scores, with the slate median overlaid so
             # the shape reads as "vs everyone else today", not in a vacuum.
@@ -1783,7 +1930,7 @@ with tab_player:
             else:
                 st.info("No pitch-type profile published for this player yet.")
 
-            arsenal = load_detail("pitcher", p.get("pitcher_id"))
+            arsenal = load_detail("pitcher", p.get("pitcher_id"), slate)
             mix = (arsenal.get("pitcher_pitch_mix") or {}).get("usage") or {}
             if mix:
                 st.markdown(f"**{txt(p, 'pitcher_name')} — pitch usage**")
@@ -1944,7 +2091,7 @@ with tab_spray:
     frames = []
     for i in picks:
         pl = top_pool[i]
-        det = load_detail("batter", pl.get("player_id"))
+        det = load_detail("batter", pl.get("player_id"), slate)
         for e in (det.get("spray_chart") or []):
             e = dict(e)
             e["player"] = name_of(pl)
