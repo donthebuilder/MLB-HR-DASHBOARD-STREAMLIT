@@ -109,7 +109,7 @@ def write_detail_files(rows: List[Dict[str, Any]], out_dir: Path) -> int:
     """
     out_dir.mkdir(parents=True, exist_ok=True)
     written = 0
-    seen_pitchers = set()
+    pitcher_acc: Dict[Any, Dict[str, Any]] = {}
 
     for row in rows:
         if not isinstance(row, dict):
@@ -127,17 +127,27 @@ def write_detail_files(rows: List[Dict[str, Any]], out_dir: Path) -> int:
                 )
                 written += 1
 
+        # Pitcher payloads are merged across every batter facing him rather
+        # than taken from the first row seen. Not all rows carry every field
+        # (9 of 246 were missing lineup-spot damage on a real slate), so
+        # first-row-wins silently dropped the spot/zone damage tables for
+        # whole pitchers depending on batting order.
         pitcher_id = row.get("pitcher_id")
-        if pitcher_id not in (None, "") and pitcher_id not in seen_pitchers:
-            pdetail = {k: row[k] for k in PITCHER_DETAIL_KEYS if row.get(k)}
-            if pdetail:
-                pdetail["pitcher_id"] = pitcher_id
-                pdetail["pitcher_name"] = row.get("pitcher_name")
-                (out_dir / f"pitcher_{pitcher_id}.json").write_text(
-                    json.dumps(pdetail, separators=(",", ":")), encoding="utf-8"
-                )
-                seen_pitchers.add(pitcher_id)
-                written += 1
+        if pitcher_id not in (None, ""):
+            existing = pitcher_acc.setdefault(pitcher_id, {
+                "pitcher_id": pitcher_id,
+                "pitcher_name": row.get("pitcher_name"),
+            })
+            for k in PITCHER_DETAIL_KEYS:
+                if k not in existing and row.get(k):
+                    existing[k] = row[k]
+
+    for pitcher_id, pdetail in pitcher_acc.items():
+        if len(pdetail) > 2:  # more than just the id/name stubs
+            (out_dir / f"pitcher_{pitcher_id}.json").write_text(
+                json.dumps(pdetail, separators=(",", ":")), encoding="utf-8"
+            )
+            written += 1
 
     return written
 
