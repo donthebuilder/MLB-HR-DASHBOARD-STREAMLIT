@@ -779,12 +779,90 @@ def tags_html(tags: Any, limit: int = 6) -> str:
     )
 
 
+@st.dialog("Player", width="large")
+def player_modal(p: Dict[str, Any]) -> None:
+    """Real popup, the way the old PlayerModal worked — open it from any card
+    instead of leaving the tab and re-finding the player in a dropdown."""
+    rc = role_config(p)
+    role_label, role_color = rc if rc else (tier_role(p), tier_color(tier_role(p)))
+    hrw = HRW_MAP.get(txt(p, "hrw_zone"))
+
+    st.markdown(f"### {name_of(p)}")
+    st.caption(
+        f"{team_of(p)} vs {opp_of(p)} · Lineup #{p.get('lineup_spot', '—')} · "
+        f"{txt(p, 'bats', default='?')}HB · vs {txt(p, 'pitcher_name', default='TBD')} "
+        f"({txt(p, 'pitcher_throws', default='?')}HP)"
+    )
+    pills = bubble(txt(p, "final_hr_role")[:1] or "•", role_label, role_color)
+    pills += bubble("", f"Grade {grade_for(p, 'hr')}", C["text2"])
+    if hrw:
+        pills += bubble(hrw[0], f"HRW {nn(p, 'hrw_score'):.0f}", hrw[1])
+    if nn(p, "last5_hr") > 0:
+        pills += bubble("", f"L5 {int(nn(p, 'last5_hr'))}HR", C["orange"])
+    if txt(p, "matchup_label"):
+        pills += bubble("", txt(p, "matchup_label"), C["cyan"])
+    if p.get("weak_spot_flag"):
+        pills += bubble("⭐", "Weak Spot", C["yellow"])
+    if is_aligned(p):
+        pills += bubble("🧩", "Aligned", C["purple"])
+    st.markdown(pills, unsafe_allow_html=True)
+
+    m = st.columns(6)
+    m[0].metric("HR", f"{hr_score(p):.0f}")
+    m[1].metric("HRR", f"{prod_score(p):.0f}")
+    m[2].metric("Hit", f"{hit_score(p):.0f}")
+    m[3].metric("TB", f"{tb_score(p):.0f}")
+    m[4].metric("PMix", f"{pmix_score(p):.0f}")
+    m[5].metric("DC", f"{nn(p, 'damage_conversion_score'):.0f}")
+
+    c1, c2 = st.columns(2)
+    with c1:
+        stat_table([
+            ("Season AVG", f"{nn(p, 'season_avg'):.3f}"),
+            ("Season HR / PA", f"{int(nn(p, 'season_hr'))} / {int(nn(p, 'season_pa'))}"),
+            ("HR per PA", f"{nn(p, 'hr_per_pa'):.4f}"),
+            ("Games since HR", f"{int(nn(p, 'games_since_last_hr'))}"),
+            ("Due score", f"{nn(p, 'hr_due_score'):.1f} ({txt(p, 'hr_due_tag', default='—')})"),
+            ("L5", f"{int(nn(p, 'last5_hits'))}H / {int(nn(p, 'last5_hr'))}HR / {int(nn(p, 'last5_xbh'))}XBH"),
+        ])
+    with c2:
+        stat_table([
+            ("Avg / Max EV", f"{avg_ev(p):.1f} / {max_ev(p):.1f}"),
+            ("Hard hit / Barrel", f"{pct(hard_hit(p))} / {pct(barrel_rate(p))}"),
+            ("Launch angle", f"{launch_angle(p):.1f}°"),
+            ("375+ / 400+", f"{int(recent375(p))} / {int(recent400(p))}"),
+            ("Pitcher HR/9 · WHIP", f"{nn(p, 'pitcher_hr9'):.2f} · {nn(p, 'pitcher_whip'):.2f}"),
+            ("Park / Weather HR", f"{nn(p, 'park_hr_factor', default=1.0):.2f} · {nn(p, 'weather_hr_effect_pct'):+.0f}%"),
+        ])
+
+    axes = ["HR", "HRR", "Hit", "TB", "PMix", "DC"]
+    radar(axes, [hr_score(p), prod_score(p), hit_score(p), tb_score(p),
+                 pmix_score(p), nn(p, "damage_conversion_score")],
+          role_color, "Score profile", height=300)
+
+    if txt(p, "simple_reason_1"):
+        st.caption(txt(p, "simple_reason_1"))
+    if txt(p, "hr_reason"):
+        st.caption(txt(p, "hr_reason"))
+
+    b1, b2 = st.columns(2)
+    if b1.button("➕ Add to slip", width="stretch", key=f"mslip_{name_of(p)}"):
+        st.session_state.slip.append(f"{name_of(p)} — {txt(p, 'best_bet_type', default='HR')}")
+        st.rerun()
+    if b2.button("⭐ Watch", width="stretch", key=f"mwatch_{name_of(p)}"):
+        if name_of(p) not in st.session_state.watch:
+            st.session_state.watch.append(name_of(p))
+            persist_watch()
+        st.rerun()
+
+
 def player_card(
     p: Dict[str, Any],
     rank: Optional[int] = None,
     kind: str = "hr",
     left_label: str = "",
     left_color: str = "",
+    open_key: str = "",
 ) -> None:
     """Card matching the old site: coloured left rail, bubbles, bars, big score."""
     rc = role_config(p)
@@ -858,6 +936,12 @@ def player_card(
         f"</div>",
         unsafe_allow_html=True,
     )
+    # Opens the modal. Streamlit can't attach a click to the card HTML itself,
+    # so this sits directly under it as the equivalent of clicking the card.
+    if open_key:
+        if st.button("View details", key=f"open_{open_key}_{p.get('player_id')}_{rank or 0}",
+                     width="stretch"):
+            player_modal(p)
 
 
 def rows_to_df(rows: List[Dict[str, Any]], cols: List[str]) -> pd.DataFrame:
@@ -992,11 +1076,11 @@ with h2:
 # Tab order matches the old site's lib/theme.js TABS list, so muscle memory
 # carries over. Player is new: Streamlit has no modal, so what used to be
 # PlayerModal is a tab instead.
-(tab_games, tab_board, tab_hitshrr, tab_pitchers, tab_pairs, tab_bot,
+(tab_games, tab_board, tab_due, tab_hitshrr, tab_pitchers, tab_pairs, tab_bot,
  tab_pools, tab_scoreboard, tab_leaders, tab_results, tab_player,
  tab_watch, tab_spray, tab_guide) = st.tabs([
-    "🗓️ Games", "🏆 HR Board", "💥 Hits & HRR", "⚾ Pitchers", "🎯 Pairs",
-    "🤖 Bot", "🧩 Pools", "📊 Scoreboard", "🥇 Leaders", "✅ Results",
+    "🗓️ Games", "🏆 HR Board", "💣 Due Board", "💥 Hits & HRR", "⚾ Pitchers",
+    "🎯 Pairs", "🤖 Bot", "🧩 Pools", "📊 Scoreboard", "🥇 Leaders", "✅ Results",
     "🔍 Player", "⭐ Watchlist", "💦 Spray", "📖 Guide",
 ])
 
@@ -1033,7 +1117,7 @@ with tab_board:
             st.caption(f"median {series.median():.0f} · max {series.max():.0f}")
 
     for i, p in enumerate(ranked[:15], start=1):
-        player_card(p, i, kind)
+        player_card(p, i, kind, open_key='board')
 
     if ranked:
         st.markdown("#### Full board")
@@ -1161,38 +1245,45 @@ with tab_games:
                 if txt(head, key):
                     st.caption(f"{label}{txt(head, key)}")
 
-            # THE FIVE GAME PICKS — the bot stamps one player per game per role
-            # (TOP / HR / HIT / HRR / CONTACT) in game_pick_role. This is the
-            # same set the .txt report prints under each game header, and it
-            # was the centrepiece of the old Games tab.
-            picked = {}
+            # THE GAME PICKS — the bot stamps players per game per role in
+            # game_pick_role. Roles are NOT one-per-game: TOP/HR/CONTACT get
+            # one each but HIT and HRR get TWO apiece, exactly as the .txt
+            # report prints them. Collecting into a dict keyed by role kept
+            # only the first of each and silently dropped two cards per game.
+            picked: Dict[str, List[Dict[str, Any]]] = {}
             for p in gp:
                 r = str(p.get("game_pick_role") or "").upper()
-                if r in GAME_ROLE_LABEL and r not in picked:
-                    picked[r] = p
+                if r in GAME_ROLE_LABEL:
+                    picked.setdefault(r, []).append(p)
 
             if picked:
-                st.markdown("**Game picks**")
+                total = sum(len(v) for v in picked.values())
+                st.markdown(f"**Game picks** ({total})")
                 for r in ("TOP", "HR", "HIT", "HRR", "CONTACT"):
-                    if r in picked:
+                    for p in sorted(picked.get(r, []), key=hr_score, reverse=True):
                         emoji, label, color = GAME_ROLE_LABEL[r]
-                        player_card(picked[r], left_label=f"{emoji} {label.upper()}",
-                                    left_color=color)
+                        player_card(p, left_label=f"{emoji} {label.upper()}",
+                                    left_color=color, open_key=f"g{gpk}")
             else:
                 st.caption("No stamped game picks for this game — showing top HR scores.")
                 for p in sorted(gp, key=hr_score, reverse=True)[:4]:
-                    player_card(p)
+                    player_card(p, open_key=f"g{gpk}")
 
-            with st.expander(f"Full lineup ({len(gp)})"):
-                st.dataframe(pd.DataFrame([{
-                    "Spot": p.get("lineup_spot"), "Player": name_of(p),
-                    "Team": team_of(p), "B": txt(p, "bats", default="?"),
-                    "Role": tier_role(p), "HR": round(hr_score(p), 1),
-                    "HRR": round(prod_score(p), 1), "Hit": round(hit_score(p), 1),
-                    "TB": round(tb_score(p), 1), "PMix": round(pmix_score(p), 1),
-                    "⭐": "⭐" if p.get("weak_spot_flag") else "",
-                } for p in sorted(gp, key=lambda x: nn(x, "lineup_spot", default=99.0))]),
-                    width="stretch", hide_index=True)
+            # Plain table rather than a nested expander: expanders inside
+            # expanders render awkwardly and hide the lineup behind a second
+            # click for no benefit.
+            st.markdown(f"**Full lineup ({len(gp)})**")
+            st.dataframe(pd.DataFrame([{
+                "Spot": p.get("lineup_spot"), "Player": name_of(p),
+                "Team": team_of(p), "B": txt(p, "bats", default="?"),
+                "Role": tier_role(p), "HR": round(hr_score(p), 1),
+                "HRR": round(prod_score(p), 1), "Hit": round(hit_score(p), 1),
+                "TB": round(tb_score(p), 1), "PMix": round(pmix_score(p), 1),
+                "DC": round(nn(p, "damage_conversion_score"), 1),
+                "Due": round(nn(p, "hr_due_score"), 1),
+                "⭐": "⭐" if p.get("weak_spot_flag") else "",
+            } for p in sorted(gp, key=lambda x: nn(x, "lineup_spot", default=99.0))]),
+                width="stretch", hide_index=True)
 
 # ── SCOREBOARD ──────────────────────────────────────────────────────────────
 with tab_scoreboard:
@@ -1517,6 +1608,99 @@ with tab_pitchers:
                         f"Bullpen behind him: {bp} · ERA {nn(r, 'bullpen_era'):.2f} · "
                         f"HR/9 {nn(r, 'bullpen_hr9'):.2f} · WHIP {nn(r, 'bullpen_whip'):.2f}"
                     )
+
+# ── DUE BOARD ───────────────────────────────────────────────────────────────
+# The bot's DUE BOMBER concept: hitters overdue for a homer. hr_due_score and
+# hr_due_tag come straight from the model; games_since_last_hr and the
+# expected-vs-actual HR gap over the recent PA window supply the evidence.
+with tab_due:
+    st.caption(
+        "Hitters the model says are overdue — real power that hasn't converted "
+        "recently. Drought alone isn't a signal, so this pairs it with the bot's "
+        "due score and the gap between expected and actual HRs."
+    )
+
+    d1, d2, d3, d4 = st.columns(4)
+    min_due = d1.slider("Min due score", 0, 100, 0, step=5)
+    min_drought = d2.number_input("Min games since HR", 0, 60, 0, step=1)
+    tag_opts = ["All"] + sorted({txt(p, "hr_due_tag") for p in players if txt(p, "hr_due_tag")})
+    tag_pick = d3.selectbox("Due tag", tag_opts)
+    due_n = d4.number_input("Show", 5, 200, 30, step=5, key="duen")
+
+    def due_gap(p: Dict[str, Any]) -> float:
+        """Expected minus actual HRs over the recent window: positive means the
+        contact quality has been there and the homers haven't followed."""
+        return nn(p, "expected_hrs_recent_window") - nn(p, "recent_hr_window")
+
+    pool = [p for p in view
+            if nn(p, "hr_due_score") >= min_due
+            and nn(p, "games_since_last_hr") >= min_drought
+            and (tag_pick == "All" or txt(p, "hr_due_tag") == tag_pick)]
+    ranked_due = sorted(pool, key=lambda p: (nn(p, "hr_due_score"), due_gap(p)),
+                        reverse=True)[: int(due_n)]
+
+    if not ranked_due:
+        st.info("No hitters match these due filters.")
+    else:
+        k = st.columns(5)
+        k[0].metric("Qualifying", len(pool))
+        k[1].metric("Due Elite Power",
+                    sum(1 for p in players if txt(p, "hr_due_tag") == "Due Elite Power"))
+        k[2].metric("Longest drought",
+                    f"{max(int(nn(p, 'games_since_last_hr')) for p in players)} g")
+        k[3].metric("Median due score",
+                    f"{pd.Series([nn(p, 'hr_due_score') for p in players]).median():.1f}")
+        k[4].metric("Biggest HR gap", f"{max(due_gap(p) for p in players):+.2f}")
+
+        v1, v2 = st.columns([3, 2])
+        with v1:
+            st.bar_chart(
+                pd.DataFrame([{"Player": f"{name_of(p)} ({team_of(p)})",
+                               "Due score": round(nn(p, "hr_due_score"), 1)}
+                              for p in ranked_due[:15]]).set_index("Player"),
+                height=320, color=C["orange"], horizontal=True,
+            )
+        with v2:
+            hm = pd.DataFrame([{
+                "Player": name_of(p),
+                "Due": nn(p, "hr_due_score"),
+                "Drought": nn(p, "games_since_last_hr"),
+                "HR gap": due_gap(p) * 20,
+                "HR/PA": nn(p, "hr_per_pa") * 1000,
+                "Barrel": barrel_rate(p) * 100,
+            } for p in ranked_due[:15]]).set_index("Player")
+            heatmap(hm, "Due profile (scaled)", height=320)
+
+        for i, p in enumerate(ranked_due[:12], start=1):
+            player_card(p, i, open_key="due")
+
+        st.markdown("#### Full due board")
+        due_tbl = pd.DataFrame([{
+            "Player": name_of(p), "Team": team_of(p), "Opp": opp_of(p),
+            "Spot": p.get("lineup_spot"),
+            "Due score": round(nn(p, "hr_due_score"), 1),
+            "Tag": txt(p, "hr_due_tag"),
+            "Games since HR": int(nn(p, "games_since_last_hr")),
+            "Exp HR": round(nn(p, "expected_hrs_recent_window"), 2),
+            "Actual HR": int(nn(p, "recent_hr_window")),
+            "HR gap": round(due_gap(p), 2),
+            "PA window": int(nn(p, "recent_pa_window")),
+            "HR/PA": round(nn(p, "hr_per_pa"), 4),
+            "PA per HR": round(nn(p, "pa_per_hr"), 1),
+            "Tier": txt(p, "hr_pa_tier"),
+            "HR score": round(hr_score(p), 1),
+            "Barrel%": round(barrel_rate(p) * 100, 1),
+            "Pitcher": txt(p, "pitcher_name"),
+            "P HR/9": round(nn(p, "pitcher_hr9"), 2),
+        } for p in ranked_due])
+        st.dataframe(due_tbl, width="stretch", hide_index=True, height=520)
+        st.download_button("⬇️ CSV", due_tbl.to_csv(index=False).encode(),
+                           file_name=f"mlb_{slate}_due_board.csv", mime="text/csv")
+        st.caption(
+            "HR gap = expected HRs minus actual over the recent PA window. "
+            "Positive means the contact has been there without the results."
+        )
+
 
 # ── HITS / HRR ──────────────────────────────────────────────────────────────
 with tab_hitshrr:
