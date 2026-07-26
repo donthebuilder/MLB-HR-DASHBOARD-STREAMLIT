@@ -164,7 +164,12 @@ def slim_file(src: Path, dest: Path) -> bool:
 
     detail_written = 0
     if isinstance(payload, list):
-        detail_written = write_detail_files(payload, CURRENT_DIR / "detail")
+        # Per-slate detail directory. Both slates used to write into one
+        # shared detail/ folder, so any pitcher or batter appearing on both
+        # days had today's file silently overwritten by tomorrow's -- 51 of
+        # 246 rows disagreed with their own detail table because of it.
+        label = dest.stem.replace("_slim", "")
+        detail_written = write_detail_files(payload, CURRENT_DIR / "detail" / label)
         slimmed: Any = slim_rows(payload)
     elif isinstance(payload, dict) and isinstance(payload.get("players"), list):
         slimmed = dict(payload)
