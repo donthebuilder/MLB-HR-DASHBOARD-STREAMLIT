@@ -2,10 +2,19 @@ name: MLB HR Bot — Grade Results (data branch only)
 
 on:
   schedule:
-    # UTC times = 7pm, 9pm, 11pm, 1am, 3am Phoenix (Phoenix is UTC-7 year-round)
-    # Spread across when games actually finish — early games done by ~9pm,
-    # West coast night games can run past midnight Phoenix time.
-    - cron: "0 2,4,6,8,10 * * *"
+    # Phoenix is UTC-7 year-round.
+    #
+    # This used to be "0 2,4,6,8,10 * * *" -- 7pm, 9pm, 11pm, 1am and 3am
+    # Phoenix. Every one of those is at or after the point most games have
+    # ENDED, so the Results tab sat on a grade from the middle of the night
+    # and showed 120 PENDING picks with 0 HRs all afternoon, right through
+    # first pitch and the whole early slate. Nothing was broken; grading
+    # simply never ran while the games were on.
+    #
+    # Now it runs hourly from 11am Phoenix (18:00 UTC) -- ahead of the
+    # earliest first pitch -- through 3am Phoenix, covering every game from
+    # the day slate to a West-coast extra-innings finish. Each run is ~40s.
+    - cron: "0 18,19,20,21,22,23,0,1,2,3,4,5,6,8,10 * * *"
   workflow_dispatch: {}
 
 # One group PER WORKFLOW, not one shared across all of them.
