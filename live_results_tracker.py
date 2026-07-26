@@ -1,0 +1,1418 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+import datetime as dt
+import json
+import os
+import shutil
+import subprocess
+from pathlib import Path
+from typing import Any, Dict, Iterable, List, Optional, Tuple
+
+import requests
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfbase.pdfmetrics import stringWidth
+from reportlab.pdfgen import canvas
+
+
+
+# STREAMLIT MIGRATION (2026-07-25): the Next.js `app/` directory used to be
+# the marker for "this is the dashboard repo". The site is Streamlit now and
+# app/ is gone, so every sync would have silently bailed out with
+# "Website repo not found". Accept either marker.
+def _is_dashboard_repo(p) -> bool:
+    from pathlib import Path as _P
+    p = _P(p)
+    return (p / "streamlit_app.py").exists() or (p / "app").exists()
+
+
+MLB_BASE = "https://statsapi.mlb.com/api/v1.1/game"
+TIMEOUT = 30
+ROOT_DIR = Path(__file__).resolve().parent
+OUT_DIR = ROOT_DIR / "outputs"
+OUT_DIR.mkdir(parents=True, exist_ok=True)
+TODAY = dt.date.today()
+
+
+def safe_int(value: Any, default: int = 0) -> int:
+    try:
+        if value in (None, "", "--"):
+            return default
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def safe_float(value: Any, default: float = 0.0) -> float:
+    try:
+        if value in (None, "", "--"):
+            return default
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def pct(items: List[Dict[str, Any]], key: str) -> float:
+    if not items:
+        return 0.0
+    return round(100 * sum(int(x.get(key, 0)) for x in items) / len(items), 1)
+
+
+def load_rows(date_str: str) -> List[Dict[str, Any]]:
+    """Load the breakdown JSON for a date, even if today/tomorrow bots use different prefixes."""
+    candidates = [
+        OUT_DIR / f"mlb_breakdown_today_{date_str}.json",
+        OUT_DIR / f"mlb_breakdown_tomorrow_{date_str}.json",
+        OUT_DIR / f"mlb_daily_breakdown_final_{date_str}.json",
+        OUT_DIR / f"mlb_today_breakdown_{date_str}.json",
+        OUT_DIR / f"mlb_today_slate_breakdown_{date_str}.json",
+        OUT_DIR / f"mlb_tomorrow_early_breakdown_{date_str}.json",
+        OUT_DIR / f"mlb_tomorrow_breakdown_{date_str}.json",
+        OUT_DIR / f"tomorrow_early_breakdown_{date_str}.json",
+    ]
+
+    for path in candidates:
+        if path.exists():
+            print(f"Loaded picks file: {path}")
+            return json.loads(path.read_text(encoding="utf-8"))
+
+    matches = sorted(
+        [
+            p for p in OUT_DIR.glob(f"*{date_str}*.json")
+            if "graded_results" not in p.name and "live_graded_results" not in p.name
+        ],
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
+    if matches:
+        path = matches[0]
+        print(f"Loaded picks file: {path}")
+        return json.loads(path.read_text(encoding="utf-8"))
+
+    tried = "\n".join(f"- {c}" for c in candidates)
+    raise FileNotFoundError(
+        f"Could not find a breakdown JSON for {date_str}.\n"
+        f"Tried:\n{tried}\n"
+        f"Also searched outputs/*{date_str}*.json"
+    )
+
+
+def write_json_and_aliases(main_path: Path, payload: Any, alias_paths: Iterable[Path]) -> None:
+    """Write canonical tracker JSON plus compatibility aliases."""
+    text = json.dumps(payload, indent=2)
+    main_path.write_text(text, encoding="utf-8")
+    for alias in alias_paths:
+        if alias == main_path:
+            continue
+        alias.write_text(text, encoding="utf-8")
+
+
+def write_text_and_aliases(main_path: Path, text: str, alias_paths: Iterable[Path]) -> None:
+    """Write canonical tracker TXT plus compatibility aliases."""
+    main_path.write_text(text, encoding="utf-8")
+    for alias in alias_paths:
+        if alias == main_path:
+            continue
+        alias.write_text(text, encoding="utf-8")
+
+
+# ── WEBSITE REPO SYNC FIX V3 ─────────────────────────────────────────────────
+
+def _find_dashboard_repo() -> Path:
+    """
+    Find the MLB-HR-DASHBOARD website repo.
+
+    Priority:
+      1. GitHub Actions environment — the repo IS the workspace
+      2. MLB_DASHBOARD_DIR env var, if set and valid
+      3. Search common Mac locations
+      4. Recursive scan of standard dirs
+      5. Fallback to old hard-coded path
+    """
+    # 1. Running inside GitHub Actions? The repo IS where we are.
+    # GITHUB_WORKSPACE is set by Actions and points at the checked-out repo.
+    gh_workspace = os.environ.get("GITHUB_WORKSPACE", "").strip()
+    if gh_workspace:
+        p = Path(gh_workspace)
+        if p.exists() and _is_dashboard_repo(p):
+            return p
+    # Fallback for Actions: walk up from this script's location
+    here = Path(__file__).resolve().parent
+    for parent in [here, *here.parents]:
+        if _is_dashboard_repo(parent) and (parent / "public").exists():
+            return parent
+
+    # 2. Honor env override
+    env_path = os.environ.get("MLB_DASHBOARD_DIR", "").strip()
+    if env_path:
+        p = Path(env_path).expanduser()
+        if p.exists() and _is_dashboard_repo(p):
+            return p
+
+    # 3. Search common Mac locations
+    home = Path.home()
+    candidates = [
+        home / "Documents" / "GitHub" / "MLB-HR-DASHBOARD",
+        home / "Documents" / "GitHub" / "MLB-HR-Dashboard",
+        home / "Documents" / "GitHub" / "mlb-hr-dashboard",
+        home / "Documents" / "GitHub" / "MLB HR MODEL",
+        home / "Documents" / "GitHub" / "MLB-HR-MODEL",
+        home / "Downloads" / "MLB-HR-DASHBOARD",
+        home / "Downloads" / "mlb_hr_bot_starter",
+        home / "Desktop" / "MLB-HR-DASHBOARD",
+        home / "Projects" / "MLB-HR-DASHBOARD",
+        Path("/Volumes/DONX/USERS/Kingdondondon/Documents/GitHub/MLB-HR-DASHBOARD"),
+        Path("/Volumes/DONX/USERS/Kingdondondon/Documents/GitHub/MLB HR MODEL"),
+        Path("/Volumes/DONX/USERS/Kingdondondon/Downloads/MLB-HR-DASHBOARD"),
+        Path("/Volumes/DONX/USERS/Kingdondondon/Downloads/mlb_hr_bot_starter"),
+    ]
+    for c in candidates:
+        if c.exists() and _is_dashboard_repo(c):
+            return c
+
+    # 4. Recursive scan
+    for top in [home / "Documents" / "GitHub", home / "Documents",
+                home / "Downloads", home / "Desktop"]:
+        if not top.exists():
+            continue
+        try:
+            for sub in top.iterdir():
+                if not sub.is_dir():
+                    continue
+                name = sub.name.lower()
+                if ("mlb" in name and "dashboard" in name) or name == "mlb_hr_bot_starter":
+                    if _is_dashboard_repo(sub):
+                        return sub
+        except (PermissionError, OSError):
+            continue
+
+    # 5. Final fallback
+    return Path("/Volumes/DONX/USERS/Kingdondondon/Documents/GitHub/MLB-HR-DASHBOARD")
+
+
+DASHBOARD_REPO = _find_dashboard_repo()
+
+def _sync_copy(src: Path, dest: Path) -> bool:
+    try:
+        if not src.exists():
+            print(f"⚠️ Website sync missing source: {src}")
+            return False
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, dest)
+        print(f"📁 Website copy: {src.name} → {dest}")
+        return True
+    except Exception as exc:
+        print(f"⚠️ Website copy failed: {src} → {dest}: {exc}")
+        return False
+
+def _sync_read_json(path: Path, default):
+    try:
+        if path.exists():
+            return json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        pass
+    return default
+
+def _sync_write_json(path: Path, payload) -> None:
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    except Exception as exc:
+        print(f"⚠️ Could not update {path}: {exc}")
+
+def _sync_git_best_effort(repo: Path, message: str) -> None:
+    # In GitHub Actions, the workflow handles the commit + push itself.
+    # Don't try to do it here — it would either fail (no user.name set) or
+    # interfere with the workflow's commit logic.
+    if os.environ.get("GITHUB_ACTIONS", "").lower() == "true":
+        print("✅ Files staged in public/data — workflow will commit and push.")
+        return
+    if not (repo / ".git").exists():
+        print(f"✅ Website files copied locally. Open GitHub Desktop for: {repo}")
+        return
+    try:
+        status = subprocess.run(["git", "-C", str(repo), "status", "--porcelain"], text=True, capture_output=True)
+        if not status.stdout.strip():
+            print("✅ Website repo already clean after sync.")
+            return
+        subprocess.run(["git", "-C", str(repo), "add", "public/data"], check=False)
+        subprocess.run(["git", "-C", str(repo), "commit", "-m", message], check=False)
+        pushed = subprocess.run(["git", "-C", str(repo), "push"], text=True, capture_output=True)
+        if pushed.returncode == 0:
+            print("✅ Synced + pushed website results to GitHub. Vercel should redeploy.")
+        else:
+            print("⚠️ Website results copied, but git push failed. Use GitHub Desktop to commit/push.")
+            if pushed.stderr:
+                print(pushed.stderr.strip())
+    except Exception as exc:
+        print(f"⚠️ Website results copied, but auto git failed: {exc}")
+        print("Open GitHub Desktop → commit → push.")
+
+def sync_results_to_website_repo_v2(date_str: str, live_mode: bool, json_path: Path, txt_path: Path, pdf_path: Path) -> None:
+    data_dir = DASHBOARD_REPO / "public" / "data"
+    if not _is_dashboard_repo(DASHBOARD_REPO):
+        print(f"⚠️ Website repo not found at {DASHBOARD_REPO}")
+        print(f"   Tried env (GITHUB_WORKSPACE, MLB_DASHBOARD_DIR) and common Mac paths.")
+        print(f"   To debug: run `pwd` and verify a folder with app/ + public/ exists.")
+        return
+    print(f"📍 Website repo: {DASHBOARD_REPO}")
+
+    results_dir = data_dir / "results"
+    current_dir = data_dir / "current"
+    role = "live" if live_mode else "final"
+    active_json = "results_live.json" if live_mode else "results_final.json"
+    active_txt = "results_live.txt" if live_mode else "results_final.txt"
+    legacy_prefix = "live_graded_results" if live_mode else "graded_results"
+
+    targets = [
+        (json_path, data_dir / active_json),
+        (txt_path, data_dir / active_txt),
+        (json_path, current_dir / active_json),
+        (txt_path, current_dir / active_txt),
+        (json_path, results_dir / f"{legacy_prefix}_{date_str}.json"),
+        (txt_path, results_dir / f"{legacy_prefix}_{date_str}.txt"),
+        (json_path, data_dir / f"{legacy_prefix}_{date_str}.json"),
+        (txt_path, data_dir / f"{legacy_prefix}_{date_str}.txt"),
+    ]
+    if pdf_path and pdf_path.exists():
+        targets.append((pdf_path, results_dir / f"{legacy_prefix}_{date_str}.pdf"))
+
+    copied = 0
+    for src, dest in targets:
+        copied += 1 if _sync_copy(src, dest) else 0
+
+    results_index = results_dir / "index.json"
+    ridx = _sync_read_json(results_index, {})
+    if not isinstance(ridx, dict):
+        ridx = {}
+    files = ridx.get("files", [])
+    if not isinstance(files, list):
+        files = []
+    history_name = f"{legacy_prefix}_{date_str}.json"
+    files = list(dict.fromkeys([history_name] + files))[:80]
+    _sync_write_json(results_index, {"files": files, "updated": date_str, "active": active_json})
+
+    root_index = data_dir / "index.json"
+    idx = _sync_read_json(root_index, {})
+    if not isinstance(idx, dict):
+        idx = {}
+    results = idx.get("results", [])
+    if not isinstance(results, list):
+        results = []
+    add_results = [active_json, f"results/{history_name}", history_name]
+    idx["results"] = list(dict.fromkeys(add_results + results))[:80]
+    idx.setdefault("current", idx.get("current", {}))
+    idx.setdefault("files", idx.get("files", []))
+    idx.setdefault("history", idx.get("history", []))
+    _sync_write_json(root_index, idx)
+
+    print(f"✅ Dashboard synced results ({role}): {copied} files copied into website repo.")
+    _sync_git_best_effort(DASHBOARD_REPO, f"Update MLB {role} results {date_str}")
+# ─────────────────────────────────────────────────────────────────────────────
+
+def fetch_game_feed(game_pk: int) -> Dict[str, Any]:
+    resp = requests.get(f"{MLB_BASE}/{game_pk}/feed/live", timeout=TIMEOUT)
+    resp.raise_for_status()
+    return resp.json()
+
+
+def get_player_batting_line(game_feed: Dict[str, Any], player_id: int) -> Dict[str, int]:
+    teams = game_feed.get("liveData", {}).get("boxscore", {}).get("teams", {})
+    for side in ("home", "away"):
+        players = teams.get(side, {}).get("players", {}) or {}
+        pdata = players.get(f"ID{player_id}")
+        if pdata:
+            batting = pdata.get("stats", {}).get("batting", {}) or {}
+            return {
+                "hits": safe_int(batting.get("hits"), 0),
+                "hr": safe_int(batting.get("homeRuns"), 0),
+                "runs": safe_int(batting.get("runs"), 0),
+                "rbi": safe_int(batting.get("rbi"), 0),
+                "tb": safe_int(batting.get("totalBases"), 0),
+                "ab": safe_int(batting.get("atBats"), 0),
+            }
+    return {"hits": 0, "hr": 0, "runs": 0, "rbi": 0, "tb": 0, "ab": 0}
+
+
+
+
+def get_all_homers_from_game(game_feed: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Return every player who homered in this game, including untracked players."""
+    homers: List[Dict[str, Any]] = []
+    teams = game_feed.get("liveData", {}).get("boxscore", {}).get("teams", {})
+    game_data = game_feed.get("gameData", {}) or {}
+    team_meta = game_data.get("teams", {}) or {}
+    for side in ("home", "away"):
+        team_abbr = ((team_meta.get(side) or {}).get("abbreviation") or side.upper())
+        players = teams.get(side, {}).get("players", {}) or {}
+        for key, pdata in players.items():
+            batting = pdata.get("stats", {}).get("batting", {}) or {}
+            hr = safe_int(batting.get("homeRuns"), 0)
+            if hr <= 0:
+                continue
+            person = pdata.get("person", {}) or {}
+            pid = safe_int(person.get("id"), 0)
+            homers.append({
+                "player_id": pid,
+                "name": person.get("fullName", f"Player {pid}"),
+                "team": team_abbr,
+                "hr": hr,
+            })
+    return homers
+
+
+def build_hr_capture_report(rows: List[Dict[str, Any]], game_cache: Dict[int, Dict[str, Any]], actual_by_pid: Dict[int, Dict[str, int]]) -> Dict[str, Any]:
+    """Compare every HR hit on the slate against every player included in the model output."""
+    tracked_player_ids = {int(r["player_id"]) for r in rows}
+    tracked_by_pid = {int(r["player_id"]): r for r in rows}
+
+    all_homer_entries: List[Dict[str, Any]] = []
+    for game_pk, feed in game_cache.items():
+        for h in get_all_homers_from_game(feed):
+            h["game_pk"] = int(game_pk)
+            all_homer_entries.append(h)
+
+    total_hrs = sum(safe_int(h.get("hr"), 0) for h in all_homer_entries)
+    caught_entries = [h for h in all_homer_entries if int(h.get("player_id", 0)) in tracked_player_ids]
+    caught_hrs = sum(safe_int(h.get("hr"), 0) for h in caught_entries)
+    missed_entries = [h for h in all_homer_entries if int(h.get("player_id", 0)) not in tracked_player_ids]
+    missed_hrs = max(0, total_hrs - caught_hrs)
+    capture_pct = round(100 * caught_hrs / total_hrs, 1) if total_hrs else 0.0
+
+    caught_details = []
+    for h in caught_entries:
+        base = tracked_by_pid.get(int(h.get("player_id", 0)), {})
+        caught_details.append({
+            **h,
+            "hr_score": safe_float(base.get("hr_score"), 0.0),
+            "overall_score": safe_float(base.get("overall_score"), 0.0),
+        })
+
+    return {
+        "total_hrs_on_slate": total_hrs,
+        "caught_hrs_on_sheet": caught_hrs,
+        "missed_hrs_not_on_sheet": missed_hrs,
+        "hr_capture_pct": capture_pct,
+        "all_homer_entries": all_homer_entries,
+        "caught_homer_entries": caught_details,
+        "missed_homer_entries": missed_entries,
+    }
+
+def build_unique_player_hr_report(graded_slots: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Count each player once so duplicate slots do not inflate/deflate HR accuracy."""
+    by_pid: Dict[int, Dict[str, Any]] = {}
+    for r in graded_slots:
+        pid = safe_int(r.get("player_id"), 0)
+        if not pid:
+            continue
+        if pid not in by_pid:
+            by_pid[pid] = {**r, "got_hr": 0, "slot_tags": []}
+        if safe_int(r.get("got_hr"), 0) >= 1:
+            by_pid[pid]["got_hr"] = 1
+        tag = str(r.get("pick_type", ""))
+        if tag == "TOP15":
+            tag = f"TOP15#{r.get('rank', '')}"
+        if tag and tag not in by_pid[pid]["slot_tags"]:
+            by_pid[pid]["slot_tags"].append(tag)
+
+    unique_players = list(by_pid.values())
+    hr_players = [r for r in unique_players if safe_int(r.get("got_hr"), 0) >= 1]
+    return {
+        "unique_players_tracked": len(unique_players),
+        "unique_players_with_hr": len(hr_players),
+        "unique_hr_accuracy_pct": round(100 * len(hr_players) / len(unique_players), 1) if unique_players else 0.0,
+        "unique_hr_players": sorted(hr_players, key=lambda r: (-safe_float(r.get("hr_score")), str(r.get("name", "")))),
+    }
+
+
+def _format_names(names: List[str]) -> str:
+    return ", ".join(names) if names else "none"
+
+
+def get_game_status(game_feed: Dict[str, Any]) -> Dict[str, Any]:
+    game_data = game_feed.get("gameData", {}) or {}
+    live_data = game_feed.get("liveData", {}) or {}
+    status = game_data.get("status", {}) or {}
+    linescore = live_data.get("linescore", {}) or {}
+    teams = game_data.get("teams", {}) or {}
+    return {
+        "detailed_state": status.get("detailedState", "Unknown"),
+        "abstract_state": status.get("abstractGameState", "Unknown"),
+        "inning": linescore.get("currentInning"),
+        "inning_half": linescore.get("inningHalf"),
+        "away": ((teams.get("away") or {}).get("abbreviation") or "AWAY"),
+        "home": ((teams.get("home") or {}).get("abbreviation") or "HOME"),
+    }
+
+
+def game_is_final(game_feed: Dict[str, Any]) -> bool:
+    st = get_game_status(game_feed)
+    detailed = str(st.get("detailed_state", "")).lower()
+    abstract = str(st.get("abstract_state", "")).lower()
+    return "final" in detailed or abstract == "final"
+
+
+def minmax_norm(value: float, low: float, high: float) -> float:
+    if high <= low:
+        return 0.5
+    value = max(low, min(high, safe_float(value, low)))
+    return (value - low) / (high - low)
+
+
+def pick_top(records: List[Dict[str, Any]], attr: str, n: int, used: Optional[Iterable[int]] = None) -> List[Dict[str, Any]]:
+    used_set = set(used or [])
+    return sorted(
+        [r for r in records if int(r["player_id"]) not in used_set],
+        key=lambda x: safe_float(x.get(attr, 0.0)),
+        reverse=True,
+    )[:n]
+
+
+def same_date_proxy_score(rec: Dict[str, Any]) -> float:
+    return (
+        0.45 * minmax_norm(safe_float(rec.get("last5_hr")), 0, 3) +
+        0.25 * minmax_norm(safe_float(rec.get("last5_xbh")), 0, 4) +
+        0.30 * safe_float(rec.get("numerology_score"), 0.0)
+    )
+
+
+def hot_score(rec: Dict[str, Any]) -> float:
+    return (
+        0.45 * minmax_norm(safe_float(rec.get("last5_hr")), 0, 3) +
+        0.30 * minmax_norm(safe_float(rec.get("last5_xbh")), 0, 4) +
+        0.25 * minmax_norm(safe_float(rec.get("last5_hits")), 0, 8)
+    )
+
+
+def due_score(rec: Dict[str, Any]) -> float:
+    num = safe_float(rec.get("recent_350_num"))
+    den = max(1.0, safe_float(rec.get("recent_350_den"), 1.0))
+    return (
+        0.40 * minmax_norm(num / den, 0.05, 0.45) +
+        0.25 * minmax_norm(safe_float(rec.get("recent_barrel_rate")), 0.02, 0.25) +
+        0.20 * minmax_norm(safe_float(rec.get("recent_fb_rate")), 0.20, 0.55) +
+        0.15 * (1.0 - minmax_norm(safe_float(rec.get("last5_hr")), 0, 3))
+    )
+
+
+def matchup_score(rec: Dict[str, Any]) -> float:
+    pitcher_throws = rec.get("pitcher_throws", "")
+    split_avg = safe_float(rec.get("avg_vs_lhp")) if pitcher_throws == "L" else safe_float(rec.get("avg_vs_rhp"))
+    split_iso = safe_float(rec.get("iso_vs_lhp")) if pitcher_throws == "L" else safe_float(rec.get("iso_vs_rhp"))
+    bats = rec.get("bats", "")
+    weak_side = rec.get("pitcher_weak_side", "")
+    side_match = 1.0 if ((bats == "L" and weak_side == "LHB") or (bats == "R" and weak_side == "RHB")) else 0.45
+    weak_spot = 1.0 if rec.get("weak_spot_flag") else 0.4
+    return (
+        0.30 * minmax_norm(split_avg, 0.180, 0.360) +
+        0.22 * minmax_norm(split_iso, 0.05, 0.35) +
+        0.18 * minmax_norm(safe_float(rec.get("pitcher_hr_allowed")), 5, 30) +
+        0.15 * minmax_norm(safe_float(rec.get("pitcher_fb_rate")), 0.25, 0.50) +
+        0.10 * side_match +
+        0.05 * weak_spot
+    )
+
+
+def pair_allowed(a: Dict[str, Any], b: Dict[str, Any]) -> bool:
+    return int(a["player_id"]) != int(b["player_id"]) and int(a["game_pk"]) != int(b["game_pk"])
+
+
+def best_hr_pair_score(a: Dict[str, Any], b: Dict[str, Any]) -> float:
+    a350 = safe_float(a.get("recent_350_num")) / max(1.0, safe_float(a.get("recent_350_den"), 1.0))
+    b350 = safe_float(b.get("recent_350_num")) / max(1.0, safe_float(b.get("recent_350_den"), 1.0))
+    wea = (minmax_norm(safe_float(a.get("weather_temp_f"), 70), 55, 95) + minmax_norm(safe_float(a.get("weather_wind_mph"), 0), 0, 20)) / 2
+    web = (minmax_norm(safe_float(b.get("weather_temp_f"), 70), 55, 95) + minmax_norm(safe_float(b.get("weather_wind_mph"), 0), 0, 20)) / 2
+    return (
+        0.36 * safe_float(a.get("hr_score")) +
+        0.36 * safe_float(b.get("hr_score")) +
+        0.08 * matchup_score(a) +
+        0.08 * matchup_score(b) +
+        0.05 * minmax_norm(a350, 0.05, 0.45) +
+        0.05 * minmax_norm(b350, 0.05, 0.45) +
+        0.01 * wea + 0.01 * web
+    )
+
+
+def hot_due_pair_score(a: Dict[str, Any], b: Dict[str, Any]) -> float:
+    return max(
+        0.55 * hot_score(a) + 0.45 * due_score(b),
+        0.55 * hot_score(b) + 0.45 * due_score(a),
+    )
+
+
+def numerology_pair_score(a: Dict[str, Any], b: Dict[str, Any]) -> float:
+    return (
+        0.42 * safe_float(a.get("numerology_score"), 0.0) +
+        0.42 * safe_float(b.get("numerology_score"), 0.0) +
+        0.08 * minmax_norm(safe_float(a.get("hr_score")), 40, 80) +
+        0.08 * minmax_norm(safe_float(b.get("hr_score")), 40, 80)
+    )
+
+
+def select_diverse_pairs(scored_pairs: List[Tuple[Dict[str, Any], Dict[str, Any], float, str]], max_pairs: int = 2, max_player_exposure: int = 1):
+    selected = []
+    exposure: Dict[int, int] = {}
+    for a, b, score, label in scored_pairs:
+        ap = int(a["player_id"])
+        bp = int(b["player_id"])
+        if exposure.get(ap, 0) >= max_player_exposure:
+            continue
+        if exposure.get(bp, 0) >= max_player_exposure:
+            continue
+        selected.append((a, b, score, label))
+        exposure[ap] = exposure.get(ap, 0) + 1
+        exposure[bp] = exposure.get(bp, 0) + 1
+        if len(selected) >= max_pairs:
+            break
+    return selected
+
+
+def build_pool(rows: List[Dict[str, Any]], size: int, variant: str, used_players=None):
+    used_players = set(used_players or [])
+    scored = []
+    if variant == "4":
+        for r in rows:
+            score = (
+                0.45 * safe_float(r.get("hr_score")) +
+                0.20 * hot_score(r) +
+                0.20 * due_score(r) +
+                0.15 * matchup_score(r)
+            )
+            scored.append((r, score))
+    else:
+        for r in rows:
+            score = (
+                0.38 * safe_float(r.get("hr_score")) +
+                0.18 * hot_score(r) +
+                0.18 * due_score(r) +
+                0.16 * matchup_score(r) +
+                0.10 * (safe_float(r.get("overall_score")) / 100.0)
+            )
+            scored.append((r, score))
+    scored.sort(key=lambda x: x[1], reverse=True)
+
+    selected = []
+    used_games = set()
+    for rec, score in scored:
+        pid = int(rec["player_id"])
+        game_pk = int(rec["game_pk"])
+        if pid in used_players:
+            continue
+        if game_pk in used_games:
+            continue
+        selected.append((rec, score))
+        used_players.add(pid)
+        used_games.add(game_pk)
+        if len(selected) >= size:
+            break
+    return selected, used_players
+
+
+def build_pair_pool_sections(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
+    ranked = sorted(rows, key=lambda r: safe_float(r.get("hr_score")), reverse=True)
+    used_pair_ids: set[int] = set()
+
+    def pair_score(kind: str, a: Dict[str, Any], b: Dict[str, Any]) -> float:
+        if kind == "bomb_gap":
+            return 0.56 * safe_float(a.get("hr_score")) + 0.20 * safe_float(b.get("hr_score")) + 0.24 * safe_float(b.get("contact_score"))
+        if kind == "bomb_matchup":
+            return 0.58 * safe_float(a.get("hr_score")) + 0.18 * safe_float(b.get("hr_score")) + 0.24 * matchup_score(b)
+        if kind == "bomb_variance":
+            return 0.52 * safe_float(a.get("hr_score")) + 0.20 * safe_float(b.get("hr_score")) + 0.28 * due_score(b)
+        return best_hr_pair_score(a, b)
+
+    def select_pair(kind: str, right_key: str = "hr_score") -> Tuple[Dict[str, Any], Dict[str, Any], float, str]:
+        left_sorted = [r for r in ranked if int(r["player_id"]) not in used_pair_ids]
+        right_sorted = sorted([r for r in rows if int(r["player_id"]) not in used_pair_ids], key=lambda r: safe_float(r.get(right_key)), reverse=True)
+        best = None
+        best_score = -1.0
+        for a in left_sorted:
+            for b in right_sorted:
+                if not pair_allowed(a, b):
+                    continue
+                if int(a["player_id"]) in used_pair_ids or int(b["player_id"]) in used_pair_ids:
+                    continue
+                score = pair_score(kind, a, b)
+                if score > best_score:
+                    best_score = score
+                    best = (a, b, round(score, 1))
+        if best is None:
+            for i in range(len(ranked)):
+                if int(ranked[i]["player_id"]) in used_pair_ids:
+                    continue
+                for j in range(i + 1, len(ranked)):
+                    if int(ranked[j]["player_id"]) in used_pair_ids:
+                        continue
+                    if pair_allowed(ranked[i], ranked[j]):
+                        best = (ranked[i], ranked[j], round(best_hr_pair_score(ranked[i], ranked[j]), 1))
+                        break
+                if best is not None:
+                    break
+        a, b, score = best
+        used_pair_ids.add(int(a["player_id"]))
+        used_pair_ids.add(int(b["player_id"]))
+        return a, b, score, kind
+
+    pair_groups = [
+        {"label": "HR Pair A | Pure Bombs", "pairs": [_trim_pair(select_pair("pure_bombs", "hr_score"))]},
+        {"label": "HR Pair B | Bomb + Gap Power", "pairs": [_trim_pair(select_pair("bomb_gap", "contact_score"))]},
+        {"label": "HR Pair C | Bomb + Matchup", "pairs": [_trim_pair(select_pair("bomb_matchup", "hr_score"))]},
+        {"label": "HR Pair D | Bomb + Variance", "pairs": [_trim_pair(select_pair("bomb_variance", "hr_score"))]},
+    ]
+
+    used_for_pools = set(used_pair_ids)
+    pool4_buckets = []
+    for label in ["4-MAN HR POOL A", "4-MAN HR POOL B", "4-MAN HR POOL C", "4-MAN HR POOL D"]:
+        pool, used_for_pools = build_pool(rows, 4, "4", used_for_pools)
+        pool4_buckets.append({"label": label, "players": [trim_row(r) for r, _ in pool]})
+
+    pool6_buckets = []
+    for label in ["6-MAN HR POOL A", "6-MAN HR POOL B", "6-MAN HR POOL C", "6-MAN HR POOL D"]:
+        pool, used_for_pools = build_pool(rows, 6, "6", used_for_pools)
+        pool6_buckets.append({"label": label, "players": [trim_row(r) for r, _ in pool]})
+
+    return {"pair_groups": pair_groups, "pools": pool4_buckets + pool6_buckets}
+
+# Fields this script actually reads from a player row, anywhere in the file
+# (tracking slots, grading, pair/pool scoring, missed-HR diagnostics). Built
+# by grepping every r.get(...)/rec.get(...) call site in this script.
+#
+# BUGFIX: build_tracking_slots() used `{**r, "pick_type": ...}` to build each
+# slot, which spreads the ENTIRE source row -- including heavy fields like
+# batter_pitch_type_profile, pitcher_pitch_mix_vs_lhb/_vs_rhb, zone_profile,
+# spray_chart/bbe arrays, etc -- into every one of the ~90+ slots generated
+# per day. None of those heavy fields are ever read by this script; they were
+# just carried along for the ride from today_bot.py's breakdown JSON. That's
+# what pushed mlb_results_live_*.json to 104MB+ and broke every git push
+# (GitHub's hard limit is 100MB). trim_row() keeps everything this script
+# actually uses and drops the rest.
+SLOT_FIELDS = {
+    "player_id", "name", "team", "game_pk", "bats", "pitcher_throws",
+    "hr_score", "overall_score", "hit_score", "hrr_score", "contact_score",
+    "season_iso", "season_avg", "season_hr", "season_xbh",
+    "last5_hits", "last5_hr", "last5_xbh", "last10_xbh",
+    "avg_vs_lhp", "avg_vs_rhp", "iso_vs_lhp", "iso_vs_rhp",
+    "recent_350_num", "recent_350_den", "recent_barrel_rate", "recent_fb_rate",
+    "pitcher_hr_allowed", "pitcher_fb_rate", "pitcher_weak_side",
+    "weather_temp_f", "weather_wind_mph", "numerology_score",
+    "weak_spot_flag", "weak_spot_reason", "best_bet_type", "true_avoid_hr",
+    "best_non_hr_category", "top_board_tags", "game_pick_role",
+    "lineup_spot", "lineup_confirmed", "venue_name", "game_time",
+}
+
+
+def trim_row(r: Dict[str, Any]) -> Dict[str, Any]:
+    """Keep only the fields this script actually reads, dropping heavy
+    nested payloads (pitch profiles, zone maps, spray charts, etc.) that
+    today_bot.py attaches for the frontend but this script never touches.
+    """
+    return {k: v for k, v in r.items() if k in SLOT_FIELDS}
+
+
+def _trim_pair(pair_tuple):
+    """Trim both player rows inside a (a, b, score, kind) pair tuple."""
+    a, b, score, kind = pair_tuple
+    return (trim_row(a), trim_row(b), score, kind)
+
+
+def build_tracking_slots(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    tracking = []
+
+    top15 = sorted(rows, key=lambda x: safe_float(x.get("hr_score")), reverse=True)[:15]
+    for i, r in enumerate(top15, 1):
+        tracking.append({**trim_row(r), "pick_type": "TOP15", "rank": i})
+
+    by_game: Dict[int, List[Dict[str, Any]]] = {}
+    for r in rows:
+        by_game.setdefault(int(r["game_pk"]), []).append(r)
+
+    for _, hitters in by_game.items():
+        used = set()
+
+        top_pick = pick_top(hitters, "overall_score", 1, used)[0]
+        used.add(int(top_pick["player_id"]))
+        tracking.append({**trim_row(top_pick), "pick_type": "TOP"})
+
+        hr_pick = pick_top(hitters, "hr_score", 1, used)[0] if len(hitters) > 1 else top_pick
+        used.add(int(hr_pick["player_id"]))
+        tracking.append({**trim_row(hr_pick), "pick_type": "HR"})
+
+        hit_picks = pick_top(hitters, "hit_score", 2, used)
+        used.update(int(h["player_id"]) for h in hit_picks)
+        for hp in hit_picks:
+            tracking.append({**trim_row(hp), "pick_type": "HIT"})
+
+        hrr_picks = pick_top(hitters, "hrr_score", 2, used)
+        used.update(int(h["player_id"]) for h in hrr_picks)
+        for hp in hrr_picks:
+            tracking.append({**trim_row(hp), "pick_type": "HRR"})
+
+        contact_pick = pick_top(hitters, "contact_score", 1, used)
+        if not contact_pick:
+            contact_pick = pick_top(hitters, "contact_score", 1)
+        tracking.append({**trim_row(contact_pick[0]), "pick_type": "CONTACT"})
+
+    return tracking
+
+
+def grade_slot(slot: Dict[str, Any], actual: Dict[str, int]) -> Dict[str, Any]:
+    hrr_total = actual["hits"] + actual["runs"] + actual["rbi"]
+    return {
+        **slot,
+        "actual_hits": actual["hits"],
+        "actual_hr": actual["hr"],
+        "actual_runs": actual["runs"],
+        "actual_rbi": actual["rbi"],
+        "actual_tb": actual["tb"],
+        "actual_ab": actual["ab"],
+        "got_base_hit": 1 if actual["hits"] >= 1 else 0,
+        "got_hr": 1 if actual["hr"] >= 1 else 0,
+        "got_xbh": 1 if actual["tb"] >= 2 else 0,
+        "hrr_total": hrr_total,
+        "hrr_2_plus": 1 if hrr_total >= 2 else 0,
+        "hrr_3_plus": 1 if hrr_total >= 3 else 0,
+    }
+
+
+def merge_homer_entries(graded_slots: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    merged: Dict[int, Dict[str, Any]] = {}
+    emoji_order = {"🏆": 0, "🧨": 1, "🔥": 2, "🏁": 3, "💠": 4, "⚾": 5, "⭐": 6}
+
+    for r in graded_slots:
+        if int(r.get("got_hr", 0)) != 1:
+            continue
+        pid = int(r["player_id"])
+        if pid not in merged:
+            merged[pid] = {
+                "player_id": pid,
+                "name": r["name"],
+                "team": r["team"],
+                "tags": [],
+                "base_row": r,
+            }
+        if r["pick_type"] == "TOP15":
+            merged[pid]["tags"].append(f"🏆#{r['rank']}")
+        elif r["pick_type"] == "HR":
+            merged[pid]["tags"].append("🧨")
+        elif r["pick_type"] == "TOP":
+            merged[pid]["tags"].append("🔥")
+        elif r["pick_type"] == "HRR":
+            merged[pid]["tags"].append("🏁")
+        elif r["pick_type"] == "HIT":
+            merged[pid]["tags"].append("💠")
+        elif r["pick_type"] == "CONTACT":
+            merged[pid]["tags"].append("⚾")
+        if r.get("weak_spot_flag"):
+            merged[pid]["tags"].append("⭐")
+
+        existing = merged[pid]["base_row"]
+        if safe_float(r.get("hr_score")) > safe_float(existing.get("hr_score")):
+            merged[pid]["base_row"] = r
+
+    def unique_tags(tags: List[str]) -> List[str]:
+        seen = set()
+        out = []
+        for tag in tags:
+            if tag not in seen:
+                seen.add(tag)
+                out.append(tag)
+        out.sort(key=lambda x: emoji_order.get(x[0], 99))
+        return out
+
+    out = []
+    for item in merged.values():
+        item["tags"] = unique_tags(item["tags"])
+        out.append(item)
+
+    def sort_key(item: Dict[str, Any]):
+        first = item["tags"][0] if item["tags"] else ""
+        return (emoji_order.get(first[0], 99), item["name"])
+
+    return sorted(out, key=sort_key)
+
+
+def format_stat_line(r: Dict[str, Any]) -> str:
+    pitcher_throws = r.get("pitcher_throws", "")
+    split_avg = safe_float(r.get("avg_vs_lhp")) if pitcher_throws == "L" else safe_float(r.get("avg_vs_rhp"))
+    split_side = "LHP" if pitcher_throws == "L" else "RHP"
+    return (
+        f"  BA(S) {safe_float(r.get('season_avg')):.3f} | "
+        f"BA vs {split_side} {split_avg:.3f} | "
+        f"ISO {safe_float(r.get('season_iso')):.3f} | "
+        f"350+ {safe_int(r.get('recent_350_num'))}/{max(1, safe_int(r.get('recent_350_den'), 1))} | "
+        f"L5 {safe_int(r.get('last5_hits'))}H/{safe_int(r.get('last5_hr'))}HR/{safe_int(r.get('last5_xbh'))}XBH"
+    )
+
+
+def grade_pairs_pools(sections: Dict[str, Any], actual_by_pid: Dict[int, Dict[str, int]]) -> Dict[str, Any]:
+    graded_pair_groups = []
+    all_pairs = []
+    cleared_pairs = []
+
+    for group in sections["pair_groups"]:
+        graded_pairs = []
+        for a, b, score, label in group["pairs"]:
+            a_hr = safe_int(actual_by_pid.get(int(a["player_id"]), {}).get("hr"), 0)
+            b_hr = safe_int(actual_by_pid.get(int(b["player_id"]), {}).get("hr"), 0)
+            homer_names = []
+            if a_hr >= 1:
+                homer_names.append(a["name"])
+            if b_hr >= 1:
+                homer_names.append(b["name"])
+            hr_count = len(homer_names)
+            hit = 1 if hr_count == 2 else 0
+            pair_entry = {
+                "label": label,
+                "a": a,
+                "b": b,
+                "score": round(score, 1),
+                "cleared": hit,
+                "hr_count": hr_count,
+                "total_count": 2,
+                "homer_names": homer_names,
+                "a_hr": a_hr,
+                "b_hr": b_hr,
+            }
+            graded_pairs.append(pair_entry)
+            all_pairs.append(pair_entry)
+            if hit:
+                cleared_pairs.append(pair_entry)
+        graded_pair_groups.append({"label": group["label"], "pairs": graded_pairs})
+
+    graded_pools = []
+    cleared_pools = []
+    pool4 = []
+    pool6 = []
+    for pool in sections["pools"]:
+        players = pool["players"]
+        homer_names = [p["name"] for p in players if safe_int(actual_by_pid.get(int(p["player_id"]), {}).get("hr"), 0) >= 1]
+        hr_count = len(homer_names)
+        total_count = len(players)
+        cleared = 1 if total_count > 0 and hr_count == total_count else 0
+        entry = {
+            "label": pool["label"],
+            "players": players,
+            "cleared": cleared,
+            "hr_count": hr_count,
+            "total_count": total_count,
+            "homer_names": homer_names,
+        }
+        graded_pools.append(entry)
+        if pool["label"].startswith("4-MAN"):
+            pool4.append(entry)
+        elif pool["label"].startswith("6-MAN"):
+            pool6.append(entry)
+        if cleared:
+            cleared_pools.append(entry)
+
+    return {
+        "graded_pair_groups": graded_pair_groups,
+        "all_pairs": all_pairs,
+        "cleared_pairs": cleared_pairs,
+        "graded_pools": graded_pools,
+        "cleared_pools": cleared_pools,
+        "pool4": pool4,
+        "pool6": pool6,
+    }
+
+
+def wrap_text_to_width(text: str, font_name: str, font_size: int, max_width: float) -> List[str]:
+    if not text:
+        return [""]
+    words = text.split(" ")
+    lines: List[str] = []
+    current = words[0]
+    for word in words[1:]:
+        trial = current + " " + word
+        if stringWidth(trial, font_name, font_size) <= max_width:
+            current = trial
+        else:
+            lines.append(current)
+            current = word
+    lines.append(current)
+    return lines
+
+
+def save_text_as_pdf(text: str, pdf_path: Path, title: str) -> None:
+    pdf_path.parent.mkdir(parents=True, exist_ok=True)
+    c = canvas.Canvas(str(pdf_path), pagesize=letter)
+    width, height = letter
+
+    margin_left = 42
+    margin_right = 42
+    margin_top = 42
+    margin_bottom = 42
+    usable_width = width - margin_left - margin_right
+
+    body_font = "Courier"
+    body_size = 8
+    body_leading = 11
+
+    def draw_header(page_no: int):
+        c.setFont("Helvetica-Bold", 13)
+        c.drawString(margin_left, height - 28, title)
+        c.setFont("Helvetica", 8)
+        c.drawRightString(width - margin_right, height - 28, f"Page {page_no}")
+        c.setLineWidth(0.5)
+        c.line(margin_left, height - 34, width - margin_right, height - 34)
+
+    page_no = 1
+    y = height - margin_top - 10
+    draw_header(page_no)
+    y -= 10
+
+    for raw_line in text.splitlines():
+        wrapped = [""] if raw_line.strip() == "" else wrap_text_to_width(raw_line, body_font, body_size, usable_width)
+        for line in wrapped:
+            if y < margin_bottom + body_leading:
+                c.showPage()
+                page_no += 1
+                y = height - margin_top - 10
+                draw_header(page_no)
+                y -= 10
+            c.setFont(body_font, body_size)
+            c.drawString(margin_left, y, line)
+            y -= body_leading
+    c.save()
+
+
+
+def category_display(pick_type: str) -> str:
+    return {
+        "TOP15": "🏆 TOP 15 BOARD",
+        "TOP": "🔥 TOP PICKS",
+        "HR": "🧨 HR PICKS",
+        "HRR": "🏁 HRR PICKS",
+        "HIT": "💠 HIT PICKS",
+        "CONTACT": "⚾ CONTACT PICKS",
+    }.get(pick_type, pick_type)
+
+
+def hit_marker(actual_hits: int) -> str:
+    if actual_hits >= 3:
+        return " 🔥"
+    if actual_hits >= 2:
+        return " ⭐"
+    return ""
+
+
+def build_hr_category_counts(graded_slots: List[Dict[str, Any]]) -> Dict[str, int]:
+    counts = {"TOP15": 0, "TOP": 0, "HR": 0, "HRR": 0, "HIT": 0, "CONTACT": 0}
+    for r in graded_slots:
+        pt = str(r.get("pick_type", ""))
+        if pt in counts and safe_int(r.get("got_hr"), 0) >= 1:
+            counts[pt] += 1
+    return counts
+
+
+def build_hit_results_by_category(graded_slots: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
+    grouped = {"TOP": [], "HR": [], "HRR": [], "HIT": [], "CONTACT": []}
+    for r in graded_slots:
+        pt = str(r.get("pick_type", ""))
+        if pt in grouped and safe_int(r.get("actual_hits"), 0) >= 1:
+            grouped[pt].append(r)
+    for pt in grouped:
+        grouped[pt] = sorted(grouped[pt], key=lambda x: (-safe_int(x.get("actual_hits")), str(x.get("name", ""))))
+    return grouped
+
+
+def build_missed_hr_reason(missed: Dict[str, Any], rows: List[Dict[str, Any]]) -> str:
+    pid = safe_int(missed.get("player_id"), 0)
+    candidates = [r for r in rows if safe_int(r.get("player_id"), 0) == pid]
+    if not candidates:
+        return "not in model sheet / lineup pool"
+    r = candidates[0]
+    hr_score = safe_float(r.get("hr_score"), 0.0)
+    recent_350 = safe_int(r.get("recent_350_num"), 0)
+    recent_den = max(1, safe_int(r.get("recent_350_den"), 1))
+    iso = safe_float(r.get("season_iso"), 0.0)
+    reasons = []
+    if hr_score < 25:
+        reasons.append("low HR score")
+    if (recent_350 / recent_den) < 0.10:
+        reasons.append("low 350+ signal")
+    if iso < 0.140:
+        reasons.append("low ISO")
+    if not reasons:
+        reasons.append("outside top range")
+    return ", ".join(reasons)
+
+
+def build_summary_text(
+    date_str: str,
+    graded_slots: List[Dict[str, Any]],
+    merged_homers: List[Dict[str, Any]],
+    pair_pool_results: Dict[str, Any],
+    hr_capture_report: Optional[Dict[str, Any]] = None,
+    unique_player_report: Optional[Dict[str, Any]] = None,
+    live_mode: bool = False,
+) -> str:
+    top15 = [r for r in graded_slots if r["pick_type"] == "TOP15"]
+    hr_picks = [r for r in graded_slots if r["pick_type"] == "HR"]
+    top_picks = [r for r in graded_slots if r["pick_type"] == "TOP"]
+    hrr_picks = [r for r in graded_slots if r["pick_type"] == "HRR"]
+    hit_picks = [r for r in graded_slots if r["pick_type"] == "HIT"]
+    contact_picks = [r for r in graded_slots if r["pick_type"] == "CONTACT"]
+
+    final_games = len({int(r["game_pk"]) for r in graded_slots if int(r.get("is_final", 0)) == 1})
+    total_games = len({int(r["game_pk"]) for r in graded_slots})
+    title = f"LIVE RESULTS TRACKER - {date_str}" if live_mode else f"RESULTS TRACKER - {date_str}"
+    lines = [title, "-" * 42]
+    if live_mode:
+        lines.append(f"Game status: {final_games}/{total_games} graded games final")
+        lines.append("Note: live results can change until every game is final.")
+        lines.append("")
+
+    lines.append("BETTABLE RESULTS")
+    lines.append(f"Top 15 HR: {sum(safe_int(r.get('got_hr')) for r in top15)}/{len(top15)} ({pct(top15, 'got_hr')}%)")
+    lines.append(f"HR Picks: {sum(safe_int(r.get('got_hr')) for r in hr_picks)}/{len(hr_picks)} ({pct(hr_picks, 'got_hr')}%)")
+    lines.append(f"Top Picks: {sum(safe_int(r.get('got_hr')) for r in top_picks)}/{len(top_picks)} ({pct(top_picks, 'got_hr')}%)")
+
+    lines.append("")
+    lines.append("FULL SHEET BASE HIT PERFORMANCE")
+    lines.append(f"Base Hit Accuracy: {pct(graded_slots, 'got_base_hit')}%")
+
+    if hr_capture_report:
+        total_hrs = safe_int(hr_capture_report.get("total_hrs_on_slate"))
+        top15_hr = sum(safe_int(r.get("got_hr")) for r in top15)
+        hr_pick_hr = sum(safe_int(r.get("got_hr")) for r in hr_picks)
+        lines.append("")
+        lines.append("HR CAPTURE (BETTABLE)")
+        lines.append(f"Total Slate HRs: {total_hrs}")
+        lines.append(f"Caught in Top 15: {top15_hr}")
+        lines.append(f"Caught in HR Picks: {hr_pick_hr}")
+        if total_hrs:
+            lines.append(f"Top 15 Capture Rate: {round(100 * top15_hr / total_hrs, 1)}%")
+            lines.append(f"HR Pick Capture Rate: {round(100 * hr_pick_hr / total_hrs, 1)}%")
+
+        all_rows = []
+        seen = set()
+        for r in graded_slots:
+            pid = safe_int(r.get("player_id"))
+            if pid and pid not in seen:
+                all_rows.append(r)
+                seen.add(pid)
+        top40_ids = {safe_int(r.get("player_id")) for r in sorted(all_rows, key=lambda x: safe_float(x.get("hr_score")), reverse=True)[:40]}
+        all_homers = hr_capture_report.get("all_homer_entries", []) or []
+        vision_caught = sum(safe_int(h.get("hr")) for h in all_homers if safe_int(h.get("player_id")) in top40_ids)
+        lines.append("")
+        lines.append("MODEL VISION (Top 40)")
+        lines.append(f"Model Caught HRs: {vision_caught} / {total_hrs}")
+        lines.append(f"Vision Rate: {round(100 * vision_caught / total_hrs, 1) if total_hrs else 0.0}%")
+
+    if unique_player_report:
+        lines.append("")
+        lines.append("UNIQUE PLAYER HR ACCURACY")
+        lines.append(f"Unique Players Tracked: {safe_int(unique_player_report.get('unique_players_tracked'))}")
+        lines.append(f"Players Who Homered: {safe_int(unique_player_report.get('unique_players_with_hr'))}")
+        lines.append(f"Unique HR Accuracy: {safe_float(unique_player_report.get('unique_hr_accuracy_pct')):.1f}%")
+
+    lines.append("")
+    lines.append("HR CATEGORY BREAKDOWN")
+    lines.append("-" * 42)
+    cat_counts = build_hr_category_counts(graded_slots)
+    for pt in ["TOP15", "TOP", "HR", "HRR", "HIT", "CONTACT"]:
+        lines.append(f"{category_display(pt)} → {cat_counts.get(pt, 0)} HR")
+    best_pt = max(cat_counts, key=lambda k: cat_counts.get(k, 0)) if cat_counts else ""
+    if best_pt:
+        lines.append(f"Best HR-producing category: {category_display(best_pt)}")
+
+    lines.append("")
+    lines.append("HR RESULTS BY PLAYER")
+    lines.append("-" * 42)
+    if merged_homers:
+        for item in merged_homers:
+            tags = " + ".join(item.get("tags", []))
+            lines.append(f"- {item['name']} — {tags}")
+    else:
+        lines.append("- none")
+
+    if hr_capture_report:
+        missed_entries = hr_capture_report.get("missed_homer_entries", []) or []
+        if missed_entries:
+            lines.append("")
+            lines.append("MISSED HRs (NOT IN MODEL SHEET)")
+            lines.append("-" * 42)
+            for h in sorted(missed_entries, key=lambda x: (x.get("team", ""), x.get("name", "")))[:30]:
+                multi = f" ({safe_int(h.get('hr'))} HR)" if safe_int(h.get("hr")) > 1 else ""
+                lines.append(f"- {h.get('name')} ({h.get('team')}){multi} — {build_missed_hr_reason(h, graded_slots)}")
+
+    lines.append("")
+    lines.append("POOL PERFORMANCE")
+    lines.append("-" * 42)
+    if pair_pool_results.get("graded_pools"):
+        for pool in pair_pool_results["graded_pools"]:
+            names = _format_names(pool.get("homer_names", []))
+            lines.append(f"{pool['label']} → {safe_int(pool.get('hr_count'))}/{safe_int(pool.get('total_count'))} HR ({names})")
+    else:
+        lines.append("- none")
+
+    lines.append("")
+    lines.append("PAIR PERFORMANCE")
+    lines.append("-" * 42)
+    if pair_pool_results.get("all_pairs"):
+        for idx, pair in enumerate(pair_pool_results["all_pairs"], 1):
+            names = _format_names(pair.get("homer_names", []))
+            lines.append(f"Pair {idx} → {safe_int(pair.get('hr_count'))}/{safe_int(pair.get('total_count'), 2)} HR ({names}) | {pair['a']['name']} + {pair['b']['name']}")
+    else:
+        lines.append("- none")
+
+    lines.append("")
+    lines.append("PLAYER TYPE PERFORMANCE")
+    lines.append("-" * 42)
+    lines.append(f"🏁 HRR PICKS ({len(hrr_picks)})")
+    lines.append(f"2+ HRR: {pct(hrr_picks, 'hrr_2_plus')}% | 3+ HRR: {pct(hrr_picks, 'hrr_3_plus')}%")
+    lines.append("")
+    lines.append(f"💠 HIT PICKS ({len(hit_picks)})")
+    lines.append(f"1+ Hit: {pct(hit_picks, 'got_base_hit')}% | HR: {pct(hit_picks, 'got_hr')}%")
+    lines.append("")
+    lines.append(f"⚾ CONTACT PICKS ({len(contact_picks)})")
+    lines.append(f"XBH: {pct(contact_picks, 'got_xbh')}% | 2+ TB: {pct(contact_picks, 'got_xbh')}% | HR: {pct(contact_picks, 'got_hr')}%")
+
+    lines.append("")
+    lines.append("HIT RESULTS BY CATEGORY")
+    lines.append("-" * 42)
+    grouped_hits = build_hit_results_by_category(graded_slots)
+    hit_headers = [("TOP", "🔥 TOP PICKS (1+ Hit)"), ("HR", "🧨 HR PICKS (1+ Hit)"), ("HRR", "🏁 HRR PICKS (1+ Hit)"), ("HIT", "💠 HIT PICKS (1+ Hit)"), ("CONTACT", "⚾ CONTACT PICKS (1+ Hit)")]
+    for pt, header in hit_headers:
+        lines.append("")
+        lines.append(header)
+        entries = grouped_hits.get(pt, [])
+        if entries:
+            for r in entries:
+                hits = safe_int(r.get("actual_hits"))
+                lines.append(f"- {r['name']} — {hits}H{hit_marker(hits)}")
+        else:
+            lines.append("- none")
+
+    if hr_capture_report:
+        lines.append("")
+        lines.append("MODEL DIAGNOSTIC (LOW PRIORITY)")
+        lines.append(f"Full Sheet HR Coverage: {safe_int(hr_capture_report.get('caught_hrs_on_sheet'))} / {safe_int(hr_capture_report.get('total_hrs_on_slate'))} ({safe_float(hr_capture_report.get('hr_capture_pct')):.1f}%)")
+
+    if live_mode:
+        live_active = [r for r in graded_slots if int(r.get("is_final", 0)) == 0]
+        if live_active:
+            lines.append("")
+            lines.append("LIVE / IN-PROGRESS PICKS WITH ACTION")
+            action = [r for r in live_active if safe_int(r.get("actual_hits")) or safe_int(r.get("actual_hr")) or safe_int(r.get("actual_runs")) or safe_int(r.get("actual_rbi"))]
+            if action:
+                for r in sorted(action, key=lambda x: (-safe_int(x.get("actual_hr")), -safe_int(x.get("actual_hits")), x.get("name", "")))[:40]:
+                    st = r.get("game_status", {}) or {}
+                    status_txt = st.get("detailed_state", "Live")
+                    lines.append(f"- {r['name']} ({r['team']}) | {r['pick_type']} | {safe_int(r.get('actual_hits'))}H/{safe_int(r.get('actual_hr'))}HR/R{safe_int(r.get('actual_runs'))}/RBI{safe_int(r.get('actual_rbi'))} | {status_txt}")
+            else:
+                lines.append("- none yet")
+
+    return "\n".join(lines)
+
+def _phoenix_today() -> dt.date:
+    """Phoenix is UTC-7 year-round (no DST). Compute the Phoenix calendar date
+    regardless of the machine's timezone (GitHub runners are UTC)."""
+    try:
+        from zoneinfo import ZoneInfo
+        return dt.datetime.now(ZoneInfo("America/Phoenix")).date()
+    except Exception:
+        # Manual UTC-7 fallback if zoneinfo unavailable
+        return (dt.datetime.utcnow() - dt.timedelta(hours=7)).date()
+
+
+def _breakdown_exists(date_str: str) -> bool:
+    """Check whether ANY breakdown file exists for the given date."""
+    candidates = [
+        OUT_DIR / f"mlb_breakdown_today_{date_str}.json",
+        OUT_DIR / f"mlb_breakdown_tomorrow_{date_str}.json",
+        OUT_DIR / f"mlb_daily_breakdown_final_{date_str}.json",
+        OUT_DIR / f"mlb_today_breakdown_{date_str}.json",
+        OUT_DIR / f"mlb_today_slate_breakdown_{date_str}.json",
+        OUT_DIR / f"mlb_tomorrow_early_breakdown_{date_str}.json",
+        OUT_DIR / f"mlb_tomorrow_breakdown_{date_str}.json",
+        OUT_DIR / f"tomorrow_early_breakdown_{date_str}.json",
+    ]
+    if any(c.exists() for c in candidates):
+        return True
+    # Glob fallback (matches the load_rows secondary search)
+    try:
+        if list(OUT_DIR.glob(f"*{date_str}*.json")):
+            return True
+        root_out = ROOT_DIR.parent / "outputs"
+        if root_out.exists() and list(root_out.glob(f"*{date_str}*.json")):
+            return True
+    except Exception:
+        pass
+    return False
+
+
+def resolve_grade_date(date_arg: str) -> str:
+    today = _phoenix_today()
+    arg = (date_arg or "auto").strip().lower()
+    if arg in {"auto", "today", "live"}:
+        target = today
+        # Auto-fallback: if today's picks aren't built yet (e.g. an overnight
+        # scheduled run before today_bot has produced the new slate), grade
+        # the most recent day that DOES have a breakdown file. This prevents
+        # the FileNotFoundError crash at midnight-ish runs.
+        if not _breakdown_exists(target.strftime("%Y-%m-%d")):
+            for back in range(1, 4):
+                candidate = today - dt.timedelta(days=back)
+                if _breakdown_exists(candidate.strftime("%Y-%m-%d")):
+                    print(f"ℹ️  No picks for {target} yet — grading most recent "
+                          f"available slate: {candidate}")
+                    target = candidate
+                    break
+    elif arg == "yesterday":
+        target = today - dt.timedelta(days=1)
+    else:
+        target = dt.datetime.strptime(arg, "%Y-%m-%d").date()
+    return target.strftime("%Y-%m-%d")
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Grade MLB breakdown results from the full sheet")
+    parser.add_argument("--date", default="auto", help="auto/today/live, yesterday, or YYYY-MM-DD")
+    parser.add_argument("--live", action="store_true", help="Run live/in-progress grading for the selected slate")
+    parser.add_argument("--final-only", action="store_true", help="Only grade games that are final; skips live games")
+    args = parser.parse_args()
+    date_str = resolve_grade_date(args.date)
+    live_mode = bool(args.live or args.date.lower() in {"auto", "today", "live"})
+    print(f"GRADING DATE: {date_str}" + (" | LIVE MODE" if live_mode else ""))
+
+    rows = load_rows(date_str)
+    tracking_slots = build_tracking_slots(rows)
+
+    game_cache: Dict[int, Dict[str, Any]] = {}
+    game_status_by_pk: Dict[int, Dict[str, Any]] = {}
+    skipped_live_games: set[int] = set()
+    actual_by_pid: Dict[int, Dict[str, int]] = {}
+    graded_slots: List[Dict[str, Any]] = []
+
+    for slot in tracking_slots:
+        game_pk = int(slot["game_pk"])
+        pid = int(slot["player_id"])
+        if game_pk not in game_cache:
+            game_cache[game_pk] = fetch_game_feed(game_pk)
+            game_status_by_pk[game_pk] = get_game_status(game_cache[game_pk])
+        if args.final_only and not game_is_final(game_cache[game_pk]):
+            skipped_live_games.add(game_pk)
+            continue
+        actual = get_player_batting_line(game_cache[game_pk], pid)
+        actual_by_pid[pid] = actual
+        graded = grade_slot(slot, actual)
+        graded["game_status"] = game_status_by_pk.get(game_pk, {})
+        graded["is_final"] = 1 if game_is_final(game_cache[game_pk]) else 0
+        graded_slots.append(graded)
+
+    # Make sure every player in rows has an actual line, not just displayed tracking slots.
+    # This makes pair/pool partial grading accurate even when a pool player was not a main pick slot.
+    for row in rows:
+        game_pk = int(row["game_pk"])
+        pid = int(row["player_id"])
+        if game_pk not in game_cache:
+            game_cache[game_pk] = fetch_game_feed(game_pk)
+            game_status_by_pk[game_pk] = get_game_status(game_cache[game_pk])
+        if pid not in actual_by_pid:
+            actual_by_pid[pid] = get_player_batting_line(game_cache[game_pk], pid)
+
+    pair_pool_sections = build_pair_pool_sections(rows)
+    pair_pool_results = grade_pairs_pools(pair_pool_sections, actual_by_pid)
+    merged_homers = merge_homer_entries(graded_slots)
+    hr_capture_report = build_hr_capture_report(rows, game_cache, actual_by_pid)
+    unique_player_report = build_unique_player_hr_report(graded_slots)
+
+    summary = build_summary_text(date_str, graded_slots, merged_homers, pair_pool_results, hr_capture_report, unique_player_report, live_mode=live_mode)
+    print(summary)
+
+    clean_prefix = "mlb_results_live" if live_mode else "mlb_results_final"
+    legacy_prefix = "live_graded_results" if live_mode else "graded_results"
+    txt_path = OUT_DIR / f"{clean_prefix}_{date_str}.txt"
+    json_path = OUT_DIR / f"{clean_prefix}_{date_str}.json"
+    pdf_path = OUT_DIR / f"{clean_prefix}_{date_str}.pdf"
+    txt_alias_paths = [OUT_DIR / f"{legacy_prefix}_{date_str}.txt"]
+    json_alias_paths = [OUT_DIR / f"{legacy_prefix}_{date_str}.json"]
+
+    # Build a site-friendly results list. The site's Results.js looks for
+    # a top-level `results` array with rows that have `grade`, `bet_type`,
+    # and `outcome_text` fields. graded_slots has the data but not those
+    # exact field names — we map them here.
+    def _grade_for_row(r):
+        # Final-mode grading uses certainty. Live-mode shows in-progress.
+        if not live_mode:
+            if int(r.get("got_hr", 0)) == 1:
+                return "WIN"
+            if int(r.get("got_base_hit", 0)) == 1 and r.get("pick_type") in ("HIT", "HRR", "CONTACT", "TOP", "TOP15"):
+                return "WIN"
+            if int(r.get("actual_ab", 0)) > 0:
+                return "LOSS"
+            return "DNP"  # Did not play
+        # Live mode
+        if int(r.get("got_hr", 0)) == 1:
+            return "HIT"
+        if int(r.get("got_base_hit", 0)) == 1:
+            return "HIT"
+        if int(r.get("actual_ab", 0)) > 0:
+            return "LIVE"
+        return "PENDING"
+
+    def _bet_for_row(r):
+        pt = (r.get("pick_type") or "").upper()
+        return {
+            "HR": "HR", "TOP": "TOP", "TOP15": "TOP15",
+            "HIT": "HIT", "HRR": "HRR", "CONTACT": "TB",
+        }.get(pt, pt or "PICK")
+
+    def _outcome_text(r):
+        ab   = int(r.get("actual_ab", 0))
+        hits = int(r.get("actual_hits", 0))
+        hr   = int(r.get("actual_hr", 0))
+        tb   = int(r.get("actual_tb", 0))
+        rbi  = int(r.get("actual_rbi", 0))
+        runs = int(r.get("actual_runs", 0))
+        if ab == 0 and hits == 0 and hr == 0:
+            return "Game not started"
+        line = f"{hits}/{ab}"
+        extras = []
+        if hr:  extras.append(f"{hr} HR")
+        if tb:  extras.append(f"{tb} TB")
+        if rbi: extras.append(f"{rbi} RBI")
+        if runs:extras.append(f"{runs} R")
+        if extras:
+            line += " · " + ", ".join(extras)
+        return line
+
+    site_results = [
+        {**slot,
+         "grade":        _grade_for_row(slot),
+         "bet_type":     _bet_for_row(slot),
+         "outcome_text": _outcome_text(slot)}
+        for slot in graded_slots
+    ]
+
+    payload = {
+        "date": date_str,
+        "live_mode": live_mode,
+        "label": ("Live" if live_mode else "Final") + " · " + date_str,
+        # ── Site-friendly aliases (what Results.js looks for) ────────────
+        "results": site_results,
+        # ── Original (preserved so nothing downstream breaks) ────────────
+        "graded_slots": graded_slots,
+        "merged_homers": merged_homers,
+        "pair_pool_results": pair_pool_results,
+        "hr_capture_report": hr_capture_report,
+        "game_status_by_pk": game_status_by_pk,
+        "skipped_live_games": sorted(skipped_live_games),
+    }
+
+    txt_path.write_text(summary + "\n", encoding="utf-8")
+    json_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    save_text_as_pdf(summary, pdf_path, f"{'Live ' if live_mode else ''}Results Tracker - {date_str}")
+    sync_results_to_website_repo_v2(date_str, live_mode, json_path, txt_path, pdf_path)
+
+    print(f"\nSaved: {txt_path}")
+    print(f"Saved: {json_path}")
+    print(f"Saved: {pdf_path}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

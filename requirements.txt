@@ -1,0 +1,8 @@
+# Streamlit Cloud installs THIS file. Keep it to what streamlit_app.py needs.
+#
+# The bot's heavy deps (pybaseball -> scipy/matplotlib/lxml) live in
+# bots/requirements.txt and are installed only by GitHub Actions. Keeping them
+# out of here is what makes the app boot in seconds instead of minutes.
+streamlit>=1.60.0
+pandas>=2.0.0
+requests>=2.31.0

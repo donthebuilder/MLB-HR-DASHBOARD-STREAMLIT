@@ -1,0 +1,5 @@
+# Bot-side deps. Installed by GitHub Actions only, never by Streamlit Cloud.
+requests>=2.31.0
+pandas>=2.0.0
+pybaseball>=2.2.0
+reportlab>=4.0.0
