@@ -1,11 +1,11 @@
-# Palette lifted verbatim from the old site's lib/theme.js so the Streamlit
-# build matches what the Next.js dashboard looked like.
+# Palette matched to the trading terminal look — near-black chrome, green as
+# the magnitude colour, red reserved for genuinely bad.
 [theme]
 base = "dark"
-primaryColor = "#f97316"          # C.orange
-backgroundColor = "#09090b"       # C.bg
-secondaryBackgroundColor = "#111113"  # C.bg2
-textColor = "#f4f4f5"             # C.text
+primaryColor = "#26a65b"
+backgroundColor = "#0b0e11"
+secondaryBackgroundColor = "#131722"
+textColor = "#d1d4dc"
 font = "sans serif"
 
 [server]
