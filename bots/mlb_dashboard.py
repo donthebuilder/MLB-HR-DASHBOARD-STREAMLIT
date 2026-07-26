@@ -7828,19 +7828,59 @@ def build_due_bomber_board(rows: List[HitterRecord], n: int = 15) -> str:
     return "\n".join(lines)
 
 
-def build_due_bomber_pairs(rows: List[HitterRecord], n_pairs: int = 2) -> str:
-    ranked = _due_bomber_eligible(rows)
+def _hot_power_eligible(rows: List[HitterRecord]) -> List[HitterRecord]:
+    """Hitters who are BOTH currently hot and elite-rate power.
+
+    Two conditions, matching the tags exactly as build_top_board_tags sets
+    them, so the pair reason and the board tags can never disagree:
+
+      * ``L5 HR 2+``      -> last5_hr >= 2   (hot right now)
+      * ``HR/PA Elite``   -> hr_per_pa >= 0.060 (elite rate, not a hot streak
+                             off a weak baseline)
+
+    Why this replaced DUE BOMBER PAIRS (2026-07-26): the due-bomber rule
+    pairs the two longest HR droughts on the slate and deliberately ignores
+    HRW, on the theory that a drought is a coiled spring. Reviewed against a
+    real slate it did not hold up -- Schwarber (6g) + Contreras (5g) and
+    Brandon Lowe (12g) + Buxton (12g) both went 0-for-4 on homers, while
+    every hitter who actually went deep that day carried the opposite
+    profile. Two of them homered TWICE (Murakami, Wood) and both carried
+    this exact tag pair.
+
+    Drought is not evidence of anything. Recent homers plus a career-rate
+    that says the recent homers aren't a fluke is at least a signal. The
+    DUE BOMBER *board* is untouched -- it stays as a watchlist. It's only
+    the automatic pairing that's been swapped.
+    """
+    eligible = [
+        r for r in rows
+        if not getattr(r, "true_avoid_hr", False)
+        and safe_int(getattr(r, "last5_hr", 0), 0) >= 2
+        and safe_float(getattr(r, "hr_per_pa", 0.0), 0.0) >= 0.060
+    ]
+    # Sorted by HR score so the strongest matchup leads, not the biggest
+    # raw power number -- the rate filter has already done that job.
+    return sorted(eligible, key=lambda r: safe_float(r.hr_score, 0.0), reverse=True)
+
+
+def build_hot_power_pairs(rows: List[HitterRecord], n_pairs: int = 2) -> str:
+    ranked = _hot_power_eligible(rows)
     if len(ranked) < 2:
         return ""
-    lines = ["💣 DUE BOMBER PAIRS"]
+    lines = ["🔥 HOT POWER PAIRS", "L5 2+ HR and elite HR/PA — hot bats with the rate to back it"]
     idx = 1
     i = 0
     while i + 1 < len(ranked) and idx <= n_pairs:
         a, b = ranked[i], ranked[i + 1]
-        g_a = safe_int(getattr(a, "games_since_last_hr", 0), 0)
-        g_b = safe_int(getattr(b, "games_since_last_hr", 0), 0)
+        hr_a = safe_int(getattr(a, "last5_hr", 0), 0)
+        hr_b = safe_int(getattr(b, "last5_hr", 0), 0)
+        pa_a = safe_float(getattr(a, "hr_per_pa", 0.0), 0.0)
+        pa_b = safe_float(getattr(b, "hr_per_pa", 0.0), 0.0)
         lines.append(f"{idx}) {a.name} ({a.team}) + {b.name} ({b.team})")
-        lines.append(f"   Reason: drought {g_a}g+{g_b}g | HR {a.hr_score:.0f}+{b.hr_score:.0f} | both ⭐ weak-spot")
+        lines.append(
+            f"   Reason: L5 {hr_a}HR+{hr_b}HR | HR/PA {pa_a:.3f}+{pa_b:.3f} "
+            f"| HR {a.hr_score:.0f}+{b.hr_score:.0f}"
+        )
         idx += 1
         i += 2
     return "\n".join(lines)
@@ -10642,7 +10682,12 @@ Use ALT LOOKS as quality variance, not primary plays.
         # functions simply weren't here). Rebuilt from the exact format/
         # thresholds shown in the 2026-07-24 reference report.
         due_bomber_board_text = build_due_bomber_board(all_rows, 15)
-        due_bomber_pairs_text = build_due_bomber_pairs(all_rows, 2)
+        # SWAPPED (2026-07-26): was build_due_bomber_pairs. Drought-based
+        # pairing was reviewed against a real slate and went 0-for-4 on
+        # homers, while the L5-2+/HR-rate-elite profile went 4-for-4
+        # including two multi-HR games. The due bomber BOARD is untouched --
+        # only the automatic pairing changed.
+        hot_power_pairs_text = build_hot_power_pairs(all_rows, 2)
         the_four_text = build_the_four(all_rows)
         game_by_game_text = ("🗓️ GAME BY GAME " + "─" * 30 + "\n\n" + "\n\n".join(game_blocks)) if game_blocks else ""
 
@@ -10660,8 +10705,8 @@ Use ALT LOOKS as quality variance, not primary plays.
         pair_sections_json: Dict[str, Any] = {"recommended_pairs": [], "pools_4man": [], "pools_6man": []}
         if not args.no_pairs:
             pair_text, pair_sections_json = build_pair_sections(all_rows)
-            if pair_text and due_bomber_pairs_text:
-                pair_text = pair_text + "\n\n" + due_bomber_pairs_text
+            if pair_text and hot_power_pairs_text:
+                pair_text = pair_text + "\n\n" + hot_power_pairs_text
             if pair_text and args.full:
                 report_text += "\n\n" + pair_text
         if boards_text:
