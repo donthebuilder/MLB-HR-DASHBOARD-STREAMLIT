@@ -191,6 +191,38 @@ def slim_file(src: Path, dest: Path) -> bool:
     return True
 
 
+def collect_bot_outputs() -> int:
+    """Copy side-outputs from bots/outputs into public/data/current.
+
+    The scoring bot writes pair_builder_latest.json (and the companion cache)
+    into its own outputs/ folder first, then tries to "sync" them into the
+    website repo. That sync is best-effort and silently no-ops in CI, so the
+    Pairs and Pools tabs sat empty even though the bot had computed the
+    pairings -- they're right there in the .txt report. Copying them straight
+    across removes the dependency on that sync working.
+    """
+    src_dir = Path(__file__).resolve().parent / "outputs"
+    if not src_dir.exists():
+        return 0
+    CURRENT_DIR.mkdir(parents=True, exist_ok=True)
+    # pair_history_cache.json is deliberately excluded: it's ~42 MB of raw
+    # pair history the app never reads. Only the summary is needed, and
+    # shipping the cache would put the data branch straight back into the
+    # bloat that broke the old repo.
+    wanted = ["pair_builder_latest.json", "hr_companion_latest.json",
+              "pair_history_summary.json"]
+    copied = 0
+    for name in wanted:
+        src = src_dir / name
+        if src.exists() and src.stat().st_size > 0:
+            (CURRENT_DIR / name).write_bytes(src.read_bytes())
+            print(f"collected: {name} ({src.stat().st_size / 1024:.0f} KB)", file=sys.stderr)
+            copied += 1
+    if not copied:
+        print("collected: no side-outputs found in bots/outputs", file=sys.stderr)
+    return copied
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Write slim copies of the slate JSON for the Streamlit app.")
     ap.add_argument("--in", dest="src", default=None, help="Single input JSON")
@@ -201,6 +233,8 @@ def main() -> int:
         src = Path(args.src)
         dest = Path(args.dest) if args.dest else src.with_name(src.stem + "_slim.json")
         return 0 if slim_file(src, dest) else 1
+
+    collect_bot_outputs()
 
     ok = False
     for label in ("today", "tomorrow"):
