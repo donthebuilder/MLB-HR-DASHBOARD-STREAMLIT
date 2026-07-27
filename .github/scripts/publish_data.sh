@@ -51,7 +51,9 @@ PUBLISH_FILES=(
 # Everything else here is regenerated each run; these ACCUMULATE -- carry_forward
 # below re-copies whatever this run didn't produce, so the set grows by one file
 # a night. GRADED_KEEP caps it so the branch can't grow without bound.
+# .txt feeds backtest_report.py; .json feeds the Results tab's Yesterday view.
 GRADED_GLOB="graded_results_*.txt"
+GRADED_JSON_GLOB="graded_results_*.json"
 GRADED_KEEP=150
 
 git config user.email "bot@mlb-hr-dashboard"
@@ -75,7 +77,8 @@ stage_local() {
       && cp "$SRC/data/$f" "$STAGE/public/data/current/"
   done
   # This run's graded file(s). Written to public/data/ by live_results_tracker.
-  for g in "$SRC"/data/$GRADED_GLOB "$SRC"/data/current/$GRADED_GLOB; do
+  for g in "$SRC"/data/$GRADED_GLOB "$SRC"/data/current/$GRADED_GLOB \
+           "$SRC"/data/$GRADED_JSON_GLOB "$SRC"/data/current/$GRADED_JSON_GLOB; do
     [ -f "$g" ] && cp "$g" "$STAGE/public/data/current/"
   done
 
@@ -105,12 +108,14 @@ carry_forward() {
   fi
   # Trim the graded backlog oldest-first. Filenames are ISO-dated, so a plain
   # sort is chronological.
-  n=$(ls -1 "$STAGE/public/data/current"/$GRADED_GLOB 2>/dev/null | wc -l)
-  if [ "$n" -gt "$GRADED_KEEP" ]; then
-    ls -1 "$STAGE/public/data/current"/$GRADED_GLOB \
-      | sort | head -n "$((n - GRADED_KEEP))" | xargs -r rm -f
-    echo "Trimmed $((n - GRADED_KEEP)) old graded file(s), keeping $GRADED_KEEP."
-  fi
+  for glob in "$GRADED_GLOB" "$GRADED_JSON_GLOB"; do
+    n=$(ls -1 "$STAGE/public/data/current"/$glob 2>/dev/null | wc -l)
+    if [ "$n" -gt "$GRADED_KEEP" ]; then
+      ls -1 "$STAGE/public/data/current"/$glob \
+        | sort | head -n "$((n - GRADED_KEEP))" | xargs -r rm -f
+      echo "Trimmed $((n - GRADED_KEEP)) old $glob file(s), keeping $GRADED_KEEP."
+    fi
+  done
 
   [ -f "$PREV/public/data/index.json" ] && [ ! -f "$STAGE/public/data/index.json" ] \
     && cp "$PREV/public/data/index.json" "$STAGE/public/data/" || true
