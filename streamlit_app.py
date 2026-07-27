@@ -1056,6 +1056,60 @@ def radar(labels: List[str], values: List[float], color: str = "#f97316",
 # Module level on purpose. This used to live inside `if order:` in the
 # Games tab, which meant any tab rendering before that branch ran -- or a
 # filter combination that emptied `order` -- hit a NameError.
+# The slate payload has `team` and `opponent` but never says which is home.
+# Every row does carry the venue, and a venue belongs to exactly one club, so
+# the park name is what resolves it. Names match the PARKS table in
+# bots/mlb_dashboard.py -- if a club moves or a park is renamed, fix both.
+VENUE_HOME = {
+    'Chase Field': 'ARI',
+    'Sutter Health Park': 'ATH',
+    'Truist Park': 'ATL',
+    'Oriole Park at Camden Yards': 'BAL',
+    'Fenway Park': 'BOS',
+    'Wrigley Field': 'CHC',
+    'Great American Ball Park': 'CIN',
+    'Progressive Field': 'CLE',
+    'Coors Field': 'COL',
+    'Rate Field': 'CWS',
+    'Comerica Park': 'DET',
+    'Daikin Park': 'HOU',
+    'Kauffman Stadium': 'KC',
+    'Angel Stadium': 'LAA',
+    'Dodger Stadium': 'LAD',
+    'loanDepot park': 'MIA',
+    'American Family Field': 'MIL',
+    'Target Field': 'MIN',
+    'Citi Field': 'NYM',
+    'Yankee Stadium': 'NYY',
+    'Citizens Bank Park': 'PHI',
+    'PNC Park': 'PIT',
+    'Petco Park': 'SD',
+    'T-Mobile Park': 'SEA',
+    'Oracle Park': 'SF',
+    'Busch Stadium': 'STL',
+    'George M. Steinbrenner Field': 'TB',
+    'Globe Life Field': 'TEX',
+    'Rogers Centre': 'TOR',
+    'Nationals Park': 'WSH',
+}
+
+
+def home_away(gp: List[Dict[str, Any]]) -> tuple:
+    """(away, home) abbreviations for a game. Falls back to slate order."""
+    teams = []
+    for x in gp:
+        t = team_of(x)
+        if t and t not in teams:
+            teams.append(t)
+    venue = txt(gp[0], "venue_name") if gp else ""
+    host = VENUE_HOME.get(venue)
+    if host and host in teams:
+        away = next((t for t in teams if t != host), "")
+        return away, host
+    # Neutral site, unknown park, or a one-sided lineup pool.
+    return (teams + ["", ""])[0], (teams + ["", ""])[1]
+
+
 def med(vals: List[float]) -> float:
     vals = sorted(v for v in vals if math.isfinite(v))
     if not vals:
@@ -2620,19 +2674,36 @@ with tab_games:
 
     slate_gs_med = med(list(game_score_by_pk.values())) if game_score_by_pk else 0.0
 
+    with st.expander("What the header numbers mean"):
+        st.markdown(
+            "**GS — Game Score.** For each hitter take the median of his four "
+            "board scores (HR, HRR, HRW, DC); then take the median of *those* "
+            "across every hitter in the lineup.\n\n"
+            "Two medians on purpose. The inner one stops a hitter who spikes on "
+            "a single board from looking live; the outer one stops one big bat "
+            "from carrying a dead lineup. So GS answers **is this whole lineup "
+            "dangerous**, not *is there one guy here*.\n\n"
+            "**▲ / ▽** — above or below the slate's own median GS.\n\n"
+            "**Med HRW** — median HR-window score: how much of this lineup the "
+            "model reads as being in a hot window right now.\n\n"
+            "**⭐ n** — hitters whose lineup spot this starter has already been "
+            "beaten in.\n\n"
+            "Matchups read **away @ home**."
+        )
+
     for gpk, gp in order:
         head = max(gp, key=hr_score)
         conf = "✅" if head.get("lineup_confirmed") else "◻︎"
         gs = game_score_by_pk.get(gpk, 0.0)
-        # A bar in the title makes the ranking legible without opening
-        # anything -- twelve rows of "Game Score 41.2" all look the same.
-        _fill = int(round(max(0.0, min(1.0, gs / 60.0)) * 10))
-        bar_txt = "█" * _fill + "·" * (10 - _fill)
         edge = "▲" if gs >= slate_gs_med else "▽"
         n_weak = sum(1 for x in gp if x.get("weak_spot_flag"))
+        away, home = home_away(gp)
+        matchup = (f"{away} @ {home}" if away and home
+                   else f"{team_of(head)} vs {opp_of(head)}")
+        med_hrw = med([nn(x, "hrw_score") for x in gp])
         with st.expander(
-            f"{conf}  {local_time(gp)}   {bar_txt} {gs:4.1f} {edge}   "
-            f"{team_of(head)} vs {opp_of(head)}   ·   top HR {hr_score(head):.0f}"
+            f"{conf}  {local_time(gp)}   ·   {matchup}   ·   "
+            f"GS {gs:.1f} {edge}   ·   Med HRW {med_hrw:.0f}"
             + (f"   ·   ⭐{n_weak}" if n_weak else "")
             + f"   ·   {txt(head, 'venue_name')}"
         ):
