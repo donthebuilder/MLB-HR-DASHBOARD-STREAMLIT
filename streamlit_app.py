@@ -369,9 +369,12 @@ def tier_color(role: str) -> str:
             "TB": C["green"], "Avoid HR": C["red"]}.get(s, C["orange"])
 
 
+dc_score = lambda p: nn(p, "damage_conversion_score")
+
+
 def score_for(p: Dict[str, Any], kind: str = "hr") -> float:
     return {"hrr": prod_score, "hit": hit_score, "tb": tb_score,
-            "cross": cross_board}.get(kind, hr_score)(p)
+            "cross": cross_board, "dc": dc_score}.get(kind, hr_score)(p)
 
 
 GAME_TZS = {
@@ -2016,9 +2019,10 @@ st.divider()
 with tab_board:
     c1, c2, c3 = st.columns([2, 1, 2])
     kind_label = c1.selectbox(
-        "Board type", ["HR", "Cross (all-round)", "HRR", "Hit", "TB (Base)"])
-    kind = {"HR": "hr", "Cross (all-round)": "cross", "HRR": "hrr",
-            "Hit": "hit", "TB (Base)": "tb"}[kind_label]
+        "Board type",
+        ["HR", "DC (damage)", "Cross (all-round)", "HRR", "Hit", "TB (Base)"])
+    kind = {"HR": "hr", "DC (damage)": "dc", "Cross (all-round)": "cross",
+            "HRR": "hrr", "Hit": "hit", "TB (Base)": "tb"}[kind_label]
     top_n = c2.number_input("Show top", 5, 200, 25, step=5)
     with c3:
         hr_pool = board_search(view, "hr_board_q")
