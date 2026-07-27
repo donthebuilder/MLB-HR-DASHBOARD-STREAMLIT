@@ -1,11 +1,13 @@
 name: Backtest Report
 
-# Runs nightly after the final grading pass, and on demand from the Actions
-# tab. It used to be manual-only, which meant the summary was only ever as
-# fresh as the last time someone remembered to click it.
+# On demand only. The nightly aggregation lives in results.yml, which already
+# restores the graded backlog and publishes backtest_summary.json right after
+# it finishes grading -- a second scheduled run here would just duplicate that
+# work and race it for the data branch.
+#
+# This exists for ad-hoc questions ("how did the model do since the All-Star
+# break?") via the `since` input.
 on:
-  schedule:
-    - cron: '30 11 * * *'   # 04:30 Phoenix, after the 3am final grade
   workflow_dispatch:
     inputs:
       since:
@@ -14,7 +16,7 @@ on:
         default: ''
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   backtest:
@@ -28,8 +30,28 @@ jobs:
         with:
           python-version: '3.11'
 
+      # The runner is ephemeral and public/data is gitignored on main, so
+      # without this the script sees zero graded files and exits 1. The backlog
+      # lives on the data branch.
+      - name: Restore graded history from data branch
+        run: |
+          git fetch origin data --depth 1 2>/dev/null || true
+          mkdir -p public/data
+          if git rev-parse --verify origin/data >/dev/null 2>&1; then
+            rm -rf /tmp/histout && mkdir -p /tmp/histout
+            git archive origin/data public/data 2>/dev/null | tar -x -C /tmp/histout || true
+            cp -n /tmp/histout/public/data/current/graded_results_*.txt public/data/ 2>/dev/null || true
+          fi
+          echo "Graded files available: $(find public/data -maxdepth 1 -name 'graded_results_*.txt' | wc -l)"
+
       - name: Run backtest_report.py
         run: |
+          n=$(find public/data -maxdepth 1 -name 'graded_results_*.txt' | wc -l)
+          if [ "$n" -eq 0 ]; then
+            echo "No graded files published yet — nothing to back-test."
+            echo "The nightly grading run publishes these; check back after it has run once."
+            exit 0
+          fi
           if [ -n "${{ github.event.inputs.since }}" ]; then
             python bots/backtest_report.py --dir public/data --since "${{ github.event.inputs.since }}" --out-dir .
           else
@@ -37,6 +59,7 @@ jobs:
           fi
 
       - name: Upload backtest summary as artifact
+        if: hashFiles('backtest_summary.json') != ''
         uses: actions/upload-artifact@v4
         with:
           name: backtest-summary

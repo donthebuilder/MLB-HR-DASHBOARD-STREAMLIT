@@ -118,7 +118,7 @@ jobs:
             # -n so today's freshly graded file is never clobbered by the
             # published copy from an earlier run on the same date.
             cp -n /tmp/histout/public/data/current/graded_results_*.txt public/data/ 2>/dev/null || true
-            echo "Graded files available: $(ls -1 public/data/graded_results_*.txt 2>/dev/null | wc -l)"
+            echo "Graded files available: $(find public/data -maxdepth 1 -name 'graded_results_*.txt' | wc -l)"
           fi
         continue-on-error: true
 
