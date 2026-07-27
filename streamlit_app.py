@@ -30,9 +30,15 @@ Run locally:  streamlit run streamlit_app.py
 from __future__ import annotations
 
 import datetime as dt
+import datetime as dt
 import json
 import math
+import re
+import unicodedata
+from difflib import get_close_matches
+from statistics import median
 from pathlib import Path
+from zoneinfo import ZoneInfo
 from typing import Any, Dict, List, Optional
 
 import pandas as pd
@@ -403,8 +409,241 @@ def tier_color(role: str) -> str:
             "TB": C["green"], "Avoid HR": C["red"]}.get(s, C["orange"])
 
 
+longest_score = lambda p: nn(p, "longest_hr_score")
+
+_SUFFIX_RE = re.compile(r"\b(?:jr|sr|ii|iii|iv|v)\b\.?", re.I)
+_JUNK_RE = re.compile(
+    r"^\s*(?:\d+[.)]|[-*\u2022\u2023\u25aa\u2043])\s*"   # 1.  1)  -  *  bullets
+    r"|\s*\((?:[A-Z]{2,3})\)\s*$"                            # trailing (NYY)
+    r"|\s*[+-]\d{2,5}\s*$"                                    # trailing odds +450 / -110
+    r"|\s+(?:vs\.?|@)\s+.*$",                                 # "Judge vs Cole"
+    re.I,
+)
+
+_JUNK_RE = re.compile(
+    r"^\s*(?:\d+[.)]|[-*\u2022\u2023\u25aa\u2043])\s*"   # 1.  1)  -  *  bullets
+    r"|\s*\((?:[A-Z]{2,3})\)\s*$"                            # trailing (NYY)
+    r"|\s*[+-]\d{2,5}\s*$"                                    # trailing odds +450 / -110
+    r"|\s+(?:vs\.?|@)\s+.*$",                                 # "Judge vs Cole"
+    re.I,
+)
+
+def norm_name(s: Any) -> str:
+    """Normalise a player name for matching.
+
+    The slate is full of names a pasted list will spell differently:
+    Rodríguez, Acuña Jr., O'Hearn, Crow-Armstrong, Encarnacion-Strand. Strip
+    accents, drop suffixes, flatten punctuation, and compare on that.
+    """
+    t = unicodedata.normalize("NFKD", str(s or ""))
+    t = "".join(c for c in t if not unicodedata.combining(c)).lower()
+    t = _SUFFIX_RE.sub(" ", t)
+    t = re.sub(r"[^a-z\s]", " ", t)
+    return re.sub(r"\s+", " ", t).strip()
+
+def parse_name_list(blob: str) -> List[str]:
+    """Pull player names out of pasted text.
+
+    People paste lists that came from somewhere else, so they arrive with
+    ranking numbers, bullets, odds, team codes, one-per-line or comma joined.
+    Strip the packaging and keep the names.
+    """
+    out: List[str] = []
+    for chunk in re.split(r"[\n\r,;|\t]+", blob or ""):
+        prev = None
+        while chunk != prev:
+            prev = chunk
+            chunk = _JUNK_RE.sub("", chunk).strip()
+        # Keep anything that looks like a person: at least one word of two or
+        # more letters, and three letters total. Drops bare team codes ("NYY")
+        # and stray numbers while keeping "J. Rodriguez" and "CJ Abrams".
+        letters = re.sub(r"[^A-Za-z]", "", chunk)
+        words = [w for w in re.split(r"\s+", chunk) if re.search(r"[A-Za-z]{2,}", w)]
+        if len(letters) >= 3 and words and chunk.upper() != chunk.strip() or (
+            len(letters) >= 3 and len(words) >= 1 and len(chunk.split()) >= 2
+        ):
+            out.append(chunk)
+    # De-dupe, keep paste order.
+    seen, uniq = set(), []
+    for n in out:
+        k = norm_name(n)
+        if k and k not in seen:
+            seen.add(k)
+            uniq.append(n)
+    return uniq
+
+def match_players(names: List[str], pool: List[Dict[str, Any]]):
+    """Match pasted names to slate players. Returns (hits, misses, ambiguous).
+
+    Four passes, loosest last:
+      exact     — normalised strings equal
+      initial   — last name + first initial ("C. Abrams")
+      partial   — one name contains the other ("Crow Armstrong", "Acuna")
+      fuzzy     — spelling similarity, flagged in the output
+
+    Anything that matches more than one player is reported as AMBIGUOUS rather
+    than guessed at or silently dropped. Two J. Rodriguezes on one slate is a
+    real thing, and calling that "not playing" would be a lie.
+    """
+    by_norm: Dict[str, Dict[str, Any]] = {}
+    by_lastinit: Dict[str, List[Dict[str, Any]]] = {}
+    norms: List[tuple] = []
+    for p in pool:
+        n = norm_name(name_of(p))
+        if not n:
+            continue
+        by_norm.setdefault(n, p)
+        norms.append((n, p))
+        parts = n.split()
+        if len(parts) >= 2:
+            by_lastinit.setdefault(f"{parts[-1]}|{parts[0][0]}", []).append(p)
+
+    hits, misses, ambiguous = [], [], []
+    for raw in names:
+        key = norm_name(raw)
+        if not key:
+            continue
+        if key in by_norm:
+            hits.append((raw, by_norm[key], "exact"))
+            continue
+
+        parts = key.split()
+        if len(parts) >= 2:
+            cands = by_lastinit.get(f"{parts[-1]}|{parts[0][0]}", [])
+            if len(cands) == 1:
+                hits.append((raw, cands[0], "initial"))
+                continue
+            if len(cands) > 1:
+                ambiguous.append((raw, [name_of(c) for c in cands]))
+                continue
+
+        # Partial: pasted name is contained in a slate name or vice versa, on
+        # whole-word boundaries so "ana" can't match "Santana".
+        kw = set(key.split())
+        part = [p for n, p in norms
+                if kw and (kw <= set(n.split()) or set(n.split()) <= kw)]
+        uniq = {name_of(p): p for p in part}
+        if len(uniq) == 1:
+            hits.append((raw, next(iter(uniq.values())), "partial"))
+            continue
+        if len(uniq) > 1:
+            ambiguous.append((raw, sorted(uniq)))
+            continue
+
+        close = get_close_matches(key, list(by_norm), n=1, cutoff=0.85)
+        if close:
+            hits.append((raw, by_norm[close[0]], "fuzzy"))
+        else:
+            misses.append(raw)
+    return hits, misses, ambiguous
+
+def cross_board(p: Dict[str, Any]) -> float:
+    """Median of Hit, DC, TB and HRR — the all-round score.
+
+    Every other number on the board rewards a spike: a hitter can post a 96 HR
+    score off one loud signal and be ordinary everywhere else. A median across
+    four boards can't be moved by one outlier, so it answers a different
+    question -- who is good at everything tonight, not who is loudest at one
+    thing. Median rather than mean on purpose: with four values the mean still
+    drags toward an extreme, the median doesn't.
+    """
+    return float(median([
+        hit_score(p),
+        nn(p, "damage_conversion_score"),
+        tb_score(p),
+        prod_score(p),
+    ]))
+
+def fair_american(rate_pct: Any) -> str:
+    """Break-even American odds for a hit rate given in percent.
+
+    A 33% hit rate is +203. Anything the book prices longer than that is
+    positive expectation; anything shorter is not. The app has no odds feed,
+    so this is the half of the comparison it CAN show.
+    """
+    try:
+        r = float(rate_pct) / 100.0
+    except (TypeError, ValueError):
+        return "—"
+    if not (0.0 < r < 1.0):
+        return "—"
+    return f"+{round(100 * (1 - r) / r)}" if r < 0.5 else f"-{round(100 * r / (1 - r))}"
+
+dc_score = lambda p: nn(p, "damage_conversion_score")
+
+
+def _minmax(value: Any, low: float, high: float) -> float:
+    """Mirror of minmax_norm() in bots/mlb_dashboard.py."""
+    if high <= low:
+        return 0.5
+    try:
+        v = float(value)
+    except (TypeError, ValueError):
+        v = low
+    v = max(low, min(high, v))
+    return (v - low) / (high - low)
+
+
+def pitcher_damage_for(p: Dict[str, Any]) -> float:
+    """Recompute the bot's pitcher_damage layer from published pitcher stats.
+
+    pitcher_damage isn't published -- only its inputs are -- so the what-if
+    swap below has to rebuild it to score an arm who isn't in this game. This
+    mirrors the three branches in apply_model_v2_layers: full statcast +
+    advanced, statcast only, and the HR/9 + WHIP fallback.
+    """
+    has_statcast = txt(p, "pitcher_statcast_status") == "ok" and nn(p, "pitcher_statcast_bbe") > 0
+    has_advanced = txt(p, "pitcher_advanced_stats_status") == "ok"
+
+    if has_statcast and has_advanced:
+        return 100 * (
+            0.18 * _minmax(p.get("pitcher_hr9", 1.10), 0.70, 2.00) +
+            0.13 * _minmax(p.get("pitcher_barrel_allowed", 0.07), 0.03, 0.13) +
+            0.11 * _minmax(p.get("pitcher_hardhit_allowed", 0.38), 0.30, 0.52) +
+            0.08 * _minmax(p.get("pitcher_ev_allowed", 88.5), 86.0, 92.5) +
+            0.04 * _minmax(p.get("pitcher_statcast_fb_rate", 0.34), 0.28, 0.48) +
+            0.03 * _minmax(p.get("pitcher_375_allowed", 0), 0, 8) +
+            0.12 * _minmax(p.get("pitcher_meatball_pct", 0.07), 0.040, 0.105) +
+            0.09 * _minmax(p.get("pitcher_pullair_allowed_pct", 0.24), 0.16, 0.32) +
+            0.14 * _minmax(p.get("pitcher_woba_against", 0.320), 0.290, 0.380) +
+            0.08 * _minmax(p.get("pitcher_fip", 4.00), 2.50, 5.50)
+        )
+    if has_statcast:
+        return 100 * (
+            0.30 * _minmax(p.get("pitcher_hr9", 1.10), 0.70, 2.00) +
+            0.22 * _minmax(p.get("pitcher_barrel_allowed", 0.07), 0.03, 0.13) +
+            0.20 * _minmax(p.get("pitcher_hardhit_allowed", 0.38), 0.30, 0.52) +
+            0.15 * _minmax(p.get("pitcher_ev_allowed", 88.5), 86.0, 92.5) +
+            0.08 * _minmax(p.get("pitcher_statcast_fb_rate", 0.34), 0.28, 0.48) +
+            0.05 * _minmax(p.get("pitcher_375_allowed", 0), 0, 8)
+        )
+    return 100 * (
+        0.58 * _minmax(p.get("pitcher_hr9", 1.10), 0.70, 2.00) +
+        0.42 * _minmax(p.get("pitcher_whip", 1.30), 1.05, 1.60)
+    ) * 0.70
+
+
+# Must track MODEL_WEIGHTS["hr_blend"]["pitcher_damage"] in the bot.
+PITCHER_DAMAGE_WEIGHT = 0.15
+
+
+def hr_score_vs_arm(p: Dict[str, Any], arm: Dict[str, Any]) -> float:
+    """Estimated HR score for hitter `p` if `arm`'s pitcher started instead.
+
+    Shifts ONLY the pitcher_damage term of the blend and holds the other
+    fourteen constant. It is an estimate, not a re-run: the published
+    hr_score already has post-blend gates and multipliers baked in, and those
+    can't be reproduced here. Good enough to rank a what-if, not a substitute
+    for the bot re-scoring the slate.
+    """
+    delta = pitcher_damage_for(arm) - pitcher_damage_for(p)
+    return max(0.0, min(100.0, hr_score(p) + PITCHER_DAMAGE_WEIGHT * delta))
+
+
 def score_for(p: Dict[str, Any], kind: str = "hr") -> float:
-    return {"hrr": prod_score, "hit": hit_score, "tb": tb_score}.get(kind, hr_score)(p)
+    return {"hrr": prod_score, "hit": hit_score, "tb": tb_score,
+            "cross": cross_board, "dc": dc_score,
+            "longest": longest_score}.get(kind, hr_score)(p)
 
 
 def grade_for(p: Dict[str, Any], kind: str = "hr") -> str:
@@ -1921,6 +2160,10 @@ with st.sidebar:
     min_hr = st.slider("Min HR score", 0, 100, 0, step=5, key="f_minhr")
     confirmed_only = st.checkbox("Confirmed lineups only", key="f_conf")
     aligned_only = st.checkbox("🧩 Aligned only", key="f_aligned")
+    # The bot flags a hitter whose lineup spot this pitcher has been beaten in
+    # ("allowed 2 HR to the #1 spot in 32 PA, .679 SLG"). ~50 of 215 on a
+    # typical slate, so it's a real cut rather than a rounding error.
+    weakspot_only = st.checkbox("⭐ Weak spot starts only", key="f_weak")
     st.divider()
 
     # Auto-refresh. The old site polled every 45s while games were live and
@@ -1977,12 +2220,55 @@ def apply_filters(pool: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         out = [p for p in out if p.get("lineup_confirmed")]
     if aligned_only:
         out = [p for p in out if is_aligned(p)]
+    if weakspot_only:
+        out = [p for p in out if p.get("weak_spot_flag")]
     if lane_key != "all":
         out = [p for p in out if lane_pass(p, lane_key)]
     return out
 
 
 view = apply_filters(players)
+
+
+def board_search(rows: List[Dict[str, Any]], key: str,
+                 label: str = "Search this board") -> List[Dict[str, Any]]:
+    """Per-tab search box.
+
+    The sidebar query already filters `view` globally, so search technically
+    worked everywhere -- but on a top-N board you had to leave the board,
+    scroll the sidebar, type, and come back. This is the same match logic
+    scoped to one tab, so the ranking you were reading stays where it was.
+    """
+    q = st.text_input(
+        label, "", key=key,
+        placeholder="name, team, opponent or pitcher",
+    ).strip().lower()
+    if not q:
+        return rows
+    return [p for p in rows
+            if q in f"{name_of(p)} {team_of(p)} {opp_of(p)} "
+                    f"{txt(p, 'pitcher_name')}".lower()]
+
+
+def best_non_hr_label(p: Dict[str, Any]) -> str:
+    """Which non-HR board this hitter actually profiles for.
+
+    enrich_signal_pills_and_best_non_hr() in the bot only writes
+    best_non_hr_category for rows flagged true_avoid_hr, and leaves it as ""
+    for everyone else. On the Hits/HRR tab -- where every row is a non-HR play
+    by definition -- that meant the column came back blank for almost the
+    whole board. Falls back to the same three scores the bot ranks, so the
+    column populates without needing a pipeline re-run.
+    """
+    cat = txt(p, "best_non_hr_category")
+    if cat and cat != "none":
+        return {"hits": "Hits", "hrr": "HRR",
+                "contact": "Contact/TB"}.get(cat, cat.title())
+    lbl, val = max(
+        (("Hits", hit_score(p)), ("HRR", prod_score(p)), ("Contact/TB", tb_score(p))),
+        key=lambda t: t[1],
+    )
+    return f"{lbl} ({val:.0f})" if val >= 55 else "—"
 
 # A filter combination that matches nobody used to leave every tab showing
 # "No players match these filters" with no hint as to WHICH filter did it or
@@ -1995,6 +2281,7 @@ _active_filters = [
         (f"Min HR ≥ {min_hr}", bool(min_hr)),
         ("Confirmed lineups only", bool(confirmed_only)),
         ("Aligned only", bool(aligned_only)),
+        ("Weak spot starts only", bool(weakspot_only)),
         (f"Lane: {lane_key}", lane_key != "all"),
     ) if on
 ]
@@ -2002,7 +2289,8 @@ if _active_filters:
     with st.sidebar:
         st.caption("**Active filters** — " + " · ".join(_active_filters))
         if st.button("↩︎ Reset filters", width="stretch", key="resetfilters"):
-            for k in ("f_team", "f_query", "f_minhr", "f_conf", "f_aligned", "f_lane"):
+            for k in ("f_team", "f_query", "f_minhr", "f_conf", "f_aligned",
+                      "f_lane", "f_weak"):
                 st.session_state.pop(k, None)
             st.rerun()
 
@@ -2038,22 +2326,30 @@ st.divider()
 # "Scoreboard", "Watchlist") overflowed the strip, so Streamlit collapsed the
 # tail behind a scroll arrow -- Spray and Guide were unreachable without
 # noticing the little chevron. These fit on one row.
-(tab_games, tab_board, tab_due, tab_hitshrr, tab_pitchers, tab_pairs, tab_bot,
- tab_pools, tab_pairhist, tab_scoreboard, tab_leaders, tab_results, tab_player,
- tab_watch, tab_spray, tab_guide) = st.tabs([
-    "🗓️ Games", "🏆 HR", "💣 Due", "💥 Hits", "⚾ Pitchers",
-    "🎯 Pairs", "🤖 Bot", "🧩 Pools", "🧬 History", "📊 Board",
-    "🥇 Leaders", "✅ Results", "🔍 Player", "⭐ Watch", "💦 Spray", "📖 Guide",
+(tab_games, tab_board, tab_long, tab_due, tab_hitshrr, tab_pitchers, tab_pairs,
+ tab_bot, tab_pools, tab_pairhist, tab_scoreboard, tab_leaders, tab_player,
+ tab_watch, tab_spray, tab_results, tab_guide) = st.tabs([
+    "🗓️ Games", "🏆 HR", "🚀 Longest", "💣 Due", "💥 Hits",
+    "⚾ Pitchers", "🎯 Pairs", "🤖 Bot", "🧩 Pools", "🧬 History",
+    "📊 Board", "🥇 Leaders", "🔍 Player", "⭐ Watch", "💦 Spray",
+    "✅ Results", "📖 Guide",
 ])
 
 # ── BOARD ───────────────────────────────────────────────────────────────────
 with tab_board:
-    c1, c2 = st.columns([2, 1])
-    kind_label = c1.selectbox("Board type", ["HR", "HRR", "Hit", "TB (Base)"])
-    kind = {"HR": "hr", "HRR": "hrr", "Hit": "hit", "TB (Base)": "tb"}[kind_label]
+    c1, c2, c3 = st.columns([2, 1, 2])
+    kind_label = c1.selectbox(
+        "Board type",
+        ["HR", "DC (damage)", "Longest (distance)", "Cross (all-round)",
+         "HRR", "Hit", "TB (Base)"])
+    kind = {"HR": "hr", "DC (damage)": "dc", "Longest (distance)": "longest",
+            "Cross (all-round)": "cross", "HRR": "hrr", "Hit": "hit",
+            "TB (Base)": "tb"}[kind_label]
     top_n = c2.number_input("Show top", 5, 200, 25, step=5)
+    with c3:
+        hr_pool = board_search(view, "hr_board_q")
 
-    ranked = sorted(view, key=lambda p: score_for(p, kind), reverse=True)[: int(top_n)]
+    ranked = sorted(hr_pool, key=lambda p: score_for(p, kind), reverse=True)[: int(top_n)]
     if not ranked:
         st.info("No players match these filters.")
 
@@ -2203,6 +2499,7 @@ with tab_games:
                 "Med HRR": round(med([prod_score(x) for x in gp]), 1),
                 "Med HRW": round(med([nn(x, "hrw_score") for x in gp]), 1),
                 "Med DC": round(med([nn(x, "damage_conversion_score") for x in gp]), 1),
+                "Med Hit": round(med([hit_score(x) for x in gp]), 1),
                 "Pitcher": txt(head, "pitcher_name"),
                 "P HR/9": round(nn(head, "pitcher_hr9"), 2),
                 "Park HR": round(nn(head, "park_hr_factor", default=1.0), 2),
@@ -2219,7 +2516,8 @@ with tab_games:
 
         metric_choice = st.radio(
             "Rank games by",
-            ["Game Score", "Top HR", "Top HRR", "Med HR", "Med HRR", "Med HRW", "Med DC"],
+            ["Game Score", "Top HR", "Top HRR", "Med HR", "Med HRR", "Med HRW",
+             "Med DC", "Med Hit"],
             horizontal=True,
         )
         ranked_games = gdf.sort_values(metric_choice, ascending=False)
@@ -2239,7 +2537,8 @@ with tab_games:
             # carried by a single 96 both rank high on a bar and look nothing
             # alike here. Slate median is drawn as a filled baseline so a
             # game's edges read as above or below par without doing the maths.
-            radar_axes = ["Game Score", "Med HR", "Med HRR", "Med HRW", "Med DC", "Top HR"]
+            radar_axes = ["Game Score", "Med HR", "Med HRR", "Med HRW", "Med DC",
+                          "Med Hit", "Top HR"]
             top_n = ranked_games.head(3)
             fig = go.Figure()
             fig.add_trace(go.Scatterpolar(
@@ -2282,7 +2581,8 @@ with tab_games:
         # strong across the board separates visually from one carried by a
         # single column.
         hm = ranked_games.set_index("Game")[
-            ["Game Score", "Med HR", "Med HRR", "Med HRW", "Med DC", "Top HR", "Top HRR"]
+            ["Game Score", "Med HR", "Med HRR", "Med HRW", "Med DC", "Med Hit",
+             "Top HR", "Top HRR"]
         ]
         heatmap(hm, "Game x metric — hotter is better for hitters",
                 height=max(280, 26 * len(hm) + 90), fmt="{:.0f}")
@@ -2303,15 +2603,48 @@ with tab_games:
         for pk, rows in by_game.items()
     }
 
+    # Every starter on the slate, as swap candidates for the what-if below.
+    # Only starters are published -- true bullpen arms never are, so a
+    # reliever can only be approximated by a similar starter.
+    arms_by_name: Dict[str, Dict[str, Any]] = {}
+    for _p in players:
+        _n = txt(_p, "pitcher_name")
+        if _n and _n not in arms_by_name:
+            arms_by_name[_n] = _p
+    arm_names = sorted(arms_by_name)
+
+    slate_gs_med = med(list(game_score_by_pk.values())) if game_score_by_pk else 0.0
+
     for gpk, gp in order:
         head = max(gp, key=hr_score)
         conf = "✅" if head.get("lineup_confirmed") else "◻︎"
         gs = game_score_by_pk.get(gpk, 0.0)
+        # A bar in the title makes the ranking legible without opening
+        # anything -- twelve rows of "Game Score 41.2" all look the same.
+        _fill = int(round(max(0.0, min(1.0, gs / 60.0)) * 10))
+        bar_txt = "█" * _fill + "·" * (10 - _fill)
+        edge = "▲" if gs >= slate_gs_med else "▽"
+        n_weak = sum(1 for x in gp if x.get("weak_spot_flag"))
         with st.expander(
-            f"{conf}  {local_time(gp)}   ·   {team_of(head)} vs {opp_of(head)}   ·   "
-            f"Game Score {gs:.1f}   ·   top HR {hr_score(head):.0f}   ·   "
-            f"{txt(head, 'venue_name')}"
+            f"{conf}  {local_time(gp)}   {bar_txt} {gs:4.1f} {edge}   "
+            f"{team_of(head)} vs {opp_of(head)}   ·   top HR {hr_score(head):.0f}"
+            + (f"   ·   ⭐{n_weak}" if n_weak else "")
+            + f"   ·   {txt(head, 'venue_name')}"
         ):
+            # Where this game sits on each board, not just Game Score.
+            g1 = st.columns(6)
+            g1[0].metric("Med HR", f"{med([hr_score(x) for x in gp]):.1f}")
+            g1[1].metric("Med Hit", f"{med([hit_score(x) for x in gp]):.1f}")
+            g1[2].metric("Med HRR", f"{med([prod_score(x) for x in gp]):.1f}")
+            g1[3].metric("Med DC", f"{med([nn(x, 'damage_conversion_score') for x in gp]):.1f}")
+            g1[4].metric("Top Longest", f"{max(longest_score(x) for x in gp):.1f}")
+            g1[5].metric("⭐ Weak spots", n_weak)
+
+            top5 = sorted(gp, key=hr_score, reverse=True)[:5]
+            hbar([name_of(x) for x in top5], [round(hr_score(x), 1) for x in top5],
+                 "Top 5 by HR score", ref=float(med([hr_score(x) for x in players])),
+                 ref_label="slate median")
+
             e = st.columns(6)
             e[0].metric("Temp", f"{nn(head, 'weather_temp_f'):.0f}°F" if head.get("weather_temp_f") else "—")
             e[1].metric("Wind", f"{nn(head, 'weather_wind_mph'):.0f} mph" if head.get("weather_wind_mph") else "—")
@@ -2327,6 +2660,147 @@ with tab_games:
             # pitcher facing the strongest hitter, so half of every matchup
             # was invisible -- you could see that CHC's lineup was live
             # without ever learning who PIT was sending out.
+            # ── WHAT-IF: swap the arm ──────────────────────────────────
+            # For TBD starters, or when the bot's listed starter gets pulled
+            # early and the game is really a bullpen game.
+            cur_arm = txt(head, "pitcher_name")
+            wi_default = arm_names.index(cur_arm) + 1 if cur_arm in arm_names else 0
+            wi = st.selectbox(
+                "What if a different arm pitched?",
+                ["— listed starter —"] + arm_names,
+                index=wi_default, key=f"whatif_{gpk}",
+                help="Estimates the HR-score shift from swapping the pitcher. "
+                     "Only starters on today's slate are available -- bullpen "
+                     "arms aren't in the published data.",
+            )
+            if wi != "— listed starter —" and wi != cur_arm:
+                arm = arms_by_name[wi]
+                a1, a2, a3 = st.columns(3)
+                a1.metric("HR/9", f"{nn(arm, 'pitcher_hr9'):.2f}",
+                          delta=f"{nn(arm, 'pitcher_hr9') - nn(head, 'pitcher_hr9'):+.2f}")
+                a2.metric("Barrel% allowed",
+                          f"{nn(arm, 'pitcher_barrel_allowed') * 100:.1f}%",
+                          delta=f"{(nn(arm, 'pitcher_barrel_allowed') - nn(head, 'pitcher_barrel_allowed')) * 100:+.1f}pp")
+                a3.metric("Pitcher damage", f"{pitcher_damage_for(arm):.1f}",
+                          delta=f"{pitcher_damage_for(arm) - pitcher_damage_for(head):+.1f}")
+
+                wi_rows = sorted(gp, key=hr_score, reverse=True)[:10]
+                st.dataframe(pd.DataFrame([{
+                    "Player": name_of(x), "Team": team_of(x),
+                    "HR now": round(hr_score(x), 1),
+                    f"HR vs {wi}": round(hr_score_vs_arm(x, arm), 1),
+                    "Shift": round(hr_score_vs_arm(x, arm) - hr_score(x), 1),
+                } for x in wi_rows]), width="stretch", hide_index=True)
+                st.caption(
+                    f"Estimate only. Moves the pitcher_damage term "
+                    f"({PITCHER_DAMAGE_WEIGHT:.0%} of the HR blend) and holds the other "
+                    "fourteen fixed — it does not re-run the model, so gates and "
+                    "post-blend multipliers aren't reflected."
+                )
+                st.divider()
+
+            st.markdown("**Starting pitchers**")
+            game_arms = group_pitchers(gp)
+            pcols = st.columns(max(1, len(game_arms)))
+            for pc, arm in zip(pcols, game_arms):
+                with pc:
+                    st.markdown(pitcher_strip(arm), unsafe_allow_html=True)
+                    if st.button("Pitcher details", width="stretch",
+                                 key=f"gp_{gpk}_{arm.get('pitcher_id')}"):
+                        pitcher_modal(arm)
+            st.caption(
+                "HR/9 is home runs allowed per 9 innings — league average is "
+                "about 1.2, so higher means easier to take deep."
+            )
+
+            # THE GAME PICKS — the bot stamps players per game per role in
+            # game_pick_role. Roles are NOT one-per-game: TOP/HR/CONTACT get
+            # one each but HIT and HRR get TWO apiece, exactly as the .txt
+            # report prints them. Collecting into a dict keyed by role kept
+            # only the first of each and silently dropped two cards per game.
+            picked: Dict[str, List[Dict[str, Any]]] = {}
+            for p in gp:
+                r = str(p.get("game_pick_role") or "").upper()
+                if r in GAME_ROLE_LABEL:
+                    picked.setdefault(r, []).append(p)
+
+            if picked:
+                # Exactly one pick per role: TOP, HR, HIT, HRR, TB -- five
+                # tiles, one row, always the same five columns in the same
+                # order. The bot stamps TWO players for HIT and HRR, which is
+                # why this used to spill to a second row and give some games
+                # seven cards and others five; the extras are the runners-up
+                # and they're all still in the lineup table below. Keeping the
+                # best of each by that role's OWN score, not by HR score --
+                # the second HIT pick often out-scores the first on HR while
+                # being the worse hit play.
+                flat = []
+                for r in GAME_ROLE_ORDER:
+                    cands = picked.get(r) or []
+                    if cands:
+                        flat.append(
+                            (r, max(cands, key=lambda x, _r=r: score_for(x, GAME_ROLE_SCORE[_r])))
+                        )
+                st.markdown(f"**Game picks** ({len(flat)})")
+                cols = st.columns(5)
+                for col, (r, p) in zip(cols, flat):
+                    with col:
+                        st.markdown(game_pick_tile(p, r), unsafe_allow_html=True)
+                        if st.button("Details", width="stretch",
+                                     key=f"gt_{gpk}_{r}_{p.get('player_id')}"):
+                            player_modal(p)
+            else:
+                st.caption("No stamped game picks for this game — showing top HR scores.")
+                top4 = sorted(gp, key=hr_score, reverse=True)[:5]
+                cols = st.columns(5)
+                for col, p in zip(cols, top4):
+                    with col:
+                        st.markdown(game_pick_tile(p, "HR"), unsafe_allow_html=True)
+                        if st.button("Details", width="stretch",
+                                     key=f"gf_{gpk}_{p.get('player_id')}"):
+                            player_modal(p)
+
+            # Lineups are split by team. Both clubs used to share one table
+            # sorted by batting order, so it ran 1,1,2,2,3,3... -- two
+            # different #3 hitters facing two different pitchers on adjacent
+            # rows. You had to read the Team column on every line to know
+            # whose order you were looking at.
+            teams_here = sorted({team_of(p) for p in gp if team_of(p)})
+            st.markdown("**Lineups**")
+            if len(teams_here) > 1:
+                pick_team = st.radio(
+                    "Lineup", teams_here + ["Both"], horizontal=True,
+                    key=f"lu_{gpk}", label_visibility="collapsed",
+                )
+            else:
+                pick_team = teams_here[0] if teams_here else "Both"
+
+            lineup_rows = gp if pick_team == "Both" else [
+                p for p in gp if team_of(p) == pick_team
+            ]
+            opp_pitcher = txt(
+                max(lineup_rows, key=hr_score) if lineup_rows else head, "pitcher_name"
+            )
+            if pick_team != "Both" and opp_pitcher:
+                st.caption(f"{pick_team} vs {opp_pitcher} · {len(lineup_rows)} hitters")
+
+            lineup_tbl = pd.DataFrame([{
+                "Spot": p.get("lineup_spot"), "Player": name_of(p),
+                "Team": team_of(p), "B": txt(p, "bats", default="?"),
+                "Role": tier_role(p), "HR": round(hr_score(p), 1),
+                "HRR": round(prod_score(p), 1), "Hit": round(hit_score(p), 1),
+                "TB": round(tb_score(p), 1), "PMix": round(pmix_score(p), 1),
+                "DC": round(nn(p, "damage_conversion_score"), 1),
+                "Due": round(nn(p, "hr_due_score"), 1),
+                "⭐": "⭐" if p.get("weak_spot_flag") else "",
+            } for p in sorted(lineup_rows,
+                              key=lambda x: (team_of(x),
+                                             nn(x, "lineup_spot", default=99.0)))])
+            # Team column is noise once you've filtered to one club.
+            if pick_team != "Both" and "Team" in lineup_tbl.columns:
+                lineup_tbl = lineup_tbl.drop(columns=["Team"])
+            st.dataframe(lineup_tbl, width="stretch", hide_index=True)
+
             st.markdown("**Starting pitchers**")
             game_arms = group_pitchers(gp)
             pcols = st.columns(max(1, len(game_arms)))
@@ -2436,12 +2910,15 @@ with tab_scoreboard:
         f"Every one of the {len(view)} hitters on the slate, all scores in one "
         "sortable grid. Click any column header to sort by it."
     )
+    sb_pool = board_search(view, "scoreboard_q")
     board = [{
         "Player": name_of(p), "Team": team_of(p), "Opp": opp_of(p),
         "Spot": p.get("lineup_spot"), "Role": tier_role(p),
         "HR": round(hr_score(p), 1), "HRR": round(prod_score(p), 1),
         "Hit": round(hit_score(p), 1), "TB": round(tb_score(p), 1),
         "Damage": round(nn(p, "damage_conversion_score"), 1),
+        "Cross": round(cross_board(p), 1),
+        "Longest": round(longest_score(p), 1),
         "PMix": round(pmix_score(p), 1),
         "PMatch": round(nn(p, "pitch_type_match_score"), 1),
         "375+": int(recent375(p)), "400+": int(recent400(p)),
@@ -2449,7 +2926,7 @@ with tab_scoreboard:
         "Pitcher": txt(p, "pitcher_name"),
         "P HR/9": round(nn(p, "pitcher_hr9"), 2),
         "🧩": "🧩" if is_aligned(p) else "",
-    } for p in view]
+    } for p in sb_pool]
     bdf = pd.DataFrame(board)
 
     if bdf.empty:
@@ -2457,8 +2934,9 @@ with tab_scoreboard:
     else:
         sb1, sb2, sb3 = st.columns([2, 2, 1])
         sb_sort = sb1.selectbox(
-            "Sort by", ["HR", "HRR", "Hit", "TB", "Damage", "PMix", "PMatch",
-                        "375+", "400+", "IHR", "K%", "Spot"], key="sbsort",
+            "Sort by", ["HR", "Cross", "Longest", "HRR", "Hit", "TB", "Damage",
+                        "PMix", "PMatch", "375+", "400+", "IHR", "K%", "Spot"],
+            key="sbsort",
         )
         sb_cols = sb2.multiselect(
             "Extra columns", ["PMix", "PMatch", "375+", "400+", "IHR", "K%",
@@ -2772,6 +3250,148 @@ with tab_pitchers:
                         f"HR/9 {nn(r, 'bullpen_hr9'):.2f} · WHIP {nn(r, 'bullpen_whip'):.2f}"
                     )
 
+
+# ── LONGEST HR ──────────────────────────────────────────────────────────────
+# Distance, not probability. longest_hr_score answers "who hits the farthest
+# ball tonight", which is a different question from "who is most likely to go
+# deep" -- a 40%-to-homer guy who hits 390ft doesn't win this board.
+def carry_factor(p: Dict[str, Any]) -> float:
+    """Multiplier on raw distance from park dimensions and air.
+
+    park_dist_factor is the ballpark's own carry. weather_hr_effect_pct is
+    the bot's temperature/wind adjustment, expressed as a % swing on HR rate;
+    a ball carries roughly a third as much in distance terms as it does in
+    HR-rate terms, so it's damped before being applied here.
+    """
+    park = nn(p, "park_dist_factor", default=1.0) or 1.0
+    weather_pct = nn(p, "weather_hr_effect_pct", default=0.0)
+    return float(park * (1.0 + (weather_pct / 100.0) * 0.33))
+
+
+def longest_adj(p: Dict[str, Any]) -> float:
+    """longest_hr_score after park + air carry."""
+    return max(0.0, min(100.0, longest_score(p) * carry_factor(p)))
+
+
+def bbe_tracked(p: Dict[str, Any]) -> int:
+    return int(nn(p, "recent_distance_tracked", "recent_350_den", "recent_pa_window"))
+
+
+with tab_long:
+    st.subheader("🚀 Longest HR")
+    st.caption(
+        "Who hits the **farthest** ball tonight — a distance board, not a "
+        "probability board. Different question from the HR tab, and it "
+        "regularly disagrees with it."
+    )
+
+    with st.expander("How this is calculated"):
+        st.markdown(
+            "`longest_hr_score` blends four recent-window distance signals:\n\n"
+            "| Weight | Signal | Why |\n|---|---|---|\n"
+            "| 35% | rate of **400ft+** batted balls | tail events predict tail events |\n"
+            "| 25% | recent **average exit velo** | the engine |\n"
+            "| 22% | rate of **350ft+** batted balls | deep-contact volume |\n"
+            "| 18% | recent **average distance** | overall carry |\n\n"
+            "Small samples are shrunk toward a neutral 40, reaching full trust "
+            "at 20 tracked batted-ball events — so a hitter with 3 tracked BBE "
+            "cannot post an 85 on four good swings.\n\n"
+            "**Carry adjustment** (this page only) multiplies that by the park's "
+            "`park_dist_factor` and a damped share of the weather HR effect. "
+            "Air and altitude move distance, but less than they move HR rate, "
+            "so the weather term is scaled to a third before it is applied."
+        )
+
+    lc1, lc2, lc3 = st.columns([2, 1, 2])
+    use_carry = lc1.radio("Rank by", ["Adjusted for park + air", "Raw score"],
+                          horizontal=True, key="long_mode")
+    long_n = lc2.number_input("Show top", 5, 100, 25, step=5, key="long_n")
+    with lc3:
+        long_pool = board_search(view, "long_q")
+
+    min_bbe = st.slider(
+        "Minimum tracked batted balls", 0, 30, 0, step=5, key="long_bbe",
+        help="Below ~20 the score is shrunk toward 40. Raise this to see only "
+             "hitters with a sample behind the number.",
+    )
+    long_pool = [p for p in long_pool if bbe_tracked(p) >= min_bbe]
+
+    keyfn = longest_adj if use_carry.startswith("Adjusted") else longest_score
+    ranked_long = sorted(long_pool, key=keyfn, reverse=True)[: int(long_n)]
+
+    if not ranked_long:
+        st.info("No hitters match these filters.")
+    else:
+        m = st.columns(4)
+        m[0].metric("Top score", f"{keyfn(ranked_long[0]):.1f}")
+        m[1].metric("Slate median",
+                    f"{med([longest_score(p) for p in players]):.1f}")
+        m[2].metric("Best carry",
+                    f"{max(carry_factor(p) for p in ranked_long):.2f}×",
+                    help="Park distance factor × damped weather effect.")
+        m[3].metric("Thin samples",
+                    sum(1 for p in ranked_long if bbe_tracked(p) < 20),
+                    help="Fewer than 20 tracked BBE — score is shrunk toward 40.")
+
+        l1, l2 = st.columns([3, 2])
+        with l1:
+            hbar([name_of(p) for p in ranked_long[:15]],
+                 [round(keyfn(p), 1) for p in ranked_long[:15]],
+                 "Top 15 by distance score",
+                 ref=float(med([longest_score(x) for x in players])),
+                 ref_label="slate median")
+        with l2:
+            st.markdown("**Distance score vs HR score**")
+            st.caption(
+                "Hitters far from the diagonal are the interesting ones: high "
+                "distance and low HR score is a big-fly-or-nothing bat."
+            )
+            sc = pd.DataFrame({
+                "Longest": [round(keyfn(p), 1) for p in ranked_long],
+                "HR": [round(hr_score(p), 1) for p in ranked_long],
+                "Player": [name_of(p) for p in ranked_long],
+            })
+            st.scatter_chart(sc, x="HR", y="Longest", height=300)
+
+        st.markdown("#### The board")
+        st.dataframe(pd.DataFrame([{
+            "": "✅" if p.get("lineup_confirmed") else "◻︎",
+            "Player": name_of(p), "Team": team_of(p), "Opp": opp_of(p),
+            "Adj": round(longest_adj(p), 1),
+            "Raw": round(longest_score(p), 1),
+            "Carry": round(carry_factor(p), 2),
+            "HR": round(hr_score(p), 1),
+            "Rank": int(nn(p, "longest_hr_rank")) or None,
+            # The four raw inputs behind the score.
+            "400+": int(nn(p, "recent_400_num", "dist_400_plus")),
+            "375+": int(nn(p, "recent_375_num")),
+            "350+": int(nn(p, "recent_350_num")),
+            "BBE": bbe_tracked(p),
+            "Avg EV": round(nn(p, "recent_ev", "l25pa_avg_ev"), 1),
+            "Barrel%": round(nn(p, "recent_barrel_rate") * 100, 1),
+            "Park dist": round(nn(p, "park_dist_factor", default=1.0), 2),
+            "Wx HR": f"{nn(p, 'weather_hr_effect_pct'):+.0f}%",
+            "Pitcher": txt(p, "pitcher_name"),
+            "Venue": txt(p, "venue_name"),
+        } for p in ranked_long]), width="stretch", hide_index=True, height=520)
+
+        st.download_button(
+            "⬇️ CSV",
+            pd.DataFrame([{"Player": name_of(p), "Team": team_of(p),
+                           "Adj": round(longest_adj(p), 1),
+                           "Raw": round(longest_score(p), 1),
+                           "Carry": round(carry_factor(p), 2),
+                           "BBE": bbe_tracked(p)} for p in ranked_long]
+                         ).to_csv(index=False).encode("utf-8-sig"),
+            file_name=f"mlb_{slate}_longest.csv", mime="text/csv", key="longcsv")
+
+        st.caption(
+            "**Adj** = raw × carry. **Carry** under 1.00 is a park/air "
+            "combination that suppresses distance. **BBE** under 20 means the "
+            "raw score is partly the neutral 40, not measured power."
+        )
+
+
 # ── DUE BOARD ───────────────────────────────────────────────────────────────
 # The bot's DUE BOMBER concept: hitters overdue for a homer. hr_due_score and
 # hr_due_tag come straight from the model; games_since_last_hr and the
@@ -2795,7 +3415,7 @@ with tab_due:
         contact quality has been there and the homers haven't followed."""
         return nn(p, "expected_hrs_recent_window") - nn(p, "recent_hr_window")
 
-    pool = [p for p in view
+    pool = [p for p in board_search(view, "due_board_q")
             if nn(p, "hr_due_score") >= min_due
             and nn(p, "games_since_last_hr") >= min_drought
             and (tag_pick == "All" or txt(p, "hr_due_tag") == tag_pick)]
@@ -2887,7 +3507,7 @@ with tab_hitshrr:
         "L5 R": int(nn(p, "last5_runs")), "L5 RBI": int(nn(p, "last5_rbi")),
         "PreOB": round(nn(p, "lineup_pre_onbase"), 3),
         "Post": round(nn(p, "lineup_post_convert"), 3),
-        "Best non-HR": txt(p, "best_non_hr_category"),
+        "Best non-HR": best_non_hr_label(p),
     } for p in hh]), width="stretch", hide_index=True, height=560)
 
 # ── PAIRS / POOLS ───────────────────────────────────────────────────────────
@@ -3160,14 +3780,71 @@ with tab_pairhist:
                 "pair_history.csv", "text/csv", key="phcsv")
 
 # ── RESULTS ─────────────────────────────────────────────────────────────────
+# Laid out to read like the nightly results report rather than a generic
+# dataframe: bettable headline first, then HR capture, then who actually went
+# deep with the same emoji tags the .txt uses, then the detail table.
+
+# The pick-type emoji vocabulary from live_results_tracker's summary text.
+PICK_EMOJI = {
+    "TOP15": "🏆", "TOP": "🔥", "HR": "🧨",
+    "HRR": "🏁", "HIT": "💠", "CONTACT": "⚾", "TB": "⚾",
+}
+PICK_LABEL = {
+    "TOP15": "Top 15 Board", "TOP": "Top Picks", "HR": "HR Picks",
+    "HRR": "HRR Picks", "HIT": "Hit Picks", "CONTACT": "Contact Picks",
+    "TB": "Contact Picks",
+}
+PICK_ORDER = ["TOP15", "TOP", "HR", "HRR", "HIT", "CONTACT", "TB"]
+
+
+def pick_badge(pick_type: Any) -> str:
+    k = str(pick_type or "").upper()
+    return f"{PICK_EMOJI.get(k, '•')} {PICK_LABEL.get(k, k or '—')}"
+
+
 with tab_results:
-    which = st.radio("Results view", ["Live", "Final"], horizontal=True)
-    rel = f"public/data/current/results_{'live' if which == 'Live' else 'final'}.json"
-    res = load_json(rel) or {}
+    # ── ALL-TIME (backtest) ────────────────────────────────────────────────
+    # Today's hit rates are one slate. The bands on a single day run to n=2 and
+    # read as 100%, which is noise wearing a percentage sign. backtest_report.py
+    # aggregates every graded day; this is where that lands.
+    # .title() turns HR_PICKS into "Hr Picks". These are acronyms, not words.
+    BT_TIER_LABELS = {
+        "TOP_15_BOARD": "Top 15 Board", "TOP_PICKS": "Top Picks",
+        "HR_PICKS": "HR Picks", "HRR_PICKS": "HRR Picks",
+        "HIT_PICKS": "Hit Picks", "CONTACT_PICKS": "Contact Picks",
+    }
+    bt = load_json("public/data/current/backtest_summary.json") or {}
+    bt_summary = bt.get("summary") or {}
+    bt_days = bt.get("per_day") or {}
+
+    # Today vs yesterday, not live vs final. Live/final was an artifact of how
+    # the grader runs, not a question anyone actually asks -- both files are
+    # always the same slate, and "final" just means the in-progress games were
+    # skipped. Today reads the rolling live file (which settles as games end);
+    # yesterday reads the dated graded file the nightly publish carries over.
+    which = st.radio("Results view", ["Today", "Yesterday"], horizontal=True)
+    if which == "Today":
+        res = (load_json("public/data/current/results_live.json")
+               or load_json("public/data/current/results_final.json") or {})
+    else:
+        y = (dt.date.today() - dt.timedelta(days=1)).isoformat()
+        res = load_json(f"public/data/current/graded_results_{y}.json") or {}
+        # The grader also writes the date into the payload; if the file is
+        # stale or missing entirely, say which day we looked for.
+        if not res:
+            res = {}
     rrows = res.get("results") or []
 
     if not rrows:
-        st.info(f"No {which.lower()} results yet — grading runs after games finish.")
+        if which == "Yesterday":
+            y = (dt.date.today() - dt.timedelta(days=1)).isoformat()
+            st.info(
+                f"No graded file published for **{y}** yet. Yesterday's view "
+                "reads `graded_results_<date>.json`, which the nightly grading "
+                "run publishes after the last game goes final."
+            )
+        else:
+            st.info("No results yet — grading runs hourly once games start.")
     else:
         rdf = pd.DataFrame(rrows)
         for c in ("got_hr", "got_base_hit", "got_xbh", "actual_hr", "actual_hits",
@@ -3179,11 +3856,10 @@ with tab_results:
                        if "grade" in rdf.columns else pd.Series(True, index=rdf.index))
         n_graded, n_pending = int(graded_mask.sum()), int((~graded_mask).sum())
 
-        st.caption(f"{res.get('label', '')} · {res.get('date', '')} · {len(rdf)} picks tracked")
+        st.markdown(f"### {res.get('label', 'Results')}")
+        st.caption(f"{res.get('date', '')} · {len(rdf)} picks tracked · "
+                   f"{n_graded} settled, {n_pending} pending")
 
-        # An all-PENDING board used to render as a wall of zeros that looked
-        # like the model went 0-for-120. It didn't -- the games hadn't
-        # started. Say so plainly before showing a single number.
         if n_graded == 0:
             st.info(
                 f"All {n_pending} picks are still **PENDING** — no game on this "
@@ -3191,29 +3867,104 @@ with tab_results:
                 "grading runs hourly from 11am Phoenix."
             )
 
-        k = st.columns(5)
-        k[0].metric("Picks", len(rdf), delta=f"{n_graded} settled" if n_graded else None)
-        for i, (lbl, col) in enumerate(
-            [("HRs", "got_hr"), ("Base hits", "got_base_hit"), ("XBH", "got_xbh")], start=1
-        ):
-            k[i].metric(lbl, int(rdf.get(col, pd.Series(dtype=float)).sum()))
-        # Rate over SETTLED picks only. Dividing by every pick including the
-        # unplayed ones dragged the hit rate to 0.0% all afternoon and made a
-        # good slate look like a disaster.
-        if "got_hr" in rdf.columns and n_graded:
-            rate = rdf.loc[graded_mask, "got_hr"].mean()
-            k[4].metric("HR hit rate", f"{rate * 100:.1f}%",
-                        help=f"Of the {n_graded} settled picks.")
+        # ── BETTABLE RESULTS ───────────────────────────────────────────────
+        # The three lines that open the .txt report, as metrics.
+        st.markdown("#### Bettable results")
+        bet_cols = st.columns(4)
+        for i, key in enumerate(["TOP15", "TOP", "HR"]):
+            sub = rdf[rdf["pick_type"].astype(str).str.upper() == key] if "pick_type" in rdf else rdf.iloc[0:0]
+            n_tot = len(sub)
+            n_hr = int(sub.get("got_hr", pd.Series(dtype=float)).sum()) if n_tot else 0
+            bet_cols[i].metric(
+                f"{PICK_EMOJI[key]} {PICK_LABEL[key]}",
+                f"{n_hr}/{n_tot}" if n_tot else "—",
+                delta=f"{n_hr / n_tot * 100:.1f}%" if n_tot else None,
+                delta_color="off",
+            )
+        if "got_base_hit" in rdf.columns and n_graded:
+            bet_cols[3].metric(
+                "Base hit accuracy",
+                f"{rdf.loc[graded_mask, 'got_base_hit'].mean() * 100:.1f}%",
+                help="Full sheet, settled picks only.",
+            )
         else:
-            k[4].metric("HR hit rate", "—", help="Fills in once games go final.")
+            bet_cols[3].metric("Base hit accuracy", "—")
 
+        # ── HR CAPTURE ─────────────────────────────────────────────────────
+        cap = res.get("hr_capture_report") or {}
+        if cap:
+            st.markdown("#### HR capture")
+            cc = st.columns(4)
+            cc[0].metric("Slate HRs", cap.get("total_hrs_on_slate", 0))
+            cc[1].metric("On the sheet", cap.get("caught_hrs_on_sheet", 0))
+            cc[2].metric("Capture rate", f"{nn(cap, 'hr_capture_pct'):.1f}%",
+                         help="Share of the slate's homers hit by someone the model had on the board at all.")
+            cc[3].metric("Missed entirely", cap.get("missed_hrs_not_on_sheet", 0),
+                         help="Homers by players who were never on the sheet.")
+
+        # ── GOING YARD ─────────────────────────────────────────────────────
+        # merged_homers already carries the emoji tags the .txt prints
+        # ('🏆#7', '🔥'). The app never used them until now.
+        homers = res.get("merged_homers") or []
+        if homers:
+            st.markdown("#### 💥 Going yard")
+            hr_recs = []
+            for h in homers:
+                base = h.get("base_row") or {}
+                hr_recs.append({
+                    "Player": h.get("name", "—"),
+                    "Team": h.get("team", ""),
+                    "Tags": " ".join(h.get("tags") or []) or "—",
+                    "HR": int(nn(base, "actual_hr")),
+                    "HR score": round(nn(base, "hr_score"), 1),
+                    "Line": txt(base, "outcome_text"),
+                })
+            hr_recs.sort(key=lambda r: (-r["HR"], -r["HR score"]))
+
+            hy1, hy2 = st.columns([3, 2])
+            with hy1:
+                st.dataframe(pd.DataFrame(hr_recs), width="stretch",
+                             hide_index=True, height=min(430, 36 * len(hr_recs) + 40))
+            with hy2:
+                # Which buckets are actually producing the homers tonight.
+                tally: Dict[str, int] = {}
+                for h in homers:
+                    for t in (h.get("tags") or []):
+                        e = str(t)[:1]
+                        for k, em in PICK_EMOJI.items():
+                            if em == e:
+                                tally[k] = tally.get(k, 0) + 1
+                                break
+                tally = {k: v for k, v in tally.items() if v}
+                if tally:
+                    ordered = [k for k in PICK_ORDER if k in tally]
+                    hbar([f"{PICK_EMOJI[k]} {PICK_LABEL[k]}" for k in ordered],
+                         [tally[k] for k in ordered],
+                         "HRs by pick type", fmt="{:.0f}")
+                    best = max(ordered, key=lambda k: tally[k])
+                    st.caption(
+                        f"Best HR-producing category tonight: "
+                        f"**{PICK_EMOJI[best]} {PICK_LABEL[best]}** ({tally[best]})"
+                    )
+
+            missed = cap.get("missed_homer_entries") or []
+            if missed:
+                with st.expander(f"Missed HRs — not on the sheet ({len(missed)})"):
+                    st.dataframe(pd.DataFrame([{
+                        "Player": m.get("name"), "Team": m.get("team"),
+                        "HR": m.get("hr", 1),
+                    } for m in missed]), width="stretch", hide_index=True)
+        elif n_graded:
+            st.markdown("#### 💥 Going yard")
+            st.caption("Nobody on the board has gone deep yet tonight.")
+
+        st.divider()
+
+        # ── CALIBRATION ────────────────────────────────────────────────────
         if "grade" in rdf.columns:
             gc = rdf["grade"].astype(str).str.upper().value_counts()
             gl, gr = st.columns([2, 3])
             with gl:
-                # Grades on a fixed good-to-bad colour scale rather than the
-                # value-count table that was here. PENDING is deliberately
-                # grey, not green -- it's not an outcome.
                 GRADE_COLOR = {
                     "HR": C["green"], "WIN": C["green"], "HIT": "#4cb96a",
                     "XBH": "#7fd894", "PARTIAL": C["yellow"],
@@ -3230,9 +3981,6 @@ with tab_results:
                 st.plotly_chart(fig, width="stretch")
             with gr:
                 if n_graded:
-                    # Did the model's ranking actually predict anything? Hit
-                    # rate by score band answers that in one look; the raw
-                    # table never did.
                     g = rdf.loc[graded_mask].copy()
                     g["band"] = pd.cut(g["hr_score"], [0, 40, 55, 70, 85, 101],
                                        labels=["<40", "40-55", "55-70", "70-85", "85+"],
@@ -3243,46 +3991,128 @@ with tab_results:
                         hbar([f"{b}  (n={int(r['size'])})" for b, r in by_band.iterrows()],
                              [float(r["mean"]) * 100 for _, r in by_band.iterrows()],
                              "HR hit rate by model score band", fmt="{:.0f}%")
-                        st.caption(
-                            "If the model is working, these climb left to right."
-                        )
+                        st.caption("If the model is working, these climb left to right.")
                 else:
                     st.caption("Hit-rate-by-score-band appears once picks settle.")
 
-        # Settled picks first — the whole point of opening this tab is seeing
-        # what cashed, and those rows were previously buried under 100+
-        # PENDING lines sorted by rank.
+        # ── PLAYER TYPE PERFORMANCE ────────────────────────────────────────
+        if "pick_type" in rdf.columns and n_graded:
+            st.markdown("#### Player type performance")
+            pt_rows = []
+            for k in PICK_ORDER:
+                sub = rdf[(rdf["pick_type"].astype(str).str.upper() == k) & graded_mask]
+                if sub.empty:
+                    continue
+                pt_rows.append({
+                    "": PICK_EMOJI[k],
+                    "Pick type": PICK_LABEL[k],
+                    "N": len(sub),
+                    "HR": int(sub["got_hr"].sum()),
+                    "HR %": f"{sub['got_hr'].mean() * 100:.1f}%",
+                    "1+ Hit %": f"{sub['got_base_hit'].mean() * 100:.1f}%"
+                                if "got_base_hit" in sub else "—",
+                    "XBH %": f"{sub['got_xbh'].mean() * 100:.1f}%"
+                             if "got_xbh" in sub else "—",
+                })
+            if pt_rows:
+                st.dataframe(pd.DataFrame(pt_rows), width="stretch", hide_index=True)
+
+        st.divider()
+
+        # ── ALL PICKS ──────────────────────────────────────────────────────
+        st.markdown("#### Every pick")
         sort_key = rdf["grade"].astype(str).str.upper().eq("PENDING").astype(int)
         rdf = rdf.assign(_pending=sort_key).sort_values(
             ["_pending", "actual_hr", "actual_tb"],
             ascending=[True, False, False],
         ).drop(columns=["_pending"])
 
-        show_only = st.radio(
+        f1, f2 = st.columns([3, 2])
+        show_only = f1.radio(
             "Show", ["All", "Settled only", "Hit a HR", "Pending"],
             horizontal=True, key="resfilter",
         )
+        type_opts = ["All types"] + [PICK_LABEL[k] for k in PICK_ORDER
+                                     if k in set(rdf["pick_type"].astype(str).str.upper())]
+        type_pick = f2.selectbox("Pick type", type_opts, key="restype")
+
         v = rdf
         if show_only == "Settled only":
-            v = rdf[rdf["grade"].astype(str).str.upper() != "PENDING"]
+            v = v[v["grade"].astype(str).str.upper() != "PENDING"]
         elif show_only == "Hit a HR":
-            v = rdf[rdf.get("got_hr", 0) > 0]
+            v = v[v.get("got_hr", 0) > 0]
         elif show_only == "Pending":
-            v = rdf[rdf["grade"].astype(str).str.upper() == "PENDING"]
+            v = v[v["grade"].astype(str).str.upper() == "PENDING"]
+        if type_pick != "All types":
+            keys = [k for k in PICK_ORDER if PICK_LABEL[k] == type_pick]
+            v = v[v["pick_type"].astype(str).str.upper().isin(keys)]
 
         if v.empty:
             st.caption("Nothing matches that filter yet.")
         else:
-            st.dataframe(rows_to_df(v.to_dict("records"), [
-                "name", "team", "pick_type", "bet_type", "rank", "hr_score",
-                "actual_hr", "actual_hits", "actual_tb", "actual_rbi", "actual_runs",
-                "grade", "outcome_text",
-            ]), width="stretch", hide_index=True, height=480)
+            disp = pd.DataFrame([{
+                "": PICK_EMOJI.get(str(r.get("pick_type", "")).upper(), "•"),
+                "Player": r.get("name"), "Team": r.get("team"),
+                "Pick": PICK_LABEL.get(str(r.get("pick_type", "")).upper(),
+                                       r.get("pick_type")),
+                "Rank": int(nn(r, "rank")) or None,
+                "HR score": round(nn(r, "hr_score"), 1),
+                "HR": int(nn(r, "actual_hr")),
+                "H": int(nn(r, "actual_hits")),
+                "TB": int(nn(r, "actual_tb")),
+                "RBI": int(nn(r, "actual_rbi")),
+                "R": int(nn(r, "actual_runs")),
+                "Grade": r.get("grade"),
+                "Line": r.get("outcome_text"),
+            } for r in v.to_dict("records")])
+            st.dataframe(disp, width="stretch", hide_index=True, height=480)
             st.download_button(
                 "⬇️ CSV", v.to_csv(index=False).encode(),
-                f"mlb_results_{which.lower()}_{res.get('date', '')}.csv",
+                f"mlb_results_{res.get('date', which.lower())}.csv",
                 "text/csv", key="rescsv",
             )
+
+    # ── ALL-TIME TIER TABLE ────────────────────────────────────────────────
+    st.divider()
+    if bt_summary:
+        st.markdown("#### All-time by tier")
+        dates = sorted(d for d in bt_days if isinstance(d, str))
+        span = f" · {dates[0]} to {dates[-1]}" if dates else ""
+        st.caption(f"{len(bt_days)} graded day(s){span}")
+
+        bt_rows = []
+        for tier, d in bt_summary.items():
+            if not isinstance(d, dict):
+                continue
+            rate = d.get("hr_rate_pct")
+            pool = d.get("total_pool_size")
+            bt_rows.append({
+                "Tier": BT_TIER_LABELS.get(tier, tier.replace("_", " ").title()),
+                "HRs": d.get("total_hr_count", 0),
+                "Pool": pool if pool else "—",
+                "HR rate": f"{rate}%" if rate is not None else "—",
+                "Fair odds": fair_american(rate) if rate else "—",
+                "Days": d.get("days_seen", 0),
+            })
+        bt_rows.sort(key=lambda r: (r["HR rate"] == "—",
+                                    -(float(r["HR rate"].rstrip("%"))
+                                      if r["HR rate"] != "—" else 0)))
+        st.dataframe(pd.DataFrame(bt_rows), width="stretch", hide_index=True)
+
+        acc = bt.get("overall_base_hit_accuracy")
+        if acc is not None:
+            st.caption(f"Base-hit accuracy across all graded days: **{acc}%**")
+        st.caption(
+            "Fair odds are the break-even American price implied by that hit "
+            "rate. Anything priced longer than fair is where the edge is — "
+            "the board doesn't know prices yet, so that comparison is manual."
+        )
+    else:
+        st.caption(
+            "All-time tier performance appears here once the nightly backtest "
+            "publishes `backtest_summary.json`. It aggregates every graded day, "
+            "so the rates above stop being single-slate noise."
+        )
 
 # ── PLAYER DETAIL ───────────────────────────────────────────────────────────
 # Modelled on the old PlayerModal: identity header, pill row, then sub-tabs
@@ -3651,13 +4481,13 @@ with tab_player:
                 st.caption("No batted-ball detail for this hitter yet.")
 
 
-def watch_card_html(p: Dict[str, Any]) -> str:
-    """Compact grid card: badges, score + grade top-right, pills, stat line."""
-    rc = role_config(p)
-    role_label, role_color = rc if rc else (tier_role(p), tier_color(tier_role(p)))
-    hrw = HRW_MAP.get(txt(p, "hrw_zone"))
-    score = nn(p, "top_board_score_v2") or hr_score(p)
+def watch_badges(p: Dict[str, Any]) -> str:
+    """The emoji run shown on a watch card.
 
+    Lives on its own so the card and the CSV export read from one place --
+    they were going to drift the first time a badge rule changed.
+    """
+    hrw = HRW_MAP.get(txt(p, "hrw_zone"))
     badges = ""
     if hrw:
         badges += hrw[0]
@@ -3667,6 +4497,15 @@ def watch_card_html(p: Dict[str, Any]) -> str:
         badges += "🧩"
     if nn(p, "pitch_type_match_score") >= 80:
         badges += "🎯"
+    return badges
+
+
+def watch_card_html(p: Dict[str, Any]) -> str:
+    """Compact grid card: badges, score + grade top-right, pills, stat line."""
+    rc = role_config(p)
+    role_label, role_color = rc if rc else (tier_role(p), tier_color(tier_role(p)))
+    score = nn(p, "top_board_score_v2") or hr_score(p)
+    badges = watch_badges(p)
 
     pills = bubble("", role_label, role_color)
     if txt(p, "best_use"):
@@ -3709,6 +4548,96 @@ def watch_card_html(p: Dict[str, Any]) -> str:
 
 
 with tab_watch:
+    # ── CROSS-REFERENCE ────────────────────────────────────────────────────
+    # Paste a list from anywhere -- someone else's picks, a DFS slate, a
+    # group chat -- and see what the model says about those exact names.
+    with st.expander("📋 Cross-reference a list of players", expanded=not st.session_state.watch):
+        st.caption(
+            "Paste names one per line or comma-separated. Ranking numbers, "
+            "bullets, odds and team codes are stripped automatically."
+        )
+        blob = st.text_area(
+            "Names", height=130, key="xref_blob",
+            placeholder="Aaron Judge\nShohei Ohtani +410\n3. Kyle Schwarber (PHI)",
+        )
+        names = parse_name_list(blob)
+        if names:
+            # Match against the whole slate, not `view` -- sidebar filters
+            # shouldn't silently hide someone you explicitly asked about.
+            hits, misses, ambiguous = match_players(names, players)
+            st.caption(
+                f"{len(names)} name(s) read · {len(hits)} matched · "
+                f"{len(ambiguous)} ambiguous · {len(misses)} not found"
+            )
+
+            if hits:
+                xdf = pd.DataFrame([{
+                    "": "✅" if p.get("lineup_confirmed") else "◻︎",
+                    "Player": name_of(p),
+                    "As pasted": raw if norm_name(raw) != norm_name(name_of(p)) else "",
+                    "Match": how,
+                    "Team": team_of(p), "Opp": opp_of(p),
+                    "Spot": p.get("lineup_spot"),
+                    "HR": round(hr_score(p), 1),
+                    "Cross": round(cross_board(p), 1),
+                    "HRR": round(prod_score(p), 1),
+                    "Hit": round(hit_score(p), 1),
+                    "TB": round(tb_score(p), 1),
+                    "DC": round(nn(p, "damage_conversion_score"), 1),
+                    "Grade": grade_for(p, "hr"),
+                    "Role": tier_role(p),
+                    "Pitcher": txt(p, "pitcher_name"),
+                    "P HR/9": round(nn(p, "pitcher_hr9"), 2),
+                    "Park HR": round(nn(p, "park_hr_factor", default=1.0), 2),
+                } for raw, p, how in hits])
+                st.dataframe(xdf, width="stretch", hide_index=True,
+                             height=min(460, 36 * len(xdf) + 42))
+
+                x1, x2, x3 = st.columns(3)
+                x1.metric("Best HR score", f"{max(hr_score(p) for _, p, _ in hits):.1f}")
+                x2.metric("Median HR score",
+                          f"{median([hr_score(p) for _, p, _ in hits]):.1f}",
+                          help="Slate median is "
+                               f"{median([hr_score(p) for p in players]):.1f}.")
+                x3.metric("Confirmed",
+                          f"{sum(1 for _, p, _ in hits if p.get('lineup_confirmed'))}/{len(hits)}")
+
+                b1, b2 = st.columns([1, 3])
+                if b1.button("⭐ Add all to watchlist", width="stretch", key="xref_watch"):
+                    added = 0
+                    for _, p, _ in hits:
+                        if name_of(p) not in st.session_state.watch:
+                            st.session_state.watch.append(name_of(p))
+                            added += 1
+                    persist_watch()
+                    st.success(f"Added {added} player(s).")
+                    st.rerun()
+                b2.download_button(
+                    "⬇️ CSV", xdf.to_csv(index=False).encode("utf-8-sig"),
+                    file_name=f"mlb_{slate}_crossref.csv", mime="text/csv",
+                    width="stretch", key="xref_csv",
+                )
+
+                if any(how == "fuzzy" for _, _, how in hits):
+                    st.caption(
+                        "⚠️ Rows marked **fuzzy** were matched on spelling "
+                        "similarity — check those before trusting them."
+                    )
+
+            if ambiguous:
+                st.warning(
+                    "**Ambiguous — more than one player matches:**\n\n"
+                    + "\n".join(f"- `{raw}` → {', '.join(c)}" for raw, c in ambiguous)
+                    + "\n\nAdd a first name to disambiguate."
+                )
+
+            if misses:
+                st.info(
+                    "**Not on this slate:** " + ", ".join(misses) +
+                    "  \nUsually means they're not in a confirmed lineup, not "
+                    "playing today, or the spelling is too far off to match."
+                )
+
     if not st.session_state.watch:
         st.info(
             "No players on your watchlist yet. Add them with the ⭐ Watch "
@@ -3721,12 +4650,37 @@ with tab_watch:
             [p for p in players if name_of(p) in st.session_state.watch],
             key=hr_score, reverse=True,
         )
-        hdr_l, hdr_r = st.columns([4, 1])
+        hdr_l, hdr_x, hdr_r = st.columns([3, 1, 1])
         hdr_l.markdown(f"### Watchlist\n{len(watched)} saved")
+
+        # Name / HR / emojis, in board order. Two shapes because they get used
+        # two ways: CSV for a spreadsheet, plain text for pasting into a post.
+        wl_rows = [{
+            "Player": name_of(p),
+            "HR": round(hr_score(p), 1),
+            "Emojis": watch_badges(p),
+            "Role": tier_role(p),
+            "Team": team_of(p),
+            "Opp": opp_of(p),
+        } for p in watched]
+        wl_text = "\n".join(
+            f"{r['Emojis']} {r['Player']} — {r['HR']}".strip() for r in wl_rows)
+
+        hdr_x.download_button(
+            "⬇️ CSV",
+            pd.DataFrame(wl_rows).to_csv(index=False).encode("utf-8-sig"),
+            file_name=f"mlb_{slate}_watchlist.csv",
+            mime="text/csv",
+            width="stretch",
+            help="Name, HR score and badges for everyone on the list",
+        )
         if hdr_r.button("Clear All", width="stretch"):
             st.session_state.watch = []
             persist_watch()
             st.rerun()
+
+        with st.expander("📋 Copy as text"):
+            st.code(wl_text, language=None)
 
         # Four across, like the old grid.
         per_row = 4
