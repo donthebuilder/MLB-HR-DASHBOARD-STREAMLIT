@@ -92,6 +92,35 @@ GREEN_SCALE_R = [[1 - stop, colr] for stop, colr in reversed(GREEN_SCALE)]
 
 NUM_FONT = "'Roboto Mono','SF Mono','Cascadia Mono',Menlo,Consolas,monospace"
 
+# Discrete steps off the same ramp, for HTML cells. Plotly can interpolate
+# GREEN_SCALE itself; hand-built tables can't, so they sample it here and
+# every table on the site ends up using the identical six shades.
+RAMP6 = ["#06251a", "#0b4b30", "#12783f", "#2f9e52", "#4cb96a", "#b7f7c9"]
+
+
+def ramp_color(v: Any, lo: float, hi: float) -> Optional[str]:
+    """Map a value onto the green ramp between two anchors.
+
+    Returns None for anything unparseable so callers can fall through to a
+    plain cell rather than painting a misleading colour on missing data.
+    """
+    try:
+        fv = float(v)
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(fv):
+        return None
+    span = hi - lo
+    pos = 0.0 if span <= 0 else (fv - lo) / span
+    pos = max(0.0, min(1.0, pos))
+    return RAMP6[min(len(RAMP6) - 1, int(pos * len(RAMP6)))]
+
+
+def ink_for(bg: str) -> str:
+    """Readable text colour on a ramp swatch — the top two shades are light
+    enough that white text disappears on them."""
+    return "#06281a" if bg in (RAMP6[-1], RAMP6[-2]) else "#e8ecef"
+
 st.markdown(
     f"""
     <style>
@@ -870,10 +899,25 @@ def candles(df: pd.DataFrame, date_col: str, val_col: str, title: str = "",
     fig = go.Figure(go.Candlestick(
         x=agg[date_col], open=agg["open"], high=agg["high"],
         low=agg["low"], close=agg["close"],
-        increasing=dict(line=dict(color=C["green"]), fillcolor=C["green"]),
-        decreasing=dict(line=dict(color=C["red"]), fillcolor=C["red"]),
+        # Both directions are green, light for a day that finished hotter
+        # than it started and dark for one that faded. Trading platforms use
+        # red for "down" because down means losing money; a day where a
+        # hitter's last ball was softer than his first isn't bad, it's just
+        # a shape. Red here also collided with the one place this site does
+        # mean danger by it.
+        increasing=dict(line=dict(color=RAMP6[-1], width=1),
+                        fillcolor=RAMP6[-1]),
+        decreasing=dict(line=dict(color=RAMP6[1], width=1),
+                        fillcolor=RAMP6[1]),
         hovertext=[f"{n} batted ball{'s' if n != 1 else ''}" for n in agg["n"]],
     ))
+    # Median line gives the candles something to be read against -- without
+    # it you can see the day-to-day shape but not whether any of it is good.
+    med = float(d[val_col].median())
+    fig.add_hline(y=med, line=dict(color=C["text3"], width=1, dash="dot"),
+                  annotation_text=f"median {med:.0f}{(' ' + unit) if unit else ''}",
+                  annotation_position="top left",
+                  annotation_font=dict(size=9, color=C["text3"]))
     fig.update_layout(xaxis_rangeslider_visible=False)
     _layout(fig, height, title)
     fig.update_yaxes(title_text=unit)
@@ -894,64 +938,98 @@ def bbe_frame(bbe: Any) -> pd.DataFrame:
 
 
 def contact_log_html(df: pd.DataFrame, max_height: int = 440) -> str:
-    """The old site's colour-coded contact log, as raw HTML.
+    """Every batted ball, shaded so hard contact is visible at a glance.
 
-    Rendered by hand rather than through pandas' `.style` accessor because
-    that needs jinja2, which isn't guaranteed to be installed on Streamlit
-    Cloud -- the whole tab used to disappear behind an ImportError. Thresholds
-    match the old EV Log exactly: EV green 95+ / red 85-, distance green
-    375+ / red 300-.
+    This used to bucket EV and distance into three states and paint the bad
+    one RED. Two problems: red is reserved on this site for "genuinely bad",
+    not for a 300-foot flyout, and three buckets threw away all the
+    resolution between them -- a 94 mph ball and an 86 mph ball rendered
+    identically as "not coloured". Both columns now sit on the same green
+    ramp as every other table here, so the whole log reads as a heat map
+    and a hot streak is a block of pale cells.
+
+    Anchors: EV 80->108 mph and distance 180->440 ft, which is roughly the
+    playable range of a batted ball. Below the floor everything is the
+    darkest shade, which is correct -- a 70 mph grounder and a 60 mph
+    grounder are equally uninteresting.
+
+    Still hand-built HTML rather than pandas .style, which needs jinja2 and
+    isn't guaranteed on Streamlit Cloud.
     """
     if df is None or df.empty:
         return ""
 
-    def cell(v: Any, kind: str = "") -> str:
+    pad = "padding:4px 8px"
+
+    def heat(v: Any, lo: float, hi: float, fmt: str) -> str:
+        bg = ramp_color(v, lo, hi)
+        if bg is None:
+            return f"<td style='{pad};color:{C['text3']}'>—</td>"
+        return (
+            f"<td style='{pad};background:{bg};color:{ink_for(bg)};"
+            f"font-weight:700;text-align:right'>{fmt.format(float(v))}</td>"
+        )
+
+    def plain(v: Any, fmt: str = "{:.0f}") -> str:
         try:
             fv = float(v)
+            if not math.isfinite(fv):
+                raise ValueError
         except (TypeError, ValueError):
-            return "<td>—</td>"
-        if not math.isfinite(fv):
-            return "<td>—</td>"
-        colr = ""
-        if kind == "ev":
-            colr = C["green"] if fv >= 95 else C["red"] if fv <= 85 else ""
-            shown = f"{fv:.1f}"
-        elif kind == "dist":
-            colr = C["green"] if fv >= 375 else C["red"] if fv <= 300 else ""
-            shown = f"{fv:.0f}"
-        else:
-            shown = f"{fv:.0f}"
-        style = f" style='color:{colr};font-weight:700'" if colr else ""
-        return f"<td{style}>{shown}</td>"
+            return f"<td style='{pad};color:{C['text3']}'>—</td>"
+        return f"<td style='{pad};color:{C['text2']};text-align:right'>{fmt.format(fv)}</td>"
 
     rows_html = []
-    for _, r in df.iterrows():
-        hr_mark = " 🔴" if r.get("is_hr") else ""
+    for i, (_, r) in enumerate(df.iterrows()):
+        is_hr = bool(r.get("is_hr"))
+        # Home runs get an orange left rail and a chip. The old 🔴 emoji sat
+        # inside the result text where it was easy to scroll straight past.
+        rail = f"border-left:3px solid {C['orange']}" if is_hr else "border-left:3px solid transparent"
+        zebra = "background:rgba(255,255,255,.02)" if i % 2 else ""
+        chip = (
+            f"<span style='background:{C['orange']};color:#1a1205;font-size:8.5px;"
+            f"font-weight:800;padding:1px 5px;border-radius:3px;margin-left:6px'>HR</span>"
+            if is_hr else ""
+        )
         rows_html.append(
-            "<tr>"
-            f"<td>{r.get('date', '')}</td>"
-            f"<td>{r.get('pitcher', '')}</td>"
-            f"<td>{r.get('arm', '')}</td>"
-            f"<td style='color:{C['cyan']}'>{r.get('pitch_name', '')}</td>"
-            + cell(r.get("ev"), "ev")
-            + cell(r.get("launch_angle"))
-            + cell(r.get("distance"), "dist")
-            + cell(r.get("pitch_velocity"))
-            + f"<td>{r.get('result', '')}{hr_mark}</td>"
-            f"<td style='color:{C['text3']}'>{r.get('trajectory', '')}</td>"
+            f"<tr style='{rail};{zebra}'>"
+            f"<td style='{pad};color:{C['text3']};white-space:nowrap'>{r.get('date', '')}</td>"
+            f"<td style='{pad};color:{C['text2']};white-space:nowrap'>{r.get('pitcher', '')}</td>"
+            f"<td style='{pad};color:{C['text3']}'>{r.get('arm', '')}</td>"
+            f"<td style='{pad};color:{C['cyan']};white-space:nowrap'>{r.get('pitch_name', '')}</td>"
+            + heat(r.get("ev"), 80, 108, "{:.1f}")
+            + plain(r.get("launch_angle"), "{:.0f}°")
+            + heat(r.get("distance"), 180, 440, "{:.0f}")
+            + plain(r.get("pitch_velocity"))
+            + f"<td style='{pad};color:{C['text']};white-space:nowrap'>"
+              f"{r.get('result', '')}{chip}</td>"
+            f"<td style='{pad};color:{C['text3']}'>{r.get('trajectory', '')}</td>"
             "</tr>"
         )
+
+    heads = ["Date", "Pitcher", "Arm", "Pitch", "EV", "Angle", "Dist", "Velo",
+             "Result", "Traj"]
+    head_html = "".join(
+        f"<th style='{pad};text-align:{'right' if h in ('EV', 'Angle', 'Dist', 'Velo') else 'left'};"
+        f"font-weight:600'>{h}</th>"
+        for h in heads
+    )
     return (
         f"<div style='max-height:{max_height}px;overflow:auto;border:1px solid "
         f"{C['border']};border-radius:12px'>"
         f"<table style='width:100%;border-collapse:collapse;"
         f"font-family:{NUM_FONT};font-size:11px'>"
-        f"<thead><tr style='position:sticky;top:0;background:{C['bg3']};"
-        f"color:{C['text3']};text-align:left'>"
-        "<th>Date</th><th>Pitcher</th><th>Arm</th><th>Pitch</th><th>EV</th>"
-        "<th>Angle</th><th>Dist</th><th>Velo</th><th>Result</th><th>Traj</th>"
-        "</tr></thead><tbody>" + "".join(rows_html) + "</tbody></table></div>"
+        f"<thead><tr style='position:sticky;top:0;z-index:1;background:{C['bg3']};"
+        f"color:{C['text3']};font-size:9.5px;letter-spacing:.04em'>{head_html}</tr></thead>"
+        f"<tbody>{''.join(rows_html)}</tbody></table></div>"
     )
+
+
+CONTACT_LOG_LEGEND = (
+    "Exit velo and distance are shaded on the site's green ramp — **pale green "
+    "is hard contact, dark green is weak**. Orange rail and HR chip mark balls "
+    "that left the yard."
+)
 
 
 def tags_html(tags: Any, limit: int = 6) -> str:
@@ -1048,7 +1126,7 @@ def player_modal(p: Dict[str, Any]) -> None:
             if "is_hr" in recent.columns:
                 q[3].metric("HRs", int(recent["is_hr"].astype(bool).sum()))
             st.markdown(contact_log_html(recent, max_height=300), unsafe_allow_html=True)
-            st.caption("EV green 95+ · red 85− | Dist green 375+ · red 300− | 🔴 home run")
+            st.caption(CONTACT_LOG_LEGEND)
             cl, cr = st.columns(2)
             with cl:
                 candles(mbbe, "date", "ev", "Exit velocity by day", height=260, unit="mph")
@@ -3273,70 +3351,11 @@ with tab_player:
                 if "is_hr" in q.columns:
                     k[4].metric("HRs", int(q["is_hr"].astype(bool).sum()))
 
-                show = [c for c in ["date", "pitcher", "arm", "pitch_name", "ev",
-                                    "launch_angle", "distance", "pitch_velocity",
-                                    "result", "trajectory"] if c in q.columns]
-                disp = q[show].rename(columns={
-                    "date": "Date", "pitcher": "Pitcher", "arm": "Arm",
-                    "pitch_name": "Pitch", "ev": "EV", "launch_angle": "Angle",
-                    "distance": "Dist", "pitch_velocity": "Velo",
-                    "result": "Result", "trajectory": "Traj",
-                })
-
-                # Rendered as HTML rather than a styled DataFrame: pandas'
-                # .style accessor needs jinja2, which isn't guaranteed on
-                # Streamlit Cloud. This also reproduces the old EV Log's
-                # per-cell colouring exactly -- EV green 95+ / red 85 and
-                # under, distance green 375+ / red 300 and under.
-                def cell(v: Any, kind: str = "") -> str:
-                    try:
-                        fv = float(v)
-                    except (TypeError, ValueError):
-                        return "<td>—</td>"
-                    if not math.isfinite(fv):
-                        return "<td>—</td>"
-                    colr = ""
-                    if kind == "ev":
-                        colr = C["green"] if fv >= 95 else C["red"] if fv <= 85 else ""
-                        shown = f"{fv:.1f}"
-                    elif kind == "dist":
-                        colr = C["green"] if fv >= 375 else C["red"] if fv <= 300 else ""
-                        shown = f"{fv:.0f}"
-                    else:
-                        shown = f"{fv:.0f}"
-                    style = f" style='color:{colr};font-weight:700'" if colr else ""
-                    return f"<td{style}>{shown}</td>"
-
-                rows_html = []
-                for _, r in q.iterrows():
-                    hr_mark = " 🔴" if r.get("is_hr") else ""
-                    rows_html.append(
-                        "<tr>"
-                        f"<td>{r.get('date', '')}</td>"
-                        f"<td>{r.get('pitcher', '')}</td>"
-                        f"<td>{r.get('arm', '')}</td>"
-                        f"<td style='color:{C['cyan']}'>{r.get('pitch_name', '')}</td>"
-                        + cell(r.get("ev"), "ev")
-                        + cell(r.get("launch_angle"))
-                        + cell(r.get("distance"), "dist")
-                        + cell(r.get("pitch_velocity"))
-                        + f"<td>{r.get('result', '')}{hr_mark}</td>"
-                        f"<td style='color:{C['text3']}'>{r.get('trajectory', '')}</td>"
-                        "</tr>"
-                    )
-                st.markdown(
-                    "<div style='max-height:440px;overflow:auto;border:1px solid "
-                    f"{C['border']};border-radius:12px'>"
-                    f"<table style='width:100%;border-collapse:collapse;"
-                    f"font-family:{NUM_FONT};font-size:11px'>"
-                    f"<thead><tr style='position:sticky;top:0;background:{C['bg3']};"
-                    f"color:{C['text3']};text-align:left'>"
-                    "<th>Date</th><th>Pitcher</th><th>Arm</th><th>Pitch</th><th>EV</th>"
-                    "<th>Angle</th><th>Dist</th><th>Velo</th><th>Result</th><th>Traj</th>"
-                    "</tr></thead><tbody>" + "".join(rows_html) + "</tbody></table></div>",
-                    unsafe_allow_html=True,
-                )
-                st.caption("EV green 95+ · red 85− | Dist green 375+ · red 300− | 🔴 home run")
+                # Single shared renderer -- this tab used to carry its own
+                # inline copy of the table, so the modal and the Player tab
+                # could (and did) drift apart on colouring.
+                st.markdown(contact_log_html(q), unsafe_allow_html=True)
+                st.caption(CONTACT_LOG_LEGEND)
 
                 st.markdown("**Contact quality by day**")
                 cc1, cc2 = st.columns(2)
