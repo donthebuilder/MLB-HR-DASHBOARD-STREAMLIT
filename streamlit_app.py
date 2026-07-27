@@ -1879,14 +1879,12 @@ st.divider()
 # "Scoreboard", "Watchlist") overflowed the strip, so Streamlit collapsed the
 # tail behind a scroll arrow -- Spray and Guide were unreachable without
 # noticing the little chevron. These fit on one row.
-# Results sits SECOND, not twelfth. It's the only tab that answers "why should
-# I believe any of this," and behind eleven others nobody found it.
-(tab_games, tab_results, tab_board, tab_due, tab_hitshrr, tab_pitchers,
- tab_pairs, tab_bot, tab_pools, tab_pairhist, tab_scoreboard, tab_leaders,
- tab_player, tab_watch, tab_spray, tab_guide) = st.tabs([
-    "🗓️ Games", "✅ Results", "🏆 HR", "💣 Due", "💥 Hits",
-    "⚾ Pitchers", "🎯 Pairs", "🤖 Bot", "🧩 Pools", "🧬 History",
-    "📊 Board", "🥇 Leaders", "🔍 Player", "⭐ Watch", "💦 Spray", "📖 Guide",
+(tab_games, tab_board, tab_due, tab_hitshrr, tab_pitchers, tab_pairs, tab_bot,
+ tab_pools, tab_pairhist, tab_scoreboard, tab_leaders, tab_player, tab_watch,
+ tab_spray, tab_results, tab_guide) = st.tabs([
+    "🗓️ Games", "🏆 HR", "💣 Due", "💥 Hits", "⚾ Pitchers",
+    "🎯 Pairs", "🤖 Bot", "🧩 Pools", "🧬 History", "📊 Board",
+    "🥇 Leaders", "🔍 Player", "⭐ Watch", "💦 Spray", "✅ Results", "📖 Guide",
 ])
 
 # ── BOARD ───────────────────────────────────────────────────────────────────
@@ -3085,13 +3083,34 @@ with tab_results:
     bt_summary = bt.get("summary") or {}
     bt_days = bt.get("per_day") or {}
 
-    which = st.radio("Results view", ["Live", "Final"], horizontal=True)
-    rel = f"public/data/current/results_{'live' if which == 'Live' else 'final'}.json"
-    res = load_json(rel) or {}
+    # Today vs yesterday, not live vs final. Live/final was an artifact of how
+    # the grader runs, not a question anyone actually asks -- both files are
+    # always the same slate, and "final" just means the in-progress games were
+    # skipped. Today reads the rolling live file (which settles as games end);
+    # yesterday reads the dated graded file the nightly publish carries over.
+    which = st.radio("Results view", ["Today", "Yesterday"], horizontal=True)
+    if which == "Today":
+        res = (load_json("public/data/current/results_live.json")
+               or load_json("public/data/current/results_final.json") or {})
+    else:
+        y = (dt.date.today() - dt.timedelta(days=1)).isoformat()
+        res = load_json(f"public/data/current/graded_results_{y}.json") or {}
+        # The grader also writes the date into the payload; if the file is
+        # stale or missing entirely, say which day we looked for.
+        if not res:
+            res = {}
     rrows = res.get("results") or []
 
     if not rrows:
-        st.info(f"No {which.lower()} results yet — grading runs after games finish.")
+        if which == "Yesterday":
+            y = (dt.date.today() - dt.timedelta(days=1)).isoformat()
+            st.info(
+                f"No graded file published for **{y}** yet. Yesterday's view "
+                "reads `graded_results_<date>.json`, which the nightly grading "
+                "run publishes after the last game goes final."
+            )
+        else:
+            st.info("No results yet — grading runs hourly once games start.")
     else:
         rdf = pd.DataFrame(rrows)
         for c in ("got_hr", "got_base_hit", "got_xbh", "actual_hr", "actual_hits",
@@ -3315,7 +3334,7 @@ with tab_results:
             st.dataframe(disp, width="stretch", hide_index=True, height=480)
             st.download_button(
                 "⬇️ CSV", v.to_csv(index=False).encode(),
-                f"mlb_results_{which.lower()}_{res.get('date', '')}.csv",
+                f"mlb_results_{res.get('date', which.lower())}.csv",
                 "text/csv", key="rescsv",
             )
 
