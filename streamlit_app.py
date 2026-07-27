@@ -29,6 +29,7 @@ Run locally:  streamlit run streamlit_app.py
 
 from __future__ import annotations
 
+import datetime as dt
 import json
 import math
 from pathlib import Path
@@ -1397,23 +1398,11 @@ def game_pick_tile(p: Dict[str, Any], role: str) -> str:
     if nn(p, "last5_hr") > 0:
         flags += f"<span style='color:{C['orange']}'>L5 {int(nn(p, 'last5_hr'))}HR</span>"
 
-    # HRW sits directly under the headline score as its own labelled row.
-    # It used to be an optional grey footnote at the bottom of the tile, so
-    # the one number that says "is his HR timing live RIGHT NOW" was the
-    # least visible thing on a home-run card.
-    hrw_row = ""
-    if hrw:
-        h_emoji, h_color, h_word, h_score = hrw
-        hrw_row = (
-            f"<div style='display:flex;align-items:center;gap:6px;"
-            f"margin:7px 0 5px;padding:4px 6px;border-radius:6px;"
-            f"background:{h_color}1a;border-left:2px solid {h_color}'>"
-            f"<span style='font-size:12px'>{h_emoji}</span>"
-            f"<span style='font-family:{NUM_FONT};font-size:14px;font-weight:800;"
-            f"color:{h_color}'>{h_score:.0f}</span>"
-            f"<span style='font-size:8.5px;font-weight:700;letter-spacing:.05em;"
-            f"color:{C['text3']}'>HRW · {h_word}</span></div>"
-        )
+    # HRW as a fifth bar in the same stack as HR/HRR/HIT/TB, coloured by its
+    # zone. It was a tinted callout block, which made it shout louder than
+    # the four scores above it; as a bar it reads as one more number in the
+    # same row of numbers, which is what it is.
+    hrw_row = bar("HRW", hrw[3], 100, hrw[1]) if hrw else ""
 
     return (
         f"<div style='background:rgba(255,255,255,.03);border:1px solid {C['border']};"
@@ -1432,11 +1421,12 @@ def game_pick_tile(p: Dict[str, Any], role: str) -> str:
         f"line-height:1'>{score:.0f}"
         f"<span style='font-size:9px;color:{C['text3']};font-weight:600;"
         f"margin-left:4px'>{label.upper()}</span></div>"
-        + hrw_row
-        + f"{bar('HR', hr_score(p), 100, '#f97316')}"
+        + f"<div style='margin-top:7px'>{bar('HR', hr_score(p), 100, '#f97316')}"
         f"{bar('HRR', prod_score(p), 100, '#22d3ee')}"
         f"{bar('HIT', hit_score(p), 100, '#a78bfa')}"
         f"{bar('TB', tb_score(p), 100, '#34d399')}"
+        + hrw_row
+        + "</div>"
         + (f"<div style='font-size:9.5px;display:flex;gap:6px;margin-top:4px;"
            f"color:{C['text3']}'>{flags}</div>" if flags else "")
         + "</div>"
@@ -1552,6 +1542,89 @@ def split_chart(df: pd.DataFrame, title: str, height: int = 300) -> None:
     st.plotly_chart(fig, width="stretch")
 
 
+def split_table_html(df: pd.DataFrame) -> str:
+    """Split line in the shape a baseball reader expects: H-AB, then rates,
+    then the counting stats.
+
+    Modelled on a standard splits table, with two deliberate differences.
+    First, the rate cells are shaded on the site's light-good / dark-green-bad
+    scale rather than the usual red-to-green, so this table matches every
+    other chart here instead of introducing a second colour language. Second,
+    the shading is relative to THIS player's own best and worst split, not to
+    a league scale -- the question being asked is "where is he strongest",
+    not "is he good".
+
+    Hand-built HTML rather than pandas .style because that needs jinja2,
+    which isn't guaranteed on Streamlit Cloud.
+    """
+    if df is None or df.empty:
+        return ""
+
+    def num(idx, col, default=0.0):
+        try:
+            return float(df.loc[idx, col]) if col in df.columns else default
+        except (TypeError, ValueError):
+            return default
+
+    ramp = ["#0b4b30", "#12783f", "#2f9e52", "#4cb96a", "#7fd894", "#b7f7c9"]
+
+    def shade(idx, col):
+        """Colour a rate cell by where it sits between this player's worst
+        and best value for that stat."""
+        if col not in df.columns:
+            return ""
+        vals = [num(i, col) for i in df.index]
+        lo, hi = min(vals), max(vals)
+        if hi <= lo:
+            return ""
+        pos = (num(idx, col) - lo) / (hi - lo)
+        bg = ramp[min(len(ramp) - 1, int(pos * len(ramp)))]
+        fg = "#06281a" if pos >= 0.6 else C["text"]
+        return f"background:{bg};color:{fg};font-weight:700"
+
+    cnt_cols = [c for c in ("HR", "XBH", "R", "RBI", "BB", "K") if c in df.columns]
+    pad = "padding:5px 8px"
+    head = (
+        f"<th style='text-align:left;{pad}'>SPLIT</th>"
+        f"<th style='{pad}'>H-AB</th>"
+        + "".join(f"<th style='{pad}'>{c}</th>"
+                  for c in ("AVG", "OBP", "SLG", "OPS", "ISO"))
+        + "".join(f"<th style='{pad}'>{c}</th>" for c in cnt_cols)
+    )
+
+    rows = []
+    for idx in df.index:
+        h, ab, pa = int(num(idx, "H")), int(num(idx, "AB")), int(num(idx, "PA"))
+        thin = pa < 25          # too few PA to read anything into
+        name_style = f"color:{C['text3']}" if thin else f"color:{C['text']}"
+        cells = "".join(
+            f"<td style='{pad};{'' if thin else shade(idx, c)}'>{num(idx, c):.3f}</td>"
+            for c in ("AVG", "OBP", "SLG", "OPS", "ISO")
+        )
+        rows.append(
+            f"<tr style='border-top:1px solid {C['border']}'>"
+            f"<td style='text-align:left;{pad};{name_style};font-weight:600'>{idx}"
+            + (f"<span style='color:{C['text3']};font-size:9px'> · thin</span>"
+               if thin else "")
+            + "</td>"
+            f"<td style='{pad};color:{C['text2']}'>{h}-{ab}</td>"
+            + cells
+            + "".join(f"<td style='{pad};color:{C['text2']}'>{int(num(idx, c))}</td>"
+                      for c in cnt_cols)
+            + "</tr>"
+        )
+
+    return (
+        f"<div style='overflow:auto;border:1px solid {C['border']};border-radius:10px;"
+        "margin:2px 0 14px'>"
+        f"<table style='width:100%;border-collapse:collapse;font-family:{NUM_FONT};"
+        "font-size:11px;text-align:right'>"
+        f"<thead><tr style='background:{C['bg3']};color:{C['text3']};"
+        f"font-size:9.5px;letter-spacing:.04em'>{head}</tr></thead>"
+        f"<tbody>{''.join(rows)}</tbody></table></div>"
+    )
+
+
 def render_splits(p: Dict[str, Any], slate_label: str, compact: bool = False) -> None:
     """Situational splits as charts. `compact` drops the backing tables so the
     same renderer can be dropped into the player modal without burying it."""
@@ -1574,12 +1647,10 @@ def render_splits(p: Dict[str, Any], slate_label: str, compact: bool = False) ->
         if df is None:
             continue
         split_chart(df, title, height=max(190, 42 * len(df) + 95))
-        if not compact:
-            order = [c for c in ["G", "PA", "AB", "H", "HR", "XBH", "RBI", "R",
-                                 "BB", "K", "AVG", "OBP", "SLG", "OPS", "ISO",
-                                 "HR/PA", "K%"] if c in df.columns]
-            with st.expander(f"{title} — full table"):
-                st.dataframe(df[order], width="stretch")
+        st.markdown(split_table_html(df), unsafe_allow_html=True)
+        # The "full table" expander that used to sit here is gone: the split
+        # table above now carries the same columns in a readable order, so
+        # the expander was the same numbers twice, once unformatted.
 
 
 # ── SIDEBAR ─────────────────────────────────────────────────────────────────
@@ -1833,7 +1904,45 @@ with tab_games:
     by_game: Dict[Any, List[Dict[str, Any]]] = {}
     for p in view:
         by_game.setdefault(p.get("game_pk"), []).append(p)
-    order = sorted(by_game.items(), key=lambda kv: max(hr_score(x) for x in kv[1]), reverse=True)
+
+
+    def game_start(rows: List[Dict[str, Any]]) -> str:
+        """ISO start time for a game, or a far-future string so games with no
+        time sort last instead of jumping to the front of a chronological
+        list."""
+        for r in rows:
+            t = str(r.get("game_time") or "").strip()
+            if t:
+                return t
+        return "9999"
+
+    def local_time(rows: List[Dict[str, Any]]) -> str:
+        """Start time as Phoenix local, e.g. '10:35 AM'. The feed stores UTC
+        with a Z suffix; Phoenix is UTC-7 all year, so this is a fixed shift
+        with no DST branch to get wrong."""
+        raw = game_start(rows)
+        if raw == "9999":
+            return "TBD"
+        try:
+            base = dt.datetime.strptime(raw.replace("Z", ""), "%Y-%m-%dT%H:%M:%S")
+        except ValueError:
+            return "TBD"
+        return (base - dt.timedelta(hours=7)).strftime("%-I:%M %p")
+
+    # First pitch order matters when you're actually playing the slate --
+    # you need to know what locks in twenty minutes, which a strength
+    # ranking can't tell you.
+    game_sort = st.radio(
+        "Order games by", ["Best first", "First pitch"],
+        horizontal=True, key="gameorder",
+        help="Best first ranks by the strongest hitter in the game. "
+             "First pitch puts them in start-time order.",
+    )
+    if game_sort == "First pitch":
+        order = sorted(by_game.items(), key=lambda kv: game_start(kv[1]))
+    else:
+        order = sorted(by_game.items(),
+                       key=lambda kv: max(hr_score(x) for x in kv[1]), reverse=True)
 
     # Slate-level view first: which games are worth attention at a glance.
     # Peaks (top HR / top HRR) say "is there a play here"; the averages across
@@ -1981,10 +2090,9 @@ with tab_games:
         conf = "✅" if head.get("lineup_confirmed") else "◻︎"
         gs = game_score_by_pk.get(gpk, 0.0)
         with st.expander(
-            f"{conf}  {team_of(head)} vs {opp_of(head)}   ·   Game Score {gs:.1f}   ·   "
-            f"top HR {hr_score(head):.0f}   ·   {txt(head, 'venue_name')}   ·   "
-            f"{txt(head, 'pitcher_name')} ({txt(head, 'pitcher_throws')}) "
-            f"HR/9 {nn(head, 'pitcher_hr9'):.2f}"
+            f"{conf}  {local_time(gp)}   ·   {team_of(head)} vs {opp_of(head)}   ·   "
+            f"Game Score {gs:.1f}   ·   top HR {hr_score(head):.0f}   ·   "
+            f"{txt(head, 'venue_name')}"
         ):
             e = st.columns(6)
             e[0].metric("Temp", f"{nn(head, 'weather_temp_f'):.0f}°F" if head.get("weather_temp_f") else "—")
