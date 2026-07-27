@@ -108,10 +108,17 @@ carry_forward() {
   fi
   # Trim the graded backlog oldest-first. Filenames are ISO-dated, so a plain
   # sort is chronological.
+  #
+  # find, not ls: with `set -o pipefail` a glob that matches nothing makes ls
+  # exit 2, the whole pipeline inherits it, the $(...) assignment fails, and
+  # `set -e` kills the publish before anything ships. That is exactly what
+  # broke Today #14 -- on the first run there were no graded files yet, so the
+  # glob matched nothing and the script died trying to count zero files.
+  # find exits 0 on no matches.
   for glob in "$GRADED_GLOB" "$GRADED_JSON_GLOB"; do
-    n=$(ls -1 "$STAGE/public/data/current"/$glob 2>/dev/null | wc -l)
+    n=$(find "$STAGE/public/data/current" -maxdepth 1 -type f -name "$glob" | wc -l)
     if [ "$n" -gt "$GRADED_KEEP" ]; then
-      ls -1 "$STAGE/public/data/current"/$glob \
+      find "$STAGE/public/data/current" -maxdepth 1 -type f -name "$glob" \
         | sort | head -n "$((n - GRADED_KEEP))" | xargs -r rm -f
       echo "Trimmed $((n - GRADED_KEEP)) old $glob file(s), keeping $GRADED_KEEP."
     fi
