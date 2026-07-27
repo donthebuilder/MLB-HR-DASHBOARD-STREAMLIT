@@ -44,7 +44,15 @@ PUBLISH_FILES=(
   results_live.txt
   results_final.json
   results_final.txt
+  backtest_summary.json
 )
+
+# Nightly graded files, kept so the backtest has more than one day to look at.
+# Everything else here is regenerated each run; these ACCUMULATE -- carry_forward
+# below re-copies whatever this run didn't produce, so the set grows by one file
+# a night. GRADED_KEEP caps it so the branch can't grow without bound.
+GRADED_GLOB="graded_results_*.txt"
+GRADED_KEEP=150
 
 git config user.email "bot@mlb-hr-dashboard"
 git config user.name "mlb-hr-bot"
@@ -66,6 +74,11 @@ stage_local() {
     [ ! -f "$STAGE/public/data/current/$f" ] && [ -f "$SRC/data/$f" ] \
       && cp "$SRC/data/$f" "$STAGE/public/data/current/"
   done
+  # This run's graded file(s). Written to public/data/ by live_results_tracker.
+  for g in "$SRC"/data/$GRADED_GLOB "$SRC"/data/current/$GRADED_GLOB; do
+    [ -f "$g" ] && cp "$g" "$STAGE/public/data/current/"
+  done
+
   [ -f "$SRC/data/index.json" ] && cp "$SRC/data/index.json" "$STAGE/public/data/" || true
 
   # Per-player detail (spray chart, pitch-type profile, pitcher arsenal).
@@ -90,6 +103,15 @@ carry_forward() {
       [ -f "$STAGE/public/data/current/$base" ] || cp "$f" "$STAGE/public/data/current/"
     done
   fi
+  # Trim the graded backlog oldest-first. Filenames are ISO-dated, so a plain
+  # sort is chronological.
+  n=$(ls -1 "$STAGE/public/data/current"/$GRADED_GLOB 2>/dev/null | wc -l)
+  if [ "$n" -gt "$GRADED_KEEP" ]; then
+    ls -1 "$STAGE/public/data/current"/$GRADED_GLOB \
+      | sort | head -n "$((n - GRADED_KEEP))" | xargs -r rm -f
+    echo "Trimmed $((n - GRADED_KEEP)) old graded file(s), keeping $GRADED_KEEP."
+  fi
+
   [ -f "$PREV/public/data/index.json" ] && [ ! -f "$STAGE/public/data/index.json" ] \
     && cp "$PREV/public/data/index.json" "$STAGE/public/data/" || true
   # detail/ is only rebuilt by the slate workflows; without this a grading run
