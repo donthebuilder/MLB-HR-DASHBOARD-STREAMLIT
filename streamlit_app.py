@@ -32,6 +32,9 @@ from __future__ import annotations
 import datetime as dt
 import json
 import math
+import re
+import unicodedata
+from difflib import get_close_matches
 from statistics import median
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -472,6 +475,128 @@ def hr_score_vs_arm(p: Dict[str, Any], arm: Dict[str, Any]) -> float:
     """
     delta = pitcher_damage_for(arm) - pitcher_damage_for(p)
     return max(0.0, min(100.0, hr_score(p) + PITCHER_DAMAGE_WEIGHT * delta))
+
+
+_SUFFIX_RE = re.compile(r"\b(?:jr|sr|ii|iii|iv|v)\b\.?", re.I)
+_JUNK_RE = re.compile(
+    r"^\s*(?:\d+[.)]|[-*\u2022\u2023\u25aa\u2043])\s*"   # 1.  1)  -  *  bullets
+    r"|\s*\((?:[A-Z]{2,3})\)\s*$"                            # trailing (NYY)
+    r"|\s*[+-]\d{2,5}\s*$"                                    # trailing odds +450 / -110
+    r"|\s+(?:vs\.?|@)\s+.*$",                                 # "Judge vs Cole"
+    re.I,
+)
+
+
+def norm_name(s: Any) -> str:
+    """Normalise a player name for matching.
+
+    The slate is full of names a pasted list will spell differently:
+    Rodríguez, Acuña Jr., O'Hearn, Crow-Armstrong, Encarnacion-Strand. Strip
+    accents, drop suffixes, flatten punctuation, and compare on that.
+    """
+    t = unicodedata.normalize("NFKD", str(s or ""))
+    t = "".join(c for c in t if not unicodedata.combining(c)).lower()
+    t = _SUFFIX_RE.sub(" ", t)
+    t = re.sub(r"[^a-z\s]", " ", t)
+    return re.sub(r"\s+", " ", t).strip()
+
+
+def parse_name_list(blob: str) -> List[str]:
+    """Pull player names out of pasted text.
+
+    People paste lists that came from somewhere else, so they arrive with
+    ranking numbers, bullets, odds, team codes, one-per-line or comma joined.
+    Strip the packaging and keep the names.
+    """
+    out: List[str] = []
+    for chunk in re.split(r"[\n\r,;|\t]+", blob or ""):
+        prev = None
+        while chunk != prev:
+            prev = chunk
+            chunk = _JUNK_RE.sub("", chunk).strip()
+        # Keep anything that looks like a person: at least one word of two or
+        # more letters, and three letters total. Drops bare team codes ("NYY")
+        # and stray numbers while keeping "J. Rodriguez" and "CJ Abrams".
+        letters = re.sub(r"[^A-Za-z]", "", chunk)
+        words = [w for w in re.split(r"\s+", chunk) if re.search(r"[A-Za-z]{2,}", w)]
+        if len(letters) >= 3 and words and chunk.upper() != chunk.strip() or (
+            len(letters) >= 3 and len(words) >= 1 and len(chunk.split()) >= 2
+        ):
+            out.append(chunk)
+    # De-dupe, keep paste order.
+    seen, uniq = set(), []
+    for n in out:
+        k = norm_name(n)
+        if k and k not in seen:
+            seen.add(k)
+            uniq.append(n)
+    return uniq
+
+
+def match_players(names: List[str], pool: List[Dict[str, Any]]):
+    """Match pasted names to slate players. Returns (hits, misses, ambiguous).
+
+    Four passes, loosest last:
+      exact     — normalised strings equal
+      initial   — last name + first initial ("C. Abrams")
+      partial   — one name contains the other ("Crow Armstrong", "Acuna")
+      fuzzy     — spelling similarity, flagged in the output
+
+    Anything that matches more than one player is reported as AMBIGUOUS rather
+    than guessed at or silently dropped. Two J. Rodriguezes on one slate is a
+    real thing, and calling that "not playing" would be a lie.
+    """
+    by_norm: Dict[str, Dict[str, Any]] = {}
+    by_lastinit: Dict[str, List[Dict[str, Any]]] = {}
+    norms: List[tuple] = []
+    for p in pool:
+        n = norm_name(name_of(p))
+        if not n:
+            continue
+        by_norm.setdefault(n, p)
+        norms.append((n, p))
+        parts = n.split()
+        if len(parts) >= 2:
+            by_lastinit.setdefault(f"{parts[-1]}|{parts[0][0]}", []).append(p)
+
+    hits, misses, ambiguous = [], [], []
+    for raw in names:
+        key = norm_name(raw)
+        if not key:
+            continue
+        if key in by_norm:
+            hits.append((raw, by_norm[key], "exact"))
+            continue
+
+        parts = key.split()
+        if len(parts) >= 2:
+            cands = by_lastinit.get(f"{parts[-1]}|{parts[0][0]}", [])
+            if len(cands) == 1:
+                hits.append((raw, cands[0], "initial"))
+                continue
+            if len(cands) > 1:
+                ambiguous.append((raw, [name_of(c) for c in cands]))
+                continue
+
+        # Partial: pasted name is contained in a slate name or vice versa, on
+        # whole-word boundaries so "ana" can't match "Santana".
+        kw = set(key.split())
+        part = [p for n, p in norms
+                if kw and (kw <= set(n.split()) or set(n.split()) <= kw)]
+        uniq = {name_of(p): p for p in part}
+        if len(uniq) == 1:
+            hits.append((raw, next(iter(uniq.values())), "partial"))
+            continue
+        if len(uniq) > 1:
+            ambiguous.append((raw, sorted(uniq)))
+            continue
+
+        close = get_close_matches(key, list(by_norm), n=1, cutoff=0.85)
+        if close:
+            hits.append((raw, by_norm[close[0]], "fuzzy"))
+        else:
+            misses.append(raw)
+    return hits, misses, ambiguous
 
 
 def cross_board(p: Dict[str, Any]) -> float:
@@ -3873,6 +3998,96 @@ def watch_card_html(p: Dict[str, Any]) -> str:
 
 
 with tab_watch:
+    # ── CROSS-REFERENCE ────────────────────────────────────────────────────
+    # Paste a list from anywhere -- someone else's picks, a DFS slate, a
+    # group chat -- and see what the model says about those exact names.
+    with st.expander("📋 Cross-reference a list of players", expanded=not st.session_state.watch):
+        st.caption(
+            "Paste names one per line or comma-separated. Ranking numbers, "
+            "bullets, odds and team codes are stripped automatically."
+        )
+        blob = st.text_area(
+            "Names", height=130, key="xref_blob",
+            placeholder="Aaron Judge\nShohei Ohtani +410\n3. Kyle Schwarber (PHI)",
+        )
+        names = parse_name_list(blob)
+        if names:
+            # Match against the whole slate, not `view` -- sidebar filters
+            # shouldn't silently hide someone you explicitly asked about.
+            hits, misses, ambiguous = match_players(names, players)
+            st.caption(
+                f"{len(names)} name(s) read · {len(hits)} matched · "
+                f"{len(ambiguous)} ambiguous · {len(misses)} not found"
+            )
+
+            if hits:
+                xdf = pd.DataFrame([{
+                    "": "✅" if p.get("lineup_confirmed") else "◻︎",
+                    "Player": name_of(p),
+                    "As pasted": raw if norm_name(raw) != norm_name(name_of(p)) else "",
+                    "Match": how,
+                    "Team": team_of(p), "Opp": opp_of(p),
+                    "Spot": p.get("lineup_spot"),
+                    "HR": round(hr_score(p), 1),
+                    "Cross": round(cross_board(p), 1),
+                    "HRR": round(prod_score(p), 1),
+                    "Hit": round(hit_score(p), 1),
+                    "TB": round(tb_score(p), 1),
+                    "DC": round(nn(p, "damage_conversion_score"), 1),
+                    "Grade": grade_for(p, "hr"),
+                    "Role": tier_role(p),
+                    "Pitcher": txt(p, "pitcher_name"),
+                    "P HR/9": round(nn(p, "pitcher_hr9"), 2),
+                    "Park HR": round(nn(p, "park_hr_factor", default=1.0), 2),
+                } for raw, p, how in hits])
+                st.dataframe(xdf, width="stretch", hide_index=True,
+                             height=min(460, 36 * len(xdf) + 42))
+
+                x1, x2, x3 = st.columns(3)
+                x1.metric("Best HR score", f"{max(hr_score(p) for _, p, _ in hits):.1f}")
+                x2.metric("Median HR score",
+                          f"{median([hr_score(p) for _, p, _ in hits]):.1f}",
+                          help="Slate median is "
+                               f"{median([hr_score(p) for p in players]):.1f}.")
+                x3.metric("Confirmed",
+                          f"{sum(1 for _, p, _ in hits if p.get('lineup_confirmed'))}/{len(hits)}")
+
+                b1, b2 = st.columns([1, 3])
+                if b1.button("⭐ Add all to watchlist", width="stretch", key="xref_watch"):
+                    added = 0
+                    for _, p, _ in hits:
+                        if name_of(p) not in st.session_state.watch:
+                            st.session_state.watch.append(name_of(p))
+                            added += 1
+                    persist_watch()
+                    st.success(f"Added {added} player(s).")
+                    st.rerun()
+                b2.download_button(
+                    "⬇️ CSV", xdf.to_csv(index=False).encode("utf-8-sig"),
+                    file_name=f"mlb_{slate}_crossref.csv", mime="text/csv",
+                    width="stretch", key="xref_csv",
+                )
+
+                if any(how == "fuzzy" for _, _, how in hits):
+                    st.caption(
+                        "⚠️ Rows marked **fuzzy** were matched on spelling "
+                        "similarity — check those before trusting them."
+                    )
+
+            if ambiguous:
+                st.warning(
+                    "**Ambiguous — more than one player matches:**\n\n"
+                    + "\n".join(f"- `{raw}` → {', '.join(c)}" for raw, c in ambiguous)
+                    + "\n\nAdd a first name to disambiguate."
+                )
+
+            if misses:
+                st.info(
+                    "**Not on this slate:** " + ", ".join(misses) +
+                    "  \nUsually means they're not in a confirmed lineup, not "
+                    "playing today, or the spelling is too far off to match."
+                )
+
     if not st.session_state.watch:
         st.info(
             "No players on your watchlist yet. Add them with the ⭐ Watch "
