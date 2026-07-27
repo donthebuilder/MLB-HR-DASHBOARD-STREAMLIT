@@ -1,8 +1,11 @@
 name: Backtest Report
 
-# Manual trigger only — run from the Actions tab whenever you want
-# a fresh tier-segmented backtest across your graded_results files.
+# Runs nightly after the final grading pass, and on demand from the Actions
+# tab. It used to be manual-only, which meant the summary was only ever as
+# fresh as the last time someone remembered to click it.
 on:
+  schedule:
+    - cron: '30 11 * * *'   # 04:30 Phoenix, after the 3am final grade
   workflow_dispatch:
     inputs:
       since:
@@ -11,7 +14,7 @@ on:
         default: ''
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   backtest:

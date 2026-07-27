@@ -105,5 +105,28 @@ jobs:
           path: bots/mlb_hr_cache.sqlite
           key: sqlite-cache-${{ github.run_id }}
 
+      # backtest_report.py aggregates across graded_results_*.txt files, but the
+      # runner is ephemeral -- without this it would see exactly one day and the
+      # "hit rate by tier" numbers would be single-slate noise. The data branch
+      # is where the backlog actually lives.
+      - name: Restore graded history from data branch
+        run: |
+          git fetch origin data --depth 1 2>/dev/null || true
+          if git rev-parse --verify origin/data >/dev/null 2>&1; then
+            rm -rf /tmp/histout && mkdir -p /tmp/histout public/data
+            git archive origin/data public/data 2>/dev/null | tar -x -C /tmp/histout || true
+            # -n so today's freshly graded file is never clobbered by the
+            # published copy from an earlier run on the same date.
+            cp -n /tmp/histout/public/data/current/graded_results_*.txt public/data/ 2>/dev/null || true
+            echo "Graded files available: $(ls -1 public/data/graded_results_*.txt 2>/dev/null | wc -l)"
+          fi
+        continue-on-error: true
+
+      - name: Build backtest summary
+        run: |
+          mkdir -p public/data/current
+          python bots/backtest_report.py --dir public/data --out-dir public/data/current
+        continue-on-error: true
+
       - name: Publish to data branch
         run: bash .github/scripts/publish_data.sh "Graded results"
