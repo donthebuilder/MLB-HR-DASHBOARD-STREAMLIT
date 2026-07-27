@@ -3048,6 +3048,28 @@ with tab_pairhist:
                 "pair_history.csv", "text/csv", key="phcsv")
 
 # ── RESULTS ─────────────────────────────────────────────────────────────────
+# Laid out to read like the nightly results report rather than a generic
+# dataframe: bettable headline first, then HR capture, then who actually went
+# deep with the same emoji tags the .txt uses, then the detail table.
+
+# The pick-type emoji vocabulary from live_results_tracker's summary text.
+PICK_EMOJI = {
+    "TOP15": "🏆", "TOP": "🔥", "HR": "🧨",
+    "HRR": "🏁", "HIT": "💠", "CONTACT": "⚾", "TB": "⚾",
+}
+PICK_LABEL = {
+    "TOP15": "Top 15 Board", "TOP": "Top Picks", "HR": "HR Picks",
+    "HRR": "HRR Picks", "HIT": "Hit Picks", "CONTACT": "Contact Picks",
+    "TB": "Contact Picks",
+}
+PICK_ORDER = ["TOP15", "TOP", "HR", "HRR", "HIT", "CONTACT", "TB"]
+
+
+def pick_badge(pick_type: Any) -> str:
+    k = str(pick_type or "").upper()
+    return f"{PICK_EMOJI.get(k, '•')} {PICK_LABEL.get(k, k or '—')}"
+
+
 with tab_results:
     # ── ALL-TIME (backtest) ────────────────────────────────────────────────
     # Today's hit rates are one slate. The bands on a single day run to n=2 and
@@ -3063,50 +3085,6 @@ with tab_results:
     bt_summary = bt.get("summary") or {}
     bt_days = bt.get("per_day") or {}
 
-    if bt_summary:
-        st.markdown("### All-time by tier")
-        dates = sorted(d for d in bt_days if isinstance(d, str))
-        span = f" · {dates[0]} to {dates[-1]}" if dates else ""
-        st.caption(f"{len(bt_days)} graded day(s){span}")
-
-        bt_rows = []
-        for tier, d in bt_summary.items():
-            if not isinstance(d, dict):
-                continue
-            rate = d.get("hr_rate_pct")
-            pool = d.get("total_pool_size")
-            bt_rows.append({
-                "Tier": BT_TIER_LABELS.get(tier, tier.replace("_", " ").title()),
-                "HRs": d.get("total_hr_count", 0),
-                "Pool": pool if pool else "—",
-                "HR rate": f"{rate}%" if rate is not None else "—",
-                # A rate is only worth reading next to the sample behind it.
-                "Fair odds": fair_american(rate) if rate else "—",
-                "Days": d.get("days_seen", 0),
-            })
-        # Best rate first; unrated tiers sink.
-        bt_rows.sort(key=lambda r: (r["HR rate"] == "—",
-                                    -(float(r["HR rate"].rstrip("%"))
-                                      if r["HR rate"] != "—" else 0)))
-        st.dataframe(pd.DataFrame(bt_rows), width="stretch", hide_index=True)
-
-        acc = bt.get("overall_base_hit_accuracy")
-        if acc is not None:
-            st.caption(f"Base-hit accuracy across all graded days: **{acc}%**")
-        st.caption(
-            "Fair odds are the break-even American price implied by that hit "
-            "rate. Anything priced longer than fair is where the edge is — "
-            "the board doesn't know prices yet, so that comparison is manual."
-        )
-        st.divider()
-    else:
-        st.caption(
-            "All-time tier performance appears here once the nightly backtest "
-            "publishes `backtest_summary.json`. It aggregates every graded day, "
-            "so the rates below stop being single-slate noise."
-        )
-
-    st.markdown("### This slate")
     which = st.radio("Results view", ["Live", "Final"], horizontal=True)
     rel = f"public/data/current/results_{'live' if which == 'Live' else 'final'}.json"
     res = load_json(rel) or {}
@@ -3125,11 +3103,10 @@ with tab_results:
                        if "grade" in rdf.columns else pd.Series(True, index=rdf.index))
         n_graded, n_pending = int(graded_mask.sum()), int((~graded_mask).sum())
 
-        st.caption(f"{res.get('label', '')} · {res.get('date', '')} · {len(rdf)} picks tracked")
+        st.markdown(f"### {res.get('label', 'Results')}")
+        st.caption(f"{res.get('date', '')} · {len(rdf)} picks tracked · "
+                   f"{n_graded} settled, {n_pending} pending")
 
-        # An all-PENDING board used to render as a wall of zeros that looked
-        # like the model went 0-for-120. It didn't -- the games hadn't
-        # started. Say so plainly before showing a single number.
         if n_graded == 0:
             st.info(
                 f"All {n_pending} picks are still **PENDING** — no game on this "
@@ -3137,29 +3114,104 @@ with tab_results:
                 "grading runs hourly from 11am Phoenix."
             )
 
-        k = st.columns(5)
-        k[0].metric("Picks", len(rdf), delta=f"{n_graded} settled" if n_graded else None)
-        for i, (lbl, col) in enumerate(
-            [("HRs", "got_hr"), ("Base hits", "got_base_hit"), ("XBH", "got_xbh")], start=1
-        ):
-            k[i].metric(lbl, int(rdf.get(col, pd.Series(dtype=float)).sum()))
-        # Rate over SETTLED picks only. Dividing by every pick including the
-        # unplayed ones dragged the hit rate to 0.0% all afternoon and made a
-        # good slate look like a disaster.
-        if "got_hr" in rdf.columns and n_graded:
-            rate = rdf.loc[graded_mask, "got_hr"].mean()
-            k[4].metric("HR hit rate", f"{rate * 100:.1f}%",
-                        help=f"Of the {n_graded} settled picks.")
+        # ── BETTABLE RESULTS ───────────────────────────────────────────────
+        # The three lines that open the .txt report, as metrics.
+        st.markdown("#### Bettable results")
+        bet_cols = st.columns(4)
+        for i, key in enumerate(["TOP15", "TOP", "HR"]):
+            sub = rdf[rdf["pick_type"].astype(str).str.upper() == key] if "pick_type" in rdf else rdf.iloc[0:0]
+            n_tot = len(sub)
+            n_hr = int(sub.get("got_hr", pd.Series(dtype=float)).sum()) if n_tot else 0
+            bet_cols[i].metric(
+                f"{PICK_EMOJI[key]} {PICK_LABEL[key]}",
+                f"{n_hr}/{n_tot}" if n_tot else "—",
+                delta=f"{n_hr / n_tot * 100:.1f}%" if n_tot else None,
+                delta_color="off",
+            )
+        if "got_base_hit" in rdf.columns and n_graded:
+            bet_cols[3].metric(
+                "Base hit accuracy",
+                f"{rdf.loc[graded_mask, 'got_base_hit'].mean() * 100:.1f}%",
+                help="Full sheet, settled picks only.",
+            )
         else:
-            k[4].metric("HR hit rate", "—", help="Fills in once games go final.")
+            bet_cols[3].metric("Base hit accuracy", "—")
 
+        # ── HR CAPTURE ─────────────────────────────────────────────────────
+        cap = res.get("hr_capture_report") or {}
+        if cap:
+            st.markdown("#### HR capture")
+            cc = st.columns(4)
+            cc[0].metric("Slate HRs", cap.get("total_hrs_on_slate", 0))
+            cc[1].metric("On the sheet", cap.get("caught_hrs_on_sheet", 0))
+            cc[2].metric("Capture rate", f"{nn(cap, 'hr_capture_pct'):.1f}%",
+                         help="Share of the slate's homers hit by someone the model had on the board at all.")
+            cc[3].metric("Missed entirely", cap.get("missed_hrs_not_on_sheet", 0),
+                         help="Homers by players who were never on the sheet.")
+
+        # ── GOING YARD ─────────────────────────────────────────────────────
+        # merged_homers already carries the emoji tags the .txt prints
+        # ('🏆#7', '🔥'). The app never used them until now.
+        homers = res.get("merged_homers") or []
+        if homers:
+            st.markdown("#### 💥 Going yard")
+            hr_recs = []
+            for h in homers:
+                base = h.get("base_row") or {}
+                hr_recs.append({
+                    "Player": h.get("name", "—"),
+                    "Team": h.get("team", ""),
+                    "Tags": " ".join(h.get("tags") or []) or "—",
+                    "HR": int(nn(base, "actual_hr")),
+                    "HR score": round(nn(base, "hr_score"), 1),
+                    "Line": txt(base, "outcome_text"),
+                })
+            hr_recs.sort(key=lambda r: (-r["HR"], -r["HR score"]))
+
+            hy1, hy2 = st.columns([3, 2])
+            with hy1:
+                st.dataframe(pd.DataFrame(hr_recs), width="stretch",
+                             hide_index=True, height=min(430, 36 * len(hr_recs) + 40))
+            with hy2:
+                # Which buckets are actually producing the homers tonight.
+                tally: Dict[str, int] = {}
+                for h in homers:
+                    for t in (h.get("tags") or []):
+                        e = str(t)[:1]
+                        for k, em in PICK_EMOJI.items():
+                            if em == e:
+                                tally[k] = tally.get(k, 0) + 1
+                                break
+                tally = {k: v for k, v in tally.items() if v}
+                if tally:
+                    ordered = [k for k in PICK_ORDER if k in tally]
+                    hbar([f"{PICK_EMOJI[k]} {PICK_LABEL[k]}" for k in ordered],
+                         [tally[k] for k in ordered],
+                         "HRs by pick type", fmt="{:.0f}")
+                    best = max(ordered, key=lambda k: tally[k])
+                    st.caption(
+                        f"Best HR-producing category tonight: "
+                        f"**{PICK_EMOJI[best]} {PICK_LABEL[best]}** ({tally[best]})"
+                    )
+
+            missed = cap.get("missed_homer_entries") or []
+            if missed:
+                with st.expander(f"Missed HRs — not on the sheet ({len(missed)})"):
+                    st.dataframe(pd.DataFrame([{
+                        "Player": m.get("name"), "Team": m.get("team"),
+                        "HR": m.get("hr", 1),
+                    } for m in missed]), width="stretch", hide_index=True)
+        elif n_graded:
+            st.markdown("#### 💥 Going yard")
+            st.caption("Nobody on the board has gone deep yet tonight.")
+
+        st.divider()
+
+        # ── CALIBRATION ────────────────────────────────────────────────────
         if "grade" in rdf.columns:
             gc = rdf["grade"].astype(str).str.upper().value_counts()
             gl, gr = st.columns([2, 3])
             with gl:
-                # Grades on a fixed good-to-bad colour scale rather than the
-                # value-count table that was here. PENDING is deliberately
-                # grey, not green -- it's not an outcome.
                 GRADE_COLOR = {
                     "HR": C["green"], "WIN": C["green"], "HIT": "#4cb96a",
                     "XBH": "#7fd894", "PARTIAL": C["yellow"],
@@ -3176,9 +3228,6 @@ with tab_results:
                 st.plotly_chart(fig, width="stretch")
             with gr:
                 if n_graded:
-                    # Did the model's ranking actually predict anything? Hit
-                    # rate by score band answers that in one look; the raw
-                    # table never did.
                     g = rdf.loc[graded_mask].copy()
                     g["band"] = pd.cut(g["hr_score"], [0, 40, 55, 70, 85, 101],
                                        labels=["<40", "40-55", "55-70", "70-85", "85+"],
@@ -3189,46 +3238,128 @@ with tab_results:
                         hbar([f"{b}  (n={int(r['size'])})" for b, r in by_band.iterrows()],
                              [float(r["mean"]) * 100 for _, r in by_band.iterrows()],
                              "HR hit rate by model score band", fmt="{:.0f}%")
-                        st.caption(
-                            "If the model is working, these climb left to right."
-                        )
+                        st.caption("If the model is working, these climb left to right.")
                 else:
                     st.caption("Hit-rate-by-score-band appears once picks settle.")
 
-        # Settled picks first — the whole point of opening this tab is seeing
-        # what cashed, and those rows were previously buried under 100+
-        # PENDING lines sorted by rank.
+        # ── PLAYER TYPE PERFORMANCE ────────────────────────────────────────
+        if "pick_type" in rdf.columns and n_graded:
+            st.markdown("#### Player type performance")
+            pt_rows = []
+            for k in PICK_ORDER:
+                sub = rdf[(rdf["pick_type"].astype(str).str.upper() == k) & graded_mask]
+                if sub.empty:
+                    continue
+                pt_rows.append({
+                    "": PICK_EMOJI[k],
+                    "Pick type": PICK_LABEL[k],
+                    "N": len(sub),
+                    "HR": int(sub["got_hr"].sum()),
+                    "HR %": f"{sub['got_hr'].mean() * 100:.1f}%",
+                    "1+ Hit %": f"{sub['got_base_hit'].mean() * 100:.1f}%"
+                                if "got_base_hit" in sub else "—",
+                    "XBH %": f"{sub['got_xbh'].mean() * 100:.1f}%"
+                             if "got_xbh" in sub else "—",
+                })
+            if pt_rows:
+                st.dataframe(pd.DataFrame(pt_rows), width="stretch", hide_index=True)
+
+        st.divider()
+
+        # ── ALL PICKS ──────────────────────────────────────────────────────
+        st.markdown("#### Every pick")
         sort_key = rdf["grade"].astype(str).str.upper().eq("PENDING").astype(int)
         rdf = rdf.assign(_pending=sort_key).sort_values(
             ["_pending", "actual_hr", "actual_tb"],
             ascending=[True, False, False],
         ).drop(columns=["_pending"])
 
-        show_only = st.radio(
+        f1, f2 = st.columns([3, 2])
+        show_only = f1.radio(
             "Show", ["All", "Settled only", "Hit a HR", "Pending"],
             horizontal=True, key="resfilter",
         )
+        type_opts = ["All types"] + [PICK_LABEL[k] for k in PICK_ORDER
+                                     if k in set(rdf["pick_type"].astype(str).str.upper())]
+        type_pick = f2.selectbox("Pick type", type_opts, key="restype")
+
         v = rdf
         if show_only == "Settled only":
-            v = rdf[rdf["grade"].astype(str).str.upper() != "PENDING"]
+            v = v[v["grade"].astype(str).str.upper() != "PENDING"]
         elif show_only == "Hit a HR":
-            v = rdf[rdf.get("got_hr", 0) > 0]
+            v = v[v.get("got_hr", 0) > 0]
         elif show_only == "Pending":
-            v = rdf[rdf["grade"].astype(str).str.upper() == "PENDING"]
+            v = v[v["grade"].astype(str).str.upper() == "PENDING"]
+        if type_pick != "All types":
+            keys = [k for k in PICK_ORDER if PICK_LABEL[k] == type_pick]
+            v = v[v["pick_type"].astype(str).str.upper().isin(keys)]
 
         if v.empty:
             st.caption("Nothing matches that filter yet.")
         else:
-            st.dataframe(rows_to_df(v.to_dict("records"), [
-                "name", "team", "pick_type", "bet_type", "rank", "hr_score",
-                "actual_hr", "actual_hits", "actual_tb", "actual_rbi", "actual_runs",
-                "grade", "outcome_text",
-            ]), width="stretch", hide_index=True, height=480)
+            disp = pd.DataFrame([{
+                "": PICK_EMOJI.get(str(r.get("pick_type", "")).upper(), "•"),
+                "Player": r.get("name"), "Team": r.get("team"),
+                "Pick": PICK_LABEL.get(str(r.get("pick_type", "")).upper(),
+                                       r.get("pick_type")),
+                "Rank": int(nn(r, "rank")) or None,
+                "HR score": round(nn(r, "hr_score"), 1),
+                "HR": int(nn(r, "actual_hr")),
+                "H": int(nn(r, "actual_hits")),
+                "TB": int(nn(r, "actual_tb")),
+                "RBI": int(nn(r, "actual_rbi")),
+                "R": int(nn(r, "actual_runs")),
+                "Grade": r.get("grade"),
+                "Line": r.get("outcome_text"),
+            } for r in v.to_dict("records")])
+            st.dataframe(disp, width="stretch", hide_index=True, height=480)
             st.download_button(
                 "⬇️ CSV", v.to_csv(index=False).encode(),
                 f"mlb_results_{which.lower()}_{res.get('date', '')}.csv",
                 "text/csv", key="rescsv",
             )
+
+    # ── ALL-TIME TIER TABLE ────────────────────────────────────────────────
+    st.divider()
+    if bt_summary:
+        st.markdown("#### All-time by tier")
+        dates = sorted(d for d in bt_days if isinstance(d, str))
+        span = f" · {dates[0]} to {dates[-1]}" if dates else ""
+        st.caption(f"{len(bt_days)} graded day(s){span}")
+
+        bt_rows = []
+        for tier, d in bt_summary.items():
+            if not isinstance(d, dict):
+                continue
+            rate = d.get("hr_rate_pct")
+            pool = d.get("total_pool_size")
+            bt_rows.append({
+                "Tier": BT_TIER_LABELS.get(tier, tier.replace("_", " ").title()),
+                "HRs": d.get("total_hr_count", 0),
+                "Pool": pool if pool else "—",
+                "HR rate": f"{rate}%" if rate is not None else "—",
+                "Fair odds": fair_american(rate) if rate else "—",
+                "Days": d.get("days_seen", 0),
+            })
+        bt_rows.sort(key=lambda r: (r["HR rate"] == "—",
+                                    -(float(r["HR rate"].rstrip("%"))
+                                      if r["HR rate"] != "—" else 0)))
+        st.dataframe(pd.DataFrame(bt_rows), width="stretch", hide_index=True)
+
+        acc = bt.get("overall_base_hit_accuracy")
+        if acc is not None:
+            st.caption(f"Base-hit accuracy across all graded days: **{acc}%**")
+        st.caption(
+            "Fair odds are the break-even American price implied by that hit "
+            "rate. Anything priced longer than fair is where the edge is — "
+            "the board doesn't know prices yet, so that comparison is manual."
+        )
+    else:
+        st.caption(
+            "All-time tier performance appears here once the nightly backtest "
+            "publishes `backtest_summary.json`. It aggregates every graded day, "
+            "so the rates above stop being single-slate noise."
+        )
 
 # ── PLAYER DETAIL ───────────────────────────────────────────────────────────
 # Modelled on the old PlayerModal: identity header, pill row, then sub-tabs
