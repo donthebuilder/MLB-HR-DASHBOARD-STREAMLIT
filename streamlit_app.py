@@ -244,6 +244,16 @@ def load_splits(player_id: Any, slate_label: str = "today") -> Dict[str, Any]:
 
 
 @st.cache_data(ttl=CACHE_TTL, show_spinner=False)
+def load_pitcher_splits(pitcher_id: Any, slate_label: str = "today") -> Dict[str, Any]:
+    """Same four split families for a starter, plus a log of every ball put
+    in play against him. Written by the same bot under a `pitcher_` prefix."""
+    if pitcher_id in (None, ""):
+        return {}
+    return load_json(
+        f"public/data/current/splits/{slate_label}/pitcher_{pitcher_id}.json") or {}
+
+
+@st.cache_data(ttl=CACHE_TTL, show_spinner=False)
 def load_detail(kind: str, ident: Any, slate_label: str = "today") -> Dict[str, Any]:
     """One player's or pitcher's heavy logs. ~82 KB, fetched only on demand.
 
@@ -1443,6 +1453,38 @@ def pitcher_modal(e: Dict[str, Any]) -> None:
             )
             st.dataframe(sdf, width="stretch", hide_index=True)
 
+    # Splits and contact log, matching what the batter modal carries.
+    psp = load_pitcher_splits(e.get("pitcher_id"), slate)
+    if psp:
+        with st.expander("📅 Situational splits — day/night, home/away, W/L, weekday"):
+            render_pitcher_splits(psp)
+
+    p_bbe = bbe_frame((psp or {}).get("contact_log"))
+    if not p_bbe.empty:
+        with st.expander(f"⚡ Contact allowed — last {min(30, len(p_bbe))} balls in play"):
+            recent = p_bbe.head(30)
+            q = st.columns(4)
+            if "ev" in recent.columns:
+                q[0].metric("Avg EV against", f"{recent['ev'].mean():.1f}")
+                q[1].metric("Max EV", f"{recent['ev'].max():.1f}")
+            if "distance" in recent.columns:
+                q[2].metric("Max dist", f"{recent['distance'].max():.0f}")
+            if "is_hr" in recent.columns:
+                q[3].metric("HRs", int(recent["is_hr"].astype(bool).sum()))
+            st.markdown(contact_log_html(recent, max_height=320), unsafe_allow_html=True)
+            st.caption(
+                CONTACT_LOG_LEGEND
+                + " On a pitcher the **Pitcher** column is the batter who hit it, "
+                  "and **Arm** is which side he swings from."
+            )
+            cl, cr = st.columns(2)
+            with cl:
+                candles(p_bbe, "date", "ev", "Exit velo allowed by day",
+                        height=260, unit="mph")
+            with cr:
+                candles(p_bbe, "date", "distance", "Distance allowed by day",
+                        height=260, unit="ft")
+
     if e.get("lineup"):
         st.markdown(f"**Lineup facing him ({len(e['lineup'])})**")
         st.dataframe(pd.DataFrame([{
@@ -1620,7 +1662,7 @@ def split_chart(df: pd.DataFrame, title: str, height: int = 300) -> None:
     st.plotly_chart(fig, width="stretch")
 
 
-def split_table_html(df: pd.DataFrame) -> str:
+def split_table_html(df: pd.DataFrame, pitcher: bool = False) -> str:
     """Split line in the shape a baseball reader expects: H-AB, then rates,
     then the counting stats.
 
@@ -1656,28 +1698,52 @@ def split_table_html(df: pd.DataFrame) -> str:
         if hi <= lo:
             return ""
         pos = (num(idx, col) - lo) / (hi - lo)
+        if col in lower_better:
+            pos = 1.0 - pos
         bg = ramp[min(len(ramp) - 1, int(pos * len(ramp)))]
         fg = "#06281a" if pos >= 0.6 else C["text"]
         return f"background:{bg};color:{fg};font-weight:700"
 
-    cnt_cols = [c for c in ("HR", "XBH", "R", "RBI", "BB", "K") if c in df.columns]
+    # A pitching line reads the other way round: ERA/WHIP/HR9 are all
+    # "lower is better", so those columns shade on the REVERSED ramp while
+    # K/9 keeps the normal one. Getting that wrong would paint a 6.00 ERA
+    # bright green.
+    if pitcher:
+        rate_cols = [c for c in ("ERA", "WHIP", "HR/9", "BB/9", "BAA", "K/9")
+                     if c in df.columns]
+        lower_better = {"ERA", "WHIP", "HR/9", "BB/9", "BAA"}
+        cnt_cols = [c for c in ("IP", "BF", "H", "HR", "ER", "BB", "K")
+                    if c in df.columns]
+        first_label, first_fmt = "G-IP", None
+    else:
+        rate_cols = [c for c in ("AVG", "OBP", "SLG", "OPS", "ISO")
+                     if c in df.columns]
+        lower_better = set()
+        cnt_cols = [c for c in ("HR", "XBH", "R", "RBI", "BB", "K")
+                    if c in df.columns]
+        first_label, first_fmt = "H-AB", None
+
     pad = "padding:5px 8px"
     head = (
         f"<th style='text-align:left;{pad}'>SPLIT</th>"
-        f"<th style='{pad}'>H-AB</th>"
-        + "".join(f"<th style='{pad}'>{c}</th>"
-                  for c in ("AVG", "OBP", "SLG", "OPS", "ISO"))
+        f"<th style='{pad}'>{first_label}</th>"
+        + "".join(f"<th style='{pad}'>{c}</th>" for c in rate_cols)
         + "".join(f"<th style='{pad}'>{c}</th>" for c in cnt_cols)
     )
 
     rows = []
     for idx in df.index:
-        h, ab, pa = int(num(idx, "H")), int(num(idx, "AB")), int(num(idx, "PA"))
-        thin = pa < 25          # too few PA to read anything into
+        if pitcher:
+            lead = f"{int(num(idx, 'G'))}-{num(idx, 'IP'):.1f}"
+            thin = num(idx, "BF") < 40      # under ~1.5 starts
+        else:
+            lead = f"{int(num(idx, 'H'))}-{int(num(idx, 'AB'))}"
+            thin = num(idx, "PA") < 25      # too few PA to read anything into
         name_style = f"color:{C['text3']}" if thin else f"color:{C['text']}"
         cells = "".join(
-            f"<td style='{pad};{'' if thin else shade(idx, c)}'>{num(idx, c):.3f}</td>"
-            for c in ("AVG", "OBP", "SLG", "OPS", "ISO")
+            f"<td style='{pad};{'' if thin else shade(idx, c)}'>"
+            f"{num(idx, c):{'.3f' if c in ('AVG', 'OBP', 'SLG', 'OPS', 'ISO', 'BAA') else '.2f'}}</td>"
+            for c in rate_cols
         )
         rows.append(
             f"<tr style='border-top:1px solid {C['border']}'>"
@@ -1685,7 +1751,7 @@ def split_table_html(df: pd.DataFrame) -> str:
             + (f"<span style='color:{C['text3']};font-size:9px'> · thin</span>"
                if thin else "")
             + "</td>"
-            f"<td style='{pad};color:{C['text2']}'>{h}-{ab}</td>"
+            f"<td style='{pad};color:{C['text2']}'>{lead}</td>"
             + cells
             + "".join(f"<td style='{pad};color:{C['text2']}'>{int(num(idx, c))}</td>"
                       for c in cnt_cols)
@@ -1701,6 +1767,80 @@ def split_table_html(df: pd.DataFrame) -> str:
         f"font-size:9.5px;letter-spacing:.04em'>{head}</tr></thead>"
         f"<tbody>{''.join(rows)}</tbody></table></div>"
     )
+
+
+def pitcher_split_chart(df: pd.DataFrame, title: str, height: int = 300) -> None:
+    """Deviation-from-baseline bars for a pitcher, on HR/9.
+
+    Same idea as the hitter chart but the polarity is flipped: for a pitcher,
+    giving up FEWER homers is the good outcome, so bars point right (light
+    green) when his HR/9 is BELOW his own baseline. HR/9 is the axis rather
+    than ERA because this is a home-run dashboard -- ERA moves on bloop
+    singles and bullpen luck, HR/9 is the thing being asked about.
+    """
+    if df is None or df.empty or "HR/9" not in df.columns:
+        return
+    hr9 = pd.to_numeric(df["HR/9"], errors="coerce")
+    ip = pd.to_numeric(df["IP"], errors="coerce") if "IP" in df.columns else pd.Series(
+        [0.0] * len(df), index=df.index)
+    bf = pd.to_numeric(df["BF"], errors="coerce") if "BF" in df.columns else ip * 4
+
+    total_ip = float(ip.sum())
+    base = float((hr9 * ip).sum() / total_ip) if total_ip else float(hr9.mean())
+
+    labels, deltas, texts, colors, hovers = [], [], [], [], []
+    for idx in df.index:
+        v, innings, faced = float(hr9.get(idx, 0)), float(ip.get(idx, 0)), float(bf.get(idx, 0))
+        # Negated so "fewer homers allowed" points right, like every other
+        # right-is-good bar on the site.
+        delta = base - v
+        labels.append(f"{idx}   {innings:.1f} IP")
+        deltas.append(delta)
+        texts.append(f"{v:.2f}")
+        if faced < 40:
+            colors.append("#3f6b52")
+        else:
+            colors.append("#b7f7c9" if delta >= 0 else "#0f6b3c")
+        hovers.append(f"{idx}<br>HR/9 {v:.2f} (baseline {base:.2f})"
+                      f"<br>{innings:.1f} IP · {int(faced)} batters faced")
+
+    fig = go.Figure(go.Bar(
+        x=deltas, y=labels, orientation="h", marker=dict(color=colors),
+        text=texts, textposition="outside",
+        textfont=dict(size=10, color=C["text2"], family=NUM_FONT),
+        hovertext=hovers, hoverinfo="text",
+    ))
+    fig.add_vline(x=0, line=dict(color=C["text3"], width=1, dash="dot"))
+    fig.add_annotation(x=0, y=1.06, yref="paper",
+                       text=f"his overall {base:.2f} HR/9",
+                       showarrow=False, font=dict(size=9, color=C["text3"]))
+    span = max(0.25, float(max(abs(v) for v in deltas)) * 1.55) if deltas else 0.5
+    _layout(fig, height, title)
+    fig.update_xaxes(range=[-span, span], zeroline=False, showticklabels=False,
+                     showgrid=False)
+    fig.update_yaxes(autorange="reversed", tickfont=dict(size=10))
+    st.plotly_chart(fig, width="stretch")
+
+
+def render_pitcher_splits(sp: Dict[str, Any]) -> None:
+    """Starter's day/night, home/away, weekday and W/L splits."""
+    if not sp:
+        st.info(
+            "No situational splits published for this starter yet — they land "
+            "with the next **Player Splits** workflow run."
+        )
+        return
+    st.caption(
+        f"{int(nn(sp, 'games_logged'))} games logged · season {sp.get('season', '')} — "
+        "bars run right when he gives up **fewer** homers than his own "
+        "average in that situation. Faded bars are under 40 batters faced."
+    )
+    for key, title in SPLIT_FAMILIES:
+        df = _split_frame(sp.get(key) or {}, key)
+        if df is None:
+            continue
+        pitcher_split_chart(df, title, height=max(190, 42 * len(df) + 95))
+        st.markdown(split_table_html(df, pitcher=True), unsafe_allow_html=True)
 
 
 def render_splits(p: Dict[str, Any], slate_label: str, compact: bool = False) -> None:
