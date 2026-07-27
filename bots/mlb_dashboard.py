@@ -131,15 +131,31 @@ MODEL_WEIGHTS: Dict[str, Dict[str, float]] = {
         # pa_per_hr term (+3pp, see below). damage_conversion_score
         # (+9.8pp lift, already the 2nd-largest weight) measured as
         # well-calibrated and is left unchanged.
-        "batted_shape": 0.17,
+        # RE-WEIGHT (2026-07-26, by request): lift the two pitcher/contact-
+        # quality terms Donovan weights most heavily in his own read of a
+        # slate -- damage_conversion (DC) and pitcher_damage, whose single
+        # largest input is pitcher_hr9. Funded from batted_shape, which the
+        # 7/25 recalibration already flagged as the weakest large weight in
+        # the blend (30th of 43 signals, +4.0pp lift), plus a point each off
+        # pull_launch and pitch_match_term.
+        #   batted_shape            0.17 -> 0.13  (-4)
+        #   pull_launch             0.08 -> 0.07  (-1)
+        #   pitch_match_term        0.08 -> 0.07  (-1)
+        #   damage_conversion_score 0.13 -> 0.16  (+3)
+        #   pitcher_damage          0.12 -> 0.15  (+3)
+        # NOTE: this is a judgement call, not a backtested one. The 7/25
+        # numbers measured DC as already well-calibrated at 0.13. Re-run
+        # backtest_report.py after ~2 weeks and revert if HR_PICKS hit rate
+        # drops -- git log has the old values.
+        "batted_shape": 0.13,
         "pitch_fit": 0.11,
-        "pitcher_damage": 0.12,
-        "pull_launch": 0.08,
+        "pitcher_damage": 0.15,
+        "pull_launch": 0.07,
         "park_weather": 0.05,
         "lineup_opportunity": 0.03,
         "season_power": 0.12,
-        "damage_conversion_score": 0.13,
-        "pitch_match_term": 0.08,
+        "damage_conversion_score": 0.16,
+        "pitch_match_term": 0.07,
         "weak_spot_interaction": 0.01,
         "bullpen_pitch_fit": 0.01,
         "yesterdays_hitters_score": 0.02,
@@ -186,6 +202,17 @@ MODEL_WEIGHTS: Dict[str, Dict[str, float]] = {
         "soft_side_share": 0.65,  # hit/HRR/contact get this fraction of the HR-side swing
     },
 }
+
+
+# The blend is a weighted average -- if it stops summing to 1.00 every score
+# silently shifts scale and nothing errors. The comment above has said "must
+# sum to 1.00" since the weights were centralized; this makes it true.
+_hr_blend_sum = round(sum(MODEL_WEIGHTS["hr_blend"].values()), 6)
+if abs(_hr_blend_sum - 1.0) > 1e-6:
+    raise ValueError(
+        f'MODEL_WEIGHTS["hr_blend"] sums to {_hr_blend_sum}, expected 1.00. '
+        "Re-balance the weights before running."
+    )
 
 
 def resolve_slate_date(date_arg: str, tomorrow: bool = False, days_ahead: int = 0) -> dt.date:
