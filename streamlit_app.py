@@ -29,10 +29,12 @@ Run locally:  streamlit run streamlit_app.py
 
 from __future__ import annotations
 
+import datetime as dt
 import json
 import math
 from statistics import median
 from pathlib import Path
+from zoneinfo import ZoneInfo
 from typing import Any, Dict, List, Optional
 
 import pandas as pd
@@ -367,6 +369,109 @@ def tier_color(role: str) -> str:
 def score_for(p: Dict[str, Any], kind: str = "hr") -> float:
     return {"hrr": prod_score, "hit": hit_score, "tb": tb_score,
             "cross": cross_board}.get(kind, hr_score)(p)
+
+
+GAME_TZS = {
+    "ET": "America/New_York", "CT": "America/Chicago",
+    "MT": "America/Denver", "PT": "America/Los_Angeles",
+    "Phoenix": "America/Phoenix",
+}
+_NO_TIME = dt.datetime.max.replace(tzinfo=dt.timezone.utc)
+
+
+def game_start(p: Dict[str, Any]) -> dt.datetime:
+    """Sortable start time. game_time is published as ISO UTC ('...T16:15:00Z').
+
+    Rows with no parseable time sort to the END rather than the front -- a
+    missing time shouldn't put a game at the top of the slate.
+    """
+    raw = txt(p, "game_time")
+    if not raw:
+        return _NO_TIME
+    try:
+        return dt.datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError:
+        return _NO_TIME
+
+
+def game_time_label(p: Dict[str, Any], tz_label: str = "ET") -> str:
+    d = game_start(p)
+    if d >= _NO_TIME:
+        return "TBD"
+    try:
+        d = d.astimezone(ZoneInfo(GAME_TZS.get(tz_label, "America/New_York")))
+    except Exception:
+        return "TBD"
+    # %-I is glibc-only; lstrip keeps this working anywhere.
+    return d.strftime("%I:%M %p").lstrip("0")
+
+
+def _minmax(value: Any, low: float, high: float) -> float:
+    """Mirror of minmax_norm() in bots/mlb_dashboard.py."""
+    if high <= low:
+        return 0.5
+    try:
+        v = float(value)
+    except (TypeError, ValueError):
+        v = low
+    v = max(low, min(high, v))
+    return (v - low) / (high - low)
+
+
+def pitcher_damage_for(p: Dict[str, Any]) -> float:
+    """Recompute the bot's pitcher_damage layer from published pitcher stats.
+
+    pitcher_damage isn't published -- only its inputs are -- so the what-if
+    swap below has to rebuild it to score an arm who isn't in this game. This
+    mirrors the three branches in apply_model_v2_layers: full statcast +
+    advanced, statcast only, and the HR/9 + WHIP fallback.
+    """
+    has_statcast = txt(p, "pitcher_statcast_status") == "ok" and nn(p, "pitcher_statcast_bbe") > 0
+    has_advanced = txt(p, "pitcher_advanced_stats_status") == "ok"
+
+    if has_statcast and has_advanced:
+        return 100 * (
+            0.18 * _minmax(p.get("pitcher_hr9", 1.10), 0.70, 2.00) +
+            0.13 * _minmax(p.get("pitcher_barrel_allowed", 0.07), 0.03, 0.13) +
+            0.11 * _minmax(p.get("pitcher_hardhit_allowed", 0.38), 0.30, 0.52) +
+            0.08 * _minmax(p.get("pitcher_ev_allowed", 88.5), 86.0, 92.5) +
+            0.04 * _minmax(p.get("pitcher_statcast_fb_rate", 0.34), 0.28, 0.48) +
+            0.03 * _minmax(p.get("pitcher_375_allowed", 0), 0, 8) +
+            0.12 * _minmax(p.get("pitcher_meatball_pct", 0.07), 0.040, 0.105) +
+            0.09 * _minmax(p.get("pitcher_pullair_allowed_pct", 0.24), 0.16, 0.32) +
+            0.14 * _minmax(p.get("pitcher_woba_against", 0.320), 0.290, 0.380) +
+            0.08 * _minmax(p.get("pitcher_fip", 4.00), 2.50, 5.50)
+        )
+    if has_statcast:
+        return 100 * (
+            0.30 * _minmax(p.get("pitcher_hr9", 1.10), 0.70, 2.00) +
+            0.22 * _minmax(p.get("pitcher_barrel_allowed", 0.07), 0.03, 0.13) +
+            0.20 * _minmax(p.get("pitcher_hardhit_allowed", 0.38), 0.30, 0.52) +
+            0.15 * _minmax(p.get("pitcher_ev_allowed", 88.5), 86.0, 92.5) +
+            0.08 * _minmax(p.get("pitcher_statcast_fb_rate", 0.34), 0.28, 0.48) +
+            0.05 * _minmax(p.get("pitcher_375_allowed", 0), 0, 8)
+        )
+    return 100 * (
+        0.58 * _minmax(p.get("pitcher_hr9", 1.10), 0.70, 2.00) +
+        0.42 * _minmax(p.get("pitcher_whip", 1.30), 1.05, 1.60)
+    ) * 0.70
+
+
+# Must track MODEL_WEIGHTS["hr_blend"]["pitcher_damage"] in the bot.
+PITCHER_DAMAGE_WEIGHT = 0.15
+
+
+def hr_score_vs_arm(p: Dict[str, Any], arm: Dict[str, Any]) -> float:
+    """Estimated HR score for hitter `p` if `arm`'s pitcher started instead.
+
+    Shifts ONLY the pitcher_damage term of the blend and holds the other
+    fourteen constant. It is an estimate, not a re-run: the published
+    hr_score already has post-blend gates and multipliers baked in, and those
+    can't be reproduced here. Good enough to rank a what-if, not a substitute
+    for the bot re-scoring the slate.
+    """
+    delta = pitcher_damage_for(arm) - pitcher_damage_for(p)
+    return max(0.0, min(100.0, hr_score(p) + PITCHER_DAMAGE_WEIGHT * delta))
 
 
 def cross_board(p: Dict[str, Any]) -> float:
@@ -2007,12 +2112,47 @@ with tab_games:
         for pk, rows in by_game.items()
     }
 
-    for gpk, gp in order:
+    st.markdown("#### Game by game")
+    go1, go2 = st.columns([2, 1])
+    game_order_by = go1.radio(
+        "Order games by",
+        ["Start time", "Game Score", "Top HR"],
+        horizontal=True, key="gameorder",
+        help="Start time reads like a slate: first pitch to last.",
+    )
+    game_tz = go2.selectbox("Times in", list(GAME_TZS), key="gametz")
+
+    if game_order_by == "Start time":
+        # Ties broken by Game Score so simultaneous first pitches still lead
+        # with the better spot.
+        game_order = sorted(
+            by_game.items(),
+            key=lambda kv: (min(game_start(x) for x in kv[1]),
+                            -game_score_by_pk.get(kv[0], 0.0)),
+        )
+    elif game_order_by == "Game Score":
+        game_order = sorted(by_game.items(),
+                            key=lambda kv: -game_score_by_pk.get(kv[0], 0.0))
+    else:
+        game_order = order
+
+    # Every starter on the slate, as swap candidates for the what-if below.
+    # Only starters exist in the payload -- true bullpen arms are never
+    # published, so a reliever can only be approximated by a similar starter.
+    arms_by_name: Dict[str, Dict[str, Any]] = {}
+    for _p in players:
+        _n = txt(_p, "pitcher_name")
+        if _n and _n not in arms_by_name:
+            arms_by_name[_n] = _p
+    arm_names = sorted(arms_by_name)
+
+    for gpk, gp in game_order:
         head = max(gp, key=hr_score)
         conf = "✅" if head.get("lineup_confirmed") else "◻︎"
         gs = game_score_by_pk.get(gpk, 0.0)
         with st.expander(
-            f"{conf}  {team_of(head)} vs {opp_of(head)}   ·   Game Score {gs:.1f}   ·   "
+            f"{conf}  {game_time_label(head, game_tz)}   ·   "
+            f"{team_of(head)} vs {opp_of(head)}   ·   Game Score {gs:.1f}   ·   "
             f"top HR {hr_score(head):.0f}   ·   {txt(head, 'venue_name')}   ·   "
             f"{txt(head, 'pitcher_name')} ({txt(head, 'pitcher_throws')}) "
             f"HR/9 {nn(head, 'pitcher_hr9'):.2f}"
@@ -2032,6 +2172,45 @@ with tab_games:
             # pitcher facing the strongest hitter, so half of every matchup
             # was invisible -- you could see that CHC's lineup was live
             # without ever learning who PIT was sending out.
+            # ── WHAT-IF: swap the arm ──────────────────────────────────
+            # For TBD starters, or when the bot's listed starter gets pulled
+            # early and the game is really a bullpen game.
+            cur_arm = txt(head, "pitcher_name")
+            wi_default = arm_names.index(cur_arm) + 1 if cur_arm in arm_names else 0
+            wi = st.selectbox(
+                "What if a different arm pitched?",
+                ["— listed starter —"] + arm_names,
+                index=wi_default, key=f"whatif_{gpk}",
+                help="Estimates the HR-score shift from swapping the pitcher. "
+                     "Only starters on today's slate are available -- bullpen "
+                     "arms aren't in the published data.",
+            )
+            if wi != "— listed starter —" and wi != cur_arm:
+                arm = arms_by_name[wi]
+                a1, a2, a3 = st.columns(3)
+                a1.metric("HR/9", f"{nn(arm, 'pitcher_hr9'):.2f}",
+                          delta=f"{nn(arm, 'pitcher_hr9') - nn(head, 'pitcher_hr9'):+.2f}")
+                a2.metric("Barrel% allowed",
+                          f"{nn(arm, 'pitcher_barrel_allowed') * 100:.1f}%",
+                          delta=f"{(nn(arm, 'pitcher_barrel_allowed') - nn(head, 'pitcher_barrel_allowed')) * 100:+.1f}pp")
+                a3.metric("Pitcher damage", f"{pitcher_damage_for(arm):.1f}",
+                          delta=f"{pitcher_damage_for(arm) - pitcher_damage_for(head):+.1f}")
+
+                wi_rows = sorted(gp, key=hr_score, reverse=True)[:10]
+                st.dataframe(pd.DataFrame([{
+                    "Player": name_of(x), "Team": team_of(x),
+                    "HR now": round(hr_score(x), 1),
+                    f"HR vs {wi}": round(hr_score_vs_arm(x, arm), 1),
+                    "Shift": round(hr_score_vs_arm(x, arm) - hr_score(x), 1),
+                } for x in wi_rows]), width="stretch", hide_index=True)
+                st.caption(
+                    f"Estimate only. Moves the pitcher_damage term "
+                    f"({PITCHER_DAMAGE_WEIGHT:.0%} of the HR blend) and holds the other "
+                    "fourteen fixed — it does not re-run the model, so gates and "
+                    "post-blend multipliers aren't reflected."
+                )
+                st.divider()
+
             st.markdown("**Starting pitchers**")
             game_arms = group_pitchers(gp)
             pcols = st.columns(max(1, len(game_arms)))
