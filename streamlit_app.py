@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import json
 import math
+from statistics import median
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -364,7 +365,42 @@ def tier_color(role: str) -> str:
 
 
 def score_for(p: Dict[str, Any], kind: str = "hr") -> float:
-    return {"hrr": prod_score, "hit": hit_score, "tb": tb_score}.get(kind, hr_score)(p)
+    return {"hrr": prod_score, "hit": hit_score, "tb": tb_score,
+            "cross": cross_board}.get(kind, hr_score)(p)
+
+
+def cross_board(p: Dict[str, Any]) -> float:
+    """Median of Hit, DC, TB and HRR — the all-round score.
+
+    Every other number on the board rewards a spike: a hitter can post a 96 HR
+    score off one loud signal and be ordinary everywhere else. A median across
+    four boards can't be moved by one outlier, so it answers a different
+    question -- who is good at everything tonight, not who is loudest at one
+    thing. Median rather than mean on purpose: with four values the mean still
+    drags toward an extreme, the median doesn't.
+    """
+    return float(median([
+        hit_score(p),
+        nn(p, "damage_conversion_score"),
+        tb_score(p),
+        prod_score(p),
+    ]))
+
+
+def fair_american(rate_pct: Any) -> str:
+    """Break-even American odds for a hit rate given in percent.
+
+    A 33% hit rate is +203. Anything the book prices longer than that is
+    positive expectation; anything shorter is not. The app has no odds feed,
+    so this is the half of the comparison it CAN show.
+    """
+    try:
+        r = float(rate_pct) / 100.0
+    except (TypeError, ValueError):
+        return "—"
+    if not (0.0 < r < 1.0):
+        return "—"
+    return f"+{round(100 * (1 - r) / r)}" if r < 0.5 else f"-{round(100 * r / (1 - r))}"
 
 
 def grade_for(p: Dict[str, Any], kind: str = "hr") -> str:
@@ -1738,19 +1774,23 @@ st.divider()
 # "Scoreboard", "Watchlist") overflowed the strip, so Streamlit collapsed the
 # tail behind a scroll arrow -- Spray and Guide were unreachable without
 # noticing the little chevron. These fit on one row.
-(tab_games, tab_board, tab_due, tab_hitshrr, tab_pitchers, tab_pairs, tab_bot,
- tab_pools, tab_pairhist, tab_scoreboard, tab_leaders, tab_results, tab_player,
- tab_watch, tab_spray, tab_guide) = st.tabs([
-    "🗓️ Games", "🏆 HR", "💣 Due", "💥 Hits", "⚾ Pitchers",
-    "🎯 Pairs", "🤖 Bot", "🧩 Pools", "🧬 History", "📊 Board",
-    "🥇 Leaders", "✅ Results", "🔍 Player", "⭐ Watch", "💦 Spray", "📖 Guide",
+# Results sits SECOND, not twelfth. It's the only tab that answers "why should
+# I believe any of this," and behind eleven others nobody found it.
+(tab_games, tab_results, tab_board, tab_due, tab_hitshrr, tab_pitchers,
+ tab_pairs, tab_bot, tab_pools, tab_pairhist, tab_scoreboard, tab_leaders,
+ tab_player, tab_watch, tab_spray, tab_guide) = st.tabs([
+    "🗓️ Games", "✅ Results", "🏆 HR", "💣 Due", "💥 Hits",
+    "⚾ Pitchers", "🎯 Pairs", "🤖 Bot", "🧩 Pools", "🧬 History",
+    "📊 Board", "🥇 Leaders", "🔍 Player", "⭐ Watch", "💦 Spray", "📖 Guide",
 ])
 
 # ── BOARD ───────────────────────────────────────────────────────────────────
 with tab_board:
     c1, c2, c3 = st.columns([2, 1, 2])
-    kind_label = c1.selectbox("Board type", ["HR", "HRR", "Hit", "TB (Base)"])
-    kind = {"HR": "hr", "HRR": "hrr", "Hit": "hit", "TB (Base)": "tb"}[kind_label]
+    kind_label = c1.selectbox(
+        "Board type", ["HR", "Cross (all-round)", "HRR", "Hit", "TB (Base)"])
+    kind = {"HR": "hr", "Cross (all-round)": "cross", "HRR": "hrr",
+            "Hit": "hit", "TB (Base)": "tb"}[kind_label]
     top_n = c2.number_input("Show top", 5, 200, 25, step=5)
     with c3:
         hr_pool = board_search(view, "hr_board_q")
@@ -2108,6 +2148,7 @@ with tab_scoreboard:
         "HR": round(hr_score(p), 1), "HRR": round(prod_score(p), 1),
         "Hit": round(hit_score(p), 1), "TB": round(tb_score(p), 1),
         "Damage": round(nn(p, "damage_conversion_score"), 1),
+        "Cross": round(cross_board(p), 1),
         "PMix": round(pmix_score(p), 1),
         "PMatch": round(nn(p, "pitch_type_match_score"), 1),
         "375+": int(recent375(p)), "400+": int(recent400(p)),
@@ -2123,8 +2164,9 @@ with tab_scoreboard:
     else:
         sb1, sb2, sb3 = st.columns([2, 2, 1])
         sb_sort = sb1.selectbox(
-            "Sort by", ["HR", "HRR", "Hit", "TB", "Damage", "PMix", "PMatch",
-                        "375+", "400+", "IHR", "K%", "Spot"], key="sbsort",
+            "Sort by", ["HR", "Cross", "HRR", "Hit", "TB", "Damage", "PMix",
+                        "PMatch", "375+", "400+", "IHR", "K%", "Spot"],
+            key="sbsort",
         )
         sb_cols = sb2.multiselect(
             "Extra columns", ["PMix", "PMatch", "375+", "400+", "IHR", "K%",
@@ -2828,6 +2870,64 @@ with tab_pairhist:
 
 # ── RESULTS ─────────────────────────────────────────────────────────────────
 with tab_results:
+    # ── ALL-TIME (backtest) ────────────────────────────────────────────────
+    # Today's hit rates are one slate. The bands on a single day run to n=2 and
+    # read as 100%, which is noise wearing a percentage sign. backtest_report.py
+    # aggregates every graded day; this is where that lands.
+    # .title() turns HR_PICKS into "Hr Picks". These are acronyms, not words.
+    BT_TIER_LABELS = {
+        "TOP_15_BOARD": "Top 15 Board", "TOP_PICKS": "Top Picks",
+        "HR_PICKS": "HR Picks", "HRR_PICKS": "HRR Picks",
+        "HIT_PICKS": "Hit Picks", "CONTACT_PICKS": "Contact Picks",
+    }
+    bt = load_json("public/data/current/backtest_summary.json") or {}
+    bt_summary = bt.get("summary") or {}
+    bt_days = bt.get("per_day") or {}
+
+    if bt_summary:
+        st.markdown("### All-time by tier")
+        dates = sorted(d for d in bt_days if isinstance(d, str))
+        span = f" · {dates[0]} to {dates[-1]}" if dates else ""
+        st.caption(f"{len(bt_days)} graded day(s){span}")
+
+        bt_rows = []
+        for tier, d in bt_summary.items():
+            if not isinstance(d, dict):
+                continue
+            rate = d.get("hr_rate_pct")
+            pool = d.get("total_pool_size")
+            bt_rows.append({
+                "Tier": BT_TIER_LABELS.get(tier, tier.replace("_", " ").title()),
+                "HRs": d.get("total_hr_count", 0),
+                "Pool": pool if pool else "—",
+                "HR rate": f"{rate}%" if rate is not None else "—",
+                # A rate is only worth reading next to the sample behind it.
+                "Fair odds": fair_american(rate) if rate else "—",
+                "Days": d.get("days_seen", 0),
+            })
+        # Best rate first; unrated tiers sink.
+        bt_rows.sort(key=lambda r: (r["HR rate"] == "—",
+                                    -(float(r["HR rate"].rstrip("%"))
+                                      if r["HR rate"] != "—" else 0)))
+        st.dataframe(pd.DataFrame(bt_rows), width="stretch", hide_index=True)
+
+        acc = bt.get("overall_base_hit_accuracy")
+        if acc is not None:
+            st.caption(f"Base-hit accuracy across all graded days: **{acc}%**")
+        st.caption(
+            "Fair odds are the break-even American price implied by that hit "
+            "rate. Anything priced longer than fair is where the edge is — "
+            "the board doesn't know prices yet, so that comparison is manual."
+        )
+        st.divider()
+    else:
+        st.caption(
+            "All-time tier performance appears here once the nightly backtest "
+            "publishes `backtest_summary.json`. It aggregates every graded day, "
+            "so the rates below stop being single-slate noise."
+        )
+
+    st.markdown("### This slate")
     which = st.radio("Results view", ["Live", "Final"], horizontal=True)
     rel = f"public/data/current/results_{'live' if which == 'Live' else 'final'}.json"
     res = load_json(rel) or {}
@@ -3377,13 +3477,13 @@ with tab_player:
                 st.caption("No batted-ball detail for this hitter yet.")
 
 
-def watch_card_html(p: Dict[str, Any]) -> str:
-    """Compact grid card: badges, score + grade top-right, pills, stat line."""
-    rc = role_config(p)
-    role_label, role_color = rc if rc else (tier_role(p), tier_color(tier_role(p)))
-    hrw = HRW_MAP.get(txt(p, "hrw_zone"))
-    score = nn(p, "top_board_score_v2") or hr_score(p)
+def watch_badges(p: Dict[str, Any]) -> str:
+    """The emoji run shown on a watch card.
 
+    Lives on its own so the card and the CSV export read from one place --
+    they were going to drift the first time a badge rule changed.
+    """
+    hrw = HRW_MAP.get(txt(p, "hrw_zone"))
     badges = ""
     if hrw:
         badges += hrw[0]
@@ -3393,6 +3493,15 @@ def watch_card_html(p: Dict[str, Any]) -> str:
         badges += "🧩"
     if nn(p, "pitch_type_match_score") >= 80:
         badges += "🎯"
+    return badges
+
+
+def watch_card_html(p: Dict[str, Any]) -> str:
+    """Compact grid card: badges, score + grade top-right, pills, stat line."""
+    rc = role_config(p)
+    role_label, role_color = rc if rc else (tier_role(p), tier_color(tier_role(p)))
+    score = nn(p, "top_board_score_v2") or hr_score(p)
+    badges = watch_badges(p)
 
     pills = bubble("", role_label, role_color)
     if txt(p, "best_use"):
@@ -3447,12 +3556,37 @@ with tab_watch:
             [p for p in players if name_of(p) in st.session_state.watch],
             key=hr_score, reverse=True,
         )
-        hdr_l, hdr_r = st.columns([4, 1])
+        hdr_l, hdr_x, hdr_r = st.columns([3, 1, 1])
         hdr_l.markdown(f"### Watchlist\n{len(watched)} saved")
+
+        # Name / HR / emojis, in board order. Two shapes because they get used
+        # two ways: CSV for a spreadsheet, plain text for pasting into a post.
+        wl_rows = [{
+            "Player": name_of(p),
+            "HR": round(hr_score(p), 1),
+            "Emojis": watch_badges(p),
+            "Role": tier_role(p),
+            "Team": team_of(p),
+            "Opp": opp_of(p),
+        } for p in watched]
+        wl_text = "\n".join(
+            f"{r['Emojis']} {r['Player']} — {r['HR']}".strip() for r in wl_rows)
+
+        hdr_x.download_button(
+            "⬇️ CSV",
+            pd.DataFrame(wl_rows).to_csv(index=False).encode("utf-8-sig"),
+            file_name=f"mlb_{slate}_watchlist.csv",
+            mime="text/csv",
+            width="stretch",
+            help="Name, HR score and badges for everyone on the list",
+        )
         if hdr_r.button("Clear All", width="stretch"):
             st.session_state.watch = []
             persist_watch()
             st.rerun()
+
+        with st.expander("📋 Copy as text"):
+            st.code(wl_text, language=None)
 
         # Four across, like the old grid.
         per_row = 4
