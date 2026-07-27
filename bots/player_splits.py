@@ -129,11 +129,12 @@ def build_splits(games: List[Dict[str, Any]]) -> Dict[str, Any]:
     return out
 
 
-def fetch_game_log(session: requests.Session, player_id: Any, season: int) -> List[Dict[str, Any]]:
+def fetch_game_log(session: requests.Session, player_id: Any, season: int,
+                   group: str = "hitting") -> List[Dict[str, Any]]:
     try:
         r = session.get(
             f"{MLB_BASE}/people/{player_id}/stats",
-            params={"stats": "gameLog", "group": "hitting", "season": season},
+            params={"stats": "gameLog", "group": group, "season": season},
             timeout=TIMEOUT,
         )
         if r.status_code != 200:
@@ -144,11 +145,159 @@ def fetch_game_log(session: requests.Session, player_id: Any, season: int) -> Li
         return []
 
 
+# ── PITCHERS ────────────────────────────────────────────────────────────────
+# Same four split families as the hitters, but a pitching line is a different
+# shape: outs recorded rather than at-bats, and every rate runs the other way
+# (a high ERA is bad, a high K/9 is good). Kept in this file rather than a new
+# one because the fetch, the bucketing and the day-of-week ordering are
+# identical -- only the stat extraction differs.
+
+def blank_p() -> Dict[str, float]:
+    return {k: 0.0 for k in
+            ("g", "outs", "bf", "h", "hr", "er", "r", "bb", "k", "ab")}
+
+
+def add_p(acc: Dict[str, float], stat: Dict[str, Any]) -> None:
+    acc["g"] += 1
+    # inningsPitched comes as "5.2" meaning 5 innings and 2 outs -- decimal
+    # arithmetic on that string is wrong (5.2 + 5.2 is 11.1 innings, not
+    # 10.4), so it's converted to outs and back only at the end.
+    ip = str(stat.get("inningsPitched") or "0")
+    try:
+        whole, _, frac = ip.partition(".")
+        acc["outs"] += int(whole or 0) * 3 + int(frac or 0)
+    except ValueError:
+        pass
+    acc["bf"] += num(stat.get("battersFaced"))
+    acc["h"] += num(stat.get("hits"))
+    acc["hr"] += num(stat.get("homeRuns"))
+    acc["er"] += num(stat.get("earnedRuns"))
+    acc["r"] += num(stat.get("runs"))
+    acc["bb"] += num(stat.get("baseOnBalls"))
+    acc["k"] += num(stat.get("strikeOuts"))
+    acc["ab"] += num(stat.get("atBats"))
+
+
+def finish_p(acc: Dict[str, float]) -> Dict[str, Any]:
+    outs = acc["outs"]
+    ip = outs / 3.0
+    ab = acc["ab"]
+    return {
+        "G": int(acc["g"]),
+        "IP": round(ip, 1),
+        "BF": int(acc["bf"]),
+        "H": int(acc["h"]),
+        "HR": int(acc["hr"]),
+        "ER": int(acc["er"]),
+        "R": int(acc["r"]),
+        "BB": int(acc["bb"]),
+        "K": int(acc["k"]),
+        "ERA": round(acc["er"] * 9.0 / ip, 2) if ip else 0.0,
+        "WHIP": round((acc["h"] + acc["bb"]) / ip, 2) if ip else 0.0,
+        "HR/9": round(acc["hr"] * 9.0 / ip, 2) if ip else 0.0,
+        "K/9": round(acc["k"] * 9.0 / ip, 1) if ip else 0.0,
+        "BB/9": round(acc["bb"] * 9.0 / ip, 1) if ip else 0.0,
+        "BAA": round(acc["h"] / ab, 3) if ab else 0.0,
+    }
+
+
+def build_pitcher_splits(games: List[Dict[str, Any]]) -> Dict[str, Any]:
+    buckets: Dict[str, Dict[str, Dict[str, float]]] = {
+        "day_night": defaultdict(blank_p),
+        "home_away": defaultdict(blank_p),
+        "day_of_week": defaultdict(blank_p),
+        "win_loss": defaultdict(blank_p),
+    }
+    for g in games:
+        stat = g.get("stat") or {}
+        if not stat:
+            continue
+        game = g.get("game") or {}
+
+        dn = str(game.get("dayNight") or "").lower()
+        if dn in ("day", "night"):
+            add_p(buckets["day_night"]["Day" if dn == "day" else "Night"], stat)
+        if g.get("isHome") is not None:
+            add_p(buckets["home_away"]["Home" if g["isHome"] else "Away"], stat)
+        if g.get("isWin") is not None:
+            add_p(buckets["win_loss"]["Win" if g["isWin"] else "Loss"], stat)
+        try:
+            d = dt.date.fromisoformat(str(g.get("date")))
+            add_p(buckets["day_of_week"][DOW[d.weekday()]], stat)
+        except Exception:
+            pass
+
+    out: Dict[str, Any] = {}
+    for family, groups in buckets.items():
+        out[family] = {k: finish_p(v) for k, v in groups.items()}
+    if out.get("day_of_week"):
+        out["day_of_week"] = {d: out["day_of_week"][d] for d in DOW
+                              if d in out["day_of_week"]}
+    return out
+
+
+def build_pitcher_contact_log(pitcher_id: Any, season: int,
+                              limit: int = 60) -> List[Dict[str, Any]]:
+    """Every ball put in play against this pitcher, newest first.
+
+    Mirrors the hitter contact log field-for-field so the dashboard can feed
+    both through one renderer. Pulled from Statcast via pybaseball, which the
+    scoring bot already depends on; if it isn't importable this returns an
+    empty list and the section simply doesn't render.
+    """
+    try:
+        from pybaseball import statcast_pitcher
+    except Exception:
+        return []
+    try:
+        df = statcast_pitcher(f"{season}-03-01",
+                              dt.date.today().isoformat(), pitcher_id)
+    except Exception:
+        return []
+    if df is None or len(df) == 0:
+        return []
+
+    try:
+        d = df[df["launch_speed"].notna()].copy()
+        if d.empty:
+            return []
+        d = d.sort_values("game_date", ascending=False).head(limit)
+        rows: List[Dict[str, Any]] = []
+        for _, r in d.iterrows():
+            ev = r.get("launch_speed")
+            rows.append({
+                "date": str(r.get("game_date"))[:10],
+                # The hitter log calls this column "pitcher"; here the
+                # opponent is the batter, so the same column carries his name
+                # and the renderer needs no special case.
+                "pitcher": str(r.get("player_name") or ""),
+                "arm": str(r.get("stand") or ""),
+                "pitch_name": str(r.get("pitch_name") or ""),
+                "ev": None if ev is None else round(float(ev), 1),
+                "launch_angle": (None if r.get("launch_angle") is None
+                                 else round(float(r.get("launch_angle")), 0)),
+                "distance": (None if r.get("hit_distance_sc") is None
+                             else round(float(r.get("hit_distance_sc")), 0)),
+                "pitch_velocity": (None if r.get("release_speed") is None
+                                   else round(float(r.get("release_speed")), 1)),
+                "result": str(r.get("events") or "").replace("_", " "),
+                "trajectory": str(r.get("bb_type") or "").replace("_", " "),
+                "is_hr": str(r.get("events") or "") == "home_run",
+            })
+        return rows
+    except Exception:
+        return []
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Build per-hitter situational splits.")
     ap.add_argument("--slate", required=True, help="Path to the slate JSON")
     ap.add_argument("--label", default="today", choices=["today", "tomorrow"])
     ap.add_argument("--season", type=int, default=dt.date.today().year)
+    ap.add_argument("--skip-pitchers", action="store_true",
+                    help="Hitters only — skip starter splits and contact logs.")
+    ap.add_argument("--skip-pitcher-bbe", action="store_true",
+                    help="Build pitcher splits but skip the Statcast contact log.")
     args = ap.parse_args()
 
     src = Path(args.slate)
@@ -193,8 +342,49 @@ def main() -> int:
             print(f"  {i}/{len(ids)} hitters…", file=sys.stderr)
         time.sleep(0.08)  # be polite to the API
 
-    print(f"splits: wrote {written} files ({empty} with no game log) -> {out_dir}",
+    print(f"splits: wrote {written} hitter files ({empty} with no game log) -> {out_dir}",
           file=sys.stderr)
+
+    # ── Starters ────────────────────────────────────────────────────────────
+    # ~30 pitchers per slate against ~260 hitters, so this adds well under a
+    # minute even with the Statcast pull. Each starter gets the same four
+    # split families plus a log of every ball put in play against him.
+    if not args.skip_pitchers:
+        parms: Dict[Any, str] = {}
+        for r in rows:
+            pid = r.get("pitcher_id")
+            if pid not in (None, "") and pid not in parms:
+                parms[pid] = r.get("pitcher_name") or str(pid)
+
+        p_written = p_empty = 0
+        for i, (pid, name) in enumerate(parms.items(), start=1):
+            games = fetch_game_log(session, pid, args.season, group="pitching")
+            if not games:
+                games = fetch_game_log(session, pid, args.season - 1, group="pitching")
+            if not games:
+                p_empty += 1
+                continue
+
+            payload = build_pitcher_splits(games)
+            payload["player_id"] = pid
+            payload["name"] = name
+            payload["games_logged"] = len(games)
+            payload["season"] = args.season
+            payload["is_pitcher"] = True
+            if not args.skip_pitcher_bbe:
+                payload["contact_log"] = build_pitcher_contact_log(pid, args.season)
+            (out_dir / f"pitcher_{pid}.json").write_text(
+                json.dumps(payload, separators=(",", ":")), encoding="utf-8")
+            p_written += 1
+
+            if i % 10 == 0:
+                print(f"  {i}/{len(parms)} pitchers…", file=sys.stderr)
+            time.sleep(0.08)
+
+        print(f"splits: wrote {p_written} pitcher files ({p_empty} with no game log)",
+              file=sys.stderr)
+        written += p_written
+
     return 0 if written else 1
 
 
