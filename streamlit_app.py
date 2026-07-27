@@ -1053,6 +1053,17 @@ def radar(labels: List[str], values: List[float], color: str = "#f97316",
     st.plotly_chart(fig, width="stretch")
 
 
+# Module level on purpose. This used to live inside `if order:` in the
+# Games tab, which meant any tab rendering before that branch ran -- or a
+# filter combination that emptied `order` -- hit a NameError.
+def med(vals: List[float]) -> float:
+    vals = sorted(v for v in vals if math.isfinite(v))
+    if not vals:
+        return 0.0
+    n = len(vals)
+    return vals[n // 2] if n % 2 else (vals[n // 2 - 1] + vals[n // 2]) / 2
+
+
 def hbar(labels: List[str], values: List[float], title: str = "",
          height: Optional[int] = None, fmt: str = "{:.1f}",
          ref: Optional[float] = None, ref_label: str = "median",
@@ -2465,12 +2476,6 @@ with tab_games:
     if order:
         st.markdown("#### Slate at a glance")
 
-        def med(vals: List[float]) -> float:
-            vals = sorted(v for v in vals if math.isfinite(v))
-            if not vals:
-                return 0.0
-            n = len(vals)
-            return vals[n // 2] if n % 2 else (vals[n // 2 - 1] + vals[n // 2]) / 2
 
         def player_score(p: Dict[str, Any]) -> float:
             """One number per hitter: the median of his four HR-relevant scores.
@@ -2698,108 +2703,6 @@ with tab_games:
                     "post-blend multipliers aren't reflected."
                 )
                 st.divider()
-
-            st.markdown("**Starting pitchers**")
-            game_arms = group_pitchers(gp)
-            pcols = st.columns(max(1, len(game_arms)))
-            for pc, arm in zip(pcols, game_arms):
-                with pc:
-                    st.markdown(pitcher_strip(arm), unsafe_allow_html=True)
-                    if st.button("Pitcher details", width="stretch",
-                                 key=f"gp_{gpk}_{arm.get('pitcher_id')}"):
-                        pitcher_modal(arm)
-            st.caption(
-                "HR/9 is home runs allowed per 9 innings — league average is "
-                "about 1.2, so higher means easier to take deep."
-            )
-
-            # THE GAME PICKS — the bot stamps players per game per role in
-            # game_pick_role. Roles are NOT one-per-game: TOP/HR/CONTACT get
-            # one each but HIT and HRR get TWO apiece, exactly as the .txt
-            # report prints them. Collecting into a dict keyed by role kept
-            # only the first of each and silently dropped two cards per game.
-            picked: Dict[str, List[Dict[str, Any]]] = {}
-            for p in gp:
-                r = str(p.get("game_pick_role") or "").upper()
-                if r in GAME_ROLE_LABEL:
-                    picked.setdefault(r, []).append(p)
-
-            if picked:
-                # Exactly one pick per role: TOP, HR, HIT, HRR, TB -- five
-                # tiles, one row, always the same five columns in the same
-                # order. The bot stamps TWO players for HIT and HRR, which is
-                # why this used to spill to a second row and give some games
-                # seven cards and others five; the extras are the runners-up
-                # and they're all still in the lineup table below. Keeping the
-                # best of each by that role's OWN score, not by HR score --
-                # the second HIT pick often out-scores the first on HR while
-                # being the worse hit play.
-                flat = []
-                for r in GAME_ROLE_ORDER:
-                    cands = picked.get(r) or []
-                    if cands:
-                        flat.append(
-                            (r, max(cands, key=lambda x, _r=r: score_for(x, GAME_ROLE_SCORE[_r])))
-                        )
-                st.markdown(f"**Game picks** ({len(flat)})")
-                cols = st.columns(5)
-                for col, (r, p) in zip(cols, flat):
-                    with col:
-                        st.markdown(game_pick_tile(p, r), unsafe_allow_html=True)
-                        if st.button("Details", width="stretch",
-                                     key=f"gt_{gpk}_{r}_{p.get('player_id')}"):
-                            player_modal(p)
-            else:
-                st.caption("No stamped game picks for this game — showing top HR scores.")
-                top4 = sorted(gp, key=hr_score, reverse=True)[:5]
-                cols = st.columns(5)
-                for col, p in zip(cols, top4):
-                    with col:
-                        st.markdown(game_pick_tile(p, "HR"), unsafe_allow_html=True)
-                        if st.button("Details", width="stretch",
-                                     key=f"gf_{gpk}_{p.get('player_id')}"):
-                            player_modal(p)
-
-            # Lineups are split by team. Both clubs used to share one table
-            # sorted by batting order, so it ran 1,1,2,2,3,3... -- two
-            # different #3 hitters facing two different pitchers on adjacent
-            # rows. You had to read the Team column on every line to know
-            # whose order you were looking at.
-            teams_here = sorted({team_of(p) for p in gp if team_of(p)})
-            st.markdown("**Lineups**")
-            if len(teams_here) > 1:
-                pick_team = st.radio(
-                    "Lineup", teams_here + ["Both"], horizontal=True,
-                    key=f"lu_{gpk}", label_visibility="collapsed",
-                )
-            else:
-                pick_team = teams_here[0] if teams_here else "Both"
-
-            lineup_rows = gp if pick_team == "Both" else [
-                p for p in gp if team_of(p) == pick_team
-            ]
-            opp_pitcher = txt(
-                max(lineup_rows, key=hr_score) if lineup_rows else head, "pitcher_name"
-            )
-            if pick_team != "Both" and opp_pitcher:
-                st.caption(f"{pick_team} vs {opp_pitcher} · {len(lineup_rows)} hitters")
-
-            lineup_tbl = pd.DataFrame([{
-                "Spot": p.get("lineup_spot"), "Player": name_of(p),
-                "Team": team_of(p), "B": txt(p, "bats", default="?"),
-                "Role": tier_role(p), "HR": round(hr_score(p), 1),
-                "HRR": round(prod_score(p), 1), "Hit": round(hit_score(p), 1),
-                "TB": round(tb_score(p), 1), "PMix": round(pmix_score(p), 1),
-                "DC": round(nn(p, "damage_conversion_score"), 1),
-                "Due": round(nn(p, "hr_due_score"), 1),
-                "⭐": "⭐" if p.get("weak_spot_flag") else "",
-            } for p in sorted(lineup_rows,
-                              key=lambda x: (team_of(x),
-                                             nn(x, "lineup_spot", default=99.0)))])
-            # Team column is noise once you've filtered to one club.
-            if pick_team != "Both" and "Team" in lineup_tbl.columns:
-                lineup_tbl = lineup_tbl.drop(columns=["Team"])
-            st.dataframe(lineup_tbl, width="stretch", hide_index=True)
 
             st.markdown("**Starting pitchers**")
             game_arms = group_pitchers(gp)
