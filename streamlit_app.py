@@ -1643,6 +1643,47 @@ def apply_filters(pool: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
 view = apply_filters(players)
 
+
+def board_search(rows: List[Dict[str, Any]], key: str,
+                 label: str = "Search this board") -> List[Dict[str, Any]]:
+    """Per-tab search box.
+
+    The sidebar query already filters `view` globally, so search technically
+    worked everywhere -- but on a top-N board you had to leave the board,
+    scroll the sidebar, type, and come back. This is the same match logic
+    scoped to one tab, so the ranking you were reading stays where it was.
+    """
+    q = st.text_input(
+        label, "", key=key,
+        placeholder="name, team, opponent or pitcher",
+    ).strip().lower()
+    if not q:
+        return rows
+    return [p for p in rows
+            if q in f"{name_of(p)} {team_of(p)} {opp_of(p)} "
+                    f"{txt(p, 'pitcher_name')}".lower()]
+
+
+def best_non_hr_label(p: Dict[str, Any]) -> str:
+    """Which non-HR board this hitter actually profiles for.
+
+    enrich_signal_pills_and_best_non_hr() in the bot only writes
+    best_non_hr_category for rows flagged true_avoid_hr, and leaves it as ""
+    for everyone else. On the Hits/HRR tab -- where every row is a non-HR play
+    by definition -- that meant the column came back blank for almost the
+    whole board. Falls back to the same three scores the bot ranks, so the
+    column populates without needing a pipeline re-run.
+    """
+    cat = txt(p, "best_non_hr_category")
+    if cat and cat != "none":
+        return {"hits": "Hits", "hrr": "HRR",
+                "contact": "Contact/TB"}.get(cat, cat.title())
+    lbl, val = max(
+        (("Hits", hit_score(p)), ("HRR", prod_score(p)), ("Contact/TB", tb_score(p))),
+        key=lambda t: t[1],
+    )
+    return f"{lbl} ({val:.0f})" if val >= 55 else "—"
+
 # A filter combination that matches nobody used to leave every tab showing
 # "No players match these filters" with no hint as to WHICH filter did it or
 # how to undo it -- easy to hit with Aligned-only plus a min HR score, and it
@@ -1707,12 +1748,14 @@ st.divider()
 
 # ── BOARD ───────────────────────────────────────────────────────────────────
 with tab_board:
-    c1, c2 = st.columns([2, 1])
+    c1, c2, c3 = st.columns([2, 1, 2])
     kind_label = c1.selectbox("Board type", ["HR", "HRR", "Hit", "TB (Base)"])
     kind = {"HR": "hr", "HRR": "hrr", "Hit": "hit", "TB (Base)": "tb"}[kind_label]
     top_n = c2.number_input("Show top", 5, 200, 25, step=5)
+    with c3:
+        hr_pool = board_search(view, "hr_board_q")
 
-    ranked = sorted(view, key=lambda p: score_for(p, kind), reverse=True)[: int(top_n)]
+    ranked = sorted(hr_pool, key=lambda p: score_for(p, kind), reverse=True)[: int(top_n)]
     if not ranked:
         st.info("No players match these filters.")
 
@@ -2058,6 +2101,7 @@ with tab_scoreboard:
         f"Every one of the {len(view)} hitters on the slate, all scores in one "
         "sortable grid. Click any column header to sort by it."
     )
+    sb_pool = board_search(view, "scoreboard_q")
     board = [{
         "Player": name_of(p), "Team": team_of(p), "Opp": opp_of(p),
         "Spot": p.get("lineup_spot"), "Role": tier_role(p),
@@ -2071,7 +2115,7 @@ with tab_scoreboard:
         "Pitcher": txt(p, "pitcher_name"),
         "P HR/9": round(nn(p, "pitcher_hr9"), 2),
         "🧩": "🧩" if is_aligned(p) else "",
-    } for p in view]
+    } for p in sb_pool]
     bdf = pd.DataFrame(board)
 
     if bdf.empty:
@@ -2417,7 +2461,7 @@ with tab_due:
         contact quality has been there and the homers haven't followed."""
         return nn(p, "expected_hrs_recent_window") - nn(p, "recent_hr_window")
 
-    pool = [p for p in view
+    pool = [p for p in board_search(view, "due_board_q")
             if nn(p, "hr_due_score") >= min_due
             and nn(p, "games_since_last_hr") >= min_drought
             and (tag_pick == "All" or txt(p, "hr_due_tag") == tag_pick)]
@@ -2498,7 +2542,8 @@ with tab_hitshrr:
     hh_n = hh2.number_input("Show", 5, 100, 30, step=5, key="hhn")
     k = {"HRR (runs + RBI)": "hrr", "Hit (base-hit floor)": "hit", "Base / XBH": "tb"}[hh_kind]
 
-    hh = sorted(view, key=lambda p: score_for(p, k), reverse=True)[: int(hh_n)]
+    hh_pool = board_search(view, "hitshrr_q")
+    hh = sorted(hh_pool, key=lambda p: score_for(p, k), reverse=True)[: int(hh_n)]
     st.dataframe(pd.DataFrame([{
         "Player": name_of(p), "Team": team_of(p), "Opp": opp_of(p),
         "Spot": p.get("lineup_spot"), "Grade": grade_for(p, k),
@@ -2509,7 +2554,7 @@ with tab_hitshrr:
         "L5 R": int(nn(p, "last5_runs")), "L5 RBI": int(nn(p, "last5_rbi")),
         "PreOB": round(nn(p, "lineup_pre_onbase"), 3),
         "Post": round(nn(p, "lineup_post_convert"), 3),
-        "Best non-HR": txt(p, "best_non_hr_category"),
+        "Best non-HR": best_non_hr_label(p),
     } for p in hh]), width="stretch", hide_index=True, height=560)
 
 # ── PAIRS / POOLS ───────────────────────────────────────────────────────────
