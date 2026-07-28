@@ -331,8 +331,15 @@ launch_angle = lambda p: nn(p, "recent_la", "avg_la", "l25pa_avg_la") or n((p.ge
 pull_rate = lambda p: nn(p, "recent_pull_rate", "pull_rate")
 
 recent350 = lambda p: nn(p, "recent_350_num", "l20pa_350_num", "distance_350_num")
-recent375 = lambda p: nn(p, "recent_375_num", "l20pa_375_num", "distance_375_num")
-recent400 = lambda p: nn(p, "recent_400_num", "l20pa_400_num", "distance_400_num", "l25pa_400_plus")
+# The 400ft counts only exist nested in bbe_profile -- no flat key is ever
+# published, so the old chain resolved to 0 for every hitter on every slate
+# and the "400+" column was permanently empty. 350/375 do have flat keys but
+# fall back the same way for consistency.
+recent375 = lambda p: (nn(p, "recent_375_num", "l20pa_375_num", "distance_375_num")
+                       or n((p.get("bbe_profile") or {}).get("dist_375_plus")))
+recent400 = lambda p: (nn(p, "recent_400_num", "l20pa_400_num", "distance_400_num",
+                          "l25pa_400_plus")
+                       or n((p.get("bbe_profile") or {}).get("dist_400_plus")))
 
 
 def d350_rate(p: Dict[str, Any]) -> float:
@@ -3389,7 +3396,7 @@ with tab_long:
             "HR": round(hr_score(p), 1),
             "Rank": int(nn(p, "longest_hr_rank")) or None,
             # The four raw inputs behind the score.
-            "400+": int(nn(p, "recent_400_num", "dist_400_plus")),
+            "400+": int(recent400(p)),
             "375+": int(nn(p, "recent_375_num")),
             "350+": int(nn(p, "recent_350_num")),
             "BBE": bbe_tracked(p),
