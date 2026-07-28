@@ -4007,6 +4007,58 @@ PICK_LABEL = {
 PICK_ORDER = ["TOP15", "TOP", "HR", "HRR", "HIT", "CONTACT", "TB"]
 
 
+# What each tier was picked to DO. Mirrors DESIGNED_OUTCOME in
+# bots/live_results_tracker.py -- keep the two in step.
+DESIGNED_OUTCOME = {
+    "TOP15": "HR",
+    "HR": "HR",
+    "HIT": "1+ hit",
+    "HRR": "2+ H+R+RBI",
+    "CONTACT": "2+ TB or XBH",
+    "TB": "2+ TB or XBH",
+    "TOP": "most productive of our picks in his game",
+}
+
+
+def designed_hit(r: Dict[str, Any], game_rows: List[Dict[str, Any]]) -> Optional[int]:
+    """Did this pick do the specific job it was picked for?
+
+    The grader stamps `designed_hit` from tonight onward; this recomputes it
+    for results published before that, so the column isn't blank on history.
+    Returns None for a pick that hasn't settled.
+    """
+    if r.get("designed_hit") is not None:
+        return int(r["designed_hit"])
+    if not int(nn(r, "is_final")):
+        return None
+    pt = str(r.get("pick_type", "")).upper()
+    tb = int(nn(r, "actual_tb"))
+    hrr = int(nn(r, "hrr_total")) or (int(nn(r, "actual_hits"))
+                                      + int(nn(r, "actual_runs"))
+                                      + int(nn(r, "actual_rbi")))
+    if pt in ("TOP15", "HR"):
+        return 1 if int(nn(r, "got_hr")) else 0
+    if pt == "HIT":
+        return 1 if int(nn(r, "got_base_hit")) else 0
+    if pt == "HRR":
+        return 1 if hrr >= 2 else 0
+    if pt in ("CONTACT", "TB"):
+        return 1 if (tb >= 2 or int(nn(r, "got_xbh"))) else 0
+    if pt == "TOP":
+        peers = [g for g in game_rows
+                 if g.get("player_id") != r.get("player_id")]
+        if not peers:
+            return 1 if tb else 0
+        if hrr == 0 and tb == 0:
+            return 0
+        best_hrr = max(int(nn(g, "hrr_total")) or (int(nn(g, "actual_hits"))
+                       + int(nn(g, "actual_runs")) + int(nn(g, "actual_rbi")))
+                       for g in peers)
+        best_tb = max(int(nn(g, "actual_tb")) for g in peers)
+        return 1 if (hrr >= best_hrr or tb >= best_tb) else 0
+    return None
+
+
 def pick_badge(pick_type: Any) -> str:
     k = str(pick_type or "").upper()
     return f"{PICK_EMOJI.get(k, '•')} {PICK_LABEL.get(k, k or '—')}"
@@ -4237,7 +4289,68 @@ with tab_results:
                 else:
                     st.caption("Hit-rate-by-score-band appears once picks settle.")
 
-        # ── PLAYER TYPE PERFORMANCE ────────────────────────────────────────
+        # ── DESIGNED OUTCOME ───────────────────────────────────────────────
+        # "Did it homer" is the wrong question for five of the six tiers. A
+        # HIT pick was picked to get a hit; grading it on HR makes a 92% tier
+        # look like a 20% one.
+        if "pick_type" in rdf.columns and n_graded:
+            _rows = rdf.to_dict("records")
+            _by_game: Dict[Any, List[Dict[str, Any]]] = {}
+            for _r in _rows:
+                _by_game.setdefault(_r.get("game_pk"), []).append(_r)
+            for _r in _rows:
+                _r["_dh"] = designed_hit(_r, _by_game.get(_r.get("game_pk"), []))
+
+            _settled = [r for r in _rows if r["_dh"] is not None]
+            if _settled:
+                st.markdown("#### Did each pick do its job?")
+                _hit = sum(r["_dh"] for r in _settled)
+                _hr_only = sum(int(nn(r, "got_hr")) for r in _settled)
+                dm = st.columns(3)
+                dm[0].metric("Designed outcome hit",
+                             f"{_hit}/{len(_settled)}",
+                             delta=f"{_hit / len(_settled) * 100:.1f}%",
+                             delta_color="off")
+                dm[1].metric("If graded on HR only",
+                             f"{_hr_only}/{len(_settled)}",
+                             delta=f"{_hr_only / len(_settled) * 100:.1f}%",
+                             delta_color="off",
+                             help="What the board looks like when every tier "
+                                  "is judged on home runs.")
+                dm[2].metric("Tiers tracked",
+                             len({str(r.get('pick_type', '')).upper()
+                                  for r in _settled}))
+
+                do_rows = []
+                for kk in PICK_ORDER:
+                    g = [r for r in _settled
+                         if str(r.get("pick_type", "")).upper() == kk]
+                    if not g:
+                        continue
+                    got = sum(r["_dh"] for r in g)
+                    do_rows.append({
+                        "": PICK_EMOJI[kk],
+                        "Pick type": PICK_LABEL[kk],
+                        "Needs": DESIGNED_OUTCOME.get(kk, "—"),
+                        "Hit": f"{got}/{len(g)}",
+                        "Rate": f"{got / len(g) * 100:.1f}%",
+                        "HR%": f"{sum(int(nn(r, 'got_hr')) for r in g) / len(g) * 100:.1f}%",
+                    })
+                if do_rows:
+                    st.dataframe(pd.DataFrame(do_rows), width="stretch",
+                                 hide_index=True)
+                    hbar([f"{r['']} {r['Pick type']}" for r in do_rows],
+                         [float(r["Rate"].rstrip("%")) for r in do_rows],
+                         "Designed-outcome hit rate by tier", fmt="{:.0f}%")
+                st.caption(
+                    "**TOP** is relative — it's picked as the best overall play "
+                    "in its game, so it only counts if it out-produced the "
+                    "other picks from that same game on HRR or total bases. "
+                    "We only see our own picks, so that means best *of the ones "
+                    "we tracked*."
+                )
+                st.divider()
+
         if "pick_type" in rdf.columns and n_graded:
             st.markdown("#### Player type performance")
             pt_rows = []
@@ -4305,6 +4418,9 @@ with tab_results:
                 "RBI": int(nn(r, "actual_rbi")),
                 "R": int(nn(r, "actual_runs")),
                 "Grade": r.get("grade"),
+                "Job": ({1: "✓", 0: "✗"}.get(
+                    designed_hit(r, [g for g in rdf.to_dict("records")
+                                     if g.get("game_pk") == r.get("game_pk")]), "")),
                 "Line": r.get("outcome_text"),
             } for r in v.to_dict("records")])
             st.dataframe(disp, width="stretch", hide_index=True, height=480)
