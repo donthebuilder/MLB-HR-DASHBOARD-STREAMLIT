@@ -764,6 +764,69 @@ def _trim_pair(pair_tuple):
     return (trim_row(a), trim_row(b), score, kind)
 
 
+# What each pick type was actually selected to do. TOP15 is the 15 best
+# hr_score hitters on the whole slate; the rest are per-game bests on their
+# own board. Grading them all on "did he homer" throws away the doubles and
+# multi-hit games the non-HR tiers were chosen for.
+DESIGNED_OUTCOME = {
+    "TOP15":   "HR",
+    "HR":      "HR",
+    "HIT":     "1+ hit",
+    "HRR":     "2+ hits+runs+RBI",
+    "CONTACT": "2+ TB or XBH",
+    "TB":      "2+ TB or XBH",
+    "TOP":     "most productive of our picks in his game (HRR or TB)",
+}
+
+
+def designed_hit(slot: Dict[str, Any], game_slots: List[Dict[str, Any]]) -> int:
+    """1 if this pick did the specific job it was picked for, else 0.
+
+    TOP is relative, not absolute: it's chosen as the single best overall play
+    in its game, so the honest test is whether it out-produced the other picks
+    from that same game -- on HRR or on total bases. Caveat worth knowing: we
+    only see OUR picks, not every hitter in the game, so "most productive"
+    means most productive of the ones we tracked.
+    """
+    pt = str(slot.get("pick_type", "")).upper()
+    if pt in ("TOP15", "HR"):
+        return 1 if safe_int(slot.get("got_hr")) else 0
+    if pt == "HIT":
+        return 1 if safe_int(slot.get("got_base_hit")) else 0
+    if pt == "HRR":
+        return 1 if safe_int(slot.get("hrr_2_plus")) else 0
+    if pt in ("CONTACT", "TB"):
+        return 1 if (safe_int(slot.get("tb_2_plus"))
+                     or safe_int(slot.get("got_xbh"))) else 0
+    if pt == "TOP":
+        peers = [g for g in game_slots
+                 if int(g.get("player_id", -1)) != int(slot.get("player_id", -2))]
+        if not peers:
+            return 1 if safe_int(slot.get("actual_tb")) else 0
+        best_hrr = max(safe_int(g.get("hrr_total")) for g in peers)
+        best_tb = max(safe_int(g.get("actual_tb")) for g in peers)
+        mine_hrr = safe_int(slot.get("hrr_total"))
+        mine_tb = safe_int(slot.get("actual_tb"))
+        # Has to actually do something -- leading a game where nobody
+        # produced isn't hitting the mark.
+        if mine_hrr == 0 and mine_tb == 0:
+            return 0
+        return 1 if (mine_hrr >= best_hrr or mine_tb >= best_tb) else 0
+    return 0
+
+
+def annotate_designed(graded: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Stamp designed_hit / designed_outcome onto every graded slot."""
+    by_game: Dict[Any, List[Dict[str, Any]]] = {}
+    for g in graded:
+        by_game.setdefault(g.get("game_pk"), []).append(g)
+    for g in graded:
+        g["designed_outcome"] = DESIGNED_OUTCOME.get(
+            str(g.get("pick_type", "")).upper(), "")
+        g["designed_hit"] = designed_hit(g, by_game.get(g.get("game_pk"), []))
+    return graded
+
+
 def build_tracking_slots(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     tracking = []
 
@@ -808,6 +871,11 @@ def grade_slot(slot: Dict[str, Any], actual: Dict[str, int]) -> Dict[str, Any]:
     hrr_total = actual["hits"] + actual["runs"] + actual["rbi"]
     return {
         **slot,
+        # An extra-base hit is always 2+ total bases, but two singles are 2 TB
+        # with no XBH -- so these are genuinely different questions and the
+        # report was answering the first one twice.
+        "tb_2_plus": 1 if actual["tb"] >= 2 else 0,
+        "tb_3_plus": 1 if actual["tb"] >= 3 else 0,
         "actual_hits": actual["hits"],
         "actual_hr": actual["hr"],
         "actual_runs": actual["runs"],
@@ -1231,7 +1299,24 @@ def build_summary_text(
     lines.append(f"1+ Hit: {pct(hit_picks, 'got_base_hit')}% | HR: {pct(hit_picks, 'got_hr')}%")
     lines.append("")
     lines.append(f"⚾ CONTACT PICKS ({len(contact_picks)})")
-    lines.append(f"XBH: {pct(contact_picks, 'got_xbh')}% | 2+ TB: {pct(contact_picks, 'got_xbh')}% | HR: {pct(contact_picks, 'got_hr')}%")
+    lines.append(f"XBH: {pct(contact_picks, 'got_xbh')}% | 2+ TB: {pct(contact_picks, 'tb_2_plus')}% | HR: {pct(contact_picks, 'got_hr')}%")
+
+    lines.append("")
+    lines.append("DESIGNED OUTCOME (did the pick do its job)")
+    lines.append("-" * 42)
+    _settled = [r for r in graded_slots if int(r.get("is_final", 0)) == 1]
+    for _pt, _label in (("TOP15", "\U0001f3c6 TOP 15 BOARD"), ("TOP", "\U0001f525 TOP PICKS"),
+                        ("HR", "\U0001f9e8 HR PICKS"), ("HRR", "\U0001f3c1 HRR PICKS"),
+                        ("HIT", "\U0001f4a0 HIT PICKS"), ("CONTACT", "\u26be CONTACT PICKS")):
+        _grp = [r for r in _settled if str(r.get("pick_type", "")).upper() == _pt]
+        if not _grp:
+            continue
+        _n = sum(int(r.get("designed_hit", 0)) for r in _grp)
+        lines.append(f"{_label} ({len(_grp)}) -> {_n}/{len(_grp)} "
+                     f"({pct(_grp, 'designed_hit')}%)  ·  needs: {DESIGNED_OUTCOME.get(_pt, '')}")
+    if _settled:
+        _tot = sum(int(r.get("designed_hit", 0)) for r in _settled)
+        lines.append(f"ALL PICKS -> {_tot}/{len(_settled)} ({pct(_settled, 'designed_hit')}%)")
 
     lines.append("")
     lines.append("HIT RESULTS BY CATEGORY")
@@ -1376,6 +1461,8 @@ def main() -> int:
             game_status_by_pk[game_pk] = get_game_status(game_cache[game_pk])
         if pid not in actual_by_pid:
             actual_by_pid[pid] = get_player_batting_line(game_cache[game_pk], pid)
+
+    graded_slots = annotate_designed(graded_slots)
 
     pair_pool_sections = build_pair_pool_sections(rows)
     pair_pool_results = grade_pairs_pools(pair_pool_sections, actual_by_pid)
