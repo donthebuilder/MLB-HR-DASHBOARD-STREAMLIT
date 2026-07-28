@@ -337,9 +337,51 @@ def get_player_batting_line(game_feed: Dict[str, Any], player_id: int) -> Dict[s
 
 
 
+def hr_distances_from_game(game_feed: Dict[str, Any]) -> Dict[int, Dict[str, Any]]:
+    """{batter_id: {"longest": ft, "distances": [...], "max_ev": mph}} for HRs.
+
+    The boxscore only carries a home-run COUNT. Distance lives on the play
+    itself, in liveData.plays.allPlays[].hitData -- the same feed we already
+    download, so this costs no extra request. Statcast occasionally omits
+    hitData on a play (tracking gap); those homers simply have no distance
+    rather than a zero, so they can't drag a leaderboard down.
+    """
+    out: Dict[int, Dict[str, Any]] = {}
+    plays = ((game_feed.get("liveData") or {}).get("plays") or {}).get("allPlays") or []
+    for play in plays:
+        result = play.get("result") or {}
+        if str(result.get("eventType") or result.get("event") or "").lower() not in (
+                "home_run", "home run"):
+            continue
+        batter = ((play.get("matchup") or {}).get("batter") or {})
+        pid = safe_int(batter.get("id"), 0)
+        if not pid:
+            continue
+        # hitData sits on the last playEvent of the at-bat.
+        hit = {}
+        for ev in reversed(play.get("playEvents") or []):
+            if ev.get("hitData"):
+                hit = ev["hitData"]
+                break
+        dist = safe_float(hit.get("totalDistance"), 0.0)
+        ev_mph = safe_float(hit.get("launchSpeed"), 0.0)
+        rec = out.setdefault(pid, {"longest": 0.0, "distances": [], "max_ev": 0.0,
+                                   "launch_angle": None})
+        if dist > 0:
+            rec["distances"].append(round(dist))
+            rec["longest"] = max(rec["longest"], round(dist))
+        if ev_mph > 0:
+            rec["max_ev"] = max(rec["max_ev"], round(ev_mph, 1))
+        la = safe_float(hit.get("launchAngle"), None) if hit.get("launchAngle") is not None else None
+        if la is not None and (rec["launch_angle"] is None or dist >= rec["longest"]):
+            rec["launch_angle"] = round(la, 1)
+    return out
+
+
 def get_all_homers_from_game(game_feed: Dict[str, Any]) -> List[Dict[str, Any]]:
     """Return every player who homered in this game, including untracked players."""
     homers: List[Dict[str, Any]] = []
+    dist_by_pid = hr_distances_from_game(game_feed)
     teams = game_feed.get("liveData", {}).get("boxscore", {}).get("teams", {})
     game_data = game_feed.get("gameData", {}) or {}
     team_meta = game_data.get("teams", {}) or {}
@@ -353,11 +395,17 @@ def get_all_homers_from_game(game_feed: Dict[str, Any]) -> List[Dict[str, Any]]:
                 continue
             person = pdata.get("person", {}) or {}
             pid = safe_int(person.get("id"), 0)
+            d = dist_by_pid.get(pid) or {}
             homers.append({
                 "player_id": pid,
                 "name": person.get("fullName", f"Player {pid}"),
                 "team": team_abbr,
                 "hr": hr,
+                # None, not 0, when Statcast didn't track it.
+                "longest_ft": (d.get("longest") or None),
+                "distances_ft": d.get("distances") or [],
+                "max_ev_mph": (d.get("max_ev") or None),
+                "launch_angle": d.get("launch_angle"),
             })
     return homers
 
@@ -1118,6 +1166,21 @@ def build_summary_text(
     if best_pt:
         lines.append(f"Best HR-producing category: {category_display(best_pt)}")
 
+    _longest = [m for m in (merged_homers or []) if m.get("longest_ft")]
+    if _longest:
+        _top = max(_longest, key=lambda m: safe_float(m.get("longest_ft"), 0.0))
+        lines.append("")
+        lines.append("LONGEST HR (BOARD)")
+        lines.append("-" * 42)
+        for m in sorted(_longest,
+                        key=lambda x: -safe_float(x.get("longest_ft"), 0.0))[:5]:
+            ev = f" · {m['max_ev_mph']} mph" if m.get("max_ev_mph") else ""
+            la = f" · {m['launch_angle']}°" if m.get("launch_angle") is not None else ""
+            lines.append(f"- {m.get('name')} — {int(safe_float(m.get('longest_ft'), 0))} ft{ev}{la}")
+        lines.append(f"Longest on the board: {_top.get('name')} "
+                     f"({int(safe_float(_top.get('longest_ft'), 0))} ft)")
+        lines.append("")
+
     lines.append("")
     lines.append("HR RESULTS BY PLAYER")
     lines.append("-" * 42)
@@ -1318,6 +1381,20 @@ def main() -> int:
     pair_pool_results = grade_pairs_pools(pair_pool_sections, actual_by_pid)
     merged_homers = merge_homer_entries(graded_slots)
     hr_capture_report = build_hr_capture_report(rows, game_cache, actual_by_pid)
+
+    # Distance is measured per PLAY, so it lands on the capture report's raw
+    # homer entries. Fold it onto the merged rows too -- the app reads those,
+    # and "who hit it farthest tonight" is a question about the board, not
+    # about the box score.
+    _dist_by_pid = {
+        safe_int(h.get("player_id"), 0): h
+        for h in (hr_capture_report.get("all_homer_entries") or [])
+    }
+    for _m in merged_homers:
+        _src = _dist_by_pid.get(safe_int(_m.get("player_id"), 0)) or {}
+        for _k in ("longest_ft", "distances_ft", "max_ev_mph", "launch_angle"):
+            if _src.get(_k) is not None:
+                _m[_k] = _src[_k]
     unique_player_report = build_unique_player_hr_report(graded_slots)
 
     summary = build_summary_text(date_str, graded_slots, merged_homers, pair_pool_results, hr_capture_report, unique_player_report, live_mode=live_mode)
