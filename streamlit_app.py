@@ -2512,7 +2512,7 @@ with tab_games:
     # you need to know what locks in twenty minutes, which a strength
     # ranking can't tell you.
     game_sort = st.radio(
-        "Order games by", ["Best first", "First pitch"],
+        "Order games by", ["First pitch", "Best first"],
         horizontal=True, key="gameorder",
         help="Best first ranks by the strongest hitter in the game. "
              "First pitch puts them in start-time order.",
@@ -2866,6 +2866,7 @@ with tab_games:
                 "Role": tier_role(p), "HR": round(hr_score(p), 1),
                 "HRR": round(prod_score(p), 1), "Hit": round(hit_score(p), 1),
                 "TB": round(tb_score(p), 1), "PMix": round(pmix_score(p), 1),
+                "HRW": round(nn(p, "hrw_score"), 1),
                 "DC": round(nn(p, "damage_conversion_score"), 1),
                 "Due": round(nn(p, "hr_due_score"), 1),
                 "⭐": "⭐" if p.get("weak_spot_flag") else "",
@@ -3137,6 +3138,7 @@ with tab_pitchers:
                     "🎯": "🎯" if nn(b, "pitch_type_match_score") >= 80 else "",
                     "HR": round(hr_score(b), 1), "HRR": round(prod_score(b), 1),
                     "Hit": round(hit_score(b), 1), "PMix": round(pmix_score(b), 1),
+                    "HRW": round(nn(b, "hrw_score"), 1),
                     "DC": round(nn(b, "damage_conversion_score"), 1),
                     "Role": tier_role(b),
                 } for b in e["lineup"]])
@@ -3465,24 +3467,142 @@ with tab_hitshrr:
         "The non-homer plays: base-hit floor, total bases, and HRR "
         "(runs + RBI). Use this when the HR board is thin."
     )
-    hh1, hh2 = st.columns([2, 1])
-    hh_kind = hh1.radio("Type", ["HRR (runs + RBI)", "Hit (base-hit floor)", "Base / XBH"], horizontal=True)
-    hh_n = hh2.number_input("Show", 5, 100, 30, step=5, key="hhn")
-    k = {"HRR (runs + RBI)": "hrr", "Hit (base-hit floor)": "hit", "Base / XBH": "tb"}[hh_kind]
 
-    hh = sorted(view, key=lambda p: score_for(p, k), reverse=True)[: int(hh_n)]
-    st.dataframe(pd.DataFrame([{
-        "Player": name_of(p), "Team": team_of(p), "Opp": opp_of(p),
-        "Spot": p.get("lineup_spot"), "Grade": grade_for(p, k),
-        "Score": round(score_for(p, k), 1),
-        "AVG": round(nn(p, "season_avg"), 3), "OBP": round(nn(p, "season_obp"), 3),
-        "BABIP": round(nn(p, "babip"), 3), "K%": round(nn(p, "season_k_rate") * 100, 1),
-        "L5 H": int(nn(p, "last5_hits")), "L5 XBH": int(nn(p, "last5_xbh")),
-        "L5 R": int(nn(p, "last5_runs")), "L5 RBI": int(nn(p, "last5_rbi")),
-        "PreOB": round(nn(p, "lineup_pre_onbase"), 3),
-        "Post": round(nn(p, "lineup_post_convert"), 3),
-        "Best non-HR": best_non_hr_label(p),
-    } for p in hh]), width="stretch", hide_index=True, height=560)
+    hh1, hh2, hh3 = st.columns([2, 1, 2])
+    hh_kind = hh1.radio(
+        "Type", ["HRR (runs + RBI)", "Hit (base-hit floor)", "Base / XBH"],
+        horizontal=True)
+    hh_n = hh2.number_input("Show", 5, 100, 30, step=5, key="hhn")
+    k = {"HRR (runs + RBI)": "hrr", "Hit (base-hit floor)": "hit",
+         "Base / XBH": "tb"}[hh_kind]
+    with hh3:
+        hh_pool = board_search(view, "hitshrr_q")
+
+    # Lineup slot decides how much of this board is even reachable: you can't
+    # drive runs with nobody on, and you can't score without someone behind
+    # you. These two filters are the difference between a good bat and a good
+    # SPOT, which is what an HRR play actually is.
+    f1, f2, f3 = st.columns(3)
+    top_slot = f1.checkbox("Top 5 in the order only", key="hh_top5")
+    min_preob = f2.slider("Min on-base ahead of him", 0.0, 0.50, 0.0, 0.05,
+                          key="hh_preob",
+                          help="lineup_pre_onbase — chance someone is on when "
+                               "he bats. Drives RBI.")
+    min_post = f3.slider("Min conversion behind him", 0.0, 0.60, 0.0, 0.05,
+                         key="hh_post",
+                         help="lineup_post_convert — chance the bats after him "
+                              "bring him around. Drives runs scored.")
+    if top_slot:
+        hh_pool = [p for p in hh_pool if nn(p, "lineup_spot", default=99) <= 5]
+    hh_pool = [p for p in hh_pool
+               if nn(p, "lineup_pre_onbase") >= min_preob
+               and nn(p, "lineup_post_convert") >= min_post]
+
+    hh = sorted(hh_pool, key=lambda p: score_for(p, k), reverse=True)[: int(hh_n)]
+
+    if not hh:
+        st.info("No hitters match these filters.")
+    else:
+        slate_med = med([score_for(p, k) for p in players])
+        m = st.columns(4)
+        m[0].metric(f"Top {hh_kind.split(' ')[0]}", f"{score_for(hh[0], k):.1f}")
+        m[1].metric("Slate median", f"{slate_med:.1f}")
+        m[2].metric("Grade A or better",
+                    sum(1 for p in hh if grade_for(p, k) in ("A+", "A")))
+        m[3].metric("Top-5 spots", sum(1 for p in hh
+                                       if nn(p, "lineup_spot", default=99) <= 5))
+
+        v1, v2 = st.columns([3, 2])
+        with v1:
+            hbar([name_of(p) for p in hh[:15]],
+                 [round(score_for(p, k), 1) for p in hh[:15]],
+                 f"Top 15 by {hh_kind.split(' ')[0]} score",
+                 ref=float(slate_med), ref_label="slate median",
+                 subtitles=[f"{team_of(p)} · #{p.get('lineup_spot', '—')} vs "
+                            f"{txt(p, 'pitcher_name')}" for p in hh[:15]])
+        with v2:
+            # A hit board and a runs board reward different things. Showing
+            # both axes at once makes the split visible: bottom-right is
+            # contact with nobody around him, top-left is a spot doing the
+            # work.
+            st.markdown("**Bat vs spot**")
+            st.caption(
+                "Across = his own contact score. Up = the lineup context "
+                "around him. Top-right is both."
+            )
+            st.scatter_chart(pd.DataFrame({
+                "Own bat": [round(hit_score(p), 1) for p in hh],
+                "Lineup context": [round((nn(p, "lineup_pre_onbase")
+                                          + nn(p, "lineup_post_convert")) * 100, 1)
+                                   for p in hh],
+            }), x="Own bat", y="Lineup context", height=300)
+
+        st.markdown("#### The board")
+        st.dataframe(pd.DataFrame([{
+            "": "✅" if p.get("lineup_confirmed") else "◻︎",
+            "Player": name_of(p), "Team": team_of(p), "Opp": opp_of(p),
+            "Spot": p.get("lineup_spot"), "Grade": grade_for(p, k),
+            "Score": round(score_for(p, k), 1),
+            "HRR": round(prod_score(p), 1), "Hit": round(hit_score(p), 1),
+            "TB": round(tb_score(p), 1),
+            "HRW": round(nn(p, "hrw_score"), 1),
+            "AVG": round(nn(p, "season_avg"), 3),
+            "OBP": round(nn(p, "season_obp"), 3),
+            "BABIP": round(nn(p, "babip"), 3),
+            "K%": round(nn(p, "season_k_rate") * 100, 1),
+            "L5 H": int(nn(p, "last5_hits")), "L5 XBH": int(nn(p, "last5_xbh")),
+            "L5 R": int(nn(p, "last5_runs")), "L5 RBI": int(nn(p, "last5_rbi")),
+            "PreOB": round(nn(p, "lineup_pre_onbase"), 3),
+            "Post": round(nn(p, "lineup_post_convert"), 3),
+            "Best non-HR": best_non_hr_label(p),
+            "Pitcher": txt(p, "pitcher_name"),
+        } for p in hh]), width="stretch", hide_index=True, height=520)
+
+        st.download_button(
+            "⬇️ CSV",
+            pd.DataFrame([{"Player": name_of(p), "Team": team_of(p),
+                           "Score": round(score_for(p, k), 1),
+                           "Spot": p.get("lineup_spot")} for p in hh]
+                         ).to_csv(index=False).encode("utf-8-sig"),
+            file_name=f"mlb_{slate}_{k}.csv", mime="text/csv", key="hhcsv")
+
+        st.caption(
+            "**PreOB** is the chance someone is on base when he hits — that is "
+            "what turns contact into RBI. **Post** is the chance the bats "
+            "behind him bring him home. A great bat in the 9 hole is a worse "
+            "HRR play than a decent bat hitting 3rd."
+        )
+
+# ── LIVE HR STATE ───────────────────────────────────────────────────────────
+# Who has ALREADY gone deep on this slate. The grader publishes it every hour
+# and the Results tab was the only thing reading it, which made every other
+# board a pre-game artefact -- you could be staring at a pair card at 9pm with
+# no idea half of it had already cashed.
+@st.cache_data(ttl=CACHE_TTL)
+def homered_today() -> Dict[str, int]:
+    """{normalised player name: HR count today}. Empty before first pitch."""
+    res = (load_json("public/data/current/results_live.json")
+           or load_json("public/data/current/results_final.json") or {})
+    out: Dict[str, int] = {}
+    for h in (res.get("merged_homers") or []):
+        nm = norm_name(h.get("name"))
+        if nm:
+            base = h.get("base_row") or {}
+            out[nm] = max(out.get(nm, 0), int(nn(base, "actual_hr")) or 1)
+    # merged_homers only covers players on the sheet; the raw rows catch the rest.
+    for r in (res.get("results") or []):
+        if int(nn(r, "actual_hr")):
+            nm = norm_name(r.get("name"))
+            if nm:
+                out[nm] = max(out.get(nm, 0), int(nn(r, "actual_hr")))
+    return out
+
+
+def deep_mark(name: Any, live: Dict[str, int]) -> str:
+    """💥 / 💥×2 if this player has already homered today."""
+    c = live.get(norm_name(name), 0)
+    return "" if not c else ("💥" if c == 1 else f"💥×{c}")
+
 
 # ── PAIRS / POOLS ───────────────────────────────────────────────────────────
 pair_payload = load_json("public/data/current/pair_builder_latest.json") or {}
@@ -3557,13 +3677,72 @@ with tab_pairs:
     if not pairs:
         st.info("No pair builder output published yet for this slate.")
     else:
-        ph1, ph2 = st.columns([3, 2])
-        ph1.caption(f"Pair Builder · {pair_payload.get('date', '')} · {len(pairs)} pairs")
+        live_hr = homered_today()
+        st.caption(f"Pair Builder · {pair_payload.get('date', '')} · {len(pairs)} pairs")
+
+        ph1, ph2, ph3, ph4 = st.columns([2, 2, 2, 2])
         types = sorted({str(p.get("type", "PAIR")) for p in pairs})
-        pick_type = ph2.selectbox("Type", ["All types"] + types, key="pairtype")
+        pick_type = ph1.selectbox("Type", ["All types"] + types, key="pairtype")
+        pair_sort = ph2.selectbox(
+            "Sort by", ["Pair score", "Half already deep", "Best hitter"],
+            key="pairsort")
+        pair_risk = ph3.multiselect(
+            "Risk", sorted({str(p.get("risk") or "—") for p in pairs if p.get("risk")}),
+            key="pairrisk")
+        pair_q = ph4.text_input("Contains player", key="pairq", placeholder="name")
+
+        def _members(rec):
+            return rec.get("players") or []
+
+        def _deep(rec):
+            return sum(1 for x in _members(rec)
+                       if live_hr.get(norm_name(x.get("name")), 0))
+
+        def _best_hr(rec):
+            out = []
+            for x in _members(rec):
+                nm = norm_name(x.get("name"))
+                m = next((p for p in players if norm_name(name_of(p)) == nm), None)
+                if m:
+                    out.append(hr_score(m))
+            return max(out) if out else 0.0
 
         shown = [p for p in pairs
                  if pick_type == "All types" or str(p.get("type", "PAIR")) == pick_type]
+        if pair_risk:
+            shown = [p for p in shown if str(p.get("risk") or "—") in pair_risk]
+        if pair_q.strip():
+            q = norm_name(pair_q)
+            shown = [p for p in shown
+                     if any(q in norm_name(x.get("name")) for x in _members(p))]
+        shown = sorted(shown, key={
+            "Pair score": lambda x: -n(x.get("pair_score")),
+            # A pair with one man already deep is the live half of the bet --
+            # that is the row you want at the top at 8pm, not at 11am.
+            "Half already deep": lambda x: (-_deep(x), -n(x.get("pair_score"))),
+            "Best hitter": lambda x: -_best_hr(x),
+        }[pair_sort])
+
+        if not shown:
+            st.info("No pairs match those filters.")
+        else:
+            half = [p for p in shown if _deep(p) == 1]
+            if half:
+                st.success(
+                    f"**{len(half)} pair(s) are half-in** — one man has already "
+                    "homered, the other is still live. Sort by *Half already "
+                    "deep* to bring them to the top."
+                )
+            st.dataframe(pd.DataFrame([{
+                "": {0: "", 1: "💥", 2: "✅✅"}.get(_deep(p), "💥"),
+                "Pair": " + ".join(str(x.get("name", "?")) for x in _members(p)),
+                "Type": str(p.get("type", "PAIR")),
+                "Score": round(n(p.get("pair_score")), 1),
+                "Risk": str(p.get("risk") or "—"),
+                "Best HR": round(_best_hr(p), 1) or None,
+                "Status": ("both deep" if _deep(p) >= 2 else
+                           "half in — other still live" if _deep(p) == 1 else ""),
+            } for p in shown]), width="stretch", hide_index=True)
 
         # Score comparison up top: which pairs the model actually likes is the
         # first question, and it was previously only answerable by reading a
@@ -3575,32 +3754,120 @@ with tab_pairs:
                  [n(p.get("pair_score")) for p in shown],
                  "Pairs ranked by pair score", fmt="{:.1f}")
 
-        for p in shown:
-            names = " + ".join(str(x.get("name", "?")) for x in (p.get("players") or []))
-            combo_card(str(p.get("type", "PAIR")), names, n(p.get("pair_score")),
-                       p.get("risk"), p.get("tags"), str(p.get("reason") or ""),
-                       p.get("players") or [], C["purple"])
+            for p in shown:
+                nd = _deep(p)
+                names = " + ".join(
+                    str(x.get("name", "?"))
+                    + (" 💥" if live_hr.get(norm_name(x.get("name")), 0) else "")
+                    for x in _members(p))
+                combo_card(
+                    str(p.get("type", "PAIR")) + (" · HALF IN" if nd == 1 else
+                                                  " · BOTH DEEP" if nd >= 2 else ""),
+                    names, n(p.get("pair_score")),
+                    p.get("risk"), p.get("tags"), str(p.get("reason") or ""),
+                    _members(p), C["green"] if nd else C["purple"])
 
 with tab_pools:
     p4 = pair_payload.get("pools_4man") or []
     p6 = pair_payload.get("pools_6man") or []
+    live_hr = homered_today()
+
     if not p4 and not p6:
         st.info("No pools published yet for this slate.")
-    for title, pools, accent in (("4-man pools", p4, C["cyan"]),
-                                 ("6-man pools", p6, C["orange"])):
-        if not pools:
-            continue
-        st.markdown(f"#### {title}")
-        if len(pools) > 1:
-            hbar([str(pool.get("name", "Pool")) for pool in pools],
-                 [n(pool.get("pool_score")) for pool in pools],
-                 f"{title} ranked by pool score", fmt="{:.1f}")
-        for pool in pools:
-            plist = pool.get("players") or []
-            combo_card(f"{len(plist)}-MAN POOL", str(pool.get("name", "Pool")),
-                       n(pool.get("pool_score")), pool.get("risk"),
-                       pool.get("tags"), str(pool.get("reason") or ""),
-                       plist, accent)
+    else:
+        c1, c2, c3, c4 = st.columns([2, 2, 2, 2])
+        pool_size = c1.radio("Size", ["Both", "4-man", "6-man"],
+                             horizontal=True, key="pool_size")
+        pool_sort = c2.selectbox(
+            "Sort by", ["Pool score", "Best hitter", "Median HR score",
+                        "Already deep"], key="pool_sort")
+        risk_pick = c3.multiselect(
+            "Risk", sorted({str(x.get("risk") or "—")
+                            for x in p4 + p6 if x.get("risk")}), key="pool_risk")
+        pool_q = c4.text_input("Contains player", key="pool_q",
+                               placeholder="name")
+
+        def pool_players(pool):
+            return pool.get("players") or []
+
+        def pool_hr(pool):
+            """Model HR scores for the pool's members, from today's slate."""
+            out = []
+            for pl in pool_players(pool):
+                nm = norm_name(pl.get("name") or pl.get("player_name"))
+                match = next((p for p in players if norm_name(name_of(p)) == nm), None)
+                if match:
+                    out.append(hr_score(match))
+            return out
+
+        def pool_deep(pool):
+            return sum(1 for pl in pool_players(pool)
+                       if live_hr.get(norm_name(pl.get("name")
+                                                or pl.get("player_name")), 0))
+
+        SORTS = {
+            "Pool score": lambda x: -n(x.get("pool_score")),
+            "Best hitter": lambda x: -(max(pool_hr(x)) if pool_hr(x) else 0),
+            "Median HR score": lambda x: -(med(pool_hr(x)) if pool_hr(x) else 0),
+            "Already deep": lambda x: -pool_deep(x),
+        }
+
+        shown = 0
+        for title, pools, accent in (("4-man pools", p4, C["cyan"]),
+                                     ("6-man pools", p6, C["orange"])):
+            if not pools or (pool_size != "Both" and not title.startswith(pool_size[0])):
+                continue
+            sel = pools
+            if risk_pick:
+                sel = [x for x in sel if str(x.get("risk") or "—") in risk_pick]
+            if pool_q.strip():
+                q = norm_name(pool_q)
+                sel = [x for x in sel
+                       if any(q in norm_name(pl.get("name") or pl.get("player_name"))
+                              for pl in pool_players(x))]
+            if not sel:
+                continue
+            sel = sorted(sel, key=SORTS[pool_sort])
+            shown += len(sel)
+
+            st.markdown(f"#### {title}")
+            # One table for scanning, cards underneath for detail. The cards
+            # alone meant twelve scrolls to compare four numbers.
+            st.dataframe(pd.DataFrame([{
+                "Pool": str(x.get("name", "Pool")),
+                "Score": round(n(x.get("pool_score")), 1),
+                "Risk": str(x.get("risk") or "—"),
+                "Best HR": round(max(pool_hr(x)), 1) if pool_hr(x) else None,
+                "Med HR": round(med(pool_hr(x)), 1) if pool_hr(x) else None,
+                "💥 Deep": pool_deep(x) or "",
+                "Players": ", ".join(
+                    (pl.get("name") or pl.get("player_name") or "?")
+                    + ("  💥" if live_hr.get(norm_name(pl.get("name")
+                                                       or pl.get("player_name")), 0) else "")
+                    for pl in pool_players(x)),
+            } for x in sel]), width="stretch", hide_index=True)
+
+            if len(sel) > 1:
+                hbar([str(x.get("name", "Pool")) for x in sel],
+                     [n(x.get("pool_score")) for x in sel],
+                     f"{title} ranked by pool score", fmt="{:.1f}")
+            for pool in sel:
+                plist = pool_players(pool)
+                nd = pool_deep(pool)
+                combo_card(
+                    f"{len(plist)}-MAN POOL" + (f" · {nd} DEEP" if nd else ""),
+                    str(pool.get("name", "Pool")),
+                    n(pool.get("pool_score")), pool.get("risk"),
+                    pool.get("tags"), str(pool.get("reason") or ""),
+                    plist, accent)
+
+        if not shown:
+            st.info("No pools match those filters.")
+        if live_hr:
+            st.caption(
+                f"💥 marks a hitter who has already homered on this slate "
+                f"({len(live_hr)} so far). Updates with the hourly grading run."
+            )
 
 # ── PAIR HISTORY ────────────────────────────────────────────────────────────
 # The Pair History Bot has been publishing pair_history_summary.json on a
@@ -3651,6 +3918,20 @@ with tab_pairhist:
             help="Only pairs where both hitters are in a lineup on this slate.",
         )
 
+        # The live link. Pair history is a season table until you cross it with
+        # tonight's homers -- then it answers the only question that matters
+        # in-game: one of these two just went deep, is the other one worth it?
+        live_hr = homered_today()
+        half_only = st.checkbox(
+            "🔴 Live: one half already homered", key="ph_half",
+            help="Pairs where exactly one hitter has gone deep tonight. The "
+                 "other is the live side of a historically correlated duo.",
+        )
+        if live_hr:
+            st.caption(f"{len(live_hr)} hitter(s) have homered on this slate so far.")
+        elif half_only:
+            st.info("Nobody has homered yet on this slate — nothing to be half-in on.")
+
         def pair_names(rec: Dict[str, Any]) -> List[str]:
             return [str(x.get("name") or x.get("player_name") or "")
                     for x in (rec.get("players") or [])]
@@ -3673,9 +3954,27 @@ with tab_pairhist:
             if playing_only and not both_live:
                 continue
 
+            deep = [1 if live_hr.get(norm_name(nm), 0) else 0 for nm in names]
+            n_deep = sum(deep)
+            if half_only and n_deep != 1:
+                continue
+            if n_deep == 1:
+                # Name the one still to come -- that's the actionable half.
+                still = names[deep.index(0)] if 0 in deep else ""
+                status = f"💥 half in — {still} still live"
+                flag = "💥"
+            elif n_deep >= 2:
+                status, flag = "✅ both already deep", "✅✅"
+            else:
+                status, flag = ("both playing" if both_live else ""), \
+                               ("🟢" if both_live else "")
+
             rows.append({
-                "": "🟢" if both_live else "",
-                "Pair": " + ".join(names),
+                "": flag,
+                "Status": status,
+                "Pair": " + ".join(
+                    nm + (" 💥" if live_hr.get(norm_name(nm), 0) else "")
+                    for nm in names),
                 "Teams": " / ".join(
                     str(x.get("team") or "?") for x in (rec.get("players") or [])),
                 "Same-day HRs": same_day,
@@ -3697,8 +3996,14 @@ with tab_pairhist:
                    if playing_only else "")
             )
         else:
-            hdf = pd.DataFrame(rows).sort_values(
-                ["Same-day HRs", "Same-game HRs"], ascending=False)
+            hdf = pd.DataFrame(rows)
+            # Half-in first: at 9pm that's the only row you're looking for.
+            hdf["_rank"] = hdf["Status"].map(
+                lambda x: 0 if str(x).startswith("💥") else
+                          1 if str(x).startswith("✅") else 2)
+            hdf = hdf.sort_values(
+                ["_rank", "Same-day HRs", "Same-game HRs"],
+                ascending=[True, False, False]).drop(columns=["_rank"])
             live_n = int((hdf[""] == "🟢").sum())
             st.caption(
                 f"{len(hdf)} pairs match · **{live_n}** with both hitters in a "
