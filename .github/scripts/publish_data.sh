@@ -126,14 +126,25 @@ carry_forward() {
 
   [ -f "$PREV/public/data/index.json" ] && [ ! -f "$STAGE/public/data/index.json" ] \
     && cp "$PREV/public/data/index.json" "$STAGE/public/data/" || true
-  # detail/ is only rebuilt by the slate workflows; without this a grading run
-  # would publish a tree with no detail/ and break every player detail view.
-  [ -d "$PREV/public/data/current/detail" ] && [ ! -d "$STAGE/public/data/current/detail" ] \
-    && cp -r "$PREV/public/data/current/detail" "$STAGE/public/data/current/" || true
-  # Same reasoning for splits: only the slate workflows rebuild them, so a
-  # grading run must carry them forward or the Splits tab goes blank.
-  [ -d "$PREV/public/data/current/splits" ] && [ ! -d "$STAGE/public/data/current/splits" ] \
-    && cp -r "$PREV/public/data/current/splits" "$STAGE/public/data/current/" || true
+  # detail/ and splits/ are only rebuilt by the slate workflows, so a grading
+  # run must carry them forward or every player view goes blank.
+  #
+  # Merge PER SLATE, not on the parent directory. The old check was
+  # `[ ! -d $STAGE/.../detail ]` -- all or nothing. The tomorrow bot stages
+  # detail/tomorrow, which made that test false, so the carry-forward was
+  # skipped and detail/today was dropped from the branch entirely. Every
+  # night after the tomorrow run, today's spray charts, pitch profiles and
+  # splits silently vanished until the next today run rebuilt them.
+  for sub in detail splits; do
+    [ -d "$PREV/public/data/current/$sub" ] || continue
+    mkdir -p "$STAGE/public/data/current/$sub"
+    for slate_dir in "$PREV/public/data/current/$sub"/*; do
+      [ -d "$slate_dir" ] || continue
+      base="$(basename "$slate_dir")"
+      [ -d "$STAGE/public/data/current/$sub/$base" ] \
+        || cp -r "$slate_dir" "$STAGE/public/data/current/$sub/"
+    done
+  done
   return 0
 }
 
