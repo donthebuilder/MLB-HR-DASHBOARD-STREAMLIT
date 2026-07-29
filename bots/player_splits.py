@@ -262,15 +262,52 @@ def build_pitcher_contact_log(pitcher_id: Any, season: int,
         if d.empty:
             return []
         d = d.sort_values("game_date", ascending=False).head(limit)
+
+        # Who actually hit it. statcast_pitcher's `player_name` is the PITCHER
+        # -- on his own log that just repeats his name on every row, which is
+        # useless. The batter is only present as an MLBAM id, so resolve it.
+        batter_names: Dict[Any, str] = {}
+        try:
+            from pybaseball import playerid_reverse_lookup
+            ids = [int(x) for x in d["batter"].dropna().unique()] if "batter" in d.columns else []
+            if ids:
+                look = playerid_reverse_lookup(ids, key_type="mlbam")
+                for _, lr in look.iterrows():
+                    batter_names[int(lr["key_mlbam"])] = (
+                        f"{str(lr.get('name_first', '')).title()} "
+                        f"{str(lr.get('name_last', '')).title()}".strip())
+        except Exception:
+            batter_names = {}
+
+        def _batter(r) -> str:
+            bid = r.get("batter")
+            try:
+                bid = int(bid) if bid is not None else None
+            except (TypeError, ValueError):
+                bid = None
+            if bid is not None and bid in batter_names:
+                return batter_names[int(bid)]
+            # Fallback: the play description leads with the batter's name.
+            des = str(r.get("des") or "").strip()
+            if des:
+                for verb in (" homers", " singles", " doubles", " triples",
+                             " grounds", " flies", " lines", " pops", " reaches",
+                             " hits", " out"):
+                    if verb in des:
+                        return des.split(verb)[0].strip()
+            return str(bid or "")
+
         rows: List[Dict[str, Any]] = []
         for _, r in d.iterrows():
             ev = r.get("launch_speed")
             rows.append({
                 "date": str(r.get("game_date"))[:10],
-                # The hitter log calls this column "pitcher"; here the
-                # opponent is the batter, so the same column carries his name
-                # and the renderer needs no special case.
-                "pitcher": str(r.get("player_name") or ""),
+                # The hitter log calls this column "pitcher"; on a pitcher's
+                # log the opponent is the batter, so the shared column carries
+                # HIS name and the renderer needs no special case. `batter` is
+                # kept explicitly too so the pitcher view can label it.
+                "pitcher": _batter(r),
+                "batter": _batter(r),
                 "arm": str(r.get("stand") or ""),
                 "pitch_name": str(r.get("pitch_name") or ""),
                 "ev": None if ev is None else round(float(ev), 1),
