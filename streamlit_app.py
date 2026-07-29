@@ -1222,6 +1222,47 @@ def heatmap(df: pd.DataFrame, title: str = "", height: int = 340,
     st.plotly_chart(fig, width="stretch")
 
 
+def bbe_trend(df: pd.DataFrame, val_col: str, label: str, unit: str = "",
+              good_at: Optional[float] = None, height: int = 260) -> None:
+    """Batted balls as dots over time with a rolling average.
+
+    Replaces the candlestick view. A candle needs a meaningful open and close;
+    batted balls have no order within a day, so the box was just "first ball
+    hit" vs "last ball hit" -- no information. Dots show the real spread and
+    the line shows whether he's actually trending.
+    """
+    if df.empty or val_col not in df.columns:
+        st.caption(f"No {label.lower()} data.")
+        return
+    d = df[[c for c in ("date", val_col) if c in df.columns]].dropna().copy()
+    if len(d) < 3:
+        st.caption(f"Only {len(d)} tracked ball(s) — not enough for a trend.")
+        return
+    if "date" in d.columns:
+        d = d.sort_values("date")
+    d = d.reset_index(drop=True)
+    idx = list(range(len(d)))
+    roll = d[val_col].rolling(min(7, max(2, len(d) // 3)), min_periods=1).mean()
+
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=idx, y=d[val_col], mode="markers",
+        marker=dict(size=7, color=C["cyan"], opacity=0.6, line=dict(width=0)),
+        customdata=(d["date"] if "date" in d.columns else d[val_col]),
+        hovertemplate="%{customdata}<br>%{y:.0f}" + unit + "<extra></extra>",
+        name=label,
+    ))
+    fig.add_trace(go.Scatter(
+        x=idx, y=roll, mode="lines", name="rolling avg",
+        line=dict(color=C["orange"], width=2), hoverinfo="skip",
+    ))
+    if good_at is not None:
+        fig.add_hline(y=good_at, line_dash="dot", line_color=C["green"])
+    _layout(fig, height, f"{label} per batted ball — oldest to newest")
+    fig.update_xaxes(showticklabels=False, showgrid=False)
+    st.plotly_chart(fig, width="stretch")
+
+
 def candles(df: pd.DataFrame, date_col: str, val_col: str, title: str = "",
             height: int = 340, unit: str = "") -> None:
     """Candlesticks over a per-event value, grouped by date.
@@ -1477,20 +1518,16 @@ def player_modal(p: Dict[str, Any]) -> None:
             st.caption(CONTACT_LOG_LEGEND)
             cl, cr = st.columns(2)
             with cl:
-                candles(mbbe, "date", "ev", "Exit velocity by day", height=260, unit="mph")
+                bbe_trend(mbbe, "ev", "Exit velocity", unit=" mph", good_at=95.0)
             with cr:
-                candles(mbbe, "date", "distance", "Distance by day", height=260, unit="ft")
+                bbe_trend(mbbe, "distance", "Distance", unit=" ft", good_at=375.0)
 
     if txt(p, "simple_reason_1"):
         st.caption(txt(p, "simple_reason_1"))
     if txt(p, "hr_reason"):
         st.caption(txt(p, "hr_reason"))
 
-    b1, b2 = st.columns(2)
-    if b1.button("➕ Add to slip", width="stretch", key=f"mslip_{name_of(p)}"):
-        st.session_state.slip.append(f"{name_of(p)} — {txt(p, 'best_bet_type', default='HR')}")
-        st.rerun()
-    if b2.button("⭐ Watch", width="stretch", key=f"mwatch_{name_of(p)}"):
+    if st.button("⭐ Watch", width="stretch", key=f"mwatch_{name_of(p)}"):
         if name_of(p) not in st.session_state.watch:
             st.session_state.watch.append(name_of(p))
             persist_watch()
@@ -1634,8 +1671,10 @@ SCORE_HELP = {
     "Damage": "Damage conversion, 0-100. When he does square a ball up, how often it turns into real damage.",
     "PMix": "Pitch-mix score, 0-100. How well his swing matches the pitches this particular starter throws.",
     "PMatch": "Pitch-type match, 0-100. Same idea as PMix, focused on his single best pitch type.",
-    "375+": "Batted balls hit 375 feet or more recently. Raw power showing up in games.",
-    "400+": "Batted balls hit 400+ feet recently. Genuine no-doubt distance.",
+    "375+": "Batted balls hit 375+ feet over his last 8 games played. Raw "
+            "power showing up in games.",
+    "400+": "Batted balls hit 400+ feet over his last 8 games played. "
+            "Genuine no-doubt distance.",
     "IHR": "Ideal HR rate — share of his batted balls hit at both the speed and angle that produce homers.",
     "K%": "Strikeout rate. HIGHER IS WORSE for a hitter — he has to put the ball in play to hit a homer.",
     "Spot": "Where he bats in the order, 1-9. Earlier spots get more plate appearances.",
@@ -1759,6 +1798,9 @@ def pitcher_modal(e: Dict[str, Any]) -> None:
 
     if txt(row, "pitcher_arsenal_summary"):
         st.markdown(f"**Arsenal** — {txt(row, 'pitcher_arsenal_summary')}")
+        _u = row.get("pitcher_pitch_usage_pct") or row.get("pitcher_arsenal") or {}
+        if isinstance(_u, dict) and _u:
+            arsenal_pie(_u, row.get("pitcher_mistake_pitch_v31"), height=230)
 
     # Where he gets hurt in the batting order — the "does he get hurt in the
     # 4-hole" question, answerable right here instead of two tabs away.
@@ -1774,20 +1816,32 @@ def pitcher_modal(e: Dict[str, Any]) -> None:
             except ValueError:
                 continue
             rows.append({
-                "Spot": spot, "PA": int(n(v.get("pa"))), "HR": int(n(v.get("hr"))),
-                "AVG": round(n(v.get("avg")), 3), "SLG": round(n(v.get("slg")), 3),
-                "OPS": round(n(v.get("ops")), 3),
+                "Spot": spot, "PA": int(n(v.get("pa"))),
+                "AVG": round(n(v.get("avg")), 3),
+                "SLG": round(n(v.get("slg")), 3),
+                "ISO": round(n(v.get("iso")), 3),
+                "HR": int(n(v.get("hr"))), "XBH": int(n(v.get("xbh"))),
+                "HR%": round(n(v.get("hr_rate")) * 100, 1),
+                "XBH%": round(n(v.get("xbh_rate")) * 100, 1),
+                "K%": round(n(v.get("k_rate")) * 100, 1),
+                "HardHit%": round(n(v.get("hard_hit_rate")) * 100, 1),
+                "Damage": round(n(v.get("damage_score")), 1),
             })
         if rows:
             sdf = pd.DataFrame(rows).sort_values("Spot")
             st.markdown("**Where he gets hurt in the order**")
-            hbar([f"{int(r['Spot'])}-hole  ({int(r['PA'])} PA)" for _, r in sdf.iterrows()],
-                 [float(r["OPS"]) for _, r in sdf.iterrows()],
-                 "OPS allowed by lineup spot", fmt="{:.3f}")
+            # Was OPS bars, but the payload has no `ops` key -- every spot
+            # rendered 0.000. These are the fields that actually exist.
+            _hm = sdf.set_index(sdf.apply(
+                lambda r: f"{int(r['Spot'])}-hole ({int(r['PA'])} PA)", axis=1
+            ))[["Damage", "HR%", "XBH%", "HardHit%", "K%"]]
+            heatmap(_hm, "Damage allowed by lineup spot",
+                    height=max(260, 30 * len(_hm) + 90))
             st.caption(
-                "OPS allowed to each batting-order slot. Longer, lighter bars "
-                "are the spots he's been beaten from. Watch the PA count — a "
-                "big number on 8 plate appearances is noise, not a trend."
+                "**Damage** is the bot's own composite for that slot — the best "
+                "single read on where he gets beaten. **K%** is the one column "
+                "where bright is good *for him*. Watch PA: a big number on 18 "
+                "plate appearances is noise, not a trend."
             )
             st.dataframe(sdf, width="stretch", hide_index=True)
 
@@ -1800,6 +1854,24 @@ def pitcher_modal(e: Dict[str, Any]) -> None:
     p_bbe = bbe_frame((psp or {}).get("contact_log"))
     if not p_bbe.empty:
         with st.expander(f"⚡ Contact allowed — last {min(30, len(p_bbe))} balls in play"):
+            # On a pitcher's log the "pitcher" column actually holds the
+            # BATTER, so relabel it -- otherwise every row repeats the
+            # pitcher's own name and tells you nothing.
+            if "batter" in p_bbe.columns:
+                p_bbe = p_bbe.rename(columns={"pitcher": "_own"})
+                p_bbe["pitcher"] = p_bbe["batter"]
+            pitches = sorted({str(x) for x in p_bbe.get("pitch_name", [])
+                              if str(x) not in ("", "nan")})
+            if pitches:
+                pick_pitch = st.selectbox(
+                    "Filter by pitch", ["All pitches"] + pitches,
+                    key=f"pbbe_{e.get('pitcher_id')}",
+                    help="See who did damage against one specific pitch.")
+                if pick_pitch != "All pitches":
+                    p_bbe = p_bbe[p_bbe["pitch_name"].astype(str) == pick_pitch]
+            if p_bbe.empty:
+                st.caption("No batted balls against that pitch.")
+                st.stop() if False else None
             recent = p_bbe.head(30)
             q = st.columns(4)
             if "ev" in recent.columns:
@@ -2210,9 +2282,6 @@ def render_splits(p: Dict[str, Any], slate_label: str, compact: bool = False) ->
 
 
 # ── SIDEBAR ─────────────────────────────────────────────────────────────────
-if "slip" not in st.session_state:
-    st.session_state.slip = []
-
 # Watchlist persistence. The old site used localStorage, which Streamlit can't
 # reach without a custom component, so the list lives in the URL query string
 # instead: it survives reloads, and the URL can be bookmarked or sent to
@@ -2291,17 +2360,6 @@ with st.sidebar:
             unsafe_allow_javascript=True,
         )
 
-    if st.session_state.slip:
-        st.markdown(f"**🎟️ Slip ({len(st.session_state.slip)})**")
-        for item in st.session_state.slip:
-            st.caption(f"• {item}")
-        sc1, sc2 = st.columns(2)
-        sc1.download_button("⬇️ Export", "\n".join(st.session_state.slip).encode(),
-                            file_name=f"slip_{slate}.txt", mime="text/plain",
-                            width="stretch")
-        if sc2.button("Clear", width="stretch"):
-            st.session_state.slip = []
-            st.rerun()
     st.caption(f"{len(players)} players · cache {CACHE_TTL // 60} min")
 
 
@@ -2407,13 +2465,48 @@ st.caption(
 )
 
 hrs = [hr_score(p) for p in players]
+
+# Projected vs actual. Before first pitch this is all projection; as games go
+# final the actuals fill in beside it, so the header stops being a pre-game
+# artefact and starts tracking the slate.
+_res_now = (load_json("public/data/current/results_live.json")
+            or load_json("public/data/current/results_final.json") or {})
+_res_rows = _res_now.get("results") or []
+_settled_now = [r for r in _res_rows if int(nn(r, "is_final"))]
+_actual_hr = len(_res_now.get("merged_homers") or [])
+_cap = _res_now.get("hr_capture_report") or {}
+_slate_hr = int(nn(_cap, "total_hrs_on_slate"))
+
+# Expected HRs across the slate, from each hitter's own HR/PA rate over his
+# recent window. Sums to a real number, not a count of "good scores".
+_proj_hr = sum(nn(p, "expected_hrs_recent_window") for p in players)
+
 m = st.columns(6)
 m[0].metric("Games", games)
 m[1].metric("Hitters", len(view))
-m[2].metric("HR 80+", sum(1 for x in hrs if x >= 80))
-m[3].metric("HR 90+", sum(1 for x in hrs if x >= 90))
+m[2].metric(
+    "HR projected", f"{_proj_hr:.1f}",
+    delta=(f"{_slate_hr - _proj_hr:+.1f} vs actual" if _slate_hr else None),
+    delta_color="normal",
+    help="Sum of every hitter's expected HRs from his recent HR/PA rate. "
+         "Delta appears once games start and compares to the real slate total.",
+)
+m[3].metric(
+    "HR actual", f"{_slate_hr:.1f}" if _slate_hr else "—",
+    delta=(f"{_actual_hr} on the board" if _actual_hr else None),
+    delta_color="off",
+    help="Home runs hit on this slate so far, and how many were by someone "
+         "the model had on the board.",
+)
 m[4].metric("🧩 Aligned", sum(1 for p in players if is_aligned(p)))
-m[5].metric("✅ Confirmed", sum(1 for p in players if p.get("lineup_confirmed")))
+m[5].metric(
+    "✅ Confirmed", sum(1 for p in players if p.get("lineup_confirmed")),
+    delta=(f"{len(_settled_now)} picks settled" if _settled_now else None),
+    delta_color="off",
+)
+_hi = [f"HR 80+: {sum(1 for x in hrs if x >= 80)}",
+       f"HR 90+: {sum(1 for x in hrs if x >= 90)}"]
+st.caption(" · ".join(_hi))
 
 st.divider()
 
@@ -4417,6 +4510,15 @@ with tab_results:
                 "Player": r.get("name"), "Team": r.get("team"),
                 "Pick": PICK_LABEL.get(str(r.get("pick_type", "")).upper(),
                                        r.get("pick_type")),
+                # A hitter can hold a per-game role AND a slate-wide Top 15
+                # rank at the same time -- they're selected by different
+                # passes. Showing every role he holds stops it looking like
+                # the pick "changed" after he homered.
+                "All roles": " + ".join(sorted({
+                    PICK_LABEL.get(str(o.get("pick_type", "")).upper(),
+                                   str(o.get("pick_type")))
+                    for o in rdf.to_dict("records")
+                    if o.get("player_id") == r.get("player_id")})),
                 "Rank": int(nn(r, "rank")) or None,
                 "HR score": round(nn(r, "hr_score"), 1),
                 "HR": int(nn(r, "actual_hr")),
@@ -4518,11 +4620,8 @@ with tab_player:
             head_pills += bubble("🧩", "Aligned", C["purple"])
         st.markdown(head_pills, unsafe_allow_html=True)
 
-        a1, a2, a3 = st.columns([1, 1, 4])
-        if a1.button("➕ Add to slip", width="stretch"):
-            st.session_state.slip.append(f"{name_of(p)} — {txt(p, 'best_bet_type', default='HR')}")
-            st.rerun()
-        if a2.button("⭐ Watch", width="stretch"):
+        a1, a2 = st.columns([1, 5])
+        if a1.button("⭐ Watch", width="stretch"):
             if name_of(p) not in st.session_state.watch:
                 st.session_state.watch.append(name_of(p))
                 persist_watch()
@@ -5054,13 +5153,8 @@ with tab_watch:
             for col, p in zip(cols, watched[i:i + per_row]):
                 with col:
                     st.markdown(watch_card_html(p), unsafe_allow_html=True)
-                    b1, b2 = st.columns([3, 1])
-                    if b1.button("+ Add to Slip", key=f"slip_{name_of(p)}_{i}",
-                                 width="stretch"):
-                        st.session_state.slip.append(
-                            f"{name_of(p)} — {txt(p, 'best_bet_type', default='HR')}")
-                        st.rerun()
-                    if b2.button("★", key=f"unwatch_{name_of(p)}_{i}", width="stretch",
+                    if st.button("★ Remove", key=f"unwatch_{name_of(p)}_{i}",
+                                 width="stretch",
                                  help="Remove from watchlist"):
                         st.session_state.watch = [
                             w for w in st.session_state.watch if w != name_of(p)]
