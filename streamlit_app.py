@@ -5071,12 +5071,29 @@ with tab_results:
                 continue
             rate = d.get("hr_rate_pct")
             pool = d.get("total_pool_size")
+            # backtest_report aggregates these per tier from the graded
+            # per-pick JSON, so they cover past slates too rather than only
+            # days graded after the report started printing all six.
+            met = d.get("avg_metrics") or {}
+
+            def _m(*names):
+                for nm in names:
+                    if met.get(nm) is not None:
+                        return f"{met[nm]}%"
+                return "—"
+
             bt_rows.append({
                 "Tier": BT_TIER_LABELS.get(tier, tier.replace("_", " ").title()),
                 "HRs": d.get("total_hr_count", 0),
                 "Pool": pool if pool else "—",
                 "HR rate": f"{rate}%" if rate is not None else "—",
                 "Fair odds": fair_american(rate) if rate else "—",
+                "HR": _m("HR"),
+                "1+ Hit": _m("1+ Hit"),
+                "XBH": _m("XBH"),
+                "2+ TB": _m("2+ TB"),
+                "2+ HRR": _m("2+ HRR"),
+                "3+ HRR": _m("3+ HRR"),
                 "Days": d.get("days_seen", 0),
             })
         bt_rows.sort(key=lambda r: (r["HR rate"] == "—",
@@ -5088,9 +5105,13 @@ with tab_results:
         if acc is not None:
             st.caption(f"Base-hit accuracy across all graded days: **{acc}%**")
         st.caption(
-            "Fair odds are the break-even American price implied by that hit "
-            "rate. Anything priced longer than fair is where the edge is — "
-            "the board doesn't know prices yet, so that comparison is manual."
+            "**HR rate** is HRs over the whole tracked pool. The columns after "
+            "Fair odds are the nightly report's own rates for that tier. "
+            "**Fair odds** are the break-even American price implied by the HR "
+            "rate — anything priced longer than that is where the edge is, and "
+            "since the board has no prices that comparison is still manual.\n\n"
+            "A **—** means no graded pick file carried that metric for the "
+            "tier — usually a slate graded before the metric existed."
         )
     else:
         st.caption(
