@@ -402,14 +402,17 @@ def compact_role(p: Dict[str, Any]) -> str:
 
 
 def tier_role(p: Dict[str, Any]) -> str:
-    """Bot's conviction tier (🏆 HR Bet / 🔥 HR Lean / ...), not the type bucket."""
+    """Bot's conviction tier (💎 HR Bet / 📈 HR Lean / ...), not the type bucket."""
     return txt(p, "final_hr_role") or compact_role(p)
 
 
 def tier_color(role: str) -> str:
     s = str(role or "")
-    for token, key in (("🏆", "orange"), ("🔥", "orange"), ("🏁", "cyan"),
-                       ("🔭", "purple"), ("💠", "blue"), ("⛔", "red")):
+    for token, key in (("💎", "orange"), ("📈", "orange"), ("🧲", "cyan"),
+                       ("🧭", "blue"), ("🔭", "purple"), ("⛔", "red"),
+                       # legacy glyphs from pre-rename payloads
+                       ("🏆", "orange"), ("🔥", "orange"), ("🏁", "cyan"),
+                       ("💠", "blue")):
         if token in s:
             return C[key]
     return {"Value HR": C["purple"], "HRR": C["cyan"], "Hit": C["purple"],
@@ -870,13 +873,22 @@ def lane_pass(p: Dict[str, Any], lane: str) -> bool:
 # Ported from GameTopPick.js / PlayerCard.js so the card UI matches the old
 # site: role bubble + HRW timing bubble + mini stat line + tags + reason, with
 # a coloured left border and the score set large on the right.
+# MODEL ROLES. Deliberately share no emoji with the pick types below --
+# 🏆/🔥/🏁/💠 used to mean one thing as a role and a different thing as a
+# pick, so a role badge read like a pick badge. The old glyphs are still
+# mapped because published slates keep them until the bot re-runs.
 ROLE_MAP = {
+    "💎": ("HR Bet", "#f87171"),
+    "📈": ("HR Lean", "#f97316"),
+    "🧲": ("HRR / XBH", "#22d3ee"),
+    "🧭": ("Contact", "#a78bfa"),
+    "🔭": ("Power Watch", "#71717a"),
+    "⛔": ("True Avoid", "#ef4444"),
+    # legacy — pre-rename payloads
     "🏆": ("HR Bet", "#f87171"),
     "🔥": ("HR Lean", "#f97316"),
     "🏁": ("HRR / XBH", "#22d3ee"),
     "💠": ("Contact", "#a78bfa"),
-    "🔭": ("Power Watch", "#71717a"),
-    "⛔": ("True Avoid", "#ef4444"),
 }
 
 # Each HRW band gets its own symbol. 80+ (volatile_hot) and 70-80
@@ -945,6 +957,18 @@ GAME_ROLE_ORDER = ("TOP", "HR", "HIT", "HRR", "CONTACT")
 GAME_ROLE_SCORE = {
     "TOP": "hr", "HR": "hr", "HIT": "hit", "HRR": "hrr", "CONTACT": "tb",
 }
+
+
+# Old payloads carry the pre-rename glyph; normalise so the UI is consistent
+# whichever slate is loaded.
+ROLE_GLYPH_FIX = {"🏆": "💎", "🔥": "📈", "🏁": "🧲", "💠": "🧭"}
+
+
+def role_glyph(p: Dict[str, Any]) -> str:
+    raw = txt(p, "final_hr_role")
+    if not raw:
+        return ""
+    return ROLE_GLYPH_FIX.get(raw[0], raw[0])
 
 
 def role_config(p: Dict[str, Any]):
@@ -3514,6 +3538,26 @@ with tab_long:
             "Venue": txt(p, "venue_name"),
         } for p in ranked_long]), width="stretch", hide_index=True, height=520)
 
+        # Same profile grid as the HR and Hits boards -- the table tells you
+        # the order, this tells you which input is carrying each name.
+        hm_long = pd.DataFrame([{
+            "Player": name_of(p),
+            "Adj": longest_adj(p),
+            "Raw": longest_score(p),
+            "400+": recent400(p) * 20,
+            "375+": recent375(p) * 12,
+            "Avg EV": nn(p, "recent_ev", "l25pa_avg_ev"),
+            "Barrel": barrel_rate(p) * 100,
+            "Carry": carry_factor(p) * 60,
+        } for p in ranked_long[:15]]).set_index("Player")
+        heatmap(hm_long, "Distance profile (scaled)",
+                height=max(280, 30 * len(hm_long) + 90))
+        st.caption(
+            "Columns are scaled independently, so bright means *high for this "
+            "slate* on that input. 400+/375+/Carry are multiplied only to sit "
+            "on a comparable scale — the real values are in the table above."
+        )
+
         open_player_picker(ranked_long, "longest")
 
         st.download_button(
@@ -4294,6 +4338,7 @@ with tab_results:
                     "Player": h.get("name", "—"),
                     "Team": h.get("team", ""),
                     "Tags": " ".join(h.get("tags") or []) or "—",
+                    "Model role": txt(base, "final_hr_role") or "—",
                     "HR": int(nn(base, "actual_hr")),
                     "Ft": int(nn(h, "longest_ft")) or None,
                     "EV": round(nn(h, "max_ev_mph"), 1) or None,
@@ -4459,6 +4504,29 @@ with tab_results:
                     hbar([f"{r['']} {r['Pick type']}" for r in do_rows],
                          [float(r["Rate"].rstrip("%")) for r in do_rows],
                          "Designed-outcome hit rate by tier", fmt="{:.0f}%")
+                # Model roles that never became a game-sheet pick. Without
+                # this they vanish from grading entirely -- the model had an
+                # opinion and nothing recorded whether it was right.
+                _roles = {}
+                for _r in _settled:
+                    _rl = txt(_r, "final_hr_role")
+                    if _rl:
+                        _roles.setdefault(_rl, []).append(_r)
+                if _roles:
+                    st.dataframe(pd.DataFrame([{
+                        "Model role": _rl,
+                        "N": len(_g),
+                        "HR": sum(int(nn(x, "got_hr")) for x in _g),
+                        "HR%": f"{sum(int(nn(x, 'got_hr')) for x in _g) / len(_g) * 100:.1f}%",
+                        "Job done%": f"{sum(x['_dh'] for x in _g) / len(_g) * 100:.1f}%",
+                    } for _rl, _g in sorted(
+                        _roles.items(), key=lambda kv: -len(kv[1]))]),
+                        width="stretch", hide_index=True)
+                    st.caption(
+                        "Model role is the bot's conviction tier — separate "
+                        "from which game sheet he landed on."
+                    )
+
                 st.caption(
                     "**TOP** is relative — it's picked as the best overall play "
                     "in its game, so it only counts if it out-produced the "
@@ -4536,6 +4604,10 @@ with tab_results:
                                    str(o.get("pick_type")))
                     for o in rdf.to_dict("records")
                     if o.get("player_id") == r.get("player_id")})),
+                # The model's own conviction tier, independent of whether he
+                # was picked for a game sheet. A 💎 HR Bet who never made a
+                # sheet still tells you the model liked him.
+                "Model role": txt(r, "final_hr_role") or "—",
                 "Rank": int(nn(r, "rank")) or None,
                 "HR score": round(nn(r, "hr_score"), 1),
                 "HR": int(nn(r, "actual_hr")),
