@@ -1568,7 +1568,6 @@ def tags_html(tags: Any, limit: int = 6) -> str:
     )
 
 
-@st.dialog("Player", width="large")
 def player_detail(p: Dict[str, Any], kp: str = "pl",
                   cmp_p: Optional[Dict[str, Any]] = None) -> None:
     """Everything the Player tab shows, renderable anywhere.
@@ -1967,13 +1966,18 @@ def player_detail(p: Dict[str, Any], kp: str = "pl",
             st.caption("No batted-ball detail for this hitter yet.")
 
 
+@st.dialog("Player", width="large")
 def player_modal(p: Dict[str, Any]) -> None:
     """Full player detail in a popup — the same content as the Player tab.
 
-    Used to be a cut-down header plus a stat line, so clicking a card gave
-    you strictly less than walking to the tab. Now they are the same view.
+    The dialog decorator belongs HERE, not on player_detail: the tab renders
+    the detail inline, and only a card click should pop it. With the
+    decorator on player_detail the Player tab itself opened as a modal that
+    stayed up across reruns.
     """
-    player_detail(p, kp=f"modal_{p.get('player_id') or name_of(p)}")
+    # game_pk disambiguates a doubleheader, where one player_id appears twice.
+    player_detail(p, kp=f"modal_{p.get('player_id') or name_of(p)}"
+                     f"_{p.get('game_pk', '')}")
 
 
 def open_player_picker(rows: List[Dict[str, Any]], where: str,
@@ -1986,12 +1990,21 @@ def open_player_picker(rows: List[Dict[str, Any]], where: str,
     """
     if not rows:
         return
-    names = [name_of(x) for x in rows]
+    # A doubleheader lists the same hitter twice; dedupe so the dropdown has
+    # one entry per player rather than two identical-looking ones.
+    seen: set = set()
+    uniq = []
+    for x in rows:
+        k = norm_name(name_of(x))
+        if k and k not in seen:
+            seen.add(k)
+            uniq.append(x)
+    names = [name_of(x) for x in uniq]
     c1, c2 = st.columns([3, 1])
     pick = c1.selectbox(label, ["—"] + names, key=f"opick_{where}")
     if c2.button("🔍 Detail", key=f"obtn_{where}", width="stretch",
                  disabled=(pick == "—")):
-        target = next((x for x in rows if name_of(x) == pick), None)
+        target = next((x for x in uniq if name_of(x) == pick), None)
         if target is not None:
             player_modal(target)
 
@@ -2079,7 +2092,9 @@ def player_card(
     # Opens the modal. Streamlit can't attach a click to the card HTML itself,
     # so this sits directly under it as the equivalent of clicking the card.
     if open_key:
-        if st.button("View details", key=f"open_{open_key}_{p.get('player_id')}_{rank or 0}",
+        if st.button("View details",
+                     key=f"open_{open_key}_{p.get('player_id')}"
+                         f"_{p.get('game_pk', '')}_{rank or 0}",
                      width="stretch"):
             player_modal(p)
 
@@ -5293,6 +5308,19 @@ with tab_watch:
                        + (f" · {len(off_slate)} not playing" if off_slate else ""))
         wl_sort = hdr_s.selectbox("Sort by", list(SORTS), key="wl_sort")
         watched = sorted(watched_all, key=SORTS[wl_sort], reverse=True)
+        # Doubleheaders put the same hitter on the slate twice, under two
+        # game_pks. Two identical cards is confusing and, because the card key
+        # was built from his name, it also collided. Keep his best row.
+        _seen: set = set()
+        _dedup = []
+        for _p in watched:
+            _k = norm_name(name_of(_p))
+            if _k in _seen:
+                continue
+            _seen.add(_k)
+            _dedup.append(_p)
+        _dh = len(watched) - len(_dedup)
+        watched = _dedup
 
         # How the list is actually doing, as a group.
         if watched:
@@ -5356,13 +5384,19 @@ with tab_watch:
             st.code(wl_text, language=None)
 
         # Four across, like the old grid.
+        if _dh:
+            st.caption(f"{_dh} hitter(s) are on a doubleheader — showing their "
+                       "stronger game.")
+
         per_row = 4
         for i in range(0, len(watched), per_row):
             cols = st.columns(per_row)
-            for col, p in zip(cols, watched[i:i + per_row]):
+            for j, (col, p) in enumerate(zip(cols, watched[i:i + per_row])):
                 with col:
                     st.markdown(watch_card_html(p), unsafe_allow_html=True)
-                    if st.button("★ Remove", key=f"unwatch_{name_of(p)}_{i}",
+                    # Keyed on position, not on the player -- a name or an id
+                    # can repeat, an index in this list cannot.
+                    if st.button("★ Remove", key=f"unwatch_{i + j}",
                                  width="stretch",
                                  help="Remove from watchlist"):
                         st.session_state.watch = [
