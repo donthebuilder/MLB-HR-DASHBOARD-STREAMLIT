@@ -849,12 +849,15 @@ def build_tracking_slots(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         used.add(int(hr_pick["player_id"]))
         tracking.append({**trim_row(hr_pick), "pick_type": "HR"})
 
-        hit_picks = pick_top(hitters, "hit_score", 2, used)
+        # One per game, matching the game sheet. This was 2, which is why the
+        # results board showed 30 HIT and 30 HRR picks against 15 of everything
+        # else -- and why the tiers weren't comparable to each other.
+        hit_picks = pick_top(hitters, "hit_score", 1, used)
         used.update(int(h["player_id"]) for h in hit_picks)
         for hp in hit_picks:
             tracking.append({**trim_row(hp), "pick_type": "HIT"})
 
-        hrr_picks = pick_top(hitters, "hrr_score", 2, used)
+        hrr_picks = pick_top(hitters, "hrr_score", 1, used)
         used.update(int(h["player_id"]) for h in hrr_picks)
         for hp in hrr_picks:
             tracking.append({**trim_row(hp), "pick_type": "HRR"})

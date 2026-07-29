@@ -1122,7 +1122,7 @@ class HitterRecord:
     true_avoid_hr: bool = False
     power_watch_flag: bool = False
     hrr_xbh_flag: bool = False
-    final_hr_role: str = "💠 Contact / Monitor"
+    final_hr_role: str = "🧭 Contact / Monitor"
     best_use: str = "Hit / contact only"
     decision_reasons: List[str] = dataclasses.field(default_factory=list)
     avoid_hr_reasons: List[str] = dataclasses.field(default_factory=list)
@@ -5622,7 +5622,7 @@ def apply_decision_engine_v31(h: HitterRecord) -> HitterRecord:
         # than every other tier including the lower-conviction HR Lean at 25.2%).
         # Emoji changed 🧨→🏆: 🧨 is freed up for the pick_type "HR" slot, and 🏆 reads
         # as "top tier" without the visual collision the old scheme had.
-        final_role = "🏆 HR Bet"
+        final_role = "💎 HR Bet"
         best_use = "HR Straight / HR Pair"
     elif dc >= 66 and raw_power:
         # Emoji changed 👀→🔭: 👀 was double-booked with the HRW 50-59 timing band
@@ -5631,16 +5631,16 @@ def apply_decision_engine_v31(h: HitterRecord) -> HitterRecord:
         final_role = "🔭 Power Watch"
         best_use = "HRR + small HR exposure"
     elif hr >= 52 and dc >= 55:
-        final_role = "🔥 HR Lean"
+        final_role = "📈 HR Lean"
         best_use = "HRR + HR exposure"
     elif hrr >= 60 or (dc >= 50 and not raw_power):
-        final_role = "🏁 HRR / XBH"
+        final_role = "🧲 HRR / XBH"
         best_use = "HRR / Total Bases"
     elif raw_power and dc >= 48:
         final_role = "🔭 Power Watch"
         best_use = "Pool only / longshot HR"
     else:
-        final_role = "💠 Contact / Monitor"
+        final_role = "🧭 Contact / Monitor"
         best_use = "Hit / contact only"
 
     h.true_avoid_hr = bool(final_role.startswith("⛔"))
