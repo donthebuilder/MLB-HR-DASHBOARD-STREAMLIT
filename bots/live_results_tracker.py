@@ -887,7 +887,11 @@ def grade_slot(slot: Dict[str, Any], actual: Dict[str, int]) -> Dict[str, Any]:
         "actual_ab": actual["ab"],
         "got_base_hit": 1 if actual["hits"] >= 1 else 0,
         "got_hr": 1 if actual["hr"] >= 1 else 0,
-        "got_xbh": 1 if actual["tb"] >= 2 else 0,
+        # Singles are worth exactly one base each, so total bases only
+        # exceed the hit count when at least one hit went for extra bases.
+        # This used to read `tb >= 2`, which made got_xbh an exact duplicate
+        # of tb_2_plus and credited anyone with two singles an XBH.
+        "got_xbh": 1 if actual["tb"] > actual["hits"] else 0,
         "hrr_total": hrr_total,
         "hrr_2_plus": 1 if hrr_total >= 2 else 0,
         "hrr_3_plus": 1 if hrr_total >= 3 else 0,
@@ -1295,14 +1299,31 @@ def build_summary_text(
     lines.append("")
     lines.append("PLAYER TYPE PERFORMANCE")
     lines.append("-" * 42)
-    lines.append(f"🏁 HRR PICKS ({len(hrr_picks)})")
-    lines.append(f"2+ HRR: {pct(hrr_picks, 'hrr_2_plus')}% | 3+ HRR: {pct(hrr_picks, 'hrr_3_plus')}%")
-    lines.append("")
-    lines.append(f"💠 HIT PICKS ({len(hit_picks)})")
-    lines.append(f"1+ Hit: {pct(hit_picks, 'got_base_hit')}% | HR: {pct(hit_picks, 'got_hr')}%")
-    lines.append("")
-    lines.append(f"⚾ CONTACT PICKS ({len(contact_picks)})")
-    lines.append(f"XBH: {pct(contact_picks, 'got_xbh')}% | 2+ TB: {pct(contact_picks, 'tb_2_plus')}% | HR: {pct(contact_picks, 'got_hr')}%")
+    # Every tier now prints the SAME metric set. It used to print only the one
+    # or two numbers each tier was "about", which meant backtest_report could
+    # never build a comparable table -- TOP15/TOP/HR carried an HR rate and
+    # nothing else, so the all-time board had three empty columns.
+    _tiers = (
+        ("\U0001f3c6 TOP 15 BOARD", top15),
+        ("\U0001f525 TOP PICKS", top_picks),
+        ("\U0001f9e8 HR PICKS", hr_picks),
+        ("\U0001f3c1 HRR PICKS", hrr_picks),
+        ("\U0001f4a0 HIT PICKS", hit_picks),
+        ("\u26be CONTACT PICKS", contact_picks),
+    )
+    for _label, _grp in _tiers:
+        if not _grp:
+            continue
+        lines.append(f"{_label} ({len(_grp)})")
+        lines.append(
+            f"HR: {pct(_grp, 'got_hr')}% | "
+            f"1+ Hit: {pct(_grp, 'got_base_hit')}% | "
+            f"XBH: {pct(_grp, 'got_xbh')}% | "
+            f"2+ TB: {pct(_grp, 'tb_2_plus')}% | "
+            f"2+ HRR: {pct(_grp, 'hrr_2_plus')}% | "
+            f"3+ HRR: {pct(_grp, 'hrr_3_plus')}%"
+        )
+        lines.append("")
 
     lines.append("")
     lines.append("DESIGNED OUTCOME (did the pick do its job)")
