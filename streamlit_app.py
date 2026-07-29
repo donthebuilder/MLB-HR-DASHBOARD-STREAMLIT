@@ -1117,6 +1117,103 @@ def home_away(gp: List[Dict[str, Any]]) -> tuple:
     return (teams + ["", ""])[0], (teams + ["", ""])[1]
 
 
+def _mm(value: Any, low: float, high: float) -> float:
+    """minmax_norm from bots/mlb_dashboard.py."""
+    if high <= low:
+        return 0.5
+    try:
+        v = float(value)
+    except (TypeError, ValueError):
+        v = low
+    v = max(low, min(high, v))
+    return (v - low) / (high - low)
+
+
+def projected_hr_total(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Slate HR projection — the number the bot prints as "projected HRs 40-49".
+
+    Mirrors projected_hr_total() in bots/mlb_dashboard.py line-for-line. The
+    bot rounds the midpoint away into a low/high range before writing the .txt,
+    so the only way to see it to one decimal is to recompute it here. Every
+    input is published per player, so this is exact rather than an estimate --
+    but it does mean the two have to be kept in step if the bot's weights move.
+    """
+    if not rows:
+        return {"mid": 0.0, "low": 0, "high": 0, "grade": "No Slate",
+                "top_profiles": 0, "weak_games": 0, "games": 0}
+
+    games = max(1, len({r.get("game_pk") for r in rows}))
+
+    def power_quality(r: Dict[str, Any]) -> float:
+        tracked = max(1, int(nn(r, "recent_350_den")))
+        return (
+            0.30 * _mm(nn(r, "recent_ideal_hr_contact"), 0.04, 0.24) +
+            0.22 * _mm(nn(r, "recent_350_num") / tracked, 0.08, 0.42) +
+            0.18 * _mm(nn(r, "recent_375_num") / tracked, 0.02, 0.24) +
+            0.13 * _mm(nn(r, "recent_fb_rate"), 0.25, 0.52) +
+            0.10 * _mm(nn(r, "recent_pull_rate"), 0.28, 0.62) +
+            0.07 * _mm(nn(r, "hrw_score"), 35, 75)
+        )
+
+    top_profiles = [r for r in rows
+                    if hr_score(r) >= 34 and nn(r, "season_pa") >= 15]
+    top_power = sorted(rows,
+                       key=lambda r: hr_score(r) * 0.65 + 35 * power_quality(r),
+                       reverse=True)[: max(20, games * 4)]
+    hitter_component = sum(
+        _mm(hr_score(r), 22, 58) * (0.72 + 0.28 * power_quality(r))
+        for r in top_power)
+
+    weak_games = set()
+    for r in rows:
+        bats = txt(r, "bats")
+        side_hr9 = nn(r, "pitcher_hr9_vs_lhb") if bats == "L" else nn(r, "pitcher_hr9_vs_rhb")
+        side_match = ((bats == "L" and txt(r, "pitcher_weak_side") == "LHB")
+                      or (bats == "R" and txt(r, "pitcher_weak_side") == "RHB"))
+        if (nn(r, "pitcher_hr9") >= 1.20 or side_hr9 >= 1.20
+                or nn(r, "pitcher_fb_rate") >= 0.39 or side_match):
+            weak_games.add(r.get("game_pk"))
+
+    weakness = len(weak_games) * 0.42
+    park = sum(_mm(nn(r, "park_factor", default=100.0), 96, 110)
+               for r in top_power[: games * 2]) * 0.18
+    mid = games * 1.05 + 0.34 * hitter_component + weakness + park
+    spread = max(3.0, games * 0.28)
+    low = max(0, round(mid - spread))
+    grade = ("Strong" if mid >= games * 2.0 else
+             "Medium" if mid >= games * 1.45 else "Light")
+    return {"mid": mid, "low": low, "high": max(low + 1, round(mid + spread)),
+            "grade": grade, "top_profiles": len(top_profiles),
+            "weak_games": len(weak_games), "games": games}
+
+
+# Module level: these used to live inside `with tab_games:`, so any other
+# tab that wanted a start time hit a NameError when the Games branch
+# hadn't run.
+def game_start(rows: List[Dict[str, Any]]) -> str:
+    """ISO start time for a game, or a far-future string so games with no
+    time sort last instead of jumping to the front of a chronological
+    list."""
+    for r in rows:
+        t = str(r.get("game_time") or "").strip()
+        if t:
+            return t
+    return "9999"
+
+def local_time(rows: List[Dict[str, Any]]) -> str:
+    """Start time as Phoenix local, e.g. '10:35 AM'. The feed stores UTC
+    with a Z suffix; Phoenix is UTC-7 all year, so this is a fixed shift
+    with no DST branch to get wrong."""
+    raw = game_start(rows)
+    if raw == "9999":
+        return "TBD"
+    try:
+        base = dt.datetime.strptime(raw.replace("Z", ""), "%Y-%m-%dT%H:%M:%S")
+    except ValueError:
+        return "TBD"
+    return (base - dt.timedelta(hours=7)).strftime("%-I:%M %p")
+
+
 def med(vals: List[float]) -> float:
     vals = sorted(v for v in vals if math.isfinite(v))
     if not vals:
@@ -2477,9 +2574,10 @@ _actual_hr = len(_res_now.get("merged_homers") or [])
 _cap = _res_now.get("hr_capture_report") or {}
 _slate_hr = int(nn(_cap, "total_hrs_on_slate"))
 
-# Expected HRs across the slate, from each hitter's own HR/PA rate over his
-# recent window. Sums to a real number, not a count of "good scores".
-_proj_hr = sum(nn(p, "expected_hrs_recent_window") for p in players)
+# The bot's own slate projection, recomputed so it can be shown to one
+# decimal -- the .txt only ever prints the rounded low-high range.
+_proj = projected_hr_total(players)
+_proj_hr = _proj["mid"]
 
 m = st.columns(6)
 m[0].metric("Games", games)
@@ -2488,8 +2586,11 @@ m[2].metric(
     "HR projected", f"{_proj_hr:.1f}",
     delta=(f"{_slate_hr - _proj_hr:+.1f} vs actual" if _slate_hr else None),
     delta_color="normal",
-    help="Sum of every hitter's expected HRs from his recent HR/PA rate. "
-         "Delta appears once games start and compares to the real slate total.",
+    help=f"The bot's slate projection — printed in the report as "
+         f"\"projected HRs {_proj['low']}\u2013{_proj['high']}\", shown here to "
+         f"one decimal. Power grade: {_proj['grade']}. "
+         f"{_proj['top_profiles']} top HR profiles, {_proj['weak_games']} weak "
+         "pitcher spots. Delta compares to the real slate total once games start.",
 )
 m[3].metric(
     "HR actual", f"{_slate_hr:.1f}" if _slate_hr else "—",
@@ -2504,9 +2605,13 @@ m[5].metric(
     delta=(f"{len(_settled_now)} picks settled" if _settled_now else None),
     delta_color="off",
 )
-_hi = [f"HR 80+: {sum(1 for x in hrs if x >= 80)}",
-       f"HR 90+: {sum(1 for x in hrs if x >= 90)}"]
-st.caption(" · ".join(_hi))
+st.caption(
+    f"Projected **{_proj['low']}\u2013{_proj['high']}** HRs · power grade "
+    f"**{_proj['grade']}** · {_proj['top_profiles']} top HR profiles · "
+    f"{_proj['weak_games']} weak pitcher spots  ·  "
+    f"HR 80+: {sum(1 for x in hrs if x >= 80)} · "
+    f"HR 90+: {sum(1 for x in hrs if x >= 90)}"
+)
 
 st.divider()
 
@@ -2632,28 +2737,6 @@ with tab_games:
         by_game.setdefault(p.get("game_pk"), []).append(p)
 
 
-    def game_start(rows: List[Dict[str, Any]]) -> str:
-        """ISO start time for a game, or a far-future string so games with no
-        time sort last instead of jumping to the front of a chronological
-        list."""
-        for r in rows:
-            t = str(r.get("game_time") or "").strip()
-            if t:
-                return t
-        return "9999"
-
-    def local_time(rows: List[Dict[str, Any]]) -> str:
-        """Start time as Phoenix local, e.g. '10:35 AM'. The feed stores UTC
-        with a Z suffix; Phoenix is UTC-7 all year, so this is a fixed shift
-        with no DST branch to get wrong."""
-        raw = game_start(rows)
-        if raw == "9999":
-            return "TBD"
-        try:
-            base = dt.datetime.strptime(raw.replace("Z", ""), "%Y-%m-%dT%H:%M:%S")
-        except ValueError:
-            return "TBD"
-        return (base - dt.timedelta(hours=7)).strftime("%-I:%M %p")
 
     # First pitch order matters when you're actually playing the slate --
     # you need to know what locks in twenty minutes, which a strength
@@ -4588,10 +4671,18 @@ with tab_player:
     if not view:
         st.info("No players match these filters.")
     else:
+        pc1, pc2 = st.columns([3, 2])
         opts = sorted(view, key=hr_score, reverse=True)
         labels = [f"{name_of(p)} ({team_of(p)}) — HR {hr_score(p):.0f}" for p in opts]
-        idx = st.selectbox("Player", range(len(opts)), format_func=lambda i: labels[i])
+        idx = pc1.selectbox("Player", range(len(opts)),
+                            format_func=lambda i: labels[i], key="pl_pick")
         p = opts[idx]
+        # Head-to-head. Reading one player's numbers tells you nothing without
+        # something to read them against.
+        cmp_names = ["— slate median —"] + [name_of(x) for x in opts
+                                            if name_of(x) != name_of(p)]
+        cmp_pick = pc2.selectbox("Compare with", cmp_names, key="pl_cmp")
+        cmp_p = next((x for x in opts if name_of(x) == cmp_pick), None)
 
         rc = role_config(p)
         role_label, role_color = rc if rc else (tier_role(p), tier_color(tier_role(p)))
@@ -4636,6 +4727,39 @@ with tab_player:
             ["📊 Overview", "⚡ EV Log", "🎯 Pitch", "💦 Spray",
              "📅 Splits", "🔥 Zones & Maps"]
         )
+
+        # Where he sits on the slate, not just his raw number. A 62 means
+        # nothing until you know it's the 88th percentile tonight.
+        BOARDS = [("HR", hr_score), ("Cross", cross_board), ("HRR", prod_score),
+                  ("Hit", hit_score), ("TB", tb_score),
+                  ("DC", lambda x: nn(x, "damage_conversion_score")),
+                  ("Longest", longest_score), ("HRW", lambda x: nn(x, "hrw_score"))]
+
+        def pctile(fn, val: float) -> float:
+            vals = [fn(x) for x in players]
+            if not vals:
+                return 0.0
+            return 100.0 * sum(1 for v in vals if v <= val) / len(vals)
+
+        pr = st.columns(len(BOARDS))
+        for i, (lbl, fn) in enumerate(BOARDS):
+            mine = fn(p)
+            pct_ = pctile(fn, mine)
+            delta = None
+            if cmp_p is not None:
+                delta = f"{mine - fn(cmp_p):+.1f} vs {cmp_pick.split()[-1]}"
+            else:
+                delta = f"{mine - med([fn(x) for x in players]):+.1f} vs med"
+            pr[i].metric(lbl, f"{mine:.1f}", delta=delta, delta_color="normal",
+                         help=f"{pct_:.0f}th percentile on tonight's slate.")
+
+        if cmp_p is not None:
+            radar(
+                [b[0] for b in BOARDS],
+                [b[1](p) for b in BOARDS],
+                title=f"{name_of(p)} vs {name_of(cmp_p)}",
+                second=(name_of(cmp_p), [b[1](cmp_p) for b in BOARDS], C["cyan"]),
+            )
 
         with ov:
             o1, o2 = st.columns(2)
@@ -5110,22 +5234,66 @@ with tab_watch:
             "carries the same players with it."
         )
     else:
-        watched = sorted(
-            [p for p in players if name_of(p) in st.session_state.watch],
-            key=hr_score, reverse=True,
-        )
-        hdr_l, hdr_x, hdr_r = st.columns([3, 1, 1])
-        hdr_l.markdown(f"### Watchlist\n{len(watched)} saved")
+        watched_all = [p for p in players if name_of(p) in st.session_state.watch]
+        # Names on the list that aren't on tonight's slate — otherwise they
+        # silently vanish and you assume you never added them.
+        off_slate = [w for w in st.session_state.watch
+                     if not any(name_of(p) == w for p in players)]
+
+        live_hr = homered_today()
+        SORTS = {
+            "HR score": hr_score, "Cross": cross_board, "Longest": longest_score,
+            "HRR": prod_score, "Hit": hit_score,
+            "DC": lambda x: nn(x, "damage_conversion_score"),
+            # game_start returns an ISO string ("9999" when unknown), so
+            # a plain string sort is chronological and puts TBD last.
+            "First pitch": lambda x: game_start([x]),
+        }
+        hdr_l, hdr_s, hdr_x, hdr_r = st.columns([2, 1, 1, 1])
+        hdr_l.markdown(f"### Watchlist\n{len(watched_all)} on the slate"
+                       + (f" · {len(off_slate)} not playing" if off_slate else ""))
+        wl_sort = hdr_s.selectbox("Sort by", list(SORTS), key="wl_sort")
+        watched = sorted(watched_all, key=SORTS[wl_sort], reverse=True)
+
+        # How the list is actually doing, as a group.
+        if watched:
+            wm = st.columns(4)
+            wm[0].metric("Best HR", f"{max(hr_score(x) for x in watched):.1f}")
+            wm[1].metric("Median HR", f"{med([hr_score(x) for x in watched]):.1f}",
+                         delta=f"{med([hr_score(x) for x in watched]) - med([hr_score(x) for x in players]):+.1f} vs slate",
+                         delta_color="normal")
+            wm[2].metric("Confirmed",
+                         f"{sum(1 for x in watched if x.get('lineup_confirmed'))}/{len(watched)}")
+            _deep = sum(1 for x in watched if live_hr.get(norm_name(name_of(x)), 0))
+            wm[3].metric("💥 Already deep", _deep or "—",
+                         help="Watchlist hitters who have homered tonight.")
+
+            hbar([name_of(x) + (" 💥" if live_hr.get(norm_name(name_of(x)), 0) else "")
+                  for x in watched],
+                 [round(SORTS[wl_sort](x), 1) for x in watched],
+                 f"Watchlist by {wl_sort}",
+                 ref=float(med([SORTS[wl_sort](x) for x in players])),
+                 ref_label="slate median")
+
+        if off_slate:
+            st.caption("Not on this slate: " + ", ".join(off_slate))
 
         # Name / HR / emojis, in board order. Two shapes because they get used
         # two ways: CSV for a spreadsheet, plain text for pasting into a post.
         wl_rows = [{
             "Player": name_of(p),
             "HR": round(hr_score(p), 1),
-            "Emojis": watch_badges(p),
+            "Emojis": watch_badges(p)
+                      + (" 💥" if live_hr.get(norm_name(name_of(p)), 0) else ""),
             "Role": tier_role(p),
             "Team": team_of(p),
             "Opp": opp_of(p),
+            "Cross": round(cross_board(p), 1),
+            "Longest": round(longest_score(p), 1),
+            "DC": round(nn(p, "damage_conversion_score"), 1),
+            "First pitch": local_time([p]),
+            "Pitcher": txt(p, "pitcher_name"),
+            "P HR/9": round(nn(p, "pitcher_hr9"), 2),
         } for p in watched]
         wl_text = "\n".join(
             f"{r['Emojis']} {r['Player']} — {r['HR']}".strip() for r in wl_rows)
