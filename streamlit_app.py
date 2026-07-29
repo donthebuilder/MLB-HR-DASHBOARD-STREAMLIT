@@ -1858,7 +1858,7 @@ def player_detail(p: Dict[str, Any], kp: str = "pl",
         mix = (arsenal.get("pitcher_pitch_mix") or {}).get("usage") or {}
         if mix:
             st.markdown(f"**{txt(p, 'pitcher_name')} — pitch usage**")
-            st.bar_chart(pd.DataFrame({"usage %": mix}), height=240, color=C["orange"], key=_chart_key("bar_chart"))
+            st.bar_chart(pd.DataFrame({"usage %": mix}), height=240, color=C["orange"])
 
     # ── SPRAY ───────────────────────────────────────────────────────────
     with spraytab:
@@ -1878,17 +1878,17 @@ def player_detail(p: Dict[str, Any], kp: str = "pl",
                     fld["y"] = 198.27 - fld["hc_y"]
                     st.scatter_chart(fld, x="x", y="y", height=340,
                                      color="result" if "result" in fld.columns else None,
-                                     size="distance" if "distance" in fld.columns else None, key=_chart_key("scatter_chart"))
+                                     size="distance" if "distance" in fld.columns else None)
             with g2:
                 st.caption("Launch angle vs distance")
                 if {"launch_angle", "distance"}.issubset(sdf.columns):
                     st.scatter_chart(sdf, x="launch_angle", y="distance", height=340,
-                                     color="result" if "result" in sdf.columns else None, key=_chart_key("scatter_chart"))
+                                     color="result" if "result" in sdf.columns else None)
             if "lane" in sdf.columns:
                 st.caption("By field lane")
                 st.bar_chart(
                     pd.DataFrame({"batted balls": sdf["lane"].replace("", "—").value_counts()}),
-                    height=220, color=C["green"], key=_chart_key("bar_chart"))
+                    height=220, color=C["green"])
 
     # ── SPLITS ──────────────────────────────────────────────────────────
     with splitstab:
@@ -3052,7 +3052,7 @@ with tab_board:
             bins = pd.cut(series, bins=range(0, 105, 5), right=False)
             hist = bins.value_counts().sort_index()
             hist.index = [f"{int(iv.left)}" for iv in hist.index]
-            st.bar_chart(pd.DataFrame({"players": hist}), height=300, color=C["cyan"], key=_chart_key("bar_chart"))
+            st.bar_chart(pd.DataFrame({"players": hist}), height=300, color=C["cyan"])
             st.caption(f"median {series.median():.0f} · max {series.max():.0f}")
 
     for i, p in enumerate(ranked[:15], start=1):
@@ -3928,7 +3928,7 @@ with tab_long:
                 "HR": [round(hr_score(p), 1) for p in ranked_long],
                 "Player": [name_of(p) for p in ranked_long],
             })
-            st.scatter_chart(sc, x="HR", y="Longest", height=300, key=_chart_key("scatter_chart"))
+            st.scatter_chart(sc, x="HR", y="Longest", height=300)
 
         st.markdown("#### The board")
         st.dataframe(pd.DataFrame([{
@@ -5426,11 +5426,11 @@ with tab_spray:
                 fld["x"] = fld["hc_x"] - 125.42
                 fld["y"] = 198.27 - fld["hc_y"]
                 st.scatter_chart(fld, x="x", y="y", color="player", height=380,
-                                 size="distance" if "distance" in fld.columns else None, key=_chart_key("scatter_chart"))
+                                 size="distance" if "distance" in fld.columns else None)
         with c2:
             st.caption("Exit velocity vs distance")
             if {"ev", "distance"}.issubset(sp.columns):
-                st.scatter_chart(sp, x="ev", y="distance", color="player", height=380, key=_chart_key("scatter_chart"))
+                st.scatter_chart(sp, x="ev", y="distance", color="player", height=380)
         st.dataframe(
             sp[[c for c in ["player", "date", "pitch_type", "event", "bb_type",
                             "ev", "launch_angle", "distance", "lane"] if c in sp.columns]],
