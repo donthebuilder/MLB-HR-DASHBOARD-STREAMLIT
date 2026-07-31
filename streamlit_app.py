@@ -1265,7 +1265,7 @@ def med(vals: List[float]) -> float:
 def hbar(labels: List[str], values: List[float], title: str = "",
          height: Optional[int] = None, fmt: str = "{:.1f}",
          ref: Optional[float] = None, ref_label: str = "median",
-         subtitles: Optional[List[str]] = None) -> None:
+         subtitles: Optional[List[str]] = None, style: str = "heat") -> None:
     """Horizontal ranked bars — the readable replacement for st.bar_chart.
 
     st.bar_chart gives no value labels, doesn't reliably preserve sort order,
@@ -1286,6 +1286,36 @@ def hbar(labels: List[str], values: List[float], title: str = "",
     # Brightest = best. Sampled from the same ramp the heatmaps use.
     ramp = ["#0b4b30", "#12783f", "#2f9e52", "#4cb96a", "#7fd894", "#b7f7c9"]
     colors = [ramp[min(len(ramp) - 1, int((v - lo) / span * len(ramp)))] for v in val]
+
+    if style == "bar":
+        # Bars are kept for the Results tab. A heat strip reads well when the
+        # question is "who is hottest"; on Results the question is "how big
+        # is this number", and a bar answers that at a glance where a shade
+        # of green does not.
+        fig = go.Figure(go.Bar(
+            x=val, y=lab, orientation="h",
+            marker=dict(color=colors, line=dict(width=0)),
+            text=[fmt.format(v) for v in val],
+            textposition="outside",
+            textfont=dict(size=11, color=C["text"], family=NUM_FONT),
+            hovertemplate="%{y}: %{x:.1f}<extra></extra>",
+            cliponaxis=False,
+        ))
+        if ref is not None:
+            fig.add_vline(x=ref, line=dict(color=C["text3"], width=1, dash="dot"),
+                          annotation_text=f"{ref_label} {ref:.1f}",
+                          annotation_position="top",
+                          annotation_font=dict(size=10, color=C["text3"]))
+        h = height or max(220, 30 * len(lab) + 70)
+        _layout(fig, h, title)
+        fig.update_xaxes(showgrid=False, zeroline=False, showticklabels=False,
+                         range=[0, (hi or 1) * 1.18])
+        fig.update_yaxes(showgrid=False, zeroline=False,
+                         tickfont=dict(size=11, color=C["text2"]))
+        fig.update_layout(margin=dict(l=8, r=54, t=40 if title else 12, b=8),
+                          bargap=0.28)
+        st.plotly_chart(fig, width="stretch", key=_chart_key())
+        return
 
     # Rendered as a one-column heat strip rather than bars, per request --
     # same ranking, same numbers, but colour carries the magnitude so these
@@ -3065,14 +3095,10 @@ with tab_board:
         st.info("No players match these filters.")
 
     if ranked:
-        v1, v2 = st.columns([3, 2])
-        with v1:
-            hbar([name_of(p) for p in ranked[:15]],
-                 [round(score_for(p, kind), 1) for p in ranked[:15]],
-                 f"Top 15 by {kind_label} score",
-                 ref=float(pd.Series([score_for(x, kind) for x in players]).median()),
-                 ref_label="slate median")
-        with v2:
+        # The profile heatmap is the primary chart now. A single ranked
+        # column only says WHO is on top; the profile says WHY, and the
+        # score is already its first column, so the ranking isn't lost.
+        if True:
             # Same shape as the Due profile: the board tells you WHO, this
             # tells you WHY -- which of the inputs is actually carrying each
             # name. Scaled so the columns are comparable side by side.
@@ -3085,7 +3111,8 @@ with tab_board:
                 "Barrel": barrel_rate(p) * 100,
                 "P HR/9": nn(p, "pitcher_hr9") * 30,
             } for p in ranked[:15]]).set_index("Player")
-            heatmap(hm_hr, f"{kind_label} profile (scaled)", height=320)
+            heatmap(hm_hr, f"Top 15 by {kind_label} score — full profile",
+                    height=max(360, 26 * min(15, len(ranked)) + 120))
             st.caption(
                 "Each column is scaled independently, so a bright cell means "
                 "*high for this slate* on that input — not that the numbers "
@@ -3204,19 +3231,21 @@ with tab_games:
                 "Med HRW": round(med([nn(x, "hrw_score") for x in gp]), 1),
                 "Med DC": round(med([nn(x, "damage_conversion_score") for x in gp]), 1),
                 "Med Hit": round(med([hit_score(x) for x in gp]), 1),
+                "Med TB": round(med([tb_score(x) for x in gp]), 1),
                 "Pitcher": txt(head, "pitcher_name"),
                 "P HR/9": round(nn(head, "pitcher_hr9"), 2),
                 "Park HR": round(nn(head, "park_hr_factor", default=1.0), 2),
             })
         gdf = pd.DataFrame(glance).sort_values("Game Score", ascending=False)
 
-        s = st.columns(6)
+        s = st.columns(7)
         s[0].metric("Games", len(gdf))
         s[1].metric("Best game score", f"{gdf['Game Score'].max():.1f}")
         s[2].metric("Slate median", f"{gdf['Game Score'].median():.1f}")
         s[3].metric("Top HR", f"{gdf['Top HR'].max():.0f}")
         s[4].metric("Top HRR", f"{gdf['Top HRR'].max():.0f}")
         s[5].metric("Med DC", f"{gdf['Med DC'].median():.1f}")
+        s[6].metric("Med TB", f"{gdf['Med TB'].median():.1f}")
 
         metric_choice = st.radio(
             "Rank games by",
@@ -3229,57 +3258,9 @@ with tab_games:
         # The "Games ranked by" chart is gone -- the sorted table and the
         # per-metric heatmap directly below say the same thing with more
         # detail, so it was a third rendering of one ordering.
-        rr = st.container()
-        with rr:
-            # Radar of the top games across every metric at once. The bar chart
-            # answers "which game is best on ONE metric"; this answers "what
-            # SHAPE is that game" -- a game that's 50 on everything and a game
-            # carried by a single 96 both rank high on a bar and look nothing
-            # alike here. Slate median is drawn as a filled baseline so a
-            # game's edges read as above or below par without doing the maths.
-            radar_axes = ["Game Score", "Med HR", "Med HRR", "Med HRW", "Med DC",
-                          "Med Hit", "Top HR"]
-            top_n = ranked_games.head(3)
-            fig = go.Figure()
-            fig.add_trace(go.Scatterpolar(
-                r=[float(gdf[a].median()) for a in radar_axes] + [float(gdf[radar_axes[0]].median())],
-                theta=radar_axes + [radar_axes[0]],
-                fill="toself", name="slate median",
-                line=dict(color=C["text3"], width=1, dash="dot"),
-                fillcolor="rgba(148,163,184,0.10)",
-            ))
-            ramp = [C["orange"], C["cyan"], C["purple"]]
-            for i, (_, row) in enumerate(top_n.iterrows()):
-                fig.add_trace(go.Scatterpolar(
-                    r=[float(row[a]) for a in radar_axes] + [float(row[radar_axes[0]])],
-                    theta=radar_axes + [radar_axes[0]],
-                    name=str(row["Game"]), line=dict(color=ramp[i % len(ramp)], width=2),
-                ))
-            fig.update_layout(
-                polar=dict(
-                    bgcolor="rgba(0,0,0,0)",
-                    radialaxis=dict(visible=True, range=[0, 100], gridcolor=C["border"],
-                                    tickfont=dict(size=8, color=C["text3"])),
-                    angularaxis=dict(gridcolor=C["border"],
-                                     tickfont=dict(size=9, color=C["text2"])),
-                ),
-            )
-            _layout(fig, 360, f"Top 3 by {metric_choice} — shape vs slate")
-            fig.update_layout(showlegend=True,
-                              legend=dict(orientation="h", y=-0.12, x=0,
-                                          font=dict(size=9), bgcolor="rgba(0,0,0,0)"))
-            st.plotly_chart(fig, width="stretch", key=_chart_key())
-
-        st.caption(
-            "Game Score = median across every hitter of that hitter's median "
-            "HR / HRR / HRW / DC. Higher = more of the lineup is live for a homer. "
-            "On the radar, a wide even shape is a live lineup top to bottom; a "
-            "single long spike is one hitter carrying the game."
-        )
-
-        # Heatmap: every game against every metric at once, so a game that's
-        # strong across the board separates visually from one carried by a
-        # single column.
+        # Radar removed per request -- the per-metric heatmap directly
+        # below answers the same "what shape is this game" question in a
+        # form that reads at a glance and matches the rest of the site.
         hm = ranked_games.set_index("Game")[
             ["Game Score", "Med HR", "Med HRR", "Med HRW", "Med DC", "Med Hit",
              "Top HR", "Top HRR"]
@@ -3584,7 +3565,8 @@ with tab_scoreboard:
     st.subheader("Scoreboard")
     st.caption(
         f"Every one of the {len(view)} hitters on the slate, all scores in one "
-        "sortable grid. Click any column header to sort by it."
+        "grid. Sort by several columns at once with the controls below the "
+        "trackers — clicking a header only ever sorts by one."
     )
     # ── LIVE HR TRACKER ────────────────────────────────────────────────
     # The grid below is a pre-game object. This is the same slate scored
@@ -3692,10 +3674,23 @@ with tab_scoreboard:
         st.info("No players match your filters — clear them in the sidebar.")
     else:
         sb1, sb2, sb3 = st.columns([2, 2, 1])
-        sb_sort = sb1.selectbox(
-            "Sort by", ["HR", "Cross", "Longest", "HRR", "Hit", "TB", "Damage",
-                        "PMix", "PMatch", "375+", "400+", "IHR", "K%", "Spot"],
-            key="sbsort",
+        # Streamlit's grid only sorts by one column at a time -- clicking a
+        # second header replaces the first. So the sort happens here instead:
+        # pick columns in priority order and the frame is sorted before it is
+        # handed to the grid. Ties on the first key break on the second, and
+        # so on.
+        sb_sort = sb1.multiselect(
+            "Sort by (in order)",
+            ["HR", "Cross", "Longest", "HRR", "Hit", "TB", "Damage",
+             "PMix", "PMatch", "375+", "400+", "IHR", "K%", "Spot"],
+            default=["HR"], key="sbsort",
+            help="Add more than one to break ties — e.g. HR then Cross sorts "
+                 "by HR, and equal HR scores fall back to Cross.",
+        )
+        sb_asc = sb1.checkbox(
+            "Low to high", value=False, key="sbasc",
+            help="Applies to every sort column. Spot sorts low-to-high by "
+                 "default since batting order 1 is the top of the lineup.",
         )
         sb_cols = sb2.multiselect(
             "Extra columns", ["PMix", "PMatch", "375+", "400+", "IHR", "K%",
@@ -3709,7 +3704,10 @@ with tab_scoreboard:
                  "HR", "HRR", "Hit", "TB", "Damage"]
                 + [c for c in sb_cols if c not in ("Damage",)] + ["🧩"])
         keep = list(dict.fromkeys(c for c in keep if c in bdf.columns))
-        out = bdf.sort_values(sb_sort, ascending=(sb_sort == "Spot"))[keep]
+        _keys = [c for c in sb_sort if c in bdf.columns] or ["HR"]
+        # Spot is the one column where "best" means smallest.
+        _asc = [sb_asc if c != "Spot" else (not sb_asc) for c in _keys]
+        out = bdf.sort_values(_keys, ascending=_asc)[keep]
         if sb_top:
             out = out.head(50)
 
@@ -4099,14 +4097,25 @@ with tab_long:
                     sum(1 for p in ranked_long if bbe_tracked(p) < 20),
                     help="Fewer than 20 tracked BBE — score is shrunk toward 40.")
 
-        l1, l2 = st.columns([3, 2])
-        with l1:
-            hbar([name_of(p) for p in ranked_long[:15]],
-                 [round(keyfn(p), 1) for p in ranked_long[:15]],
-                 "Top 15 by distance score",
-                 ref=float(med([longest_score(x) for x in players])),
-                 ref_label="slate median")
-        with l2:
+        hm_long = pd.DataFrame([{
+            "Player": name_of(p),
+            "Adj": longest_adj(p),
+            "Raw": longest_score(p),
+            "400+": recent400(p) * 20,
+            "375+": recent375(p) * 12,
+            "Avg EV": nn(p, "recent_ev", "l25pa_avg_ev"),
+            "Barrel": barrel_rate(p) * 100,
+            "Carry": carry_factor(p) * 60,
+        } for p in ranked_long[:15]]).set_index("Player")
+        heatmap(hm_long, "Distance profile (scaled)",
+                height=max(280, 30 * len(hm_long) + 90))
+        st.caption(
+            "Columns are scaled independently, so bright means *high for this "
+            "slate* on that input. 400+/375+/Carry are multiplied only to sit "
+            "on a comparable scale — the real values are in the table above."
+        )
+
+        if True:
             st.markdown("**Distance score vs HR score**")
             st.caption(
                 "Hitters far from the diagonal are the interesting ones: high "
@@ -4143,23 +4152,6 @@ with tab_long:
 
         # Same profile grid as the HR and Hits boards -- the table tells you
         # the order, this tells you which input is carrying each name.
-        hm_long = pd.DataFrame([{
-            "Player": name_of(p),
-            "Adj": longest_adj(p),
-            "Raw": longest_score(p),
-            "400+": recent400(p) * 20,
-            "375+": recent375(p) * 12,
-            "Avg EV": nn(p, "recent_ev", "l25pa_avg_ev"),
-            "Barrel": barrel_rate(p) * 100,
-            "Carry": carry_factor(p) * 60,
-        } for p in ranked_long[:15]]).set_index("Player")
-        heatmap(hm_long, "Distance profile (scaled)",
-                height=max(280, 30 * len(hm_long) + 90))
-        st.caption(
-            "Columns are scaled independently, so bright means *high for this "
-            "slate* on that input. 400+/375+/Carry are multiplied only to sit "
-            "on a comparable scale — the real values are in the table above."
-        )
 
         open_player_picker(ranked_long, "longest")
 
@@ -4223,14 +4215,7 @@ with tab_due:
                     f"{pd.Series([nn(p, 'hr_due_score') for p in players]).median():.1f}")
         k[4].metric("Biggest HR gap", f"{max(due_gap(p) for p in players):+.2f}")
 
-        v1, v2 = st.columns([3, 2])
-        with v1:
-            hbar([f"{name_of(p)} ({team_of(p)})" for p in ranked_due[:15]],
-                 [round(nn(p, "hr_due_score"), 1) for p in ranked_due[:15]],
-                 "Most overdue",
-                 ref=float(pd.Series([nn(x, "hr_due_score") for x in players]).median()),
-                 ref_label="slate median")
-        with v2:
+        if True:
             hm = pd.DataFrame([{
                 "Player": name_of(p),
                 "Due": nn(p, "hr_due_score"),
@@ -4238,8 +4223,13 @@ with tab_due:
                 "HR gap": due_gap(p) * 20,
                 "HR/PA": nn(p, "hr_per_pa") * 1000,
                 "Barrel": barrel_rate(p) * 100,
+                # A drought only matters if tonight is a good spot to end it,
+                # so the two matchup inputs sit alongside the due signals.
+                "DC": nn(p, "damage_conversion_score"),
+                "P HR/9": nn(p, "pitcher_hr9") * 30,
             } for p in ranked_due[:15]]).set_index("Player")
-            heatmap(hm, "Due profile (scaled)", height=320)
+            heatmap(hm, "Due profile (scaled)",
+                    height=max(360, 26 * min(15, len(ranked_due)) + 120))
 
         for i, p in enumerate(ranked_due[:12], start=1):
             player_card(p, i, open_key="due")
@@ -4324,15 +4314,9 @@ with tab_hitshrr:
         m[3].metric("Top-5 spots", sum(1 for p in hh
                                        if nn(p, "lineup_spot", default=99) <= 5))
 
-        v1, v2 = st.columns([3, 2])
-        with v1:
-            hbar([name_of(p) for p in hh[:15]],
-                 [round(score_for(p, k), 1) for p in hh[:15]],
-                 f"Top 15 by {hh_kind.split(' ')[0]} score",
-                 ref=float(slate_med), ref_label="slate median",
-                 subtitles=[f"{team_of(p)} · #{p.get('lineup_spot', '—')} vs "
-                            f"{txt(p, 'pitcher_name')}" for p in hh[:15]])
-        with v2:
+        # The profile grid leads the page -- Score is its first column, so
+        # the ranking is still there, and the rest of the row says why.
+        if True:
             # Bat and spot in one grid. A great bat with dark PreOB/Post cells
             # is a good hitter in a dead lineup slot -- the exact thing this
             # board should stop you doing.
@@ -4345,7 +4329,8 @@ with tab_hitshrr:
                 "PreOB": nn(p, "lineup_pre_onbase") * 100,
                 "Post": nn(p, "lineup_post_convert") * 100,
             } for p in hh[:15]]).set_index("Player")
-            heatmap(hm_hh, "Bat and spot (scaled)", height=320)
+            heatmap(hm_hh, "Bat and spot (scaled)",
+                    height=max(360, 26 * min(15, len(hh)) + 120))
             st.caption(
                 "**PreOB** and **Post** are the lineup around him — men on "
                 "when he bats, and the bats behind him. A bright Hit column "
@@ -4972,7 +4957,7 @@ with tab_results:
                       sorted(with_dist, key=lambda h: -nn(h, "longest_ft"))[:10]],
                      [int(nn(h, "longest_ft")) for h in
                       sorted(with_dist, key=lambda h: -nn(h, "longest_ft"))[:10]],
-                     "Longest HRs tonight (ft)", fmt="{:.0f}")
+                     "Longest HRs tonight (ft)", fmt="{:.0f}", style="bar")
                 st.caption(
                     "Feeds the Longest board: compare these to who the model "
                     "actually had ranked, and the distance weights become "
@@ -4999,7 +4984,7 @@ with tab_results:
                     ordered = [k for k in PICK_ORDER if k in tally]
                     hbar([f"{PICK_EMOJI[k]} {PICK_LABEL[k]}" for k in ordered],
                          [tally[k] for k in ordered],
-                         "HRs by pick type", fmt="{:.0f}")
+                         "HRs by pick type", fmt="{:.0f}", style="bar")
                     best = max(ordered, key=lambda k: tally[k])
                     st.caption(
                         f"Best HR-producing category tonight: "
@@ -5058,7 +5043,7 @@ with tab_results:
                     if len(by_band):
                         hbar([f"{b}  (n={int(r['size'])})" for b, r in by_band.iterrows()],
                              [float(r["mean"]) * 100 for _, r in by_band.iterrows()],
-                             "HR hit rate by model score band", fmt="{:.0f}%")
+                             "HR hit rate by model score band", fmt="{:.0f}%", style="bar")
                         st.caption("If the model is working, these climb left to right.")
                 else:
                     st.caption("Hit-rate-by-score-band appears once picks settle.")
@@ -5115,7 +5100,7 @@ with tab_results:
                                  hide_index=True)
                     hbar([f"{r['']} {r['Pick type']}" for r in do_rows],
                          [float(r["Rate"].rstrip("%")) for r in do_rows],
-                         "Designed-outcome hit rate by tier", fmt="{:.0f}%")
+                         "Designed-outcome hit rate by tier", fmt="{:.0f}%", style="bar")
                 # Model roles that never became a game-sheet pick. Without
                 # this they vanish from grading entirely -- the model had an
                 # opinion and nothing recorded whether it was right.
@@ -5292,40 +5277,10 @@ with tab_results:
         if acc is not None:
             st.caption(f"Base-hit accuracy across all graded days: **{acc}%**")
         st.caption(
-            "**HR rate** is HRs over the whole tracked pool. The columns after "
-            "Fair odds are the nightly report's own rates for that tier. "
-            "**Fair odds** are the break-even American price implied by the HR "
-            "rate — anything priced longer than that is where the edge is, and "
-            "since the board has no prices that comparison is still manual.\n\n"
-            "**Did its job** grades each pick against what it was picked "
-            "FOR, not against HR — a Hit pick that singles did its job. "
-            "Rates are pooled across every graded pick.\n\n"
-            "A **—** means no graded pick file carried that metric for the "
-            "tier — usually a slate graded before the metric existed."
+            "Fair odds are the break-even American price implied by that hit "
+            "rate. Anything priced longer than fair is where the edge is — "
+            "the board doesn't know prices yet, so that comparison is manual."
         )
-        _avg_rows = []
-        for tier, d in bt_summary.items():
-            if not isinstance(d, dict):
-                continue
-            am = d.get("avg_metrics") or {}
-            if not am:
-                continue
-            _avg_rows.append({
-                "Tier": BT_TIER_LABELS.get(tier, tier.replace("_", " ").title()),
-                **{k: (f"{am[k]}%" if am.get(k) is not None else "—")
-                   for k in ("Did its job", "HR", "1+ Hit", "XBH", "2+ TB",
-                             "1+ HRR", "2+ HRR", "3+ HRR")},
-            })
-        if _avg_rows:
-            with st.expander("Same table, averaging each day equally"):
-                st.dataframe(pd.DataFrame(_avg_rows), width="stretch",
-                             hide_index=True)
-                st.caption(
-                    "The table above pools every pick, so a 30-pick slate "
-                    "outweighs an 11-pick one. This one gives each day the "
-                    "same say. Where the two disagree, one slate is doing "
-                    "a lot of the work."
-                )
     else:
         st.caption(
             "All-time tier performance appears here once the nightly backtest "
