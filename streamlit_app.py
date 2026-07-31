@@ -3049,6 +3049,68 @@ m[5].metric(
     delta=(f"{len(_settled_now)} picks settled" if _settled_now else None),
     delta_color="off",
 )
+# ── SLATE LEAN ─────────────────────────────────────────────────────────────
+# Which way tonight actually tilts. Comparing the boards' raw medians would be
+# meaningless -- they aren't calibrated to each other, and hit_score sits ~12
+# points above hr_score on an ordinary night. So each board is scored against
+# ITS OWN normal, measured over 34 graded days:
+#   hr_score      median 49.9  (sd 17.1)
+#   hit_score     median 61.3  (sd  4.3)
+#   contact_score median 48.1  (sd  5.7)
+# The lean is whichever board sits furthest above its own baseline in standard
+# deviations, so "high for a HR night" and "high for a hits night" are on the
+# same footing.
+# score_for() has no "contact" kind -- it silently falls back to hr_score --
+# so the contact board is read straight off the field it lives in.
+_LEAN_BASE = {
+    "HR": (lambda x: hr_score(x), 49.86, 17.11),
+    "hits": (lambda x: hit_score(x), 61.30, 4.28),
+    "bases": (lambda x: nn(x, "contact_score"), 48.12, 5.71),
+}
+# The baselines were measured on GRADED PICKS -- roughly 90 hitters a night,
+# the top of each board -- not on all 260-odd bats in the slate. Taking the
+# median of the whole slate would compare two different populations and make
+# every night look far below normal. So today is measured over a matched
+# top-90 slice of each board.
+_LEAN_N = 90
+_lean_z = {}
+for _lbl, (_fn, _mu, _sd) in _LEAN_BASE.items():
+    try:
+        _vals = [_fn(x) for x in players]
+        _vals = sorted((v for v in _vals if isinstance(v, (int, float)) and v),
+                       reverse=True)[:_LEAN_N]
+        if len(_vals) < 20:
+            continue
+        _m = float(med(_vals))
+    except Exception:
+        continue
+    _lean_z[_lbl] = (_m - _mu) / (_sd or 1.0)
+if _lean_z:
+    # A lean is a RELATIVE call -- which of the three to favour tonight --
+    # so it keys off the gap between the top two boards, not the top board's
+    # absolute level. The absolute level is reported separately, because
+    # "favour hits" on a night when everything is down still matters.
+    _ordered = sorted(_lean_z, key=lambda k: -_lean_z[k])
+    _best = _ordered[0]
+    _gap = _lean_z[_best] - (_lean_z[_ordered[1]] if len(_ordered) > 1 else 0.0)
+    if _gap < 0.4:
+        _lean_txt = "**balanced** — no board stands out tonight"
+    elif _gap < 1.0:
+        _lean_txt = f"leans **{_best}** (mild)"
+    else:
+        _lean_txt = f"leans **{_best}**"
+    _overall = sum(_lean_z.values()) / len(_lean_z)
+    _lean_txt += (" · whole slate **quiet**" if _overall < -0.75
+                  else " · whole slate **live**" if _overall > 0.75 else "")
+    st.caption(
+        f"Slate {_lean_txt}  ·  "
+        + " · ".join(f"{k} {_lean_z[k]:+.1f}sd" for k in ("HR", "hits", "bases")
+                     if k in _lean_z)
+        + "  — each board against its own 34-day normal. HR swings widest "
+          "(sd 17) because the scoring model changed mid-season, so treat an "
+          "HR lean as the softest of the three."
+    )
+
 st.caption(
     f"Projected **{_proj['low']}\u2013{_proj['high']}** HRs · power grade "
     f"**{_proj['grade']}** · {_proj['top_profiles']} top HR profiles · "
@@ -3263,7 +3325,7 @@ with tab_games:
         # form that reads at a glance and matches the rest of the site.
         hm = ranked_games.set_index("Game")[
             ["Game Score", "Med HR", "Med HRR", "Med HRW", "Med DC", "Med Hit",
-             "Top HR", "Top HRR"]
+             "Med TB", "Top HR", "Top HRR"]
         ]
         heatmap(hm, "Game x metric — hotter is better for hitters",
                 height=max(280, 26 * len(hm) + 90), fmt="{:.0f}")
@@ -3345,14 +3407,44 @@ with tab_games:
             g1[7].metric("⭐ Weak spots", n_weak)
 
 
+            # Five names ranked on one score only told you the order, and the
+            # order was already obvious from the lineup table. This says what
+            # each of them is actually good at, so you can see at a glance
+            # whether the game's best bat is a power play or a contact play.
             top5 = sorted(gp, key=hr_score, reverse=True)[:5]
-            hbar([name_of(x) for x in top5], [round(hr_score(x), 1) for x in top5],
-                 "Top 5 by HR score", ref=float(med([hr_score(x) for x in players])),
-                 ref_label="slate median")
+            hm_g5 = pd.DataFrame([{
+                "Player": name_of(x),
+                "HR": hr_score(x),
+                "Hit": hit_score(x),
+                "HRR": prod_score(x),
+                "TB": tb_score(x),
+                "DC": nn(x, "damage_conversion_score"),
+                "HRW": nn(x, "hrw_score"),
+                "P HR/9": nn(x, "pitcher_hr9") * 30,
+            } for x in top5]).set_index("Player")
+            heatmap(hm_g5, "Top 5 bats in this game — what each one is for",
+                    height=max(240, 30 * len(hm_g5) + 110), fmt="{:.0f}")
+            st.caption(
+                "Columns scale independently, so bright means high *for this "
+                "slate*. A bright HR row with a dark Hit row is a swing-hard "
+                "bat; the reverse is a table-setter. P HR/9 is ×30 to fit."
+            )
 
+            # Wind gets a real block like every other number. st.metric can't
+            # render rotated HTML, so the bearing is snapped to the nearest of
+            # eight compass glyphs -- wind_deg is the direction it blows FROM,
+            # so +180 points it where the ball actually gets carried.
+            _wdeg = head.get("wind_deg", head.get("weather_wind_deg"))
+            _wlab = txt(head, "wind_direction_label")
+            _wmph = nn(head, "weather_wind_mph", "wind_mph")
+            if _wdeg is not None:
+                _glyph = "↑↗→↘↓↙←↖"[int(((float(_wdeg) + 180) % 360) / 45 + 0.5) % 8]
+            else:
+                _glyph = ""
             e = st.columns(6)
             e[0].metric("Temp", f"{nn(head, 'weather_temp_f'):.0f}°F" if head.get("weather_temp_f") else "—")
-            e[1].metric("Wind", f"{nn(head, 'weather_wind_mph'):.0f} mph" if head.get("weather_wind_mph") else "—")
+            e[1].metric("Wind", f"{_glyph} {_wmph:.0f} mph" if _wmph else "—",
+                        _wlab or None, delta_color="off")
             e[2].metric("Park HR", f"{nn(head, 'park_hr_factor', default=1.0):.2f}")
             e[3].metric("Weather HR", f"{nn(head, 'weather_hr_effect_pct'):+.0f}%")
             e[4].metric("Roof", txt(head, "roof", default="—"))
@@ -3366,27 +3458,6 @@ with tab_games:
             # together read as "out to CF ->" without needing a field diagram.
             _wdeg = head.get("wind_deg", head.get("weather_wind_deg"))
             _wlab = txt(head, "wind_direction_label")
-            if _wlab or _wdeg is not None:
-                _mph = nn(head, "weather_wind_mph", "wind_mph")
-                _out = "out" in _wlab.lower()
-                _in = _wlab.lower().startswith("in") or " in " in _wlab.lower()
-                _col = C["orange"] if _out else (C["cyan"] if _in else C["text3"])
-                _arrow = ""
-                if _wdeg is not None:
-                    _arrow = (
-                        f"<span style='display:inline-block;transform:rotate("
-                        f"{(float(_wdeg) + 180) % 360:.0f}deg);color:{_col};"
-                        f"font-size:15px;line-height:1'>&#8593;</span>"
-                    )
-                st.markdown(
-                    f"<div style='font-size:12px;color:{C['text3']};"
-                    f"display:flex;align-items:center;gap:7px'>"
-                    f"{_arrow}<span>Wind: <b style='color:{_col}'>{_wlab or '—'}</b>"
-                    + (f" · {_mph:.0f} mph" if _mph else "")
-                    + "</span></div>",
-                    unsafe_allow_html=True,
-                )
-
             # BOTH starters, side by side. The header only ever named the
             # pitcher facing the strongest hitter, so half of every matchup
             # was invisible -- you could see that CHC's lineup was live
