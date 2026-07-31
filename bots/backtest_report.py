@@ -166,20 +166,39 @@ def parse_json_file(filepath):
             hits, tb = row.get("actual_hits"), row.get("actual_tb")
             if hits is not None and tb is not None:
                 row["got_xbh"] = tb > hits
+        # 1+ HRR isn't stored as a flag -- it's any hit, run or RBI at all,
+        # which is hrr_total >= 1.
+        for row in group:
+            if row.get("hrr_1_plus") is None:
+                row["hrr_1_plus"] = (row.get("hrr_total") or 0) >= 1
+        fields = (
+            ("HR", "got_hr"),
+            ("1+ Hit", "got_base_hit"),
+            ("XBH", "got_xbh"),
+            ("2+ TB", "tb_2_plus"),
+            ("1+ HRR", "hrr_1_plus"),
+            ("2+ HRR", "hrr_2_plus"),
+            ("3+ HRR", "hrr_3_plus"),
+            # "Did its job" -- graded against what the pick was FOR, not
+            # against HR. A HIT pick that singles did its job; grading it on
+            # HR calls a working pick a miss.
+            ("Did its job", "designed_hit"),
+        )
         tiers[tier] = {
             "hr_count": sum(1 for r in group if r.get("got_hr")),
             "pool_size": len(group),
             "metrics": {
                 name: value
-                for name, value in (
-                    ("HR", pct(group, "got_hr")),
-                    ("1+ Hit", pct(group, "got_base_hit")),
-                    ("XBH", pct(group, "got_xbh")),
-                    ("2+ TB", pct(group, "tb_2_plus")),
-                    ("2+ HRR", pct(group, "hrr_2_plus")),
-                    ("3+ HRR", pct(group, "hrr_3_plus")),
-                )
+                for name, key in fields
+                for value in (pct(group, key),)
                 if value is not None
+            },
+            # Raw numerator/denominator per metric so the aggregate can pool
+            # across days instead of averaging daily percentages -- a 30-pick
+            # slate and an 11-pick slate should not count the same.
+            "metric_counts": {
+                name: [sum(1 for r in group if r.get(key)), len(group)]
+                for name, key in fields
             },
         }
 
@@ -301,6 +320,7 @@ def aggregate(per_file_results):
     """
     totals = defaultdict(lambda: {"hr_count": 0, "pool_size": 0, "days_seen": 0})
     metric_sums = defaultdict(lambda: defaultdict(lambda: {"sum": 0.0, "count": 0}))
+    metric_pool = defaultdict(lambda: defaultdict(lambda: [0, 0]))
     base_hit_acc_values = []
 
     for date_str, day_data in per_file_results.items():
@@ -313,6 +333,9 @@ def aggregate(per_file_results):
             for metric_name, value in data.get("metrics", {}).items():
                 metric_sums[tier][metric_name]["sum"] += value
                 metric_sums[tier][metric_name]["count"] += 1
+            for metric_name, (num, den) in data.get("metric_counts", {}).items():
+                metric_pool[tier][metric_name][0] += num
+                metric_pool[tier][metric_name][1] += den
 
         if day_data.get("base_hit_accuracy") is not None:
             base_hit_acc_values.append(day_data["base_hit_accuracy"])
@@ -325,12 +348,23 @@ def aggregate(per_file_results):
             for name, stat in metric_sums[tier].items()
             if stat["count"] > 0
         }
+        pooled_metrics = {
+            name: round(num * 100.0 / den, 1)
+            for name, (num, den) in metric_pool[tier].items()
+            if den
+        }
         summary[tier] = {
             "total_hr_count": data["hr_count"],
             "total_pool_size": data["pool_size"] or None,
             "hr_rate_pct": round(rate, 1) if rate is not None else None,
             "days_seen": data["days_seen"],
+            # avg_metrics = mean of the daily percentages (every day counts
+            # equally). pooled_metrics = all picks in one bucket (every pick
+            # counts equally). Pooled is the headline; the average is kept so
+            # a single lopsided slate skewing the pool is still visible.
             "avg_metrics": avg_metrics,
+            "pooled_metrics": pooled_metrics,
+            "metric_counts": {k: v for k, v in metric_pool[tier].items()},
         }
 
     overall_base_hit_accuracy = (

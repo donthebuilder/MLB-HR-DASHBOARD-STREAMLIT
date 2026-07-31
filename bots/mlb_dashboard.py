@@ -6608,7 +6608,31 @@ def apply_model_v2_layers(h: HitterRecord) -> HitterRecord:
     #      season_power only carries 0.08 weight in the live blend.
     # Logged alongside hr_score for 30 days -- do not change the live score
     # until the shadow wins or loses on real graded picks.
-    _corrected_hr = round(_hr2_clip(0.80 * h.hr_score + 0.20 * season_power), 2)
+    # RE-ANCHOR (2026-07-31): the 7/13 shadow test ran on three days and
+    # concluded recency boosts hurt, so the 7/14 swap dropped recency from the
+    # live score entirely. Five days of graded picks (313 unique player-days)
+    # say the opposite, and say it loudly -- HR rate by HRs-in-last-5 runs
+    # 2.8% / 9.8% / 30.4% / 46.7% (n=109/133/56/15), and last5_hr correlates
+    # with actually homering at r=+0.351 (t=6.6) versus r=+0.139 (t=2.5) for
+    # the full hr_score blend. The composite was predicting worse than one of
+    # its own ingredients because that ingredient had been removed.
+    #
+    # Re-anchoring 30% to recent_hr_form_score. Measured on the graded days,
+    # re-ranking the top 15 of each slate: 25.3% -> 29.3% HR rate, and the
+    # top 8 goes 22.5% -> 32.5%. The gain is a broad plateau from 20% to 40%
+    # (peak 35%), not a knife-edge, which is why 30% is safe to sit on; it is
+    # deliberately one notch below the measured optimum because five days is
+    # a thin sample. 50% is worse than 30% on the top 15, so the rest of the
+    # blend is carrying real information -- this is a re-anchor, not a
+    # replacement.
+    #
+    # Revisit after ~2 more weeks. If the top-of-board HR rate drops, lower
+    # the 0.30; git log has the previous formula.
+    _hr_form_anchor = 0.30
+    _corrected_hr = round(_hr2_clip(
+        (1.0 - _hr_form_anchor) * (0.80 * h.hr_score + 0.20 * season_power)
+        + _hr_form_anchor * safe_float(getattr(h, "recent_hr_form_score", 0.0), 0.0)
+    ), 2)
 
     # ── LONGEST HR SCORE (added 2026-07-13) ────────────────────────────────
     # "Who hits the FARTHEST ball tonight" -- a distance metric, not an HR
