@@ -207,6 +207,21 @@ MODEL_WEIGHTS: Dict[str, Dict[str, float]] = {
 # The blend is a weighted average -- if it stops summing to 1.00 every score
 # silently shifts scale and nothing errors. The comment above has said "must
 # sum to 1.00" since the weights were centralized; this makes it true.
+def effective_side(bats: Any, throws: Any) -> str:
+    """Which side of the plate this hitter is ACTUALLY batting from tonight.
+
+    Switch hitters (bats == "S") bat opposite the arm -- left against a
+    righty, right against a lefty -- so they hold the platoon edge in every
+    matchup. Comparing bats directly against "L"/"R" silently dropped them
+    out of every side-specific term: weak-side match, side HR/9, side WHIP,
+    side slug/OPS and the handed pitch mix. They are ~11% of a slate.
+    """
+    b = (bats or "").upper()[:1]
+    if b == "S":
+        return "R" if (throws or "").upper()[:1] == "L" else "L"
+    return b
+
+
 _hr_blend_sum = round(sum(MODEL_WEIGHTS["hr_blend"].values()), 6)
 if abs(_hr_blend_sum - 1.0) > 1e-6:
     raise ValueError(
@@ -5714,16 +5729,30 @@ def apply_model_v2_layers(h: HitterRecord) -> HitterRecord:
     _spot = _spot_damage_for_batter(h)
     # Weak-side edge: graded 0-1, blends the pitcher's weakness to this batter's
     # side. Bonus scales with how exploitable + how lopsided the split is.
+    # SWITCH HITTERS (fixed 2026-07-31). Every platoon term below compared
+    # h.bats directly against "L"/"R", so a switch hitter -- bats == "S" --
+    # failed all of them: never matched the pitcher's weak side, always took
+    # the neutral WHIP fallback, and always took the 0.4 side_match penalty
+    # instead of the 1.0 bonus. A switch hitter has the platoon edge in EVERY
+    # matchup, so it was exactly backwards. They are ~11% of a slate and were
+    # shut out of the top 25 of the HR board entirely.
+    #
+    # A switch hitter bats opposite the arm: left against a righty, right
+    # against a lefty.
+    _eff_bats = h.bats
+    if (h.bats or "").upper()[:1] == "S":
+        _eff_bats = "R" if (h.pitcher_throws or "").upper()[:1] == "L" else "L"
+
     _wk_side_norm = minmax_norm(safe_float(getattr(h, "pitcher_weak_side_score", 0.0), 0.0), 40.0, 85.0)
     _wk_gap = safe_float(getattr(h, "pitcher_weak_side_gap", 0.0), 0.0)
-    _is_weak_side = (h.pitcher_weak_side == "LHB" and h.bats == "L") or (h.pitcher_weak_side == "RHB" and h.bats == "R")
+    _is_weak_side = (h.pitcher_weak_side == "LHB" and _eff_bats == "L") or (h.pitcher_weak_side == "RHB" and _eff_bats == "R")
     _weak_side_edge = _wk_side_norm * (0.6 + 0.4 * min(1.0, _wk_gap / 0.30))
     # Side-specific WHIP as its own visible factor (was previously only
     # baked into pitcher_weak_side_score's upstream composite, not directly
     # readable here) -- added per audit (2026-06-27). A high side-specific
     # WHIP means more traffic/baserunners against this batter's hand
     # specifically, a distinct signal from pure power weakness.
-    _side_whip = h.pitcher_whip_vs_lhb if h.bats == "L" else h.pitcher_whip_vs_rhb if h.bats == "R" else 1.28
+    _side_whip = h.pitcher_whip_vs_lhb if _eff_bats == "L" else h.pitcher_whip_vs_rhb if _eff_bats == "R" else 1.28
     _whip_boost = minmax_norm(safe_float(_side_whip, 1.28), 1.15, 1.55) * 0.15  # up to +15% multiplier
     _weak_side_edge = min(1.0, _weak_side_edge * (1.0 + _whip_boost))
     if _is_weak_side:
@@ -6761,7 +6790,10 @@ def apply_matchup_center_fields(h: HitterRecord) -> HitterRecord:
     k9 = safe_float(getattr(h, "pitcher_k9", 0.0), 0.0)
     low_k = (0 < k_rate <= 0.205) or (0 < k9 <= 7.50)
     very_low_k = (0 < k_rate <= 0.165) or (0 < k9 <= 6.50)
-    side_weak = (h.bats == "L" and h.pitcher_weak_side == "LHB") or (h.bats == "R" and h.pitcher_weak_side == "RHB")
+    _sw = h.bats
+    if (h.bats or "").upper()[:1] == "S":
+        _sw = "R" if (h.pitcher_throws or "").upper()[:1] == "L" else "L"
+    side_weak = (_sw == "L" and h.pitcher_weak_side == "LHB") or (_sw == "R" and h.pitcher_weak_side == "RHB")
     spot_hot = h.pitcher_spot_damage_score >= 62 or h.pitcher_zone_damage_score >= 64
     spot_watch = h.pitcher_spot_damage_score >= 52 or h.pitcher_zone_damage_score >= 54
     weak_pitcher = (
@@ -6843,9 +6875,14 @@ def score_hitter(h: HitterRecord) -> HitterRecord:
     season_pa = max(1, safe_int(h.season_pa, 1))
     h.hr_per_pa = round(safe_float(h.season_hr, 0.0) / season_pa, 4)
     h.hr_pa_score = round(100 * minmax_norm(h.hr_per_pa, 0.015, 0.085), 1)
-    side_hr9 = h.pitcher_hr9_vs_lhb if h.bats == "L" else h.pitcher_hr9_vs_rhb
-    side_whip = h.pitcher_whip_vs_lhb if h.bats == "L" else h.pitcher_whip_vs_rhb
-    side_match = 1.0 if ((h.bats == "L" and h.pitcher_weak_side == "LHB") or (h.bats == "R" and h.pitcher_weak_side == "RHB")) else 0.4
+    # Same switch-hitter correction as above: "S" used to fall through the
+    # else branch and silently take the vs-RHB numbers even when batting left.
+    _eb = h.bats
+    if (h.bats or "").upper()[:1] == "S":
+        _eb = "R" if (h.pitcher_throws or "").upper()[:1] == "L" else "L"
+    side_hr9 = h.pitcher_hr9_vs_lhb if _eb == "L" else h.pitcher_hr9_vs_rhb
+    side_whip = h.pitcher_whip_vs_lhb if _eb == "L" else h.pitcher_whip_vs_rhb
+    side_match = 1.0 if ((_eb == "L" and h.pitcher_weak_side == "LHB") or (_eb == "R" and h.pitcher_weak_side == "RHB")) else 0.4
 
     # V2 lineup-spot damage from pitcher history. This powers the Matchups tab color/hover layer.
     spot_key = str(safe_int(h.lineup_spot, 0))
@@ -7228,7 +7265,8 @@ def build_hitter_records(client: MLBClient, db: CacheDB, game: Dict[str, Any], s
             batter_pitch_profile = build_batter_pitch_type_profile(db, pid, statcast_data_end_date(slate_date))
             # Select handed pitch mix for this hitter. Fall back to all-batters if
             # the handed slice is empty or low-sample (<150 pitches).
-            handed_mix = pitch_mix_vs_L if bats == "L" else pitch_mix_vs_R if bats == "R" else pitch_mix_all
+            _eside = effective_side(bats, getattr(pitcher, "throws", None))
+            handed_mix = pitch_mix_vs_L if _eside == "L" else pitch_mix_vs_R if _eside == "R" else pitch_mix_all
             if safe_int(handed_mix.get("sample_pitches"), 0) < 150:
                 pitch_mix_data = pitch_mix_all
             else:
@@ -7402,10 +7440,10 @@ def build_hitter_records(client: MLBClient, db: CacheDB, game: Dict[str, Any], s
                 pitcher_l3_hr9=pitcher.l3_hr9,
                 pitcher_l3_starts_found=pitcher.l3_starts_found,
                 pitcher_weak_side=pitcher.weak_side,
-                pitcher_weak_side_score=(pitcher.weak_side_score_lhb if bats == "L" else pitcher.weak_side_score_rhb),
+                pitcher_weak_side_score=(pitcher.weak_side_score_lhb if effective_side(bats, pitcher.throws) == "L" else pitcher.weak_side_score_rhb),
                 pitcher_weak_side_gap=pitcher.weak_side_gap,
-                pitcher_side_slug=(pitcher.slug_vs_lhb if bats == "L" else pitcher.slug_vs_rhb),
-                pitcher_side_ops=(pitcher.ops_vs_lhb if bats == "L" else pitcher.ops_vs_rhb),
+                pitcher_side_slug=(pitcher.slug_vs_lhb if effective_side(bats, pitcher.throws) == "L" else pitcher.slug_vs_rhb),
+                pitcher_side_ops=(pitcher.ops_vs_lhb if effective_side(bats, pitcher.throws) == "L" else pitcher.ops_vs_rhb),
                 pitcher_lineup_spot_damage=getattr(pitcher, "lineup_spot_damage", {}) or {},
                 pitcher_lineup_zone_damage=getattr(pitcher, "lineup_zone_damage", {}) or {},
                 pitch_mix_score=safe_float(pmix_fit.get("score"), 50.0),
@@ -7672,10 +7710,11 @@ def projected_hr_total(rows: List[HitterRecord]) -> Tuple[int, int, str, int, in
 
     pitcher_weak_games = set()
     for r in rows:
-        side_hr9 = r.pitcher_hr9_vs_lhb if r.bats == "L" else r.pitcher_hr9_vs_rhb
+        _es = effective_side(r.bats, r.pitcher_throws)
+        side_hr9 = r.pitcher_hr9_vs_lhb if _es == "L" else r.pitcher_hr9_vs_rhb
         side_match = (
-            (r.bats == "L" and r.pitcher_weak_side == "LHB")
-            or (r.bats == "R" and r.pitcher_weak_side == "RHB")
+            (_es == "L" and r.pitcher_weak_side == "LHB")
+            or (_es == "R" and r.pitcher_weak_side == "RHB")
         )
         if r.pitcher_hr9 >= 1.20 or side_hr9 >= 1.20 or r.pitcher_fb_rate >= 0.39 or side_match:
             pitcher_weak_games.add(r.game_pk)
@@ -8315,9 +8354,10 @@ def due_score(rec: HitterRecord) -> float:
 def matchup_score(rec: HitterRecord) -> float:
     split_avg = rec.avg_vs_lhp if rec.pitcher_throws == "L" else rec.avg_vs_rhp
     split_iso = rec.iso_vs_lhp if rec.pitcher_throws == "L" else rec.iso_vs_rhp
-    side_match = 1.0 if ((rec.bats == "L" and rec.pitcher_weak_side == "LHB") or (rec.bats == "R" and rec.pitcher_weak_side == "RHB")) else 0.45
+    _esm = effective_side(rec.bats, rec.pitcher_throws)
+    side_match = 1.0 if ((_esm == "L" and rec.pitcher_weak_side == "LHB") or (_esm == "R" and rec.pitcher_weak_side == "RHB")) else 0.45
     weak_spot = 1.0 if rec.weak_spot_flag else 0.4
-    side_hr9 = rec.pitcher_hr9_vs_lhb if rec.bats == "L" else rec.pitcher_hr9_vs_rhb
+    side_hr9 = rec.pitcher_hr9_vs_lhb if _esm == "L" else rec.pitcher_hr9_vs_rhb
     return (
         0.26 * minmax_norm(split_avg, 0.180, 0.360) +
         0.24 * minmax_norm(split_iso, 0.08, 0.38) +
@@ -9024,11 +9064,12 @@ def build_structured_pairs(
 
     def pitcher_weakness_points(rec: HitterRecord) -> float:
         pts = 0.0
-        side_hr9 = rec.pitcher_hr9_vs_lhb if rec.bats == "L" else rec.pitcher_hr9_vs_rhb
-        side_whip = rec.pitcher_whip_vs_lhb if rec.bats == "L" else rec.pitcher_whip_vs_rhb
+        _es2 = effective_side(rec.bats, rec.pitcher_throws)
+        side_hr9 = rec.pitcher_hr9_vs_lhb if _es2 == "L" else rec.pitcher_hr9_vs_rhb
+        side_whip = rec.pitcher_whip_vs_lhb if _es2 == "L" else rec.pitcher_whip_vs_rhb
         side_match = (
-            (rec.bats == "L" and rec.pitcher_weak_side == "LHB")
-            or (rec.bats == "R" and rec.pitcher_weak_side == "RHB")
+            (_es2 == "L" and rec.pitcher_weak_side == "LHB")
+            or (_es2 == "R" and rec.pitcher_weak_side == "RHB")
         )
         if rec.pitcher_hr9 >= 1.30: pts += 2.0
         elif rec.pitcher_hr9 >= 1.05: pts += 1.0
@@ -10417,10 +10458,11 @@ def enrich_signal_pills_and_best_non_hr(rows_payload: List[Dict[str, Any]]) -> L
         wk_side_score = _sf(x, "pitcher_weak_side_score", 0.0)
         bats = x.get("bats", "")
         weak_side = x.get("pitcher_weak_side", "")
-        on_weak_side = (weak_side == "LHB" and bats == "L") or (weak_side == "RHB" and bats == "R")
+        _esd = effective_side(bats, x.get("pitcher_throws", ""))
+        on_weak_side = (weak_side == "LHB" and _esd == "L") or (weak_side == "RHB" and _esd == "R")
 
         if on_weak_side and wk_side_score >= 55:
-            side_lbl = "LHB" if bats == "L" else "RHB"
+            side_lbl = "LHB" if _esd == "L" else "RHB"
             pills.append(f"Weak vs {side_lbl}")
         elif mistake_match and pmix_score >= 75:
             crush = pmix_note.replace("Crush ", "").split()[0] if pmix_note.startswith("Crush") else ""
