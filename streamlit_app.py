@@ -3297,7 +3297,11 @@ with tab_games:
         # scale nobody knows. These answer questions instead: how much power
         # is on tonight, WHICH game is the one, how much of the slate is
         # actually confirmed, and where the exploitable spots are.
-        _best_g = gdf.iloc[gdf["Game Score"].idxmax()] if len(gdf) else None
+        # gdf is already sorted by Game Score descending, so the best game is
+        # simply the first row. (This previously used gdf.iloc[idxmax()],
+        # mixing a label from idxmax with positional .iloc indexing -- after
+        # the sort those disagree, so it reported the wrong game entirely.)
+        _best_g = gdf.iloc[0] if len(gdf) else None
         _conf = sum(1 for p in view if p.get("lineup_confirmed"))
         _hot = sum(1 for p in view if hr_score(p) >= 70)
         s = st.columns(6)
