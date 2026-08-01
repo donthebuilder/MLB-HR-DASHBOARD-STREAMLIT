@@ -147,12 +147,12 @@ MODEL_WEIGHTS: Dict[str, Dict[str, float]] = {
         # numbers measured DC as already well-calibrated at 0.13. Re-run
         # backtest_report.py after ~2 weeks and revert if HR_PICKS hit rate
         # drops -- git log has the old values.
-        "batted_shape": 0.13,
+        "batted_shape": 0.09,
         "pitch_fit": 0.11,
         "pitcher_damage": 0.15,
         "pull_launch": 0.07,
         "park_weather": 0.05,
-        "lineup_opportunity": 0.03,
+        "lineup_opportunity": 0.01,
         "season_power": 0.12,
         "damage_conversion_score": 0.16,
         "pitch_match_term": 0.07,
@@ -176,6 +176,24 @@ MODEL_WEIGHTS: Dict[str, Dict[str, float]] = {
         # one recalibration pass isn't enough to bet big on a brand-new
         # blend component; revisit sizing after another month of data.
         "pa_per_hr": 0.03,
+        # NEW (2026-07-31), both measured on 34 graded days / 3,265 player-days.
+        #
+        # k_rate (+0.04, taken from batted_shape): season strikeout rate
+        # correlates with actually homering at r=+0.100 (t=5.6) and was not in
+        # the blend at all. It reads backwards until you picture the swing --
+        # hitters who strike out a lot swing hard and lift, and that is the
+        # same swing that leaves the park. Strictly an HR-side signal; it is
+        # deliberately NOT added to hit_score, where it points the other way.
+        # Funded from batted_shape, which the 7/25 recalibration already
+        # flagged as the weakest large weight (30th of 43 signals, +4.0pp).
+        #
+        # times_through (+0.02, taken from lineup_opportunity): a refinement
+        # of the same idea lineup_opportunity was reaching for. Facing the
+        # starter a third time is where hitters gain most, and whether a spot
+        # gets that third look depends on the batting order AND how deep the
+        # arm goes -- lineup_opportunity only knew the spot.
+        "k_rate": 0.04,
+        "times_through": 0.02,
     },
     # HR GATE (v2) thresholds -- how many of these 5 signals a player clears
     # decides the gate bonus/penalty applied to hr_raw. See "HR GATE (v2)"
@@ -6199,6 +6217,26 @@ def apply_model_v2_layers(h: HitterRecord) -> HitterRecord:
     # the lowest-risk way to wire in the strongest raw signal found in the
     # 4/27-7/24 backtest. Defaults to a neutral 50.0 if missing.
     pa_per_hr_term = safe_float(getattr(h, "hr_pa_score", 50.0), 50.0)
+
+    # K-RATE. Normalised over the realistic league span (14%-32%); a hitter
+    # who never strikes out is usually a slap hitter, not a power threat.
+    k_rate_term = 100.0 * minmax_norm(
+        safe_float(getattr(h, "season_k_rate", 0.0), 0.0), 0.14, 0.32)
+
+    # TIMES THROUGH THE ORDER. How many looks this spot gets at the starter.
+    # A starter faces ~24 batters in a typical outing; sharper arms go deeper,
+    # so the estimate is nudged by his WHIP. Spot s gets its Nth look on
+    # batter s + 9*(N-1), so the third look needs the arm to reach s + 18.
+    _spot = safe_int(getattr(h, "lineup_spot", 5), 5) or 5
+    _whip = safe_float(getattr(h, "pitcher_whip", 1.28), 1.28) or 1.28
+    # WHIP 1.10 -> ~26 batters faced, WHIP 1.50 -> ~21.
+    _est_bf = 24.0 + (1.28 - _whip) * 12.0
+    _est_bf = max(18.0, min(30.0, _est_bf))
+    # Fractional credit rather than a cliff: a spot sitting one batter short
+    # of a third look is not the same as one sitting six short.
+    _third_look = max(0.0, min(1.0, (_est_bf - (_spot + 18.0)) / 4.0 + 0.5))
+    times_through_term = 100.0 * _third_look
+
     _w = MODEL_WEIGHTS["hr_blend"]
     hr_raw = (
         _w["batted_shape"] * batted_shape +
@@ -6215,7 +6253,9 @@ def apply_model_v2_layers(h: HitterRecord) -> HitterRecord:
         _w["yesterdays_hitters_score"] * yesterdays_hitters_score +
         _w["pitcher_trend"] * pitcher_trend_term +
         _w["bvp_signal"] * bvp_term +
-        _w["pa_per_hr"] * pa_per_hr_term
+        _w["pa_per_hr"] * pa_per_hr_term +
+        _w["k_rate"] * k_rate_term +
+        _w["times_through"] * times_through_term
     )
 
     # weak_spot_bonus: five-tier graded score (0.034/0.028/0.020/0.016/0.010/0.0)
