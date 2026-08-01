@@ -3240,6 +3240,25 @@ with tab_games:
     for p in view:
         by_game.setdefault(p.get("game_pk"), []).append(p)
 
+    # Projections run on the WHOLE lineup, not the filtered view. "How many
+    # home runs will this game produce" doesn't change because you filtered
+    # the board to confirmed lineups or searched a name -- but summing
+    # per-hitter rates over a filtered set silently shrank every total.
+    # Doubleheaders also put the same player in the slate twice, so those
+    # are collapsed per game.
+    by_game_full: Dict[Any, List[Dict[str, Any]]] = {}
+    for p in players:
+        by_game_full.setdefault(p.get("game_pk"), []).append(p)
+    for _gk, _rows in by_game_full.items():
+        _s, _keep = set(), []
+        for _p in _rows:
+            _id = _p.get("player_id") or name_of(_p)
+            if _id in _s:
+                continue
+            _s.add(_id)
+            _keep.append(_p)
+        by_game_full[_gk] = _keep
+
 
 
     # First pitch order matters when you're actually playing the slate --
