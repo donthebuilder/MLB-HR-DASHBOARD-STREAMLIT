@@ -1327,7 +1327,10 @@ def hbar(labels: List[str], values: List[float], title: str = "",
         zmin=lo, zmax=hi if hi != lo else lo + 1.0,
         text=[[fmt.format(v)] for v in val],
         texttemplate="%{text}",
-        textfont=dict(size=11, color="#dfe6e9", family=NUM_FONT),
+        # Amber, not off-white: the green ramp runs from near-black to a
+        # pale mint, and a light grey vanishes on the bright end. Amber
+        # holds contrast against both ends of the scale.
+        textfont=dict(size=11, color=C["yellow"], family=NUM_FONT),
         hovertemplate="%{y}: %{z:.1f}<extra></extra>",
         xgap=0, ygap=2,
     ))
@@ -1384,7 +1387,8 @@ def heatmap(df: pd.DataFrame, title: str = "", height: int = 340,
         colorscale=scale, showscale=True,
         colorbar=dict(thickness=10, tickfont=dict(size=9, color=C["text3"])),
         text=[[fmt.format(v) if pd.notna(v) else "" for v in row] for row in df.values],
-        texttemplate="%{text}", textfont=dict(size=10, color="#dfe6e9"),
+        texttemplate="%{text}",
+        textfont=dict(size=11, color=C["yellow"], family=NUM_FONT),
         hovertemplate="%{y} · %{x}: %{z:.2f}<extra></extra>",
     ))
     _layout(fig, height, title)
