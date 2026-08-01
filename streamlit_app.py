@@ -3673,29 +3673,59 @@ with tab_games:
         "Projection view", ["By game", "By team"], horizontal=True,
         key="projview", label_visibility="collapsed",
     )
+    # PITCHER ADJUSTMENT. The batter scores already carry some matchup
+    # signal, so applying the arm's full effect on top would double-count --
+    # the multipliers are square-rooted to take roughly half, and clamped so
+    # one extreme arm can't swamp a lineup. League anchors: HR/9 1.20,
+    # opponent AVG .245. An ace now suppresses the whole game and a
+    # batting-practice arm lifts it, which is what was missing when a Skenes
+    # start projected the same as a spot starter.
+    def _arm_mult(grp, stat, anchor, lo=0.62, hi=1.55):
+        vals = [nn(p, stat) for p in grp]
+        vals = [v for v in vals if isinstance(v, (int, float)) and v > 0]
+        if not vals:
+            return 1.0
+        return max(lo, min(hi, (sorted(vals)[len(vals) // 2] / anchor) ** 0.5))
+
+    def _adjust(grp, col, base):
+        if col in ("Proj HR", "Proj XBH", "Proj bases"):
+            return base * _arm_mult(grp, "pitcher_hr9", 1.20)
+        if col == "Proj hits":
+            return base * _arm_mult(grp, "pitcher_avg_against", 0.245)
+        return base
+
     buckets: Dict[Any, List[Dict[str, Any]]] = {}
-    for gk, gp2 in by_game.items():
+    bucket_time: Dict[Any, str] = {}
+    for gk, gp2 in by_game_full.items():
+        _t0 = game_start(gp2)
         if proj_view == "By team":
             for p in gp2:
                 t = team_of(p)
                 lbl = f"{t} vs {opp_of(p)}" if t else txt(p, "venue_name", default=str(gk))
                 buckets.setdefault(lbl, []).append(p)
+                # Both halves of a game share its start time, so the two
+                # sides stay side by side instead of being flung apart by
+                # whichever lineup happens to project higher.
+                bucket_time[lbl] = f"{_t0}|{t}"
         else:
             h2 = gp2[0]
             lbl = (f"{team_of(h2)} @ {opp_of(h2)}" if team_of(h2)
                    else txt(h2, "venue_name", default=str(gk)))
             buckets.setdefault(lbl, []).extend(gp2)
+            bucket_time[lbl] = _t0
 
     proj_rows = []
     for lbl, grp in buckets.items():
         row = {"Game" if proj_view == "By game" else "Team": lbl}
         for col, (kind, table) in CALIB.items():
-            row[col] = round(sum(_rate(_sc(p, kind), table) for p in grp), 2)
+            base = sum(_rate(_sc(p, kind), table) for p in grp)
+            row[col] = round(_adjust(grp, col, base), 2)
+        row["_t"] = bucket_time.get(lbl, "")
         proj_rows.append(row)
     if proj_rows:
         _idx = "Game" if proj_view == "By game" else "Team"
-        pdf = pd.DataFrame(proj_rows).set_index(_idx).sort_values(
-            "Proj HR", ascending=False)
+        pdf = (pd.DataFrame(proj_rows).sort_values("_t")
+               .drop(columns=["_t"]).set_index(_idx))
         heatmap(pdf, f"Projected output {proj_view.lower()} — expected count, not a score",
                 height=max(280, 26 * len(pdf) + 90), fmt="{:.1f}")
         st.caption(
@@ -3703,7 +3733,10 @@ with tab_games:
             "actually produced over 34 graded days, then summed across "
             "the lineup. **Proj HR** and **Proj hits** rest on bands that "
             "climb cleanly with score, so they carry real signal. "
-            "**Proj XBH** and **Proj bases** come off the contact board, "
+            "Totals are then scaled by the arm they face — HR/9 against a "
+            "1.20 league anchor, opponent AVG against .245, square-rooted so "
+            "the pitcher effect already inside the batter scores isn't "
+            "counted twice. **Proj XBH** and **Proj bases** come off the contact board, "
             "whose bands do *not* climb with score — those two columns "
             "are close to lineup-size times a constant, so read them as "
             "opportunity, not edge."
