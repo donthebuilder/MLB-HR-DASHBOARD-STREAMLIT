@@ -365,8 +365,27 @@ def hr_distances_from_game(game_feed: Dict[str, Any]) -> Dict[int, Dict[str, Any
                 break
         dist = safe_float(hit.get("totalDistance"), 0.0)
         ev_mph = safe_float(hit.get("launchSpeed"), 0.0)
+        # PITCH CAPTURE (2026-07-31). pitchData sits on the same playEvent as
+        # hitData and costs no extra request. Without it there is no way to
+        # test whether breaking balls really produce more 400+ contact than
+        # they are thrown -- and crucially, storing EVERY homer here gives the
+        # short ones too, which is the comparison group a highlight feed can
+        # never provide.
+        pitch_ev = None
+        for evt in reversed(play.get("playEvents") or []):
+            if evt.get("hitData"):
+                pitch_ev = evt
+                break
+        pd_ = (pitch_ev or {}).get("pitchData") or {}
+        details = (pitch_ev or {}).get("details") or {}
+        ptype = ((details.get("type") or {}).get("description")
+                 or (details.get("type") or {}).get("code") or "")
+        pvelo = safe_float((pd_.get("startSpeed") if pd_ else None), 0.0)
+        spin = safe_float(((pd_.get("breaks") or {}).get("spinRate")
+                           if pd_ else None), 0.0)
+
         rec = out.setdefault(pid, {"longest": 0.0, "distances": [], "max_ev": 0.0,
-                                   "launch_angle": None})
+                                   "launch_angle": None, "hrs": []})
         if dist > 0:
             rec["distances"].append(round(dist))
             rec["longest"] = max(rec["longest"], round(dist))
@@ -375,6 +394,16 @@ def hr_distances_from_game(game_feed: Dict[str, Any]) -> Dict[int, Dict[str, Any
         la = safe_float(hit.get("launchAngle"), None) if hit.get("launchAngle") is not None else None
         if la is not None and (rec["launch_angle"] is None or dist >= rec["longest"]):
             rec["launch_angle"] = round(la, 1)
+        # One row per home run, so each is analysable on its own rather than
+        # collapsed into a per-player maximum.
+        rec.setdefault("hrs", []).append({
+            "dist": round(dist) if dist > 0 else None,
+            "ev": round(ev_mph, 1) if ev_mph > 0 else None,
+            "la": round(la, 1) if la is not None else None,
+            "pitch": str(ptype) or None,
+            "pitch_velo": round(pvelo, 1) if pvelo > 0 else None,
+            "spin": int(spin) if spin > 0 else None,
+        })
     return out
 
 
