@@ -6577,13 +6577,27 @@ def apply_model_v2_layers(h: HitterRecord) -> HitterRecord:
     hard_rate_handed = _handed_contact_avg("hard_hit_rate", hard_rate)
     barrel_rate_handed = _handed_contact_avg("barrel_like_rate", barrel_rate)
 
+    # REWEIGHT (2026-07-31). Measured against 3,265 graded player-days, the
+    # composite predicted an actual extra-base hit at r=+0.029 (t=1.69) --
+    # not significant. The block structure was why: recent_barrel_rate
+    # (r=+0.003), avg exit velo (r=+0.000) and hard-hit rate (r=+0.028) made
+    # up 40% of the score and none of them measurably predicts XBH, while
+    # last5_xbh (r=+0.097, t=5.58) and last10_xbh (r=+0.078) carried only 28%.
+    # Quality-of-contact rates describe a hitter's TYPICAL contact; an
+    # extra-base hit is one swing in one game. So the blocks swap emphasis.
+    #   xbh history 0.28->0.40, quality 0.40->0.26, iso 0.14->0.16,
+    #   pitcher 0.10->0.12, spot/k_floor 0.04->0.03 each.  Sums to 1.00.
+    # Caveat: contact_score can't be recomputed from the archive, so unlike
+    # the recency re-anchor this is reasoned from component correlations
+    # rather than backtested end to end. Grade the Contact tier's XBH rate in
+    # ~2 weeks; git log has the old weights.
     contact_v2 = 100 * (
-        0.40 * (0.22 * minmax_norm(avg_ev_handed, 86, 96) + 0.20 * minmax_norm(hard_rate_handed, 0.25, 0.65) + 0.18 * minmax_norm(barrel_rate_handed, 0.02, 0.20) + 0.16 * minmax_norm(h.recent_sweet_spot_rate, 0.22, 0.52) + 0.14 * minmax_norm(h.recent_xwoba, 0.280, 0.470) + 0.10 * minmax_norm(r375, 0.02, 0.22)) +
-        0.28 * (0.32 * minmax_norm(h.last5_xbh, 0, 5) + 0.24 * minmax_norm(h.last10_xbh, 0, 7) + 0.18 * minmax_norm(h.l20pa_xbh, 0, 4) + 0.13 * minmax_norm(h.last7_xbh, 0, 5) + 0.13 * minmax_norm(h.l20pa_350_num / max(1, h.l20pa_350_den), 0.04, 0.34)) +
-        0.14 * iso_power_boost +
-        0.10 * (0.32 * minmax_norm(h.pitcher_ev_allowed, 86, 92.5) + 0.28 * minmax_norm(h.pitcher_hardhit_allowed, 0.30, 0.52) + 0.22 * minmax_norm(h.pitcher_barrel_allowed, 0.03, 0.13) + 0.18 * minmax_norm(h.pitcher_whip, 1.05, 1.60)) +
-        0.04 * (_spot["weight"] * _spot["slg"] + (1 - _spot["weight"]) * 0.5) +
-        0.04 * (0.50 * k_floor + 0.30 * minmax_norm(split_avg, 0.180, 0.360) + 0.20 * minmax_norm(h.season_avg, 0.200, 0.330))
+        0.26 * (0.22 * minmax_norm(avg_ev_handed, 86, 96) + 0.20 * minmax_norm(hard_rate_handed, 0.25, 0.65) + 0.18 * minmax_norm(barrel_rate_handed, 0.02, 0.20) + 0.16 * minmax_norm(h.recent_sweet_spot_rate, 0.22, 0.52) + 0.14 * minmax_norm(h.recent_xwoba, 0.280, 0.470) + 0.10 * minmax_norm(r375, 0.02, 0.22)) +
+        0.40 * (0.32 * minmax_norm(h.last5_xbh, 0, 5) + 0.24 * minmax_norm(h.last10_xbh, 0, 7) + 0.18 * minmax_norm(h.l20pa_xbh, 0, 4) + 0.13 * minmax_norm(h.last7_xbh, 0, 5) + 0.13 * minmax_norm(h.l20pa_350_num / max(1, h.l20pa_350_den), 0.04, 0.34)) +
+        0.16 * iso_power_boost +
+        0.12 * (0.32 * minmax_norm(h.pitcher_ev_allowed, 86, 92.5) + 0.28 * minmax_norm(h.pitcher_hardhit_allowed, 0.30, 0.52) + 0.22 * minmax_norm(h.pitcher_barrel_allowed, 0.03, 0.13) + 0.18 * minmax_norm(h.pitcher_whip, 1.05, 1.60)) +
+        0.03 * (_spot["weight"] * _spot["slg"] + (1 - _spot["weight"]) * 0.5) +
+        0.03 * (0.50 * k_floor + 0.30 * minmax_norm(split_avg, 0.180, 0.360) + 0.20 * minmax_norm(h.season_avg, 0.200, 0.330))
     ) * (0.92 + 0.16 * minmax_norm(park_bar, 0.94, 1.07))
     h.contact_score_v2 = round(_hr2_clip(contact_v2), 2)
 
