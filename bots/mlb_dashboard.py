@@ -6227,14 +6227,17 @@ def apply_model_v2_layers(h: HitterRecord) -> HitterRecord:
     # A starter faces ~24 batters in a typical outing; sharper arms go deeper,
     # so the estimate is nudged by his WHIP. Spot s gets its Nth look on
     # batter s + 9*(N-1), so the third look needs the arm to reach s + 18.
-    _spot = safe_int(getattr(h, "lineup_spot", 5), 5) or 5
-    _whip = safe_float(getattr(h, "pitcher_whip", 1.28), 1.28) or 1.28
+    # NOTE: named _tto_spot, not _spot -- apply_model_v2_layers already binds
+    # _spot to the lineup-spot damage DICT further up, and shadowing it with
+    # an int broke every later use of _spot["weight"].
+    _tto_spot = safe_int(getattr(h, "lineup_spot", 5), 5) or 5
+    _tto_whip = safe_float(getattr(h, "pitcher_whip", 1.28), 1.28) or 1.28
     # WHIP 1.10 -> ~26 batters faced, WHIP 1.50 -> ~21.
-    _est_bf = 24.0 + (1.28 - _whip) * 12.0
+    _est_bf = 24.0 + (1.28 - _tto_whip) * 12.0
     _est_bf = max(18.0, min(30.0, _est_bf))
     # Fractional credit rather than a cliff: a spot sitting one batter short
     # of a third look is not the same as one sitting six short.
-    _third_look = max(0.0, min(1.0, (_est_bf - (_spot + 18.0)) / 4.0 + 0.5))
+    _third_look = max(0.0, min(1.0, (_est_bf - (_tto_spot + 18.0)) / 4.0 + 0.5))
     times_through_term = 100.0 * _third_look
 
     _w = MODEL_WEIGHTS["hr_blend"]
