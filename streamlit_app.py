@@ -4342,22 +4342,26 @@ with tab_long:
         st.markdown("#### The board")
         st.dataframe(pd.DataFrame([{
             "": "✅" if p.get("lineup_confirmed") else "◻︎",
-            "Player": name_of(p), "Team": team_of(p), "Opp": opp_of(p),
+            "Player": name_of(p), "Opp": opp_of(p),
             "Adj": round(longest_adj(p), 1),
             "Raw": round(longest_score(p), 1),
             "Carry": round(carry_factor(p), 2),
             "HR": round(hr_score(p), 1),
             "Rank": int(nn(p, "longest_hr_rank")) or None,
-            # The four raw inputs behind the score.
+            # Raw inputs behind the score. 375+ dropped -- it sat between
+            # 350+ and 400+ and moved with both, so it was a third column
+            # saying what two already said.
             "400+": int(recent400(p)),
-            "375+": int(nn(p, "recent_375_num")),
             "350+": int(nn(p, "recent_350_num")),
             "BBE": bbe_tracked(p),
             "Avg EV": round(nn(p, "recent_ev", "l25pa_avg_ev"), 1),
             "Barrel%": round(nn(p, "recent_barrel_rate") * 100, 1),
+            # The arm, as numbers rather than a name -- a name tells you
+            # nothing on a distance board.
+            "P HR/9": round(nn(p, "pitcher_hr9"), 2),
+            "P HH%": round(nn(p, "pitcher_hardhit_allowed") * 100, 1),
             "Park dist": round(nn(p, "park_dist_factor", default=1.0), 2),
             "Wx HR": f"{nn(p, 'weather_hr_effect_pct'):+.0f}%",
-            "Pitcher": txt(p, "pitcher_name"),
             "Venue": txt(p, "venue_name"),
         } for p in ranked_long]), width="stretch", hide_index=True, height=520)
 
