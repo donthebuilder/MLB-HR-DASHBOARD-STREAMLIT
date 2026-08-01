@@ -3245,17 +3245,10 @@ with tab_games:
     # First pitch order matters when you're actually playing the slate --
     # you need to know what locks in twenty minutes, which a strength
     # ranking can't tell you.
-    game_sort = st.radio(
-        "Order games by", ["First pitch", "Best first"],
-        horizontal=True, key="gameorder",
-        help="Best first ranks by the strongest hitter in the game. "
-             "First pitch puts them in start-time order.",
-    )
-    if game_sort == "First pitch":
-        order = sorted(by_game.items(), key=lambda kv: game_start(kv[1]))
-    else:
-        order = sorted(by_game.items(),
-                       key=lambda kv: max(hr_score(x) for x in kv[1]), reverse=True)
+    # Always first-pitch order. The game panels are the point of this page,
+    # and you read a slate chronologically -- re-ranking them by score made
+    # you hunt for the 7:05 game you were actually about to bet.
+    order = sorted(by_game.items(), key=lambda kv: game_start(kv[1]))
 
     # Slate-level view first: which games are worth attention at a glance.
     # Peaks (top HR / top HRR) say "is there a play here"; the averages across
@@ -3300,22 +3293,33 @@ with tab_games:
             })
         gdf = pd.DataFrame(glance).sort_values("Game Score", ascending=False)
 
-        s = st.columns(7)
+        # Slate at a glance. "Best game score 61.2" told you a number on a
+        # scale nobody knows. These answer questions instead: how much power
+        # is on tonight, WHICH game is the one, how much of the slate is
+        # actually confirmed, and where the exploitable spots are.
+        _best_g = gdf.iloc[gdf["Game Score"].idxmax()] if len(gdf) else None
+        _conf = sum(1 for p in view if p.get("lineup_confirmed"))
+        _hot = sum(1 for p in view if hr_score(p) >= 70)
+        s = st.columns(6)
         s[0].metric("Games", len(gdf))
-        s[1].metric("Best game score", f"{gdf['Game Score'].max():.1f}")
-        s[2].metric("Slate median", f"{gdf['Game Score'].median():.1f}")
-        s[3].metric("Top HR", f"{gdf['Top HR'].max():.0f}")
-        s[4].metric("Top HRR", f"{gdf['Top HRR'].max():.0f}")
-        s[5].metric("Med DC", f"{gdf['Med DC'].median():.1f}")
-        s[6].metric("Med TB", f"{gdf['Med TB'].median():.1f}")
+        s[1].metric("Projected HRs", f"{_proj_hr:.1f}",
+                    f"{_proj['low']}–{_proj['high']} range", delta_color="off")
+        s[2].metric("Best game",
+                    str(_best_g["Game"]) if _best_g is not None else "—",
+                    f"score {_best_g['Game Score']:.1f}" if _best_g is not None else None,
+                    delta_color="off")
+        s[3].metric("Hitters 70+", _hot,
+                    f"{100 * _hot / max(1, len(view)):.0f}% of slate", delta_color="off")
+        s[4].metric("Lineups confirmed",
+                    f"{100 * _conf / max(1, len(view)):.0f}%",
+                    f"{_conf} of {len(view)}", delta_color="off")
+        s[5].metric("⭐ Weak spots",
+                    sum(1 for p in view if p.get("weak_spot_flag")))
 
-        metric_choice = st.radio(
-            "Rank games by",
-            ["Game Score", "Top HR", "Top HRR", "Med HR", "Med HRR", "Med HRW",
-             "Med DC", "Med Hit"],
-            horizontal=True,
-        )
-        ranked_games = gdf.sort_values(metric_choice, ascending=False)
+        # The heatmap and the table below are supporting material, so they
+        # get one fixed ordering instead of a control -- every column is on
+        # the heatmap anyway, and it sorts on click.
+        ranked_games = gdf.sort_values("Game Score", ascending=False)
 
         # The "Games ranked by" chart is gone -- the sorted table and the
         # per-metric heatmap directly below say the same thing with more
@@ -3330,7 +3334,6 @@ with tab_games:
         heatmap(hm, "Game x metric — hotter is better for hitters",
                 height=max(280, 26 * len(hm) + 90), fmt="{:.0f}")
 
-        st.dataframe(ranked_games, width="stretch", hide_index=True, height=min(520, 40 * len(gdf) + 40))
 
     st.divider()
 
@@ -3630,6 +3633,83 @@ with tab_games:
                 )
                 if _lu_c2.button("Open", width="stretch", key=f"luopen_{gpk}"):
                     player_modal(_who)
+
+
+    st.divider()
+    # Dessert: the game panels above are the meal. These two are what
+    # you read after, to check the slate agreed with what you just saw.
+    # ── PROJECTED OUTPUT BY GAME ───────────────────────────────────
+    # Scores are ranks: a 78 only means "above a 62". These are
+    # PROJECTIONS -- each hitter's score is mapped through the observed
+    # hit rate for its band across 34 graded days (3,265 player-days),
+    # then summed over the lineup. So a cell reads "this game projects
+    # 2.4 home runs", not "this game scores 61".
+    CALIB = {
+        "Proj HR":    ("hr",      {0: 12.8, 40: 15.0, 55: 15.3, 70: 18.7, 85: 16.1}),
+        "Proj hits":  ("hit",     {0: 61.8, 40: 59.5, 55: 63.0, 70: 65.4, 85: 72.0}),
+        "Proj XBH":   ("contact", {0: 29.1, 40: 29.8, 55: 32.8, 70: 27.2, 85: 36.4}),
+        "Proj bases": ("contact", {0: 37.8, 40: 37.5, 55: 41.6, 70: 34.3, 85: 45.5}),
+    }
+
+    def _rate(score: float, table: Dict[int, float]) -> float:
+        edge = 0
+        for cut in sorted(table):
+            if score >= cut:
+                edge = cut
+        return table[edge] / 100.0
+
+    def _sc(p, kind):
+        if kind == "contact":
+            return nn(p, "contact_score")
+        return score_for(p, kind)
+
+    # Per game, or split into the two lineups that make it up. A 3.0-HR
+    # game is a different bet if one side is carrying 2.2 of it.
+    proj_view = st.radio(
+        "Projection view", ["By game", "By team"], horizontal=True,
+        key="projview", label_visibility="collapsed",
+    )
+    buckets: Dict[Any, List[Dict[str, Any]]] = {}
+    for gk, gp2 in by_game.items():
+        if proj_view == "By team":
+            for p in gp2:
+                t = team_of(p)
+                lbl = f"{t} vs {opp_of(p)}" if t else txt(p, "venue_name", default=str(gk))
+                buckets.setdefault(lbl, []).append(p)
+        else:
+            h2 = gp2[0]
+            lbl = (f"{team_of(h2)} @ {opp_of(h2)}" if team_of(h2)
+                   else txt(h2, "venue_name", default=str(gk)))
+            buckets.setdefault(lbl, []).extend(gp2)
+
+    proj_rows = []
+    for lbl, grp in buckets.items():
+        row = {"Game" if proj_view == "By game" else "Team": lbl}
+        for col, (kind, table) in CALIB.items():
+            row[col] = round(sum(_rate(_sc(p, kind), table) for p in grp), 2)
+        proj_rows.append(row)
+    if proj_rows:
+        _idx = "Game" if proj_view == "By game" else "Team"
+        pdf = pd.DataFrame(proj_rows).set_index(_idx).sort_values(
+            "Proj HR", ascending=False)
+        heatmap(pdf, f"Projected output {proj_view.lower()} — expected count, not a score",
+                height=max(280, 26 * len(pdf) + 90), fmt="{:.1f}")
+        st.caption(
+            "Each hitter's board score is converted to the rate that band "
+            "actually produced over 34 graded days, then summed across "
+            "the lineup. **Proj HR** and **Proj hits** rest on bands that "
+            "climb cleanly with score, so they carry real signal. "
+            "**Proj XBH** and **Proj bases** come off the contact board, "
+            "whose bands do *not* climb with score — those two columns "
+            "are close to lineup-size times a constant, so read them as "
+            "opportunity, not edge."
+        )
+
+    # Seasoning: every number here is already on the heatmap above, so it
+    # is collapsed rather than taking a screen of its own.
+    with st.expander("Every game, every metric — sortable table"):
+        st.dataframe(ranked_games, width="stretch", hide_index=True,
+                     height=min(520, 40 * len(gdf) + 40))
 
 # ── SCOREBOARD ──────────────────────────────────────────────────────────────
 with tab_scoreboard:
