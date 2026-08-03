@@ -172,6 +172,35 @@ st.markdown(
       .stDataFrame {{border: 1px solid {C['border']}; border-radius: 12px;}}
       section[data-testid="stSidebar"] {{background: {C['bg2']}; border-right: 1px solid {C['border']};}}
       .stExpander {{border: 1px solid {C['border']} !important; border-radius: 12px !important;}}
+
+      /* Game selector strip. Cards, not a stack of closed expanders --
+         a closed expander told you nothing about whether to open it. */
+      .gcard {{
+        border: 1px solid {C['border']}; border-radius: 12px;
+        background: {C['bg2']}; padding: .55rem .7rem .5rem;
+        min-height: 104px; margin-bottom: .35rem;
+      }}
+      .gcard.on {{
+        border-color: {C['green']}; background: {C['bg3']};
+        box-shadow: 0 0 20px -8px {C['green']};
+      }}
+      .gcard .gt {{
+        font-size: .64rem; text-transform: uppercase; letter-spacing: .08em;
+        color: {C['text3']}; margin-bottom: .3rem;
+      }}
+      .gcard .gm {{
+        font-family: {NUM_FONT}; font-size: 1rem; font-weight: 800;
+        letter-spacing: -.02em; color: {C['text']}; white-space: nowrap;
+      }}
+      .gcard.on .gm {{color: #eef2f5;}}
+      .gcard .gs {{
+        font-family: {NUM_FONT}; font-size: .73rem;
+        color: {C['text2']}; margin-top: .3rem;
+      }}
+      .gcard .gv {{
+        font-size: .63rem; color: {C['text3']}; margin-top: .2rem;
+        overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      }}
     </style>
     """,
     unsafe_allow_html=True,
@@ -2046,6 +2075,37 @@ def open_player_picker(rows: List[Dict[str, Any]], where: str,
             player_modal(target)
 
 
+def rows_click_open(df: pd.DataFrame, rows: List[Dict[str, Any]], key: str,
+                    height: Optional[int] = None) -> None:
+    """Render a table whose rows open the player modal when clicked.
+
+    `df` and `rows` MUST be in the same order -- build the frame from `rows`,
+    never re-sort one of them, or clicking row 4 opens someone else.
+
+    The seen-index guard is not optional: closing the dialog triggers a rerun
+    with the row still selected, which would pop the modal straight back up.
+    """
+    kw: Dict[str, Any] = {}
+    if height:
+        kw["height"] = height
+    ev = st.dataframe(df, width="stretch", hide_index=True, key=key,
+                      on_select="rerun", selection_mode="single-row", **kw)
+    seen = f"_rowseen_{key}"
+    try:
+        picked = list(ev.selection["rows"] or [])
+    except Exception:
+        picked = []
+    if not picked:
+        st.session_state.pop(seen, None)
+        return
+    i = picked[0]
+    if st.session_state.get(seen) == i:
+        return
+    st.session_state[seen] = i
+    if 0 <= i < len(rows):
+        player_modal(rows[i])
+
+
 def player_card(
     p: Dict[str, Any],
     rank: Optional[int] = None,
@@ -3214,7 +3274,8 @@ with tab_board:
             "SznHR": int(nn(p, "season_hr")), "Pitcher": txt(p, "pitcher_name"),
             "HR/9": round(nn(p, "pitcher_hr9"), 2),
         } for p in ranked]
-        st.dataframe(pd.DataFrame(table), width="stretch", hide_index=True, height=480)
+        st.caption("Click any row to open that hitter.")
+        rows_click_open(pd.DataFrame(table), ranked, key="hrboard_tbl", height=480)
         st.download_button("⬇️ CSV", pd.DataFrame(table).to_csv(index=False).encode(),
                            file_name=f"mlb_{slate}_{kind}_board.csv", mime="text/csv")
 
@@ -3405,7 +3466,68 @@ with tab_games:
             "Matchups read **away @ home**."
         )
 
-    for gpk, gp in order:
+    # Fifteen stacked expanders meant scrolling past fourteen identical grey
+    # bars to reach the game you wanted, and a closed bar told you nothing
+    # about whether it was worth opening. Every game is a card now: matchup,
+    # first pitch, Game Score, median HR window, weak spots, park. One click
+    # swaps the panel below.
+    def _game_meta(_pk: Any, _rows: List[Dict[str, Any]]) -> Dict[str, Any]:
+        _head = max(_rows, key=hr_score)
+        _away, _home = home_away(_rows)
+        return {
+            "conf": bool(_head.get("lineup_confirmed")),
+            "gs": game_score_by_pk.get(_pk, 0.0),
+            "weak": sum(1 for x in _rows if x.get("weak_spot_flag")),
+            "matchup": (f"{_away} @ {_home}" if _away and _home
+                        else f"{team_of(_head)} vs {opp_of(_head)}"),
+            "hrw": med([nn(x, "hrw_score") for x in _rows]),
+            "time": local_time(_rows),
+            "venue": txt(_head, "venue_name"),
+        }
+
+    _meta = {_pk: _game_meta(_pk, _rows) for _pk, _rows in order}
+    _pks = [_pk for _pk, _ in order]
+    _sel_key = f"gamesel_{slate}"
+    # Reset when the slate flips today/tomorrow -- yesterday's game_pk isn't
+    # in the new list and would leave the panel blank.
+    if st.session_state.get(_sel_key) not in _pks:
+        st.session_state[_sel_key] = _pks[0] if _pks else None
+
+    if _pks:
+        st.markdown("#### Games")
+        _PER_ROW = 5
+        for _i in range(0, len(order), _PER_ROW):
+            _cols = st.columns(_PER_ROW)
+            for _col, (_pk, _rows) in zip(_cols, order[_i:_i + _PER_ROW]):
+                _m = _meta[_pk]
+                _on = (_pk == st.session_state[_sel_key])
+                _ed = "▲" if _m["gs"] >= slate_gs_med else "▽"
+                with _col:
+                    st.markdown(
+                        f"<div class='gcard{' on' if _on else ''}'>"
+                        f"<div class='gt'>{'✅' if _m['conf'] else '◻︎'} "
+                        f"{_m['time']}"
+                        f"{' · ⭐' + str(_m['weak']) if _m['weak'] else ''}</div>"
+                        f"<div class='gm'>{_m['matchup']}</div>"
+                        f"<div class='gs'>GS {_m['gs']:.1f} {_ed} · "
+                        f"HRW {_m['hrw']:.0f}</div>"
+                        f"<div class='gv'>{_m['venue']}</div>"
+                        f"</div>",
+                        unsafe_allow_html=True,
+                    )
+                    if st.button("Viewing" if _on else "Open",
+                                 key=f"gbtn_{slate}_{_pk}", width="stretch",
+                                 type="primary" if _on else "secondary"):
+                        st.session_state[_sel_key] = _pk
+                        st.rerun()
+        st.caption(
+            "Cards are in first-pitch order — you read a slate "
+            "chronologically. GS is the game's median hitter score; "
+            "▲/▽ is against the slate median."
+        )
+
+    for gpk, gp in [(_p, _r) for _p, _r in order
+                    if _p == st.session_state.get(_sel_key)]:
         head = max(gp, key=hr_score)
         conf = "✅" if head.get("lineup_confirmed") else "◻︎"
         gs = game_score_by_pk.get(gpk, 0.0)
@@ -3415,12 +3537,15 @@ with tab_games:
         matchup = (f"{away} @ {home}" if away and home
                    else f"{team_of(head)} vs {opp_of(head)}")
         med_hrw = med([nn(x, "hrw_score") for x in gp])
-        with st.expander(
-            f"{conf}  {local_time(gp)}   ·   {matchup}   ·   "
-            f"GS {gs:.1f} {edge}   ·   Med HRW {med_hrw:.0f}"
-            + (f"   ·   ⭐{n_weak}" if n_weak else "")
-            + f"   ·   {txt(head, 'venue_name')}"
-        ):
+        st.markdown(
+            f"### {conf} {matchup}\n"
+            f"<span class='muted'>{local_time(gp)}  ·  GS {gs:.1f} {edge}"
+            f"  ·  Med HRW {med_hrw:.0f}"
+            + (f"  ·  ⭐{n_weak}" if n_weak else "")
+            + f"  ·  {txt(head, 'venue_name')}</span>",
+            unsafe_allow_html=True,
+        )
+        with st.container(border=True):
             # Where this game sits on each board, not just Game Score.
             g1 = st.columns(8)
             g1[0].metric("Med HR", f"{med([hr_score(x) for x in gp]):.1f}")
@@ -3620,6 +3745,12 @@ with tab_games:
             if pick_team != "Both" and opp_pitcher:
                 st.caption(f"{pick_team} vs {opp_pitcher} · {len(lineup_rows)} hitters")
 
+            # Sorted list first, frame built FROM it -- row selection maps by
+            # position, so the two must never be sorted independently.
+            _lu_sorted = sorted(
+                lineup_rows,
+                key=lambda x: (team_of(x), nn(x, "lineup_spot", default=99.0)),
+            )
             lineup_tbl = pd.DataFrame([{
                 "Spot": p.get("lineup_spot"), "Player": name_of(p),
                 "Team": team_of(p), "B": txt(p, "bats", default="?"),
@@ -3630,36 +3761,15 @@ with tab_games:
                 "DC": round(nn(p, "damage_conversion_score"), 1),
                 "Due": round(nn(p, "hr_due_score"), 1),
                 "⭐": "⭐" if p.get("weak_spot_flag") else "",
-            } for p in sorted(lineup_rows,
-                              key=lambda x: (team_of(x),
-                                             nn(x, "lineup_spot", default=99.0)))])
+            } for p in _lu_sorted])
             # Team column is noise once you've filtered to one club.
             if pick_team != "Both" and "Team" in lineup_tbl.columns:
                 lineup_tbl = lineup_tbl.drop(columns=["Team"])
-            st.dataframe(lineup_tbl, width="stretch", hide_index=True)
-
-            # Streamlit dataframe rows aren't clickable, so every hitter in
-            # the order gets here through a picker instead -- otherwise only
-            # the five stamped game picks above could be opened, and the
-            # other thirteen names in the game were dead text.
-            if lineup_rows:
-                _lu_sorted = sorted(
-                    lineup_rows,
-                    key=lambda x: (team_of(x), nn(x, "lineup_spot", default=99.0)),
-                )
-                _lu_c1, _lu_c2 = st.columns([4, 1])
-                _who = _lu_c1.selectbox(
-                    "Open a hitter",
-                    _lu_sorted,
-                    format_func=lambda x: (
-                        f"{int(nn(x, 'lineup_spot', default=0)) or '—'}. "
-                        f"{name_of(x)} ({team_of(x)}) · HR {hr_score(x):.1f}"
-                    ),
-                    key=f"luwho_{gpk}",
-                    label_visibility="collapsed",
-                )
-                if _lu_c2.button("Open", width="stretch", key=f"luopen_{gpk}"):
-                    player_modal(_who)
+            # Rows open the hitter directly. This replaced a dropdown that
+            # existed only because dataframes used to be dead text.
+            st.caption("Click any row to open that hitter.")
+            rows_click_open(lineup_tbl, _lu_sorted,
+                            key=f"lutbl_{gpk}_{pick_team}")
 
 
     st.divider()
