@@ -482,6 +482,39 @@ def write_individual_batter_files(players_out: dict[str, dict[str, Any]]) -> int
     return written
 
 
+
+ZONES_DIR = PUBLIC_DATA_DIR / "current" / "zones" / "today"
+
+
+def write_zone_files(players_out: dict[str, dict[str, Any]]) -> int:
+    """One small file per hitter holding only the zone profiles.
+
+    Deliberately NOT merged into current/detail/<slate>/batter_<id>.json. This
+    job runs on a fresh checkout where public/data is gitignored and therefore
+    empty, so anything written into detail/ here would be a stub with no
+    spray_chart -- and publish_data.sh copies detail/ as a whole directory, so
+    publishing those stubs would replace the real detail files and blank every
+    spray chart, pitch profile and EV log on the site. A directory this job
+    alone owns has no such failure mode.
+    """
+    written = 0
+    for player in players_out.values():
+        pid = player.get("player_id")
+        if not pid:
+            continue
+        zp = player.get("zone_profile")
+        pzp = player.get("pitcher_zone_profile")
+        if not zp and not pzp:
+            continue
+        payload = {"player_id": pid, "name": player.get("name", "")}
+        if zp:
+            payload["zone_profile"] = zp
+        if pzp:
+            payload["pitcher_zone_profile"] = pzp
+        write_json(ZONES_DIR / f"batter_{pid}.json", payload)
+        written += 1
+    return written
+
 def write_outputs(payload: dict[str, Any]) -> None:
     date_str = payload["slate_date"]
 
@@ -493,6 +526,8 @@ def write_outputs(payload: dict[str, Any]) -> None:
     # Individual batter files for SprayChart.js
     written = write_individual_batter_files(payload.get("players", {}))
     print(f"Written: {written} individual batter files to public/data/pitch/", file=sys.stderr)
+    zoned = write_zone_files(payload.get("players", {}))
+    print(f"Written: {zoned} zone files to public/data/current/zones/today/", file=sys.stderr)
 
 
 

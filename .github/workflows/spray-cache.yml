@@ -9,7 +9,7 @@ on:
 # STREAMLIT MIGRATION (2026-07-25): dropped from `write` to `read`. This job
 # no longer pushes anything -- see the cache note below.
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   # BUGFIX (kept): both passes run in ONE job with ONE checkout, so pass 2
@@ -72,3 +72,9 @@ jobs:
             public/data/zone_cache
             public/data/pitch
           key: spray-cache-${{ github.run_id }}
+
+      # Publish the zone profiles. Without this the job computes them and
+      # throws them away when the runner dies -- which is why Hot Zones was
+      # empty for months while this workflow reported success every day.
+      - name: Publish to data branch
+        run: bash .github/scripts/publish_data.sh "Spray cache"

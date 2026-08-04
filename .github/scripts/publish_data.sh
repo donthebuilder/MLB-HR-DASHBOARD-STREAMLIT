@@ -91,6 +91,8 @@ stage_local() {
   # Situational splits (day/night, home/away, day-of-week, win/loss), one
   # small file per hitter, fetched on demand by the Player tab.
   [ -d "$SRC/data/current/splits" ] && cp -r "$SRC/data/current/splits" "$STAGE/public/data/current/" || true
+  # Zone profiles from spray_cache.py.
+  [ -d "$SRC/data/current/zones" ] && cp -r "$SRC/data/current/zones" "$STAGE/public/data/current/" || true
   return 0
 }
 
@@ -135,7 +137,7 @@ carry_forward() {
   # skipped and detail/today was dropped from the branch entirely. Every
   # night after the tomorrow run, today's spray charts, pitch profiles and
   # splits silently vanished until the next today run rebuilt them.
-  for sub in detail splits; do
+  for sub in detail splits zones; do
     [ -d "$PREV/public/data/current/$sub" ] || continue
     mkdir -p "$STAGE/public/data/current/$sub"
     for slate_dir in "$PREV/public/data/current/$sub"/*; do
