@@ -2996,8 +2996,14 @@ def build_batter_statcast_profile(db: CacheDB, player_id: int, end_date: dt.date
             "xbh": xbh_count,
         }
 
-        # ── Wider BBE window for spray chart (last 30 games, not 8) ──
-        spray_dates = list(played[played <= pd.Timestamp(end_date)].drop_duplicates().sort_values().tail(30))
+        # ── Full-season BBE for the spray chart / EV log (2026-08-06). Was
+        # tail(30) game dates, which silently capped every EV log and spray
+        # view at a month of balls while the df already held the whole season.
+        # The site added an "All" window stop that was really "all of 30
+        # days" — this makes All mean the season. Detail files are fetched
+        # per-modal on demand, so the payload growth lands on one player at a
+        # time, not the slate.
+        spray_dates = list(played[played <= pd.Timestamp(end_date)].drop_duplicates().sort_values())
         if spray_dates:
             bbe_spray = df[df["game_date"].dt.normalize().isin(spray_dates)].copy()
             bbe_spray = bbe_spray[bbe_spray["type"] == "X"].copy()
