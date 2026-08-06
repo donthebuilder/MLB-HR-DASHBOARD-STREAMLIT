@@ -4,6 +4,7 @@ name: Pair History Bot
 on:
   schedule:
     - cron: '15 7 * * *'   # 12:15am PHX
+    - cron: '15 9 * * *'   # backup 2h later — runner-acquisition insurance
   workflow_dispatch:
 
 permissions:

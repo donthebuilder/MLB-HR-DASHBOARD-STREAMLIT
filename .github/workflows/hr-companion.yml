@@ -4,6 +4,7 @@ name: HR Companion Cache Bot
 on:
   schedule:
     - cron: '45 7 * * *'   # 12:45am PHX
+    - cron: '45 9 * * *'   # backup 2h later — runner-acquisition insurance
   workflow_dispatch:
 
 permissions:

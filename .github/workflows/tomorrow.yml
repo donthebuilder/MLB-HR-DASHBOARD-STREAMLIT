@@ -3,6 +3,7 @@ name: MLB HR Bot — Tomorrow (data branch only)
 on:
   schedule:
     - cron: "5 7 * * *"   # 12:05am Phoenix (07:05 UTC)
+    - cron: "5 9 * * *"   # backup 2h later — runner-acquisition insurance
   workflow_dispatch: {}
 
 # One group PER WORKFLOW, not one shared across all of them.

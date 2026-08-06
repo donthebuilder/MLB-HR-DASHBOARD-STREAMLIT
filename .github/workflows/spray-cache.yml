@@ -5,6 +5,12 @@ on:
   schedule:
     # Adjust to your existing staggered schedule alongside your other bots
     - cron: '0 13 * * *'
+    # Backup pass 2h later (2026-08-06): GitHub's hosted-runner pool
+    # occasionally fails to acquire a job ("not acquired by Runner of type
+    # hosted"); a single daily cron loses the whole day to that hiccup.
+    # Concurrency dedups if the first run is still going; a clean second
+    # run just republishes the same day's cache — harmless.
+    - cron: '0 15 * * *'
 
 # STREAMLIT MIGRATION (2026-07-25): dropped from `write` to `read`. This job
 # no longer pushes anything -- see the cache note below.
