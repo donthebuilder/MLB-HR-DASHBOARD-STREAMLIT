@@ -236,11 +236,67 @@ def _post_discord(msg: str) -> None:
 
 
 def _webhook_transitions(old_payload, new_payload) -> None:
-    """Diff the previous published live results against the new ones and
-    announce TRANSITIONS only: a pool reaching one-away, a pool cashing, a
-    pair cashing. Steady states never repeat — each grading run compares to
-    what was already public, so the same milestone can't fire twice."""
+    """Diff the previous published live results against the new ones and post
+    ONE Discord digest per grading run (2026-08-06, expanded on request).
+    Covers: homers by designated picks, picks clearing their own bar, picks
+    going final without it, multi-HR nights, pool one-away/cashed, pair
+    cashed, and a full per-category report line once the night is (mostly)
+    final. Transitions only — a state already announced never repeats — and
+    everything batches into a single message so "a lot of stuff" arrives as
+    one hourly digest instead of a pager meltdown."""
     try:
+        def slots_of(p):
+            out = {}
+            for sl in ((p or {}).get("graded_slots") or (p or {}).get("results") or []):
+                nm = str(sl.get("name", "")).strip()
+                role = str(sl.get("game_pick_role") or sl.get("pick_type") or "").split("/")[0].strip().upper()
+                if nm:
+                    out[(nm.lower(), role)] = sl
+            return out
+
+        def bar_cleared(sl, role):
+            if sl is None:
+                return None
+            h = int(sl.get("actual_hits") or 0); hr = int(sl.get("actual_hr") or 0)
+            combo = h + int(sl.get("actual_runs") or 0) + int(sl.get("actual_rbi") or 0)
+            tb = int(sl.get("actual_tb") or 0)
+            if role in ("HR", "TOP"):
+                return hr >= 1
+            if role == "HIT":
+                return h >= 1
+            if role == "HRR":
+                return combo >= 2
+            if role in ("CONTACT", "TB"):
+                return tb >= 2
+            return None
+
+        old_s, new_s = slots_of(old_payload), slots_of(new_payload)
+        lines = []
+
+        # ── picks: homers, bars cleared, final without it ──
+        hr_lines, clear_lines, dead_lines, multi_lines = [], [], [], []
+        for (nm, role), sl in new_s.items():
+            if not role:
+                continue
+            osl = old_s.get((nm, role))
+            hr_n, hr_o = int(sl.get("actual_hr") or 0), int((osl or {}).get("actual_hr") or 0)
+            name = str(sl.get("name", nm)).strip() or nm.title()
+            if hr_n > hr_o:
+                extra = f" — that makes {hr_n}" if hr_n > 1 else ""
+                hr_lines.append(f"💥 **{name}** ({role} pick) went deep{extra}")
+            if hr_n >= 2 and hr_o < 2:
+                multi_lines.append(f"🚀 **{name}**: {hr_n} HR tonight")
+            c_n, c_o = bar_cleared(sl, role), bar_cleared(osl, role) if osl else None
+            if c_n is True and c_o is not True and hr_n == hr_o:
+                h = int(sl.get("actual_hits") or 0); ab = int(sl.get("actual_ab") or 0)
+                clear_lines.append(f"✓ {name} clears the {role} bar ({h}-{ab})")
+            fin_n = int(sl.get("is_final") or 0) == 1
+            fin_o = osl is not None and int(osl.get("is_final") or 0) == 1
+            if fin_n and not fin_o and c_n is False:
+                dead_lines.append(f"✗ {name} — {role} pick final without it")
+        lines += hr_lines[:8] + multi_lines[:4] + clear_lines[:10] + dead_lines[:8]
+
+        # ── pools ──
         def pools(p):
             out = {}
             for pl in (((p or {}).get("pair_pool_results") or {}).get("graded_pools") or []):
@@ -250,35 +306,61 @@ def _webhook_transitions(old_payload, new_payload) -> None:
                     set(str(x).lower() for x in (pl.get("homer_names") or [])),
                 )
             return out
-
-        def hr_names(p):
-            slots = (p or {}).get("graded_slots") or (p or {}).get("results") or []
-            return set(str(sl.get("name", "")).lower() for sl in slots
-                       if int(sl.get("actual_hr") or 0) >= 1 or int(sl.get("got_hr") or 0) >= 1)
-
-        msgs = []
         oldp, newp = pools(old_payload), pools(new_payload)
         for label, (hit, tot, members, homered) in newp.items():
             if not tot:
                 continue
             old_hit = oldp.get(label, (0,))[0]
             if hit >= tot and old_hit < tot:
-                msgs.append(f"💰 POOL CASHED — {label}: all {tot} went deep")
+                lines.append(f"💰 **POOL CASHED — {label}**: all {tot} went deep")
             elif hit == tot - 1 and old_hit < tot - 1:
                 missing = [m for m in members if m.lower() not in homered]
-                msgs.append(f"🎟 {label} is {hit}/{tot} — one swing from cashing ({', '.join(missing[:3])})")
+                lines.append(f"🎟 {label} is {hit}/{tot} — one swing from cashing ({', '.join(missing[:3])})")
+
+        # ── pairs ──
+        def hr_names(p):
+            slots = (p or {}).get("graded_slots") or (p or {}).get("results") or []
+            return set(str(sl.get("name", "")).lower() for sl in slots
+                       if int(sl.get("actual_hr") or 0) >= 1 or int(sl.get("got_hr") or 0) >= 1)
         old_hr, new_hr = hr_names(old_payload), hr_names(new_payload)
         for pr in (((new_payload or {}).get("pair_pool_results") or {}).get("all_pairs") or []):
             a_n = str((pr.get("a") or {}).get("name", ""))
             b_n = str((pr.get("b") or {}).get("name", ""))
             if not a_n or not b_n:
                 continue
-            both_now = a_n.lower() in new_hr and b_n.lower() in new_hr
-            both_before = a_n.lower() in old_hr and b_n.lower() in old_hr
-            if both_now and not both_before:
-                msgs.append(f"💰 PAIR CASHED — {a_n} + {b_n} ({pr.get('label', 'pair')})")
-        for m in msgs[:6]:
-            _post_discord(m)
+            if a_n.lower() in new_hr and b_n.lower() in new_hr and not (a_n.lower() in old_hr and b_n.lower() in old_hr):
+                lines.append(f"💰 **PAIR CASHED — {a_n} + {b_n}** ({pr.get('label', 'pair')})")
+
+        # ── night wrap: per-category record, once, when grading turns final ──
+        def final_share(p):
+            slots = (p or {}).get("graded_slots") or (p or {}).get("results") or []
+            fin = sum(1 for sl in slots if int(sl.get("is_final") or 0) == 1)
+            return (fin / len(slots)) if slots else 0.0
+        if final_share(new_payload) >= 0.95 and final_share(old_payload) < 0.95:
+            # simple per-role tally
+            tally = {}
+            for (nm, role), sl in new_s.items():
+                if not role:
+                    continue
+                c = bar_cleared(sl, role)
+                if c is None:
+                    continue
+                ok, n = tally.get(role, (0, 0))
+                tally[role] = (ok + (1 if c else 0), n + 1)
+            if tally:
+                parts = [f"{r} {ok}/{n}" for r, (ok, n) in sorted(tally.items())]
+                lines.append(f"🧾 **Night wrap** — {' · '.join(parts)}")
+
+        if not lines:
+            return
+        # one digest, chunked under Discord's 2000-char content limit
+        chunk, size = [], 0
+        for ln in lines:
+            if size + len(ln) + 1 > 1800:
+                _post_discord("\n".join(chunk)); chunk, size = [], 0
+            chunk.append(ln); size += len(ln) + 1
+        if chunk:
+            _post_discord("\n".join(chunk))
     except Exception as exc:
         print(f"webhook transitions skipped: {exc}")
 
