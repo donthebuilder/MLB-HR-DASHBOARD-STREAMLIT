@@ -331,8 +331,16 @@ def get_player_batting_line(game_feed: Dict[str, Any], player_id: int) -> Dict[s
                 "rbi": safe_int(batting.get("rbi"), 0),
                 "tb": safe_int(batting.get("totalBases"), 0),
                 "ab": safe_int(batting.get("atBats"), 0),
+                # Docket #1-3 (2026-08-05): these four were sitting unread in
+                # the same dict. actual_k makes K-risk auditable for the first
+                # time; actual_bb stops CONTACT picks being graded failures
+                # for walking twice.
+                "k": safe_int(batting.get("strikeOuts"), 0),
+                "bb": safe_int(batting.get("baseOnBalls"), 0),
+                "doubles": safe_int(batting.get("doubles"), 0),
+                "triples": safe_int(batting.get("triples"), 0),
             }
-    return {"hits": 0, "hr": 0, "runs": 0, "rbi": 0, "tb": 0, "ab": 0}
+    return {"hits": 0, "hr": 0, "runs": 0, "rbi": 0, "tb": 0, "ab": 0, "k": 0, "bb": 0, "doubles": 0, "triples": 0}
 
 
 
@@ -776,6 +784,14 @@ SLOT_FIELDS = {
     "weak_spot_flag", "weak_spot_reason", "best_bet_type", "true_avoid_hr",
     "best_non_hr_category", "top_board_tags", "game_pick_role",
     "lineup_spot", "lineup_confirmed", "venue_name", "game_time",
+    # Docket #8-10 (2026-08-05): carried through so every score can be
+    # backtested against the day it was generated for, instead of joined to
+    # tonight's slate — exact for today, wrong for any archived day.
+    "hrw_score", "pitch_mix_score", "top_board_score_v2", "recent_375_num",
+    "pitcher_name", "pitcher_id", "pitcher_hr9",
+    "park_factor", "park_hr_factor", "wind_direction_label",
+    "weather_wind_direction_label", "season_k_rate", "season_bb_rate",
+    "trap_flag", "alt_look_tag", "final_hr_role",
 }
 
 
@@ -914,6 +930,10 @@ def grade_slot(slot: Dict[str, Any], actual: Dict[str, int]) -> Dict[str, Any]:
         "actual_rbi": actual["rbi"],
         "actual_tb": actual["tb"],
         "actual_ab": actual["ab"],
+        "actual_k": actual.get("k", 0),
+        "actual_bb": actual.get("bb", 0),
+        "actual_doubles": actual.get("doubles", 0),
+        "actual_triples": actual.get("triples", 0),
         "got_base_hit": 1 if actual["hits"] >= 1 else 0,
         "got_hr": 1 if actual["hr"] >= 1 else 0,
         # Singles are worth exactly one base each, so total bases only

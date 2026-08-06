@@ -566,11 +566,11 @@ for _team in ["ARI", "ATL", "BAL", "BOS", "CHC", "CIN", "CLE", "COL", "CWS", "DE
 PARK_DIMENSIONS: Dict[str, Dict[str, Any]] = {
     "Great American Ball Park": {"park_name":"Great American Ball Park","lf":328,"lcf":379,"cf":404,"rcf":370,"rf":325,"short_side":"RF","hr_friendly_side":"RF/LF"},
     "Yankee Stadium": {"park_name":"Yankee Stadium","lf":318,"lcf":399,"cf":408,"rcf":385,"rf":314,"short_side":"RF","hr_friendly_side":"RF"},
-    "Fenway Park": {"park_name":"Fenway Park","lf":310,"lcf":379,"cf":390,"rcf":380,"rf":302,"short_side":"RF","hr_friendly_side":"LF/RF"},
+    "Fenway Park": {"park_name":"Fenway Park","lf":310,"lcf":379,"cf":390,"rcf":420,"rf":302,"short_side":"RF","hr_friendly_side":"LF/RF"},
     "Coors Field": {"park_name":"Coors Field","lf":347,"lcf":390,"cf":415,"rcf":375,"rf":350,"short_side":"RCF","hr_friendly_side":"LCF/RCF"},
     "Citizens Bank Park": {"park_name":"Citizens Bank Park","lf":329,"lcf":374,"cf":401,"rcf":369,"rf":330,"short_side":"LF/RF","hr_friendly_side":"LF/RF"},
-    "Camden Yards": {"park_name":"Oriole Park at Camden Yards","lf":384,"lcf":410,"cf":400,"rcf":373,"rf":318,"short_side":"RF","hr_friendly_side":"RF"},
-    "Oriole Park at Camden Yards": {"park_name":"Oriole Park at Camden Yards","lf":384,"lcf":410,"cf":400,"rcf":373,"rf":318,"short_side":"RF","hr_friendly_side":"RF"},
+    "Camden Yards": {"park_name":"Oriole Park at Camden Yards","lf":333,"lcf":384,"cf":400,"rcf":373,"rf":318,"short_side":"RF","hr_friendly_side":"RF"},
+    "Oriole Park at Camden Yards": {"park_name":"Oriole Park at Camden Yards","lf":333,"lcf":384,"cf":400,"rcf":373,"rf":318,"short_side":"RF","hr_friendly_side":"RF"},
     "Dodger Stadium": {"park_name":"Dodger Stadium","lf":330,"lcf":385,"cf":395,"rcf":385,"rf":330,"short_side":"LF/RF","hr_friendly_side":"LF/RF"},
     "Wrigley Field": {"park_name":"Wrigley Field","lf":355,"lcf":368,"cf":400,"rcf":368,"rf":353,"short_side":"LCF/RCF","hr_friendly_side":"wind dependent"},
     "Comerica Park": {"park_name":"Comerica Park","lf":345,"lcf":370,"cf":412,"rcf":365,"rf":330,"short_side":"RF","hr_friendly_side":"RF","deep_risk_zone":"CF"},
@@ -593,6 +593,10 @@ PARK_DIMENSIONS: Dict[str, Dict[str, Any]] = {
     "Angel Stadium": {"park_name":"Angel Stadium","lf":330,"lcf":387,"cf":396,"rcf":370,"rf":330,"short_side":"LF/RF","hr_friendly_side":"RCF"},
     "Chase Field": {"park_name":"Chase Field","lf":330,"lcf":374,"cf":407,"rcf":374,"rf":334,"short_side":"LF","hr_friendly_side":"LF/RCF"},
     "Sutter Health Park": {"park_name":"Sutter Health Park","lf":330,"lcf":380,"cf":403,"rcf":380,"rf":325,"short_side":"RF","hr_friendly_side":"RF"},
+    # Venue-rename aliases (docket #16): the schedule now publishes these
+    # names, and without the alias the lookup fell to DEFAULT dims.
+    "Daikin Park": {"park_name":"Daikin Park","lf":315,"lcf":362,"cf":409,"rcf":373,"rf":326,"short_side":"LF","hr_friendly_side":"LF"},
+    "Guaranteed Rate Field": {"park_name":"Rate Field","lf":330,"lcf":375,"cf":400,"rcf":375,"rf":335,"short_side":"LF","hr_friendly_side":"LF/RF"},
     "Rate Field": {"park_name":"Rate Field","lf":330,"lcf":375,"cf":400,"rcf":375,"rf":335,"short_side":"LF","hr_friendly_side":"LF/RF"},
 }
 
@@ -1278,6 +1282,12 @@ class HitterRecord:
     # Full per-pitch arsenal with damage allowed (HR, EV, hard-hit% per pitch type).
     # List of dicts from pitch_type_summary — used for display + deeper analysis.
     pitcher_pitch_arsenal_detail: List[Dict[str, Any]] = dataclasses.field(default_factory=list)
+    # Docket #4-7: exact season counting stats (were client-estimated).
+    season_tb: int = 0
+    season_ab: int = 0
+    season_doubles: int = 0
+    season_triples: int = 0
+    season_babip: float = 0.0
 
 
 class CacheDB:
@@ -1879,6 +1889,13 @@ def flatten_season_hitting(stat: Dict[str, Any]) -> Dict[str, float]:
         "season_hr": safe_int(stat.get("homeRuns"), 0),
         "season_pa": pa,
         "season_bb_rate": safe_int(stat.get("baseOnBalls"), 0) / pa,
+        # Docket #4-7 (2026-08-05): already present in this stat dict, never
+        # read. Makes League Leaders exact instead of client-estimated.
+        "season_tb": safe_int(stat.get("totalBases"), 0),
+        "season_ab": safe_int(stat.get("atBats"), 0),
+        "season_doubles": safe_int(stat.get("doubles"), 0),
+        "season_triples": safe_int(stat.get("triples"), 0),
+        "season_babip": safe_float(stat.get("babip"), 0.0),
         "season_k_rate": safe_int(stat.get("strikeOuts"), 0) / pa,
         # Added per audit (2026-06-28): season-long RBI/runs were completely
         # absent despite hrr_v2 (literally "Hits, Runs, RBI") having zero
@@ -7379,6 +7396,11 @@ def build_hitter_records(client: MLBClient, db: CacheDB, game: Dict[str, Any], s
                 season_ops=season["season_ops"],
                 season_slg=season["season_slg"],
                 season_iso=season["season_iso"],
+                season_tb=season.get("season_tb", 0),
+                season_ab=season.get("season_ab", 0),
+                season_doubles=season.get("season_doubles", 0),
+                season_triples=season.get("season_triples", 0),
+                season_babip=season.get("season_babip", 0.0),
                 season_hr=season["season_hr"],
                 season_pa=season["season_pa"],
                 season_bb_rate=season["season_bb_rate"],
@@ -8107,8 +8129,9 @@ def build_slate_prediction(rows: List[HitterRecord]) -> str:
 
 
 def build_top10_alt_board(rows: List[HitterRecord]) -> str:
-    global LAST_ALT_USED_IDS
+    global LAST_ALT_USED_IDS, LAST_ALT_TAGS
     LAST_ALT_USED_IDS = set()
+    LAST_ALT_TAGS = {}
     MIN_TOP10_PA = 40
     MIN_TOP10_BBE = 10
 
@@ -8247,6 +8270,9 @@ def build_top10_alt_board(rows: List[HitterRecord]) -> str:
 
     # Lock ALT LOOKS out of later pools/pairs/builders so ALT stays truly unique on the sheet.
     LAST_ALT_USED_IDS = {r.player_id for r, _ in alt_rows[:15]}
+    # Docket #12: stamp WHICH alt lane each hitter landed in, so ALT LOOKS
+    # can finally be graded like every other designation.
+    LAST_ALT_TAGS.update({r.player_id: tag.split(" ")[0] for r, tag in alt_rows[:15]})
 
     parts: List[str] = []
     parts.append("⚾ THE BOARDS " + "─" * 33 + "\n\n")
@@ -8522,7 +8548,29 @@ def build_game_pick_role_map(rows: List[HitterRecord]) -> Dict[Tuple[int, int], 
         used.add(top_pick.player_id)
         role_map.setdefault((game_pk, top_pick.player_id), []).append("TOP")
 
-        hr_pick = pick_top_min_pa(hitters, "hr_score", 1, 15, used)[0] if len(hitters) > 1 else top_pick
+        # Docket #14 + #17 (2026-08-05). Measured on 1,377 graded HR-type
+        # picks: sub-.18-ISO picks homered 11.5% vs 19.5% above; overall_score
+        # out-predicts hr_score on homers (+7.3 vs +4.7 quartile spread); and
+        # 24 hitters on one recent slate were simultaneously the HR pick and
+        # trap-flagged — a self-contradiction. So the HR slot now ranks by
+        # overall_score behind an ISO floor, skipping trapped bats while any
+        # alternative exists. The fallback chain guarantees a pick in every
+        # game however thin the slate.
+        def _hr_slot() -> HitterRecord:
+            pool = [h for h in hitters if h.player_id not in used and getattr(h, "season_pa", 0) >= 15]
+            if not pool:
+                pool = [h for h in hitters if h.player_id not in used] or [top_pick]
+            for cond in (
+                lambda h: getattr(h, "season_iso", 0.0) >= 0.180 and not getattr(h, "trap_flag", False),
+                lambda h: getattr(h, "season_iso", 0.0) >= 0.180,
+                lambda h: not getattr(h, "trap_flag", False),
+                lambda h: True,
+            ):
+                tier = [h for h in pool if cond(h)]
+                if tier:
+                    return sorted(tier, key=lambda h: getattr(h, "overall_score", 0.0), reverse=True)[0]
+            return top_pick
+        hr_pick = _hr_slot() if len(hitters) > 1 else top_pick
         used.add(hr_pick.player_id)
         role_map.setdefault((game_pk, hr_pick.player_id), []).append("HR")
 
@@ -8873,7 +8921,29 @@ def game_pick_type_map(rows: List[HitterRecord]) -> Dict[int, str]:
         used.add(top_pick.player_id)
         tag_map[top_pick.player_id] = "🔥TOP"
 
-        hr_pick = pick_top_min_pa(hitters, "hr_score", 1, 15, used)[0] if len(hitters) > 1 else top_pick
+        # Docket #14 + #17 (2026-08-05). Measured on 1,377 graded HR-type
+        # picks: sub-.18-ISO picks homered 11.5% vs 19.5% above; overall_score
+        # out-predicts hr_score on homers (+7.3 vs +4.7 quartile spread); and
+        # 24 hitters on one recent slate were simultaneously the HR pick and
+        # trap-flagged — a self-contradiction. So the HR slot now ranks by
+        # overall_score behind an ISO floor, skipping trapped bats while any
+        # alternative exists. The fallback chain guarantees a pick in every
+        # game however thin the slate.
+        def _hr_slot() -> HitterRecord:
+            pool = [h for h in hitters if h.player_id not in used and getattr(h, "season_pa", 0) >= 15]
+            if not pool:
+                pool = [h for h in hitters if h.player_id not in used] or [top_pick]
+            for cond in (
+                lambda h: getattr(h, "season_iso", 0.0) >= 0.180 and not getattr(h, "trap_flag", False),
+                lambda h: getattr(h, "season_iso", 0.0) >= 0.180,
+                lambda h: not getattr(h, "trap_flag", False),
+                lambda h: True,
+            ):
+                tier = [h for h in pool if cond(h)]
+                if tier:
+                    return sorted(tier, key=lambda h: getattr(h, "overall_score", 0.0), reverse=True)[0]
+            return top_pick
+        hr_pick = _hr_slot() if len(hitters) > 1 else top_pick
         used.add(hr_pick.player_id)
         tag_map[hr_pick.player_id] = "🧨HR"
 
@@ -8998,6 +9068,7 @@ def build_structured_pool(
 
 LAST_HR_SECTION_USED_IDS: set[int] = set()
 LAST_ALT_USED_IDS: set[int] = set()
+LAST_ALT_TAGS: Dict[int, str] = {}
 LAST_TOP30_BOARD: List[HitterRecord] = []
 
 def clean_pick_tag(tag: str) -> str:
@@ -10890,6 +10961,7 @@ Use ALT LOOKS as quality variance, not primary plays.
         for row in rows_payload:
             key = (row.get('game_pk'), row.get('player_id'))
             row['game_pick_role'] = _role_map.get(key, '')
+            row['alt_look_tag'] = LAST_ALT_TAGS.get(row.get('player_id'), '')
         # HR Score 2.0 clean output: only the main TXT + JSON are written locally.
 
         # Print report first so the final console lines clearly show save/sync status.
