@@ -11219,8 +11219,55 @@ Use ALT LOOKS as quality variance, not primary plays.
         rows_payload = enrich_hr_pa_payload(rows_payload)
         rows_payload = enrich_signal_pills_and_best_non_hr(rows_payload)
 
-        # Stamp game pick role (TOP/HR/HIT/HRR/CONTACT) onto each player row
+        # Stamp game pick role (TOP/HR/HIT/HRR/CONTACT) onto each player row.
+        #
+        # PICK LOCK (2026-08-06). The slate rebuilds hourly and re-picked every
+        # run — including for games already in progress, which meant the "HR
+        # pick" could quietly become a different hitter in the 4th inning and
+        # the graded record would grade the REVISION. Picks are promises;
+        # rewriting them after first pitch is grading a bet nobody could have
+        # made. Rule: the last role map stamped BEFORE a game's first pitch is
+        # that game's map forever. Persisted in the cache per (date, game);
+        # games with no lock yet (not started, or TBD time) keep updating.
         _role_map = build_game_pick_role_map(all_rows)
+        try:
+            _lock_key = f"pick_lock:{slate_date.isoformat()}"
+            _lock = db.get(_lock_key) or {}
+            _now = dt.datetime.now(dt.timezone.utc)
+            _gtime = {}
+            for r in all_rows:
+                gt = getattr(r, 'game_time', None)
+                if r.game_pk and gt and r.game_pk not in _gtime:
+                    _gtime[r.game_pk] = str(gt)
+            def _started(pk):
+                t = _gtime.get(pk)
+                if not t:
+                    return False
+                try:
+                    ts = dt.datetime.fromisoformat(str(t).replace('Z', '+00:00'))
+                    if ts.tzinfo is None:
+                        ts = ts.replace(tzinfo=dt.timezone.utc)
+                    return _now >= ts
+                except Exception:
+                    return False
+            _locked_map = {}
+            _fresh_by_game = {}
+            for (pk, pid), role in _role_map.items():
+                _fresh_by_game.setdefault(pk, {})[str(pid)] = role
+            for pk in set(list(_fresh_by_game.keys()) + [int(k) for k in _lock.keys() if str(k).isdigit()]):
+                if _started(pk) and str(pk) in _lock:
+                    # frozen: first-pitch map wins, this run's opinion discarded
+                    for pid_s, role in _lock[str(pk)].items():
+                        _locked_map[(pk, int(pid_s))] = role
+                else:
+                    for pid_s, role in _fresh_by_game.get(pk, {}).items():
+                        _locked_map[(pk, int(pid_s))] = role
+                    if not _started(pk) and pk in _fresh_by_game:
+                        _lock[str(pk)] = _fresh_by_game[pk]
+            db.set(_lock_key, _lock)
+            _role_map = _locked_map
+        except Exception as _lock_exc:
+            print(f"pick lock skipped (fresh map used): {_lock_exc}", file=sys.stderr)
         for row in rows_payload:
             key = (row.get('game_pk'), row.get('player_id'))
             row['game_pick_role'] = _role_map.get(key, '')
