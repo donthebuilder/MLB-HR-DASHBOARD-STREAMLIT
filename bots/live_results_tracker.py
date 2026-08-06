@@ -214,6 +214,54 @@ def _sync_read_json(path: Path, default):
         pass
     return default
 
+def _post_discord_payload(payload: dict) -> None:
+    url = os.environ.get("DISCORD_WEBHOOK", "").strip()
+    if not url:
+        return
+    try:
+        import urllib.request
+        req = urllib.request.Request(
+            url,
+            data=json.dumps(payload).encode("utf-8"),
+            headers={"Content-Type": "application/json", "User-Agent": "moonshot-bot"},
+        )
+        urllib.request.urlopen(req, timeout=10)
+    except Exception as exc:
+        print(f"discord post failed: {exc}")
+
+
+_HL_CACHE: dict = {}
+
+def _hr_highlight_url(game_pk, batter_name: str) -> str:
+    """Best-effort link to the HR highlight clip for this batter in this
+    game, from MLB's game content feed. Any miss returns '' and the digest
+    line simply ships without a video — never worth failing a post over."""
+    try:
+        if not game_pk or not batter_name:
+            return ""
+        if game_pk not in _HL_CACHE:
+            import urllib.request
+            u = f"https://statsapi.mlb.com/api/v1/game/{game_pk}/content"
+            with urllib.request.urlopen(u, timeout=10) as r:
+                _HL_CACHE[game_pk] = json.loads(r.read().decode("utf-8"))
+        items = ((((_HL_CACHE[game_pk] or {}).get("highlights") or {}).get("highlights") or {}).get("items") or [])
+        last = batter_name.split()[-1].lower()
+        for it in items:
+            text = f"{it.get('headline','')} {it.get('title','')} {it.get('description','')}".lower()
+            if last in text and ("homer" in text or "home run" in text or "hr" in text.split()):
+                pbs = it.get("playbacks") or []
+                best = ""
+                for pb in pbs:
+                    u2 = str(pb.get("url", ""))
+                    if u2.endswith(".mp4"):
+                        best = u2  # later entries are higher bitrate
+                if best:
+                    return best
+        return ""
+    except Exception:
+        return ""
+
+
 def _post_discord(msg: str) -> None:
     """Fire-and-forget alert to a Discord webhook. Set the DISCORD_WEBHOOK
     secret in the repo and pass it through the workflow env; without it this
@@ -283,7 +331,9 @@ def _webhook_transitions(old_payload, new_payload) -> None:
             name = str(sl.get("name", nm)).strip() or nm.title()
             if hr_n > hr_o:
                 extra = f" — that makes {hr_n}" if hr_n > 1 else ""
-                hr_lines.append(f"💥 **{name}** ({role} pick) went deep{extra}")
+                clip = _hr_highlight_url(sl.get("game_pk"), name)
+                watch = f"  [▶ watch]({clip})" if clip else ""
+                hr_lines.append(f"💥 **{name}** ({role} pick) went deep{extra}{watch}")
             if hr_n >= 2 and hr_o < 2:
                 multi_lines.append(f"🚀 **{name}**: {hr_n} HR tonight")
             c_n, c_o = bar_cleared(sl, role), bar_cleared(osl, role) if osl else None
@@ -294,7 +344,15 @@ def _webhook_transitions(old_payload, new_payload) -> None:
             fin_o = osl is not None and int(osl.get("is_final") or 0) == 1
             if fin_n and not fin_o and c_n is False:
                 dead_lines.append(f"✗ {name} — {role} pick final without it")
-        lines += hr_lines[:8] + multi_lines[:4] + clear_lines[:10] + dead_lines[:8]
+        sections = []
+        if hr_lines:
+            sections.append(("💥 WENT DEEP", hr_lines[:8]))
+        if multi_lines:
+            sections.append(("🚀 MULTI-HR", multi_lines[:4]))
+        if clear_lines:
+            sections.append(("✓ BARS CLEARED", clear_lines[:10]))
+        if dead_lines:
+            sections.append(("✗ DIDN'T GET THERE", dead_lines[:8]))
 
         # ── pools ──
         def pools(p):
@@ -306,16 +364,17 @@ def _webhook_transitions(old_payload, new_payload) -> None:
                     set(str(x).lower() for x in (pl.get("homer_names") or [])),
                 )
             return out
+        ticket_lines = []
         oldp, newp = pools(old_payload), pools(new_payload)
         for label, (hit, tot, members, homered) in newp.items():
             if not tot:
                 continue
             old_hit = oldp.get(label, (0,))[0]
             if hit >= tot and old_hit < tot:
-                lines.append(f"💰 **POOL CASHED — {label}**: all {tot} went deep")
+                ticket_lines.append(f"💰 **POOL CASHED — {label}**: all {tot} went deep")
             elif hit == tot - 1 and old_hit < tot - 1:
                 missing = [m for m in members if m.lower() not in homered]
-                lines.append(f"🎟 {label} is {hit}/{tot} — one swing from cashing ({', '.join(missing[:3])})")
+                ticket_lines.append(f"🎟 {label} · **{hit}/{tot}** — one swing away ({', '.join(missing[:3])})")
 
         # ── pairs ──
         def hr_names(p):
@@ -329,13 +388,14 @@ def _webhook_transitions(old_payload, new_payload) -> None:
             if not a_n or not b_n:
                 continue
             if a_n.lower() in new_hr and b_n.lower() in new_hr and not (a_n.lower() in old_hr and b_n.lower() in old_hr):
-                lines.append(f"💰 **PAIR CASHED — {a_n} + {b_n}** ({pr.get('label', 'pair')})")
+                ticket_lines.append(f"💰 **PAIR CASHED — {a_n} + {b_n}** ({pr.get('label', 'pair')})")
 
         # ── night wrap: per-category record, once, when grading turns final ──
         def final_share(p):
             slots = (p or {}).get("graded_slots") or (p or {}).get("results") or []
             fin = sum(1 for sl in slots if int(sl.get("is_final") or 0) == 1)
             return (fin / len(slots)) if slots else 0.0
+        tally = {}
         if final_share(new_payload) >= 0.95 and final_share(old_payload) < 0.95:
             # simple per-role tally
             tally = {}
@@ -348,19 +408,35 @@ def _webhook_transitions(old_payload, new_payload) -> None:
                 ok, n = tally.get(role, (0, 0))
                 tally[role] = (ok + (1 if c else 0), n + 1)
             if tally:
-                parts = [f"{r} {ok}/{n}" for r, (ok, n) in sorted(tally.items())]
-                lines.append(f"🧾 **Night wrap** — {' · '.join(parts)}")
+                parts = [f"**{r}** {ok}/{n}" for r, (ok, n) in sorted(tally.items())]
+                sections.append(("🧾 NIGHT WRAP", [" · ".join(parts)]))
+        if ticket_lines:
+            sections.append(("🎫 TICKETS", ticket_lines[:8]))
 
-        if not lines:
+        if not sections:
             return
-        # one digest, chunked under Discord's 2000-char content limit
-        chunk, size = [], 0
-        for ln in lines:
-            if size + len(ln) + 1 > 1800:
-                _post_discord("\n".join(chunk)); chunk, size = [], 0
-            chunk.append(ln); size += len(ln) + 1
-        if chunk:
-            _post_discord("\n".join(chunk))
+        # One rich embed per digest: sectioned, color-coded, timestamped —
+        # not a wall of words. Cashes turn it gold, homers green, otherwise
+        # the site's ember orange. Footer carries the running pick record.
+        cashed = any("CASHED" in ln for _, ls in sections for ln in ls)
+        went_deep = any(t.startswith("💥") for t, _ in sections)
+        color = 0xF5C242 if cashed else (0x4ADE80 if went_deep else 0xF97316)
+        desc_parts = []
+        for title, ls in sections:
+            desc_parts.append(f"**{title}**\n" + "\n".join(ls))
+        desc = "\n\n".join(desc_parts)[:4000]
+        ok_t = sum(ok for ok, n in tally.values()) if tally else None
+        n_t = sum(n for ok, n in tally.values()) if tally else None
+        footer = f"picks {ok_t}/{n_t} on their own bars tonight" if n_t else "moonshot live digest"
+        _post_discord_payload({
+            "embeds": [{
+                "title": "📡 Moonshot — live digest",
+                "description": desc,
+                "color": color,
+                "footer": {"text": footer},
+                "timestamp": dt.datetime.now(dt.timezone.utc).isoformat(),
+            }],
+        })
     except Exception as exc:
         print(f"webhook transitions skipped: {exc}")
 
