@@ -344,9 +344,49 @@ def _webhook_transitions(old_payload, new_payload) -> None:
             fin_o = osl is not None and int(osl.get("is_final") or 0) == 1
             if fin_n and not fin_o and c_n is False:
                 dead_lines.append(f"✗ {name} — {role} pick final without it")
+        # ── ALWAYS-ON LAYERS (2026-08-06, "give that good update") ──
+        # Tonight's full pick-homer board, ranked by the bot's own score —
+        # shown whenever the NEW list is thin, so a digest never reads empty
+        # while bombs already sit on the board.
+        def _score(sl):
+            for k in ("hrw_score", "top_board_score_v2", "overall_score"):
+                try:
+                    v = float(sl.get(k) or 0)
+                    if v:
+                        return v
+                except Exception:
+                    pass
+            return 0.0
+        tonight = []
+        for (nm, role), sl in new_s.items():
+            if role and int(sl.get("actual_hr") or 0) >= 1:
+                name = str(sl.get("name", nm)).strip() or nm.title()
+                tonight.append((int(sl.get("actual_hr") or 0), _score(sl), name, role))
+        tonight.sort(key=lambda t: (-t[0], -t[1]))
+        tonight_lines = [
+            f"💣 **{name}** ({role}){f' — {hrn} HR' if hrn > 1 else ''}{f' · score {sc:.0f}' if sc else ''}"
+            for hrn, sc, name, role in tonight[:8]
+        ]
+
+        # Live picks status — cleared / did the job SO FAR, every digest.
+        live_tally = {}
+        for (nm, role), sl in new_s.items():
+            if not role or int(sl.get("actual_ab") or 0) == 0:
+                continue
+            c = bar_cleared(sl, role)
+            if c is None:
+                continue
+            okc, n = live_tally.get(role, (0, 0))
+            live_tally[role] = (okc + (1 if c else 0), n + 1)
+        status_line = " · ".join(
+            f"**{r}** {okc}/{n}" for r, (okc, n) in sorted(live_tally.items())
+        ) if live_tally else ""
+
         sections = []
         if hr_lines:
             sections.append(("💥 WENT DEEP", hr_lines[:8]))
+        if len(hr_lines) < 3 and tonight_lines:
+            sections.append(("🏆 TONIGHT SO FAR — by score", tonight_lines))
         if multi_lines:
             sections.append(("🚀 MULTI-HR", multi_lines[:4]))
         if clear_lines:
@@ -395,6 +435,8 @@ def _webhook_transitions(old_payload, new_payload) -> None:
             slots = (p or {}).get("graded_slots") or (p or {}).get("results") or []
             fin = sum(1 for sl in slots if int(sl.get("is_final") or 0) == 1)
             return (fin / len(slots)) if slots else 0.0
+        if status_line:
+            sections.append(("📋 PICKS SO FAR — did the job", [status_line]))
         tally = {}
         if final_share(new_payload) >= 0.95 and final_share(old_payload) < 0.95:
             # simple per-role tally
@@ -425,8 +467,9 @@ def _webhook_transitions(old_payload, new_payload) -> None:
         for title, ls in sections:
             desc_parts.append(f"**{title}**\n" + "\n".join(ls))
         desc = "\n\n".join(desc_parts)[:4000]
-        ok_t = sum(ok for ok, n in tally.values()) if tally else None
-        n_t = sum(n for ok, n in tally.values()) if tally else None
+        src_tally = tally or live_tally
+        ok_t = sum(ok for ok, n in src_tally.values()) if src_tally else None
+        n_t = sum(n for ok, n in src_tally.values()) if src_tally else None
         footer = f"picks {ok_t}/{n_t} on their own bars tonight" if n_t else "moonshot live digest"
         _post_discord_payload({
             "embeds": [{
