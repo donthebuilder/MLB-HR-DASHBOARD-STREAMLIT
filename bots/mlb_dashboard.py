@@ -1293,6 +1293,14 @@ class HitterRecord:
     recent_max_distance: float = 0.0
     recent_avg_hr_distance: float = 0.0
     season_max_distance: float = 0.0
+    # Docket #20: expected HRs from contact + luck (actual − expected).
+    season_xhr: float = 0.0
+    season_hr_luck: float = 0.0
+    recent_xhr: float = 0.0
+    xhr_bbe: int = 0
+    pitcher_xhr_allowed: float = 0.0
+    pitcher_hr_luck: float = 0.0
+    pitcher_xhr_bbe: int = 0
 
 
 class CacheDB:
@@ -2734,8 +2742,202 @@ def parse_pitcher_handed_splits(client: MLBClient, db: CacheDB, pitcher_id: int)
     return out
 
 
+
+# ══════════════════════════════════════════════════════════════════════════
+# DOCKET #20 — EXPECTED HOME RUNS FROM CONTACT (the "luck" layer)
+#
+# One machine: league HR rate per (EV, LA) bucket, accumulated from the same
+# per-batter season statcast pulls the bot already makes. Every tracked ball
+# then has an xHR probability that depends only on how it left the bat — no
+# park, no weather, which is the point. From that single table:
+#   season_xhr / season_hr_luck / recent_xhr    per hitter
+#   pitcher_xhr_allowed / pitcher_hr_luck       per starter
+#   hr_class (no_doubter / likely / maybe)      per HR in the spray chart
+# The spray-chart classes use LAST run's finalized table (physics doesn't
+# change overnight); hitter/pitcher numbers use THIS run's. Buckets are 2 mph
+# × 3°, buckets under 100 balls borrow their 3×3 neighborhood, and no player
+# number prints under 50 tracked balls.
+# ══════════════════════════════════════════════════════════════════════════
+
+XHR_MIN_PLAYER_BBE = 50
+XHR_MIN_BUCKET = 100
+XHR_MIN_LEAGUE_BALLS = 5000
+
+_XHR_ACCUM: Dict[str, List[int]] = {}
+_XHR_BY_PID: Dict[int, Dict[str, Any]] = {}
+_XHR_PITCHERS: Dict[int, Dict[str, Any]] = {}
+_XHR_PREV: Optional[Dict[str, float]] = None
+_XHR_PREV_LOADED = False
+
+
+def _xhr_key(ev: float, la: float) -> str:
+    return f"{int(round(ev / 2.0)) * 2}_{int(round(la / 3.0)) * 3}"
+
+
+def build_xhr_hist(bbe_df) -> Dict[str, List[int]]:
+    """{bucket: [balls, hr]} from a BBE frame; only rows with tracked EV+LA."""
+    out: Dict[str, List[int]] = {}
+    try:
+        if bbe_df is None or len(bbe_df) == 0:
+            return out
+        sub = bbe_df[bbe_df["launch_speed"].notna() & bbe_df["launch_angle"].notna()]
+        for _, b in sub.iterrows():
+            ev = float(b["launch_speed"]); la = float(b["launch_angle"])
+            if ev <= 0:
+                continue
+            k = _xhr_key(ev, la)
+            cell = out.setdefault(k, [0, 0])
+            cell[0] += 1
+            if str(b.get("events", "")) == "home_run":
+                cell[1] += 1
+    except Exception:
+        return out
+    return out
+
+
+def _xhr_neighbors(k: str) -> List[str]:
+    try:
+        ev, la = (int(x) for x in k.split("_"))
+    except Exception:
+        return [k]
+    return [f"{ev + de}_{la + dl}" for de in (-2, 0, 2) for dl in (-3, 0, 3)]
+
+
+def finalize_xhr_table(accum: Dict[str, List[int]]) -> Optional[Dict[str, float]]:
+    total = sum(v[0] for v in accum.values())
+    if total < XHR_MIN_LEAGUE_BALLS:
+        return None
+    table: Dict[str, float] = {}
+    for k, (n, hr) in accum.items():
+        if n >= XHR_MIN_BUCKET:
+            table[k] = hr / n
+        else:
+            pn = ph = 0
+            for nk in _xhr_neighbors(k):
+                cell = accum.get(nk)
+                if cell:
+                    pn += cell[0]; ph += cell[1]
+            table[k] = (ph / pn) if pn else 0.0
+    return table
+
+
+def xhr_expected(hist: Dict[str, List[int]], table: Dict[str, float]) -> float:
+    exp = 0.0
+    for k, (n, _hr) in hist.items():
+        p = table.get(k)
+        if p is None:
+            pn = ph_rate = 0.0
+            for nk in _xhr_neighbors(k):
+                if nk in table:
+                    pn += 1; ph_rate += table[nk]
+            p = (ph_rate / pn) if pn else 0.0
+        exp += n * p
+    return exp
+
+
+def _xhr_register_batter(pid: int, sc: Dict[str, Any]) -> None:
+    hist = sc.get("xhr_hist") or {}
+    if not isinstance(hist, dict) or not hist:
+        return
+    for k, cell in hist.items():
+        try:
+            n, hr = int(cell[0]), int(cell[1])
+        except Exception:
+            continue
+        acc = _XHR_ACCUM.setdefault(k, [0, 0])
+        acc[0] += n; acc[1] += hr
+    _XHR_BY_PID[int(pid)] = {
+        "hist": hist,
+        "recent": sc.get("xhr_hist_recent") or {},
+    }
+
+
+def _xhr_register_pitcher(pitcher_id: int, psc: Dict[str, Any]) -> None:
+    hist = psc.get("xhr_hist_allowed") or {}
+    if isinstance(hist, dict) and hist:
+        # NOT added to the league accumulator — every ball is already counted
+        # once from the batter side; adding the pitcher view would double it.
+        _XHR_PITCHERS[int(pitcher_id)] = {"hist": hist}
+
+
+def _xhr_prev_table(db: CacheDB) -> Optional[Dict[str, float]]:
+    global _XHR_PREV, _XHR_PREV_LOADED
+    if not _XHR_PREV_LOADED:
+        _XHR_PREV_LOADED = True
+        try:
+            blob = db.get(f"xhr_league_table:{SEASON}")
+            if isinstance(blob, dict) and isinstance(blob.get("table"), dict):
+                _XHR_PREV = blob["table"]
+        except Exception:
+            _XHR_PREV = None
+    return _XHR_PREV
+
+
+def classify_hr_prob(prob: Optional[float]) -> str:
+    if prob is None:
+        return ""
+    if prob >= 0.97: return "no_doubter"
+    if prob >= 0.60: return "likely"
+    if prob >= 0.10: return "maybe"
+    return "cheap"
+
+
+def xhr_hr_class(db: CacheDB, ev: Optional[float], la: Optional[float]) -> str:
+    """Doubt class for one HR, from LAST run's table. '' until one exists."""
+    table = _xhr_prev_table(db)
+    if not table or ev is None or la is None or ev <= 0:
+        return ""
+    k = _xhr_key(float(ev), float(la))
+    p = table.get(k)
+    if p is None:
+        pn = pr = 0.0
+        for nk in _xhr_neighbors(k):
+            if nk in table:
+                pn += 1; pr += table[nk]
+        p = (pr / pn) if pn else None
+    return classify_hr_prob(p)
+
+
+def finalize_xhr_fields(rows: List["HitterRecord"], db: CacheDB) -> None:
+    """After the build loop: finalize this run's league table, persist it for
+    tomorrow's spray classes, and stamp hitter + facing-pitcher luck fields."""
+    table = finalize_xhr_table(_XHR_ACCUM)
+    if table is None:
+        return
+    try:
+        total = sum(v[0] for v in _XHR_ACCUM.values())
+        db.set(f"xhr_league_table:{SEASON}", {"table": table, "balls": total,
+                                              "generated": dt.datetime.now().isoformat()})
+    except Exception:
+        pass
+    for r in rows:
+        reg = _XHR_BY_PID.get(safe_int(getattr(r, "player_id", 0), 0))
+        if reg:
+            hist = reg["hist"]
+            bbe = sum(c[0] for c in hist.values())
+            r.xhr_bbe = bbe
+            if bbe >= XHR_MIN_PLAYER_BBE:
+                exp = xhr_expected(hist, table)
+                actual = sum(c[1] for c in hist.values())
+                r.season_xhr = round(exp, 2)
+                r.season_hr_luck = round(actual - exp, 2)
+                rec_hist = reg.get("recent") or {}
+                if rec_hist:
+                    r.recent_xhr = round(xhr_expected(rec_hist, table), 2)
+        preg = _XHR_PITCHERS.get(safe_int(getattr(r, "pitcher_id", 0), 0))
+        if preg:
+            hist = preg["hist"]
+            bbe = sum(c[0] for c in hist.values())
+            r.pitcher_xhr_bbe = bbe
+            if bbe >= XHR_MIN_PLAYER_BBE:
+                exp = xhr_expected(hist, table)
+                actual = sum(c[1] for c in hist.values())
+                r.pitcher_xhr_allowed = round(exp, 2)
+                r.pitcher_hr_luck = round(actual - exp, 2)
+
+
 def build_batter_statcast_profile(db: CacheDB, player_id: int, end_date: dt.date) -> Dict[str, Any]:
-    key = f"batter_statcast_v6_distance:{SEASON}:{player_id}:{end_date.isoformat()}"
+    key = f"batter_statcast_v7_xhr:{SEASON}:{player_id}:{end_date.isoformat()}"
     out = {
         "recent_350_num": 0,
         "recent_350_den": 1,
@@ -2873,6 +3075,10 @@ def build_batter_statcast_profile(db: CacheDB, player_id: int, end_date: dt.date
         _season_bbe = df[df["type"] == "X"] if "type" in df.columns else df
         _sd = _season_bbe.loc[_season_bbe["hit_distance_sc"] > 0, "hit_distance_sc"]
         out["season_max_distance"] = float(_sd.max()) if len(_sd) else 0.0
+        # Docket #20: per-player (EV, LA) histograms — season for the league
+        # table + his own xHR, recent window for recent_xhr.
+        out["xhr_hist"] = build_xhr_hist(_season_bbe)
+        out["xhr_hist_recent"] = build_xhr_hist(bbe)
 
         out["recent_fb_rate"] = float((bbe.get("bb_type") == "fly_ball").mean()) if len(bbe) else 0.0
         out["recent_ev"] = float(bbe["launch_speed"].dropna().mean()) if len(bbe) and bbe["launch_speed"].notna().any() else 88.5
@@ -3052,6 +3258,7 @@ def build_batter_statcast_profile(db: CacheDB, player_id: int, end_date: dt.date
                     "arm": str(bp.get("p_throws", "?") or "?"),
                     "pitch_velocity": _clean_num(bp.get("release_speed"), 1),
                     "is_hr": event == "home_run",
+                    "hr_class": xhr_hr_class(db, ev2, la2) if event == "home_run" else "",
                     "is_xbh": event in {"double", "triple", "home_run"},
                     "is_barrel": bool(ev2 is not None and la2 is not None and ev2 >= 98 and 24 <= la2 <= 32),
                     "is_hard_hit": bool(ev2 is not None and ev2 >= 95),
@@ -3193,7 +3400,7 @@ def build_pitcher_statcast_profile(db: CacheDB, pitcher_id: int, end_date: Optio
     Rates are decimals, not percentages. Missing pulls stay marked as missing.
     """
     end_date = end_date or statcast_data_end_date(TODAY)
-    key = f"pitcher_statcast_damage_v5_l5l8:{SEASON}:{pitcher_id}:{end_date.isoformat()}"
+    key = f"pitcher_statcast_damage_v6_xhr:{SEASON}:{pitcher_id}:{end_date.isoformat()}"
     defaults = {
         "statcast_bbe": 0,
         "statcast_games": 0,
@@ -3207,6 +3414,7 @@ def build_pitcher_statcast_profile(db: CacheDB, pitcher_id: int, end_date: Optio
         "dist375_allowed": 0,
         "dist400_allowed": 0,
         "babip_statcast": 0.300,
+        "xhr_hist_allowed": {},
         "trend_note": "5G trend / 8G baseline",
         # Fastball velocity tracking (per audit, 2026-06-27): real, well-
         # documented evidence that velocity decline signals fatigue and
@@ -3251,6 +3459,13 @@ def build_pitcher_statcast_profile(db: CacheDB, pitcher_id: int, end_date: Optio
         df["launch_speed"] = pd.to_numeric(df.get("launch_speed"), errors="coerce")
         df["launch_angle"] = pd.to_numeric(df.get("launch_angle"), errors="coerce")
         df["hit_distance_sc"] = pd.to_numeric(df.get("hit_distance_sc"), errors="coerce")
+
+        # Docket #20: season-long contact-allowed histogram for xHR-allowed.
+        try:
+            _p_season = df[df["type"] == "X"] if "type" in df.columns else df.iloc[0:0]
+            out["xhr_hist_allowed"] = build_xhr_hist(_p_season)
+        except Exception:
+            out["xhr_hist_allowed"] = {}
 
         played = df["game_date"].dropna().dt.normalize()
         played_dates = list(played[played <= pd.Timestamp(end_date)].drop_duplicates().sort_values())
@@ -4732,6 +4947,7 @@ def build_pitcher_profile(client: MLBClient, db: CacheDB, pitcher_id: int, team_
     flat = flatten_pitching(stat)
     split_meta = parse_pitcher_handed_splits(client, db, pitcher_id)
     psc = build_pitcher_statcast_profile(db, pitcher_id, data_end_date)
+    _xhr_register_pitcher(pitcher_id, psc)
     advanced = build_pitcher_advanced_stats(db, pitcher_id, data_end_date)
     spot_damage = build_pitcher_lineup_spot_damage(client, db, pitcher_id, data_end_date)
     attack_score, attack_tag = pitcher_attack_score_and_tag(flat, split_meta, psc)
@@ -7362,6 +7578,7 @@ def build_hitter_records(client: MLBClient, db: CacheDB, game: Dict[str, Any], s
             gs_since_hr = games_since_last_hr(glog, max_lookback=60)
             split = get_player_split_stats(client, db, pid)
             sc = build_batter_statcast_profile(db, pid, statcast_data_end_date(slate_date))
+            _xhr_register_batter(pid, sc)
             batter_pitch_profile = build_batter_pitch_type_profile(db, pid, statcast_data_end_date(slate_date))
             # Select handed pitch mix for this hitter. Fall back to all-batters if
             # the handed slice is empty or low-sample (<150 pitches).
@@ -10986,6 +11203,12 @@ Use ALT LOOKS as quality variance, not primary plays.
         if model_health_text:
             report_text += "\n" + model_health_text + "\n"
 
+        # Docket #20: finalize this run's league (EV,LA) table and stamp the
+        # xHR / luck fields on every row before serialization.
+        try:
+            finalize_xhr_fields(all_rows, db)
+        except Exception as _xexc:
+            print(f"xHR finalize skipped: {_xexc}", file=sys.stderr)
         rows_payload = enrich_weather_payload_for_website([dataclasses.asdict(r) for r in all_rows])
         rows_payload = enrich_hr_pa_payload(rows_payload)
         rows_payload = enrich_signal_pills_and_best_non_hr(rows_payload)
