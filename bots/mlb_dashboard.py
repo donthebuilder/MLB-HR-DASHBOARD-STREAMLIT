@@ -8821,12 +8821,18 @@ def build_game_pick_role_map(rows: List[HitterRecord]) -> Dict[Tuple[int, int], 
         used.add(hr_pick.player_id)
         role_map.setdefault((game_pk, hr_pick.player_id), []).append("HR")
 
-        hit_picks = pick_top(hitters, "hit_score", 2, used)
+        # ONE pick per category per game (2026-08-06). This took 2 for HIT
+        # and 2 for HRR, which put two robots on the same game's board rows
+        # and made "the bot's HIT pick" ambiguous everywhere downstream —
+        # the five-slot design, the graded results and the site all treat these
+        # as single designations. The second-best name still surfaces through
+        # Alt Looks / cross-check; it just doesn't wear the pick badge.
+        hit_picks = pick_top(hitters, "hit_score", 1, used)
         used.update(h.player_id for h in hit_picks)
         for hp in hit_picks:
             role_map.setdefault((game_pk, hp.player_id), []).append("HIT")
 
-        hrr_picks = pick_top(hitters, "hrr_score", 2, used)
+        hrr_picks = pick_top(hitters, "hrr_score", 1, used)
         used.update(h.player_id for h in hrr_picks)
         for hp in hrr_picks:
             role_map.setdefault((game_pk, hp.player_id), []).append("HRR")
