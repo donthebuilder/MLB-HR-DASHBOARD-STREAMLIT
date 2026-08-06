@@ -11272,6 +11272,81 @@ Use ALT LOOKS as quality variance, not primary plays.
             key = (row.get('game_pk'), row.get('player_id'))
             row['game_pick_role'] = _role_map.get(key, '')
             row['alt_look_tag'] = LAST_ALT_TAGS.get(row.get('player_id'), '')
+
+        # ── DISCORD SLATE BOARD (2026-08-06). Every today-bot run that CHANGES
+        # the picks posts tonight's board to the webhook: top names per
+        # category by that category's own score, plus what moved since the
+        # last post. Identical republishes stay silent (signature check in the
+        # cache), so hourly runs don't spam the same board — and once games
+        # start, the pick lock means changes stop on their own. Silent no-op
+        # without the DISCORD_WEBHOOK env. ──
+        try:
+            _dw = os.environ.get("DISCORD_WEBHOOK", "").strip()
+            if _dw:
+                import hashlib as _hl
+                import urllib.request as _ur
+                _CAT_SC = {
+                    'TOP': lambda r: safe_float(r.get('top_board_score_v2') or r.get('overall_score'), 0.0),
+                    'HR': lambda r: safe_float(r.get('hr_score'), 0.0),
+                    'HIT': lambda r: safe_float(r.get('hit_score'), 0.0),
+                    'HRR': lambda r: safe_float(r.get('hrr_score'), 0.0),
+                    'CONTACT': lambda r: safe_float(r.get('contact_score'), 0.0),
+                }
+                _picks_by_cat = {}
+                _pick_map = {}
+                for row in rows_payload:
+                    _pr = str(row.get('game_pick_role') or '').split('/')[0].strip().upper()
+                    if _pr in _CAT_SC:
+                        _picks_by_cat.setdefault(_pr, []).append(row)
+                        _pick_map[str(row.get('player_id'))] = {"role": _pr, "name": str(row.get('name') or '')}
+                _sig = _hl.sha1(json.dumps(sorted((k, v["role"]) for k, v in _pick_map.items())).encode()).hexdigest()
+                _sig_key = f"discord_slate_sig:{slate_date.isoformat()}"
+                _prev = db.get(_sig_key) or {}
+                if _pick_map and _sig != _prev.get("sig"):
+                    _secs = []
+                    for _cat in ('TOP', 'HR', 'HIT', 'HRR', 'CONTACT'):
+                        _rows = sorted(_picks_by_cat.get(_cat, []), key=_CAT_SC[_cat], reverse=True)
+                        if not _rows:
+                            continue
+                        _ls = []
+                        for r in _rows[:3]:
+                            _conf = '' if r.get('lineup_confirmed') else ' ◻'
+                            _arm = str(r.get('pitcher_name') or 'TBD').split()[-1]
+                            _ls.append(f"**{r.get('name')}** {_CAT_SC[_cat](r):.0f} · {r.get('team')} vs {_arm}{_conf}")
+                        if len(_rows) > 3:
+                            _ls.append(f"+{len(_rows) - 3} more")
+                        _secs.append((f"{_cat} PICKS", _ls))
+                    _chg = []
+                    _old_map = _prev.get("map") or {}
+                    if _old_map:
+                        for pid, v in _pick_map.items():
+                            ov = _old_map.get(pid)
+                            if ov is None:
+                                _chg.append(f"🆕 {v['name']} — {v['role']}")
+                            elif ov.get("role") != v["role"]:
+                                _chg.append(f"🔁 {v['name']} — {ov.get('role')}→{v['role']}")
+                        for pid, ov in _old_map.items():
+                            if pid not in _pick_map:
+                                _chg.append(f"➖ {ov.get('name')} dropped ({ov.get('role')})")
+                    if _chg:
+                        _secs.append(("CHANGES SINCE LAST BOARD", _chg[:8]))
+                    _desc = "\n\n".join(f"**{t}**\n" + "\n".join(ls) for t, ls in _secs)[:4000]
+                    _payload = {"embeds": [{
+                        "title": f"🗒 Tonight's board — {slate_date.isoformat()}",
+                        "description": _desc,
+                        "color": 0xF97316,
+                        "footer": {"text": "◻ = lineup not confirmed yet · picks lock at first pitch"},
+                        "timestamp": dt.datetime.now(dt.timezone.utc).isoformat(),
+                    }]}
+                    try:
+                        _req = _ur.Request(_dw, data=json.dumps(_payload).encode("utf-8"),
+                                           headers={"Content-Type": "application/json", "User-Agent": "moonshot-bot"})
+                        _ur.urlopen(_req, timeout=10)
+                    except Exception as _pexc:
+                        print(f"discord slate post failed: {_pexc}", file=sys.stderr)
+                    db.set(_sig_key, {"sig": _sig, "map": _pick_map})
+        except Exception as _dexc:
+            print(f"discord slate board skipped: {_dexc}", file=sys.stderr)
         # HR Score 2.0 clean output: only the main TXT + JSON are written locally.
 
         # Print report first so the final console lines clearly show save/sync status.

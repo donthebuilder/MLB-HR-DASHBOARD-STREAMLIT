@@ -67,6 +67,9 @@ jobs:
       # standalone "Check lineups" step is gone. Nothing consumed the
       # lineups.json it produced.
       - name: Run scoring bot (today)
+        env:
+          # Optional: slate-board Discord posts when picks change (silent without it)
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         run: python bots/mlb_dashboard.py --today
 
       # Shrinks the 76 MB slate JSON to ~3 MB for the Streamlit app by
