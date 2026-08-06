@@ -1288,6 +1288,11 @@ class HitterRecord:
     season_doubles: int = 0
     season_triples: int = 0
     season_babip: float = 0.0
+    # Docket #19: true distance fields for the Longest board (site pre-wired).
+    recent_400_num: int = 0
+    recent_max_distance: float = 0.0
+    recent_avg_hr_distance: float = 0.0
+    season_max_distance: float = 0.0
 
 
 class CacheDB:
@@ -2730,12 +2735,16 @@ def parse_pitcher_handed_splits(client: MLBClient, db: CacheDB, pitcher_id: int)
 
 
 def build_batter_statcast_profile(db: CacheDB, player_id: int, end_date: dt.date) -> Dict[str, Any]:
-    key = f"batter_statcast_v5_pitchfix:{SEASON}:{player_id}:{end_date.isoformat()}"
+    key = f"batter_statcast_v6_distance:{SEASON}:{player_id}:{end_date.isoformat()}"
     out = {
         "recent_350_num": 0,
         "recent_350_den": 1,
         "recent_distance_tracked": 0,
         "recent_375_num": 0,
+        "recent_400_num": 0,
+        "recent_max_distance": 0.0,
+        "recent_avg_hr_distance": 0.0,
+        "season_max_distance": 0.0,
         "recent_ev": 88.5,
         "recent_hard_hit_rate": 0.0,
         "recent_sweet_spot_rate": 0.0,
@@ -2853,6 +2862,17 @@ def build_batter_statcast_profile(db: CacheDB, player_id: int, end_date: dt.date
         out["recent_distance_tracked"] = int(tracked_dist.sum()) if len(bbe) else 0
         out["recent_350_num"] = int((bbe["hit_distance_sc"] >= 350).fillna(False).sum()) if len(bbe) else 0
         out["recent_375_num"] = int((bbe["hit_distance_sc"] >= 375).fillna(False).sum()) if len(bbe) else 0
+        # Docket #19: real distances, not just bucket counts. Guard: aggregate
+        # only rows where distance is tracked (>0) -- untracked balls write
+        # NaN/0 and a max() over them ships a 0-ft "longest ball".
+        out["recent_400_num"] = int((bbe["hit_distance_sc"] >= 400).fillna(False).sum()) if len(bbe) else 0
+        _rd = bbe.loc[bbe["hit_distance_sc"] > 0, "hit_distance_sc"] if len(bbe) else None
+        out["recent_max_distance"] = float(_rd.max()) if _rd is not None and len(_rd) else 0.0
+        _hd = bbe.loc[(bbe.get("events") == "home_run") & (bbe["hit_distance_sc"] > 0), "hit_distance_sc"] if len(bbe) else None
+        out["recent_avg_hr_distance"] = round(float(_hd.mean()), 1) if _hd is not None and len(_hd) else 0.0
+        _season_bbe = df[df["type"] == "X"] if "type" in df.columns else df
+        _sd = _season_bbe.loc[_season_bbe["hit_distance_sc"] > 0, "hit_distance_sc"]
+        out["season_max_distance"] = float(_sd.max()) if len(_sd) else 0.0
 
         out["recent_fb_rate"] = float((bbe.get("bb_type") == "fly_ball").mean()) if len(bbe) else 0.0
         out["recent_ev"] = float(bbe["launch_speed"].dropna().mean()) if len(bbe) and bbe["launch_speed"].notna().any() else 88.5
@@ -7433,6 +7453,10 @@ def build_hitter_records(client: MLBClient, db: CacheDB, game: Dict[str, Any], s
                 recent_350_den=max(1, sc["recent_350_den"]),
                 recent_distance_tracked=safe_int(sc.get("recent_distance_tracked"), 0),
                 recent_375_num=sc["recent_375_num"],
+                recent_400_num=safe_int(sc.get("recent_400_num"), 0),
+                recent_max_distance=safe_float(sc.get("recent_max_distance"), 0.0),
+                recent_avg_hr_distance=safe_float(sc.get("recent_avg_hr_distance"), 0.0),
+                season_max_distance=safe_float(sc.get("season_max_distance"), 0.0),
                 recent_ev=safe_float(sc.get("recent_ev"), 88.5),
                 recent_hard_hit_rate=sc["recent_hard_hit_rate"],
                 recent_sweet_spot_rate=sc["recent_sweet_spot_rate"],
@@ -9511,6 +9535,10 @@ def _s2_player_dict(r: HitterRecord) -> Dict[str, Any]:
         "consistency_score": r.consistency_score,
         "recent_ideal_hr_contact": r.recent_ideal_hr_contact, "recent_350_num": r.recent_350_num,
         "recent_350_den": r.recent_350_den, "recent_375_num": r.recent_375_num,
+        "recent_400_num": getattr(r, "recent_400_num", 0),
+        "recent_max_distance": getattr(r, "recent_max_distance", 0.0),
+        "recent_avg_hr_distance": getattr(r, "recent_avg_hr_distance", 0.0),
+        "season_max_distance": getattr(r, "season_max_distance", 0.0),
         "recent_ev": getattr(r, "recent_ev", None), "last5_hits": r.last5_hits,
         "last5_hr": r.last5_hr, "last5_xbh": r.last5_xbh, "last7_hr": r.last7_hr,
         "season_hr": r.season_hr, "season_pa": r.season_pa, "hr_per_pa": r.hr_per_pa,
