@@ -214,6 +214,75 @@ def _sync_read_json(path: Path, default):
         pass
     return default
 
+def _post_discord(msg: str) -> None:
+    """Fire-and-forget alert to a Discord webhook. Set the DISCORD_WEBHOOK
+    secret in the repo and pass it through the workflow env; without it this
+    is a silent no-op. The notification lives in Discord's infrastructure —
+    the cheapest way live news reaches a pocket without the site growing a
+    server (2026-08-06)."""
+    url = os.environ.get("DISCORD_WEBHOOK", "").strip()
+    if not url:
+        return
+    try:
+        import urllib.request
+        req = urllib.request.Request(
+            url,
+            data=json.dumps({"content": msg[:1900]}).encode("utf-8"),
+            headers={"Content-Type": "application/json", "User-Agent": "moonshot-bot"},
+        )
+        urllib.request.urlopen(req, timeout=10)
+    except Exception as exc:
+        print(f"discord post failed: {exc}")
+
+
+def _webhook_transitions(old_payload, new_payload) -> None:
+    """Diff the previous published live results against the new ones and
+    announce TRANSITIONS only: a pool reaching one-away, a pool cashing, a
+    pair cashing. Steady states never repeat — each grading run compares to
+    what was already public, so the same milestone can't fire twice."""
+    try:
+        def pools(p):
+            out = {}
+            for pl in (((p or {}).get("pair_pool_results") or {}).get("graded_pools") or []):
+                out[str(pl.get("label"))] = (
+                    int(pl.get("hr_count") or 0), int(pl.get("total_count") or 0),
+                    [str(m.get("name")) for m in (pl.get("players") or []) if isinstance(m, dict)],
+                    set(str(x).lower() for x in (pl.get("homer_names") or [])),
+                )
+            return out
+
+        def hr_names(p):
+            slots = (p or {}).get("graded_slots") or (p or {}).get("results") or []
+            return set(str(sl.get("name", "")).lower() for sl in slots
+                       if int(sl.get("actual_hr") or 0) >= 1 or int(sl.get("got_hr") or 0) >= 1)
+
+        msgs = []
+        oldp, newp = pools(old_payload), pools(new_payload)
+        for label, (hit, tot, members, homered) in newp.items():
+            if not tot:
+                continue
+            old_hit = oldp.get(label, (0,))[0]
+            if hit >= tot and old_hit < tot:
+                msgs.append(f"💰 POOL CASHED — {label}: all {tot} went deep")
+            elif hit == tot - 1 and old_hit < tot - 1:
+                missing = [m for m in members if m.lower() not in homered]
+                msgs.append(f"🎟 {label} is {hit}/{tot} — one swing from cashing ({', '.join(missing[:3])})")
+        old_hr, new_hr = hr_names(old_payload), hr_names(new_payload)
+        for pr in (((new_payload or {}).get("pair_pool_results") or {}).get("all_pairs") or []):
+            a_n = str((pr.get("a") or {}).get("name", ""))
+            b_n = str((pr.get("b") or {}).get("name", ""))
+            if not a_n or not b_n:
+                continue
+            both_now = a_n.lower() in new_hr and b_n.lower() in new_hr
+            both_before = a_n.lower() in old_hr and b_n.lower() in old_hr
+            if both_now and not both_before:
+                msgs.append(f"💰 PAIR CASHED — {a_n} + {b_n} ({pr.get('label', 'pair')})")
+        for m in msgs[:6]:
+            _post_discord(m)
+    except Exception as exc:
+        print(f"webhook transitions skipped: {exc}")
+
+
 def _sync_write_json(path: Path, payload) -> None:
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -264,6 +333,17 @@ def sync_results_to_website_repo_v2(date_str: str, live_mode: bool, json_path: P
     active_json = "results_live.json" if live_mode else "results_final.json"
     active_txt = "results_live.txt" if live_mode else "results_final.txt"
     legacy_prefix = "live_graded_results" if live_mode else "graded_results"
+
+    # Discord transitions: compare against what was already public BEFORE the
+    # new results overwrite it (live runs only — finals repeat nothing new).
+    if live_mode:
+        try:
+            _old_pub = current_dir / active_json
+            _oldp = json.loads(_old_pub.read_text(encoding="utf-8")) if _old_pub.exists() else None
+            _newp = json.loads(Path(json_path).read_text(encoding="utf-8"))
+            _webhook_transitions(_oldp, _newp)
+        except Exception as _wexc:
+            print(f"webhook diff skipped: {_wexc}")
 
     targets = [
         (json_path, data_dir / active_json),

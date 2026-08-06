@@ -74,6 +74,10 @@ jobs:
       # bots/live_results_tracker.py. Every scheduled run had been failing on
       # that line, which is why the Results tab never showed fresh grades.
       - name: Grade live results
+        env:
+          # Optional: set the DISCORD_WEBHOOK repo secret to get pool/pair
+          # transition alerts (one-away, cashed) in Discord. Absent = no-op.
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         run: python bots/live_results_tracker.py --date auto --live
 
       # The Results tab's "Final" view was permanently empty because nothing
