@@ -4917,6 +4917,70 @@ def compute_pitcher_extended_stats(stat: Dict[str, Any], flat: Dict[str, float],
     }
 
 
+# ── TBD PITCHER RESOLVER (2026-08-06, "ensure the bot does its best") ──
+# When the schedule has no probable yet, two fallbacks before giving up:
+#   A. the game's own live feed (sometimes populated before the schedule)
+#   B. rotation inference — the team's starter from 4–6 days ago who hasn't
+#      pitched since, i.e. the guy whose turn it is. Marked PROJECTED so the
+#      site can say so instead of presenting a guess as a fact.
+PROJECTED_PITCHERS: set = set()
+
+def resolve_probable_pitcher(game_pk: int, sched_id: int, team_id: int, slate_date_: dt.date) -> tuple:
+    """Returns (pitcher_id, projected_bool)."""
+    if sched_id:
+        return sched_id, False
+    try:
+        # Fallback A: live feed probables
+        r = requests.get(
+            f"https://statsapi.mlb.com/api/v1.1/game/{game_pk}/feed/live",
+            params={"fields": "gameData,probablePitchers,home,away,id,teams,team"},
+            timeout=15,
+        )
+        if r.ok:
+            gd = (r.json() or {}).get("gameData", {}) or {}
+            pp = gd.get("probablePitchers", {}) or {}
+            teams = gd.get("teams", {}) or {}
+            for side in ("home", "away"):
+                if safe_int(((teams.get(side) or {}).get("id")), 0) == team_id:
+                    pid = safe_int((pp.get(side) or {}).get("id"), 0)
+                    if pid:
+                        return pid, False
+    except Exception:
+        pass
+    try:
+        # Fallback B: rotation inference from the team's last 6 days
+        start = (slate_date_ - dt.timedelta(days=6)).isoformat()
+        end = (slate_date_ - dt.timedelta(days=1)).isoformat()
+        r = requests.get(
+            "https://statsapi.mlb.com/api/v1/schedule",
+            params={"sportId": 1, "teamId": team_id, "startDate": start, "endDate": end,
+                    "hydrate": "probablePitcher"},
+            timeout=15,
+        )
+        if r.ok:
+            starts = []  # (date, pitcher_id)
+            for d in (r.json() or {}).get("dates", []):
+                for g in d.get("games", []):
+                    for side in ("home", "away"):
+                        t = (g.get("teams", {}) or {}).get(side, {}) or {}
+                        if safe_int((t.get("team") or {}).get("id"), 0) == team_id:
+                            pid = safe_int((t.get("probablePitcher") or {}).get("id"), 0)
+                            if pid:
+                                starts.append((d.get("date", ""), pid))
+            if starts:
+                starts.sort()
+                recent3 = {pid for dstr, pid in starts if dstr >= (slate_date_ - dt.timedelta(days=3)).isoformat()}
+                # whose turn: the starter 4-6 days back who hasn't gone since
+                for dstr, pid in starts:  # oldest first = most rest
+                    if pid not in recent3:
+                        PROJECTED_PITCHERS.add(pid)
+                        print(f"  probable TBD for team {team_id} — projecting rotation arm {pid} (last started {dstr})", file=sys.stderr)
+                        return pid, True
+    except Exception:
+        pass
+    return 0, False
+
+
 def build_pitcher_profile(client: MLBClient, db: CacheDB, pitcher_id: int, team_abbr: str, data_end_date: Optional[dt.date] = None) -> PitcherSummary:
     if not pitcher_id:
         return PitcherSummary(0, "TBD", team_abbr)
@@ -7488,6 +7552,11 @@ def build_hitter_records(client: MLBClient, db: CacheDB, game: Dict[str, Any], s
     probable = game_data.get("probablePitchers", {}) or {}
     probable_home_id = safe_int((probable.get("home") or {}).get("id"), 0)
     probable_away_id = safe_int((probable.get("away") or {}).get("id"), 0)
+    # TBD? Chase it before settling (live feed, then rotation inference).
+    _tmp_home_tid = safe_int((game_data.get("teams", {}).get("home", {}) or {}).get("id"), 0)
+    _tmp_away_tid = safe_int((game_data.get("teams", {}).get("away", {}) or {}).get("id"), 0)
+    probable_home_id, _home_proj = resolve_probable_pitcher(game_pk, probable_home_id, _tmp_home_tid, slate_date)
+    probable_away_id, _away_proj = resolve_probable_pitcher(game_pk, probable_away_id, _tmp_away_tid, slate_date)
     data_end = statcast_data_end_date(slate_date)
     pitchers = {
         "home": build_pitcher_profile(client, db, probable_home_id, home_abbr, data_end),
@@ -11272,6 +11341,7 @@ Use ALT LOOKS as quality variance, not primary plays.
             key = (row.get('game_pk'), row.get('player_id'))
             row['game_pick_role'] = _role_map.get(key, '')
             row['alt_look_tag'] = LAST_ALT_TAGS.get(row.get('player_id'), '')
+            row['pitcher_projected'] = safe_int(row.get('pitcher_id'), 0) in PROJECTED_PITCHERS
 
         # ── DISCORD SLATE BOARD (2026-08-06). Every today-bot run that CHANGES
         # the picks posts tonight's board to the webhook: top names per
