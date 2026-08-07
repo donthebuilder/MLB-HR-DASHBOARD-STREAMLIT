@@ -322,7 +322,7 @@ def _webhook_transitions(old_payload, new_payload) -> None:
         lines = []
 
         # ── picks: homers, bars cleared, final without it ──
-        hr_lines, clear_lines, dead_lines, multi_lines = [], [], [], []
+        hr_lines, clear_lines, dead_lines, multi_lines, bases_lines = [], [], [], [], []
         for (nm, role), sl in new_s.items():
             if not role:
                 continue
@@ -336,6 +336,13 @@ def _webhook_transitions(old_payload, new_payload) -> None:
                 hr_lines.append(f"💥 **{name}** ({role} pick) went deep{extra}{watch}")
             if hr_n >= 2 and hr_o < 2:
                 multi_lines.append(f"🚀 **{name}**: {hr_n} HR tonight")
+            # Big-bases nights (2026-08-06): 4+ TB crossing, gated so a fresh
+            # homer doesn't double-announce — pure bases surges get their own
+            # line, HR-driven ones are already covered above.
+            tb_n, tb_o = int(sl.get("actual_tb") or 0), int((osl or {}).get("actual_tb") or 0)
+            if tb_n >= 4 and tb_o < 4 and hr_n == hr_o:
+                h_ = int(sl.get("actual_hits") or 0); ab_ = int(sl.get("actual_ab") or 0)
+                bases_lines.append(f"🧨 **{name}** ({role}) — {tb_n} TB night ({h_}-{ab_})")
             c_n, c_o = bar_cleared(sl, role), bar_cleared(osl, role) if osl else None
             if c_n is True and c_o is not True and hr_n == hr_o:
                 h = int(sl.get("actual_hits") or 0); ab = int(sl.get("actual_ab") or 0)
@@ -389,6 +396,8 @@ def _webhook_transitions(old_payload, new_payload) -> None:
             sections.append(("🏆 TONIGHT SO FAR — by score", tonight_lines))
         if multi_lines:
             sections.append(("🚀 MULTI-HR", multi_lines[:4]))
+        if bases_lines:
+            sections.append(("🧨 BIG BASES", bases_lines[:5]))
         if clear_lines:
             sections.append(("✓ BARS CLEARED", clear_lines[:10]))
         if dead_lines:
