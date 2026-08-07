@@ -129,6 +129,22 @@ jobs:
           fi
         continue-on-error: true
 
+      # TRACK RECORD MATRIX (2026-08-07): the site's Track record table read a
+      # frozen snapshot ending 06-22. Rebuild it nightly from the frozen base
+      # (39 local-archive days that predate the branch) + every graded day the
+      # branch holds + today's fresh file in bots/outputs. Published alongside
+      # the other current/ artifacts; the site prefers this over its static
+      # fallback copy.
+      - name: Build pick matrix
+        run: |
+          mkdir -p public/data/current
+          python bots/build_pick_matrix.py \
+            --graded-dir /tmp/histout/public/data/current \
+            --graded-dir bots/outputs \
+            --base bots/data/pick_matrix_base.json \
+            --out public/data/current/pick_matrix.json
+        continue-on-error: true
+
       - name: Build backtest summary
         run: |
           mkdir -p public/data/current
