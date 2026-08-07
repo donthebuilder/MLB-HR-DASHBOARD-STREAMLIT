@@ -11303,39 +11303,33 @@ Use ALT LOOKS as quality variance, not primary plays.
                 _sig_key = f"discord_slate_sig:{slate_date.isoformat()}"
                 _prev = db.get(_sig_key) or {}
                 if _pick_map and _sig != _prev.get("sig"):
-                    _secs = []
+                    # SHORT AND SWEET (2026-08-06): the board reads like a tip
+                    # sheet, not a roster dump — ONE edge per category, one
+                    # line each, changes as a count not a ledger.
+                    _EMO = {'TOP': '🥇', 'HR': '💣', 'HIT': '🎯', 'HRR': '🏁', 'CONTACT': '⚾'}
+                    _ls = []
                     for _cat in ('TOP', 'HR', 'HIT', 'HRR', 'CONTACT'):
                         _rows = sorted(_picks_by_cat.get(_cat, []), key=_CAT_SC[_cat], reverse=True)
                         if not _rows:
                             continue
-                        _ls = []
-                        for r in _rows[:3]:
-                            _conf = '' if r.get('lineup_confirmed') else ' ◻'
-                            _arm = str(r.get('pitcher_name') or 'TBD').split()[-1]
-                            _ls.append(f"**{r.get('name')}** {_CAT_SC[_cat](r):.0f} · {r.get('team')} vs {_arm}{_conf}")
-                        if len(_rows) > 3:
-                            _ls.append(f"+{len(_rows) - 3} more")
-                        _secs.append((f"{_cat} PICKS", _ls))
-                    _chg = []
+                        r = _rows[0]
+                        _conf = '' if r.get('lineup_confirmed') else ' ◻'
+                        _arm = str(r.get('pitcher_name') or 'TBD').split()[-1]
+                        _ls.append(f"{_EMO.get(_cat, '')} **{r.get('name')}** · {_cat} {_CAT_SC[_cat](r):.0f} · vs {_arm}{_conf}")
                     _old_map = _prev.get("map") or {}
+                    _n_chg = 0
                     if _old_map:
-                        for pid, v in _pick_map.items():
-                            ov = _old_map.get(pid)
-                            if ov is None:
-                                _chg.append(f"🆕 {v['name']} — {v['role']}")
-                            elif ov.get("role") != v["role"]:
-                                _chg.append(f"🔁 {v['name']} — {ov.get('role')}→{v['role']}")
-                        for pid, ov in _old_map.items():
-                            if pid not in _pick_map:
-                                _chg.append(f"➖ {ov.get('name')} dropped ({ov.get('role')})")
-                    if _chg:
-                        _secs.append(("CHANGES SINCE LAST BOARD", _chg[:8]))
-                    _desc = "\n\n".join(f"**{t}**\n" + "\n".join(ls) for t, ls in _secs)[:4000]
+                        _n_chg = sum(1 for pid, v in _pick_map.items()
+                                     if _old_map.get(pid, {}).get("role") != v["role"])
+                        _n_chg += sum(1 for pid in _old_map if pid not in _pick_map)
+                    if _n_chg:
+                        _ls.append(f"\n🔁 {_n_chg} change{'s' if _n_chg != 1 else ''} since the last board — full story on the site")
+                    _desc = "\n".join(_ls)[:4000]
                     _payload = {"embeds": [{
-                        "title": f"🗒 Tonight's board — {slate_date.isoformat()}",
+                        "title": f"🗒 Tonight's edge — {slate_date.isoformat()}",
                         "description": _desc,
                         "color": 0xF97316,
-                        "footer": {"text": "◻ = lineup not confirmed yet · picks lock at first pitch"},
+                        "footer": {"text": "one per category, its own scale · ◻ lineup not confirmed · picks lock at first pitch"},
                         "timestamp": dt.datetime.now(dt.timezone.utc).isoformat(),
                     }]}
                     try:
