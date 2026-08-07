@@ -11377,6 +11377,13 @@ Use ALT LOOKS as quality variance, not primary plays.
                     # sheet, not a roster dump — ONE edge per category, one
                     # line each, changes as a count not a ledger.
                     _EMO = {'TOP': '🥇', 'HR': '💣', 'HIT': '🎯', 'HRR': '🏁', 'CONTACT': '⚾'}
+                    # DEPTH ROTATION (2026-08-07 v2, "still showing the same
+                    # people"): the top name per category IS the edge and can't
+                    # honestly rotate — but the DEPTH can. Each post expands a
+                    # different category to its top three, so consecutive
+                    # boards read differently even when every #1 held.
+                    _seq0 = safe_int((db.get(f"discord_slate_seq:{slate_date.isoformat()}") or {}).get("n"), 0)
+                    _exp_cat = ('TOP', 'HR', 'HIT', 'HRR', 'CONTACT')[_seq0 % 5]
                     _ls = []
                     for _cat in ('TOP', 'HR', 'HIT', 'HRR', 'CONTACT'):
                         _rows = sorted(_picks_by_cat.get(_cat, []), key=_CAT_SC[_cat], reverse=True)
@@ -11386,6 +11393,10 @@ Use ALT LOOKS as quality variance, not primary plays.
                         _conf = '' if r.get('lineup_confirmed') else ' ◻'
                         _arm = str(r.get('pitcher_name') or 'TBD').split()[-1]
                         _ls.append(f"{_EMO.get(_cat, '')} **{r.get('name')}** · {_cat} {_CAT_SC[_cat](r):.0f} · vs {_arm}{_conf}")
+                        if _cat == _exp_cat and len(_rows) > 1:
+                            _depth = ' · '.join(
+                                f"{r2.get('name')} {_CAT_SC[_cat](r2):.0f}" for r2 in _rows[1:3])
+                            _ls.append(f"    ↳ next in line: {_depth}")
                     # ── 🎬 ROTATING SPOTLIGHT (2026-08-07, Donovan: "make sure
                     # tonight's edge shows something different every
                     # notification"). The five category lines are the board's
@@ -11399,8 +11410,13 @@ Use ALT LOOKS as quality variance, not primary plays.
                     import urllib.parse as _up
                     _seq_key = f"discord_slate_seq:{slate_date.isoformat()}"
                     _seq = safe_int((db.get(_seq_key) or {}).get("n"), 0)
-                    def _film(nm):
-                        return f"[🎬 film room](https://www.mlb.com/video/?q={_up.quote(str(nm) + ' home runs')})"
+                    # mlb.com/video hits an access wall for logged-out users
+                    # (Donovan got "access denied") — Baseball Savant player
+                    # pages are public and carry the statcast video links.
+                    def _film(nm, pid=None):
+                        if pid:
+                            return f"[📊 savant](https://baseballsavant.mlb.com/savant-player/{safe_int(pid, 0)})"
+                        return f"[📊 savant](https://baseballsavant.mlb.com/statcast_search?player_lookup={_up.quote(str(nm))})"
                     def _spot(angle):
                         if angle == 0:  # best park tonight
                             _gp = {}
@@ -11423,14 +11439,14 @@ Use ALT LOOKS as quality variance, not primary plays.
                             r0 = best[0]
                             thr = max(best, key=lambda r2: safe_float(r2.get('longest_hr_score'), 0.0))
                             return (f"\n🌋 **Park of the night**: {r0.get('venue_name') or 'TBD'} ({bedge:+.0f}% vs neutral) — "
-                                    f"biggest threat in the building: **{thr.get('name')}** · {_film(thr.get('name'))}")
+                                    f"biggest threat in the building: **{thr.get('name')}** · {_film(thr.get('name'), thr.get('player_id'))}")
                         if angle == 1:  # back-to-back watch
                             b2 = sorted([r2 for r2 in rows_payload if safe_int(r2.get('games_since_last_hr'), 99) == 0],
                                         key=lambda r2: safe_float(r2.get('hr_score'), 0.0), reverse=True)[:3]
                             if not b2:
                                 return None
                             names = ' · '.join(f"**{r2.get('name')}**" for r2 in b2)
-                            return f"\n🔁 **B2B watch** — went deep last game: {names} · {_film(b2[0].get('name'))}"
+                            return f"\n🔁 **B2B watch** — went deep last game: {names} · {_film(b2[0].get('name'), b2[0].get('player_id'))}"
                         if angle == 2:  # luck buy (calibrated xHR)
                             lk = sorted([r2 for r2 in rows_payload
                                          if safe_int(r2.get('xhr_bbe'), 0) >= 50 and safe_float(r2.get('season_hr_luck'), 0.0) <= -1.5],
@@ -11439,7 +11455,7 @@ Use ALT LOOKS as quality variance, not primary plays.
                                 return None
                             r2 = lk[0]
                             return (f"\n🍀 **Luck buy**: **{r2.get('name')}** — {safe_int(r2.get('season_hr'),0)} HR on contact worth "
-                                    f"{safe_float(r2.get('season_xhr'),0.0):.1f} · the regression bet is with him · {_film(r2.get('name'))}")
+                                    f"{safe_float(r2.get('season_xhr'),0.0):.1f} · the regression bet is with him · {_film(r2.get('name'), r2.get('player_id'))}")
                         if angle == 3:  # alt look of the night
                             al = sorted([r2 for r2 in rows_payload if str(r2.get('alt_look_tag') or '').strip()],
                                         key=lambda r2: safe_float(r2.get('alt_hr_score') or r2.get('hr_score'), 0.0), reverse=True)[:1]
