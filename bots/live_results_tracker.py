@@ -376,6 +376,12 @@ def _webhook_transitions(old_payload, new_payload, date_str: str = "") -> None:
         def bar_cleared(sl, role):
             if sl is None:
                 return None
+            # A pick with ZERO at-bats never had his chance — late scratch
+            # after the lock, rainout, ejection before a PA. Grading that a
+            # miss punishes a bet that never existed; it grades as nothing
+            # (2026-08-06, "so it can be true").
+            if int(sl.get("actual_ab") or 0) == 0:
+                return None
             h = int(sl.get("actual_hits") or 0); hr = int(sl.get("actual_hr") or 0)
             combo = h + int(sl.get("actual_runs") or 0) + int(sl.get("actual_rbi") or 0)
             tb = int(sl.get("actual_tb") or 0)
