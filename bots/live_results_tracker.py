@@ -283,7 +283,78 @@ def _post_discord(msg: str) -> None:
         print(f"discord post failed: {exc}")
 
 
-def _webhook_transitions(old_payload, new_payload) -> None:
+def _render_night_card(tally: dict, date_str: str) -> bytes:
+    """The nightly receipt as an IMAGE (2026-08-06) — an artifact that can be
+    posted, screenshotted and shared, and that nobody can retroactively edit.
+    Site palette, per-category records at their own bars, overall line."""
+    from PIL import Image, ImageDraw, ImageFont
+    W, H = 940, 96 + 74 * max(1, len(tally)) + 96
+    img = Image.new("RGB", (W, H), (9, 9, 11))
+    d = ImageDraw.Draw(img)
+    def font(sz, bold=True):
+        for path in ("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf" if bold
+                     else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",):
+            try:
+                return ImageFont.truetype(path, sz)
+            except Exception:
+                pass
+        return ImageFont.load_default()
+    ORANGE = (249, 115, 22); GREEN = (74, 222, 128); DIM = (140, 140, 148); TXT = (235, 235, 238)
+    CAT_COL = {"TOP": (252, 211, 77), "HR": (251, 146, 60), "HIT": (96, 165, 250),
+               "HRR": (34, 211, 238), "CONTACT": (167, 139, 250)}
+    d.rectangle([0, 0, W, 6], fill=ORANGE)
+    d.text((36, 30), "MOONSHOT — NIGHT RECEIPTS", font=font(30), fill=TXT)
+    d.text((36, 68), f"{date_str} · every pick graded against its own bar · locked at first pitch",
+           font=font(15, False), fill=DIM)
+    y = 118
+    tot_ok = tot_n = 0
+    BARS = {"TOP": "homered", "HR": "homered", "HIT": "got a hit",
+            "HRR": "2+ H+R+RBI", "CONTACT": "2+ total bases"}
+    for role in ("TOP", "HR", "HIT", "HRR", "CONTACT"):
+        if role not in tally:
+            continue
+        ok, n = tally[role]; tot_ok += ok; tot_n += n
+        pct = (100.0 * ok / n) if n else 0.0
+        col = CAT_COL.get(role, DIM)
+        d.text((36, y), role, font=font(24), fill=col)
+        d.text((36, y + 30), BARS.get(role, ""), font=font(13, False), fill=DIM)
+        bx, bw = 260, 460
+        d.rounded_rectangle([bx, y + 8, bx + bw, y + 34], 6, fill=(30, 30, 34))
+        if n:
+            d.rounded_rectangle([bx, y + 8, bx + int(bw * min(1.0, ok / n)), y + 34], 6, fill=col)
+        d.text((bx + bw + 24, y + 2), f"{ok}/{n}", font=font(26), fill=TXT)
+        d.text((bx + bw + 118, y + 10), f"{pct:.0f}%", font=font(18), fill=GREEN if pct >= 50 else DIM)
+        y += 74
+    d.line([36, y + 6, W - 36, y + 6], fill=(40, 40, 44), width=2)
+    tp = (100.0 * tot_ok / tot_n) if tot_n else 0.0
+    d.text((36, y + 22), f"NIGHT: {tot_ok}/{tot_n} · {tp:.0f}%", font=font(26),
+           fill=GREEN if tp >= 50 else ORANGE)
+    d.text((W - 330, y + 30), "moonshot-mlb.vercel.app", font=font(15, False), fill=DIM)
+    import io
+    buf = io.BytesIO(); img.save(buf, format="PNG")
+    return buf.getvalue()
+
+
+def _post_discord_file(png: bytes, filename: str, content: str) -> None:
+    url = os.environ.get("DISCORD_WEBHOOK", "").strip()
+    if not url:
+        return
+    try:
+        import urllib.request, uuid
+        boundary = uuid.uuid4().hex
+        pj = json.dumps({"content": content}).encode()
+        body = b""
+        body += f"--{boundary}\r\nContent-Disposition: form-data; name=\"payload_json\"\r\nContent-Type: application/json\r\n\r\n".encode() + pj + b"\r\n"
+        body += f"--{boundary}\r\nContent-Disposition: form-data; name=\"files[0]\"; filename=\"{filename}\"\r\nContent-Type: image/png\r\n\r\n".encode() + png + b"\r\n"
+        body += f"--{boundary}--\r\n".encode()
+        req = urllib.request.Request(url, data=body, headers={
+            "Content-Type": f"multipart/form-data; boundary={boundary}", "User-Agent": "moonshot-bot"})
+        urllib.request.urlopen(req, timeout=15)
+    except Exception as exc:
+        print(f"discord file post failed: {exc}")
+
+
+def _webhook_transitions(old_payload, new_payload, date_str: str = "") -> None:
     """Diff the previous published live results against the new ones and post
     ONE Discord digest per grading run (2026-08-06, expanded on request).
     Covers: homers by designated picks, picks clearing their own bar, picks
@@ -461,6 +532,13 @@ def _webhook_transitions(old_payload, new_payload) -> None:
             if tally:
                 parts = [f"**{r}** {ok}/{n}" for r, (ok, n) in sorted(tally.items())]
                 sections.append(("🧾 NIGHT WRAP", [" · ".join(parts)]))
+                # the shareable artifact: tonight's receipts as an image
+                try:
+                    _png = _render_night_card(tally, date_str or "tonight")
+                    _post_discord_file(_png, f"receipts_{date_str or 'night'}.png",
+                                       "🧾 **Night receipts** — locked, graded, done.")
+                except Exception as _cexc:
+                    print(f"night card skipped: {_cexc}")
         if ticket_lines:
             sections.append(("🎫 TICKETS", ticket_lines[:8]))
 
@@ -551,7 +629,7 @@ def sync_results_to_website_repo_v2(date_str: str, live_mode: bool, json_path: P
             _old_pub = current_dir / active_json
             _oldp = json.loads(_old_pub.read_text(encoding="utf-8")) if _old_pub.exists() else None
             _newp = json.loads(Path(json_path).read_text(encoding="utf-8"))
-            _webhook_transitions(_oldp, _newp)
+            _webhook_transitions(_oldp, _newp, date_str)
         except Exception as _wexc:
             print(f"webhook diff skipped: {_wexc}")
 
