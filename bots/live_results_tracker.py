@@ -1391,6 +1391,52 @@ def format_stat_line(r: Dict[str, Any]) -> str:
     )
 
 
+def load_pair_builder_sections(date_str: str):
+    """ALIGNMENT (2026-08-07): grade the PUBLISHED pair-builder tickets.
+
+    The site's Pairs and Pools pages render pair_builder_latest.json, but this
+    grader used to build its own pair/pool sections from the slate rows — a
+    different generator, so "Live pools" and "Tonight's pools" showed
+    different tickets on the same page. When the published file is present
+    (fetch_picks_for_grading.py now downloads it in CI) and is for the same
+    slate date, convert it into the sections shape grade_pairs_pools expects
+    and grade THOSE. Missing/stale file falls back to the internal builder,
+    so a broken publish never blanks live grading.
+    """
+    path = OUT_DIR / "pair_builder_latest.json"
+    if not path.exists():
+        return None
+    try:
+        pb = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    if str(pb.get("date") or "") != str(date_str):
+        print(f"pair_builder_latest is for {pb.get('date')}, grading {date_str} — using internal pools instead")
+        return None
+    by_lane: Dict[str, list] = {}
+    for rp in (pb.get("recommended_pairs") or []):
+        ps = rp.get("players") or []
+        if len(ps) != 2 or not ps[0].get("player_id") or not ps[1].get("player_id"):
+            continue
+        lane = str(rp.get("type") or rp.get("lane_key") or "Pairs")
+        by_lane.setdefault(lane, []).append(
+            (ps[0], ps[1], safe_float(rp.get("pair_score")), lane)
+        )
+    pair_groups = [{"label": lane, "pairs": pairs} for lane, pairs in by_lane.items()]
+    pools = []
+    for key, prefix in (("pools_4man", "4-MAN"), ("pools_6man", "6-MAN")):
+        for pl in (pb.get(key) or []):
+            players = [x for x in (pl.get("players") or []) if x.get("player_id")]
+            if not players:
+                continue
+            nm = str(pl.get("name") or pl.get("label") or "POOL")
+            pools.append({"label": f"{prefix} {nm}", "players": players})
+    if not pair_groups and not pools:
+        return None
+    print(f"Grading PUBLISHED pair-builder tickets: {len(pair_groups)} pair lanes, {len(pools)} pools — same tickets the site shows")
+    return {"pair_groups": pair_groups, "pools": pools}
+
+
 def grade_pairs_pools(sections: Dict[str, Any], actual_by_pid: Dict[int, Dict[str, int]]) -> Dict[str, Any]:
     graded_pair_groups = []
     all_pairs = []
@@ -1911,7 +1957,7 @@ def main() -> int:
 
     graded_slots = annotate_designed(graded_slots)
 
-    pair_pool_sections = build_pair_pool_sections(rows)
+    pair_pool_sections = load_pair_builder_sections(date_str) or build_pair_pool_sections(rows)
     pair_pool_results = grade_pairs_pools(pair_pool_sections, actual_by_pid)
     merged_homers = merge_homer_entries(graded_slots)
     hr_capture_report = build_hr_capture_report(rows, game_cache, actual_by_pid)

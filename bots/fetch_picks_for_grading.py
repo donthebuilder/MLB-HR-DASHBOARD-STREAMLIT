@@ -74,8 +74,27 @@ def main() -> int:
 
     date = resolve(args.date)
     dest = OUT_DIR / f"mlb_breakdown_today_{date.isoformat()}.json"
-    if dest.exists() and dest.stat().st_size > 0:
+    slate_cached = dest.exists() and dest.stat().st_size > 0
+    if slate_cached:
         print(f"Picks already present: {dest}")
+
+    # ALIGNMENT FIX (2026-08-07): the grader used to invent its own pair/pool
+    # tickets because this fetch never gave it the published ones. Pull
+    # pair_builder_latest.json too (best-effort — the grader falls back to its
+    # internal builder if this file is missing or for a different date), so
+    # live grading runs against the SAME tickets the site displays.
+    pb_dest = OUT_DIR / "pair_builder_latest.json"
+    try:
+        pb = requests.get(f"{RAW_BASE}/public/data/current/pair_builder_latest.json", timeout=60)
+        if pb.status_code == 200 and pb.text.strip():
+            pb_dest.write_text(pb.text, encoding="utf-8")
+            print(f"Fetched pair_builder_latest.json -> {pb_dest}")
+        else:
+            print(f"No pair_builder_latest published (HTTP {pb.status_code}); grader will use internal pools.")
+    except Exception as exc:
+        print(f"pair_builder fetch skipped: {exc}")
+
+    if slate_cached:
         return 0
 
     url = f"{RAW_BASE}/public/data/current/{args.label}_slim.json"
