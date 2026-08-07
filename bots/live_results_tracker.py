@@ -214,20 +214,26 @@ def _sync_read_json(path: Path, default):
         pass
     return default
 
+def _discord_urls() -> list:
+    """DISCORD_WEBHOOK accepts MULTIPLE webhook URLs separated by commas,
+    whitespace or newlines (2026-08-08 — second server added). One secret,
+    every room gets every post; a failure on one URL never blocks the rest."""
+    raw = os.environ.get("DISCORD_WEBHOOK", "")
+    return [u.strip() for u in raw.replace(",", "\n").split() if u.strip().startswith("http")]
+
+
 def _post_discord_payload(payload: dict) -> None:
-    url = os.environ.get("DISCORD_WEBHOOK", "").strip()
-    if not url:
-        return
-    try:
-        import urllib.request
-        req = urllib.request.Request(
-            url,
-            data=json.dumps(payload).encode("utf-8"),
-            headers={"Content-Type": "application/json", "User-Agent": "moonshot-bot"},
-        )
-        urllib.request.urlopen(req, timeout=10)
-    except Exception as exc:
-        print(f"discord post failed: {exc}")
+    for url in _discord_urls():
+        try:
+            import urllib.request
+            req = urllib.request.Request(
+                url,
+                data=json.dumps(payload).encode("utf-8"),
+                headers={"Content-Type": "application/json", "User-Agent": "moonshot-bot"},
+            )
+            urllib.request.urlopen(req, timeout=10)
+        except Exception as exc:
+            print(f"discord post failed: {exc}")
 
 
 _HL_CACHE: dict = {}
@@ -268,19 +274,17 @@ def _post_discord(msg: str) -> None:
     is a silent no-op. The notification lives in Discord's infrastructure —
     the cheapest way live news reaches a pocket without the site growing a
     server (2026-08-06)."""
-    url = os.environ.get("DISCORD_WEBHOOK", "").strip()
-    if not url:
-        return
-    try:
-        import urllib.request
-        req = urllib.request.Request(
-            url,
-            data=json.dumps({"content": msg[:1900]}).encode("utf-8"),
-            headers={"Content-Type": "application/json", "User-Agent": "moonshot-bot"},
-        )
-        urllib.request.urlopen(req, timeout=10)
-    except Exception as exc:
-        print(f"discord post failed: {exc}")
+    for url in _discord_urls():
+        try:
+            import urllib.request
+            req = urllib.request.Request(
+                url,
+                data=json.dumps({"content": msg[:1900]}).encode("utf-8"),
+                headers={"Content-Type": "application/json", "User-Agent": "moonshot-bot"},
+            )
+            urllib.request.urlopen(req, timeout=10)
+        except Exception as exc:
+            print(f"discord post failed: {exc}")
 
 
 def _render_night_card(tally: dict, date_str: str) -> bytes:
@@ -336,22 +340,20 @@ def _render_night_card(tally: dict, date_str: str) -> bytes:
 
 
 def _post_discord_file(png: bytes, filename: str, content: str) -> None:
-    url = os.environ.get("DISCORD_WEBHOOK", "").strip()
-    if not url:
-        return
-    try:
-        import urllib.request, uuid
-        boundary = uuid.uuid4().hex
-        pj = json.dumps({"content": content}).encode()
-        body = b""
-        body += f"--{boundary}\r\nContent-Disposition: form-data; name=\"payload_json\"\r\nContent-Type: application/json\r\n\r\n".encode() + pj + b"\r\n"
-        body += f"--{boundary}\r\nContent-Disposition: form-data; name=\"files[0]\"; filename=\"{filename}\"\r\nContent-Type: image/png\r\n\r\n".encode() + png + b"\r\n"
-        body += f"--{boundary}--\r\n".encode()
-        req = urllib.request.Request(url, data=body, headers={
-            "Content-Type": f"multipart/form-data; boundary={boundary}", "User-Agent": "moonshot-bot"})
-        urllib.request.urlopen(req, timeout=15)
-    except Exception as exc:
-        print(f"discord file post failed: {exc}")
+    for url in _discord_urls():
+        try:
+            import urllib.request, uuid
+            boundary = uuid.uuid4().hex
+            pj = json.dumps({"content": content}).encode()
+            body = b""
+            body += f"--{boundary}\r\nContent-Disposition: form-data; name=\"payload_json\"\r\nContent-Type: application/json\r\n\r\n".encode() + pj + b"\r\n"
+            body += f"--{boundary}\r\nContent-Disposition: form-data; name=\"files[0]\"; filename=\"{filename}\"\r\nContent-Type: image/png\r\n\r\n".encode() + png + b"\r\n"
+            body += f"--{boundary}--\r\n".encode()
+            req = urllib.request.Request(url, data=body, headers={
+                "Content-Type": f"multipart/form-data; boundary={boundary}", "User-Agent": "moonshot-bot"})
+            urllib.request.urlopen(req, timeout=15)
+        except Exception as exc:
+            print(f"discord file post failed: {exc}")
 
 
 def _webhook_transitions(old_payload, new_payload, date_str: str = "") -> None:

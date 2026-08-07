@@ -11351,8 +11351,10 @@ Use ALT LOOKS as quality variance, not primary plays.
         # start, the pick lock means changes stop on their own. Silent no-op
         # without the DISCORD_WEBHOOK env. ──
         try:
-            _dw = os.environ.get("DISCORD_WEBHOOK", "").strip()
-            if _dw:
+            # Multi-room (2026-08-08): the secret may carry SEVERAL webhook
+            # URLs separated by commas/whitespace — the board posts to all.
+            _dws = [u.strip() for u in os.environ.get("DISCORD_WEBHOOK", "").replace(",", "\n").split() if u.strip().startswith("http")]
+            if _dws:
                 import hashlib as _hl
                 import urllib.request as _ur
                 _CAT_SC = {
@@ -11501,12 +11503,13 @@ Use ALT LOOKS as quality variance, not primary plays.
                         "footer": {"text": "one per category, its own scale · ◻ lineup not confirmed · picks lock at first pitch"},
                         "timestamp": dt.datetime.now(dt.timezone.utc).isoformat(),
                     }]}
-                    try:
-                        _req = _ur.Request(_dw, data=json.dumps(_payload).encode("utf-8"),
-                                           headers={"Content-Type": "application/json", "User-Agent": "moonshot-bot"})
-                        _ur.urlopen(_req, timeout=10)
-                    except Exception as _pexc:
-                        print(f"discord slate post failed: {_pexc}", file=sys.stderr)
+                    for _dw in _dws:
+                        try:
+                            _req = _ur.Request(_dw, data=json.dumps(_payload).encode("utf-8"),
+                                               headers={"Content-Type": "application/json", "User-Agent": "moonshot-bot"})
+                            _ur.urlopen(_req, timeout=10)
+                        except Exception as _pexc:
+                            print(f"discord slate post failed: {_pexc}", file=sys.stderr)
                     db.set(_sig_key, {"sig": _sig, "map": _pick_map})
         except Exception as _dexc:
             print(f"discord slate board skipped: {_dexc}", file=sys.stderr)
