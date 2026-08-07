@@ -11386,6 +11386,89 @@ Use ALT LOOKS as quality variance, not primary plays.
                         _conf = '' if r.get('lineup_confirmed') else ' ◻'
                         _arm = str(r.get('pitcher_name') or 'TBD').split()[-1]
                         _ls.append(f"{_EMO.get(_cat, '')} **{r.get('name')}** · {_cat} {_CAT_SC[_cat](r):.0f} · vs {_arm}{_conf}")
+                    # ── 🎬 ROTATING SPOTLIGHT (2026-08-07, Donovan: "make sure
+                    # tonight's edge shows something different every
+                    # notification"). The five category lines are the board's
+                    # identity and stay; what rotates is one spotlight section
+                    # per post, cycling through five angles so consecutive
+                    # boards never read identical even when the picks held.
+                    # Headline player gets a real MLB Film Room search link —
+                    # the "maybe some videos" ask, honestly: a link to actual
+                    # highlights, not an embedded clip we don't have rights to
+                    # rehost. Angle index persists per date in the cache.
+                    import urllib.parse as _up
+                    _seq_key = f"discord_slate_seq:{slate_date.isoformat()}"
+                    _seq = safe_int((db.get(_seq_key) or {}).get("n"), 0)
+                    def _film(nm):
+                        return f"[🎬 film room](https://www.mlb.com/video/?q={_up.quote(str(nm) + ' home runs')})"
+                    def _spot(angle):
+                        if angle == 0:  # best park tonight
+                            _gp = {}
+                            for r2 in rows_payload:
+                                _gp.setdefault(r2.get('game_pk'), []).append(r2)
+                            best, bedge = None, -99.0
+                            for _rows2 in _gp.values():
+                                r0 = _rows2[0]
+                                pf = safe_float(r0.get('park_hr_factor') or r0.get('park_dist_factor'), 0.0)
+                                wx = r0.get('weather_hr_effect_pct') or r0.get('hr_weather_effect_pct')
+                                t2 = safe_float(r0.get('weather_temp_f') or r0.get('temp_f'), 0.0)
+                                w2 = safe_float(r0.get('weather_wind_mph') or r0.get('wind_mph'), 0.0)
+                                wl = str(r0.get('wind_direction_label') or '')
+                                wout = w2 if 'out' in wl.lower() else (-w2 if 'in' in wl.lower() else 0.0)
+                                edge = ((pf - 1) * 100 if pf > 0 else 0.0) + (safe_float(wx, 0.0) if wx is not None else wout + ((t2 - 70) / 7 if t2 > 0 else 0.0))
+                                if edge > bedge:
+                                    bedge, best = edge, _rows2
+                            if not best:
+                                return None
+                            r0 = best[0]
+                            thr = max(best, key=lambda r2: safe_float(r2.get('longest_hr_score'), 0.0))
+                            return (f"\n🌋 **Park of the night**: {r0.get('venue_name') or 'TBD'} ({bedge:+.0f}% vs neutral) — "
+                                    f"biggest threat in the building: **{thr.get('name')}** · {_film(thr.get('name'))}")
+                        if angle == 1:  # back-to-back watch
+                            b2 = sorted([r2 for r2 in rows_payload if safe_int(r2.get('games_since_last_hr'), 99) == 0],
+                                        key=lambda r2: safe_float(r2.get('hr_score'), 0.0), reverse=True)[:3]
+                            if not b2:
+                                return None
+                            names = ' · '.join(f"**{r2.get('name')}**" for r2 in b2)
+                            return f"\n🔁 **B2B watch** — went deep last game: {names} · {_film(b2[0].get('name'))}"
+                        if angle == 2:  # luck buy (calibrated xHR)
+                            lk = sorted([r2 for r2 in rows_payload
+                                         if safe_int(r2.get('xhr_bbe'), 0) >= 50 and safe_float(r2.get('season_hr_luck'), 0.0) <= -1.5],
+                                        key=lambda r2: safe_float(r2.get('season_hr_luck'), 0.0))[:1]
+                            if not lk:
+                                return None
+                            r2 = lk[0]
+                            return (f"\n🍀 **Luck buy**: **{r2.get('name')}** — {safe_int(r2.get('season_hr'),0)} HR on contact worth "
+                                    f"{safe_float(r2.get('season_xhr'),0.0):.1f} · the regression bet is with him · {_film(r2.get('name'))}")
+                        if angle == 3:  # alt look of the night
+                            al = sorted([r2 for r2 in rows_payload if str(r2.get('alt_look_tag') or '').strip()],
+                                        key=lambda r2: safe_float(r2.get('alt_hr_score') or r2.get('hr_score'), 0.0), reverse=True)[:1]
+                            if not al:
+                                return None
+                            r2 = al[0]
+                            return f"\n🅰 **Alt look of the night**: **{r2.get('name')}** ({str(r2.get('alt_look_tag')).strip()}) — off the main board, quality variance lane"
+                        # angle 4: weak-spot stack
+                        _gp = {}
+                        for r2 in rows_payload:
+                            _gp.setdefault(r2.get('game_pk'), []).append(r2)
+                        best = max(_gp.values(), key=lambda rs: sum(1 for r2 in rs if r2.get('weak_spot_flag')), default=None)
+                        if not best:
+                            return None
+                        wk = [r2 for r2 in best if r2.get('weak_spot_flag')]
+                        if len(wk) < 2:
+                            return None
+                        r0 = best[0]
+                        nm = ' · '.join(f"**{r2.get('name')}**" for r2 in wk[:3])
+                        return f"\n⭐ **Stack alert**: {r0.get('team')} vs {r0.get('opponent_team')} carries {len(wk)} weak pitcher spots — {nm}"
+                    _spot_line = None
+                    for _try in range(5):
+                        _spot_line = _spot((_seq + _try) % 5)
+                        if _spot_line:
+                            break
+                    if _spot_line:
+                        _ls.append(_spot_line)
+                    db.set(_seq_key, {"n": _seq + 1})
+
                     _old_map = _prev.get("map") or {}
                     _n_chg = 0
                     if _old_map:
