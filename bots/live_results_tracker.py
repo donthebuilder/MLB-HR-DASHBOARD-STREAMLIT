@@ -410,7 +410,16 @@ def _webhook_transitions(old_payload, new_payload, date_str: str = "") -> None:
                 extra = f" — that makes {hr_n}" if hr_n > 1 else ""
                 clip = _hr_highlight_url(sl.get("game_pk"), name)
                 watch = f"  [▶ watch]({clip})" if clip else ""
-                hr_lines.append(f"💥 **{name}** ({role} pick) went deep{extra}{watch}")
+                _pg = 0.0
+                for _k in ("hrw_score", "top_board_score_v2", "overall_score"):
+                    try:
+                        _pg = float(sl.get(_k) or 0)
+                    except Exception:
+                        _pg = 0.0
+                    if _pg:
+                        break
+                _called = f", called pregame at {_pg:.0f}" if _pg else ""
+                hr_lines.append(f"💥 **{name}** ({role} pick{_called}) went deep{extra}{watch}")
             if hr_n >= 2 and hr_o < 2:
                 multi_lines.append(f"🚀 **{name}**: {hr_n} HR tonight")
             # Big-bases nights (2026-08-06): 4+ TB crossing, gated so a fresh
@@ -466,7 +475,24 @@ def _webhook_transitions(old_payload, new_payload, date_str: str = "") -> None:
             f"**{r}** {okc}/{n}" for r, (okc, n) in sorted(live_tally.items())
         ) if live_tally else ""
 
+        # receipts-first: totals across every judgeable pick RIGHT NOW
+        _tot_ok = sum(okc for okc, _n2 in live_tally.values())
+        _tot_n = sum(_n2 for _okc2, _n2 in live_tally.values())
+        _missed_final = sum(
+            1 for (_nm3, _r3), _sl3 in new_s.items()
+            if _r3 and int(_sl3.get("is_final") or 0) == 1 and bar_cleared(_sl3, _r3) is False
+        )
+        receipts_line = None
+        if _tot_n:
+            receipts_line = (
+                f"📌 locked at first pitch, never edited · so far **{_tot_ok}/{_tot_n}** cleared their bar"
+                + (f" · **{_missed_final}** finished without it" if _missed_final else "")
+                + " — misses post here the same as bombs"
+            )
+
         sections = []
+        if receipts_line:
+            sections.append(("🧾 THE RECORD, FIRST", [receipts_line]))
         if hr_lines:
             sections.append(("💥 WENT DEEP", hr_lines[:8]))
         if len(hr_lines) < 3 and tonight_lines:
