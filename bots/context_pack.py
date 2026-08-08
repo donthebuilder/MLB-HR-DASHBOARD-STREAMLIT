@@ -75,6 +75,7 @@ def load_slate(path: Path) -> tuple[str, list[dict]]:
                 "name": r.get("name") or r.get("player_name") or "",
                 "team": str(r.get("team") or "").upper(),
                 "venue_name": r.get("venue_name") or "",
+                "game_pk": r.get("game_pk"),
                 "bats": str(r.get("bats") or r.get("handedness") or "?")[:1].upper(),
                 "lineup_spot": r.get("lineup_spot") or r.get("batting_order"),
             }
@@ -235,7 +236,10 @@ def game_logs(pid: str, season: int) -> list[dict]:
             if (sp.get("game") or {}).get("gamePk")]
 
 
-def venues_for(pks: list[int]) -> dict[int, str]:
+def venues_for(pks: list[int]) -> dict[int, dict]:
+    """gamePk → {id, name}. ID is the match key (2026-08-08 — exact-name
+    matching silently dropped whole parks after renames; same fix as the
+    site's lib/venueHr.js, same day)."""
     out = {}
     for i in range(0, len(pks), 40):
         j = get(f"{API}/schedule?sportId=1&gamePks={','.join(map(str, pks[i:i+40]))}"
@@ -243,8 +247,12 @@ def venues_for(pks: list[int]) -> dict[int, str]:
         for d in (j or {}).get("dates", []):
             for g in d.get("games", []):
                 if g.get("gamePk") and (g.get("venue") or {}).get("name"):
-                    out[g["gamePk"]] = g["venue"]["name"]
+                    out[g["gamePk"]] = {"id": g["venue"].get("id"), "name": g["venue"]["name"]}
     return out
+
+
+def _norm_name(s: str) -> str:
+    return "".join(c for c in str(s or "").lower() if c.isalnum())
 
 
 def main() -> int:
@@ -286,13 +294,31 @@ def main() -> int:
         rows = game_logs(p["player_id"], yr) + game_logs(p["player_id"], yr - 1)
         logs[p["player_id"]] = rows
         all_pks.update(x["pk"] for x in rows)
+        # tonight's game rides in the same batch — its venue ID is the target
+        try:
+            if p.get("game_pk"):
+                all_pks.add(int(p["game_pk"]))
+        except (TypeError, ValueError):
+            pass
     vmap = venues_for(sorted(all_pks))
 
     players_out: dict[str, Any] = {}
     for p in players:
         pid = p["player_id"]
         rows = logs.get(pid) or []
-        here = [x for x in rows if vmap.get(x["pk"]) == p["venue_name"]]
+        try:
+            target_id = (vmap.get(int(p.get("game_pk") or 0)) or {}).get("id")
+        except (TypeError, ValueError):
+            target_id = None
+
+        def _here(x):
+            v = vmap.get(x["pk"])
+            if not v:
+                return False
+            if target_id is not None and v.get("id") is not None:
+                return v["id"] == target_id
+            return _norm_name(v.get("name")) == _norm_name(p["venue_name"])
+        here = [x for x in rows if _here(x)]
         hr_here = sum(x["hr"] for x in here)
         hr_all = sum(x["hr"] for x in rows)
         rate = hr_here / len(here) if here else None
