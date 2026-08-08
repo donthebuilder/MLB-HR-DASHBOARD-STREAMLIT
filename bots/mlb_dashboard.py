@@ -11511,6 +11511,85 @@ Use ALT LOOKS as quality variance, not primary plays.
                         except Exception as _pexc:
                             print(f"discord slate post failed: {_pexc}", file=sys.stderr)
                     db.set(_sig_key, {"sig": _sig, "map": _pick_map})
+
+                    # ── 📓 PICK CHANGELOG (2026-08-08, wishlist #2): when a
+                    # pick changes between runs, name the INPUT that moved.
+                    # Context per pick is snapshotted in the cache each run;
+                    # the diff against last run's snapshot becomes
+                    # current/pick_changes.json — one plain-language line per
+                    # change, which the site's Since panel can quote instead
+                    # of leaving readers to guess. ──
+                    try:
+                        _ctx_key = f"pick_ctx:{slate_date.isoformat()}"
+                        _prev_ctx = (db.get(_ctx_key) or {}).get("ctx") or {}
+                        _new_ctx = {}
+                        _by_pid = {str(row.get('player_id')): row for row in rows_payload}
+                        for _pid, _v in _pick_map.items():
+                            _row = _by_pid.get(_pid) or {}
+                            _new_ctx[_pid] = {
+                                "name": _v.get("name", ""), "role": _v.get("role", ""),
+                                "conf": bool(_row.get("lineup_confirmed")),
+                                "pit": safe_int(_row.get("pitcher_id"), 0),
+                                "pit_name": str(_row.get("pitcher_name") or ""),
+                                "sc": round(safe_float(_row.get("hr_score"), 0.0), 1),
+                            }
+                        _changes = []
+                        for _pid, _nc in _new_ctx.items():
+                            _oc = _prev_ctx.get(_pid)
+                            if _oc is None:
+                                # new pick — say what likely earned it
+                                _why = []
+                                if _nc["conf"]:
+                                    _why.append("lineup confirmed him")
+                                _who_out = next((o["name"] for op, o in _prev_ctx.items()
+                                                 if op not in _new_ctx and o.get("role") == _nc["role"]), None)
+                                _changes.append({
+                                    "kind": "in", "name": _nc["name"], "role": _nc["role"],
+                                    "reason": (" · ".join(_why) or "score moved to the top of the lane")
+                                              + (f" — replaces {_who_out}" if _who_out else ""),
+                                })
+                            elif _oc.get("role") != _nc["role"]:
+                                _changes.append({
+                                    "kind": "moved", "name": _nc["name"], "role": _nc["role"],
+                                    "reason": f"category changed {_oc.get('role')}→{_nc['role']}",
+                                })
+                        for _pid, _oc in _prev_ctx.items():
+                            if _pid in _new_ctx:
+                                continue
+                            _row_now = _by_pid.get(_pid) or {}
+                            if not _row_now:
+                                _reason = "off the slate (lineup scratch or postponement)"
+                            elif safe_int(_row_now.get("pitcher_id"), 0) != _oc.get("pit", 0) and _oc.get("pit"):
+                                _reason = f"pitcher changed ({_oc.get('pit_name') or 'listed arm'} out)"
+                            elif not _row_now.get("lineup_confirmed") and _oc.get("conf"):
+                                _reason = "dropped from the posted lineup"
+                            else:
+                                _sc_now = round(safe_float(_row_now.get("hr_score"), 0.0), 1)
+                                _d = _sc_now - safe_float(_oc.get("sc"), 0.0)
+                                _reason = f"score moved {_d:+.1f} — someone else took the lane"
+                            _changes.append({"kind": "out", "name": _oc.get("name", ""),
+                                             "role": _oc.get("role", ""), "reason": _reason})
+                        db.set(_ctx_key, {"ctx": _new_ctx})
+                        if _changes or _prev_ctx:
+                            _clog = {
+                                "date": slate_date.isoformat(),
+                                "generated_at": dt.datetime.now(dt.timezone.utc).isoformat(),
+                                "changes": _changes[:40],
+                            }
+                            _targets = [OUT_DIR / "pick_changes.json"]
+                            try:
+                                for _ap in (json_alias_paths or []):
+                                    _targets.append(Path(_ap).parent / "pick_changes.json")
+                            except Exception:
+                                pass
+                            for _cp in _targets:
+                                try:
+                                    _cp.parent.mkdir(parents=True, exist_ok=True)
+                                    _cp.write_text(json.dumps(_clog, indent=1), encoding="utf-8")
+                                except Exception:
+                                    pass
+                    except Exception as _clexc:
+                        print(f"pick changelog skipped: {_clexc}", file=sys.stderr)
         except Exception as _dexc:
             print(f"discord slate board skipped: {_dexc}", file=sys.stderr)
         # HR Score 2.0 clean output: only the main TXT + JSON are written locally.

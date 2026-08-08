@@ -1194,6 +1194,11 @@ SLOT_FIELDS = {
     "park_factor", "park_hr_factor", "wind_direction_label",
     "weather_wind_direction_label", "season_k_rate", "season_bb_rate",
     "trap_flag", "alt_look_tag", "final_hr_role",
+    # SIGNAL AUDIT (2026-08-08): every flag the site DISPLAYS must be
+    # auditable from the archive, or the audit page can only grade half the
+    # decorations. These were shown but never kept.
+    "pitch_type_match_flag", "pitch_type_match_score", "games_since_last_hr",
+    "hidden_hr_value", "high_confidence_hr_flag",
 }
 
 
@@ -1984,6 +1989,30 @@ def main() -> int:
             actual_by_pid[pid] = get_player_batting_line(game_cache[game_pk], pid)
 
     graded_slots = annotate_designed(graded_slots)
+
+    # TOP, GRADED AS ITS OWN CLAIM (2026-08-08, Donovan: "what is another
+    # way to score the top pick besides hr"). TOP means "best play in his
+    # game" — so grade it relatively: top_beat_game = 1 when the pick's
+    # total bases meet or beat every other hitter's in THAT game (ties
+    # count — sharing the lead is not losing it). actual_by_pid covers the
+    # whole slate, so the comparison is against the game, not just our picks.
+    _tb_by_game: Dict[int, list] = {}
+    for row in rows:
+        _l = actual_by_pid.get(int(row["player_id"]))
+        if _l is not None:
+            _tb_by_game.setdefault(int(row["game_pk"]), []).append(
+                (int(row["player_id"]), int(_l.get("tb") or 0)))
+    for g in graded_slots:
+        _role = str(g.get("game_pick_role") or "").split("/")[0].strip().upper()
+        if _role != "TOP":
+            continue
+        mates = _tb_by_game.get(int(g.get("game_pk") or 0)) or []
+        if not mates:
+            continue
+        own = int(g.get("actual_tb") or 0)
+        best_other = max((tb for pid2, tb in mates if pid2 != int(g.get("player_id") or 0)), default=0)
+        g["top_beat_game"] = 1 if own >= best_other and own > 0 else 0
+        g["top_game_best_tb"] = best_other
 
     pair_pool_sections = load_pair_builder_sections(date_str) or build_pair_pool_sections(rows)
     pair_pool_results = grade_pairs_pools(pair_pool_sections, actual_by_pid)
