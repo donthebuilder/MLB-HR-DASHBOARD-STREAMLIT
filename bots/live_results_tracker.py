@@ -2059,14 +2059,12 @@ def main() -> int:
         if pid not in actual_by_pid:
             actual_by_pid[pid] = get_player_batting_line(game_cache[game_pk], pid)
 
-    # 🚪 pen-door alerts ride the feeds this run already fetched — zero extra
-    # API calls. Live mode only: a final-only grading pass posting hour-old
-    # pitching changes would be noise. Never allowed to break grading.
-    if live_mode:
-        try:
-            send_pitching_change_alerts(game_cache, rows)
-        except Exception as exc:
-            print(f"pen-door alert skipped: {exc}")
+    # 🚪 pen-door alerts moved to bots/pen_door_watch.py + pen-door.yml
+    # (2026-08-08, same day they landed here): Donovan wanted the ping when
+    # the change HAPPENS, not an hourly digest. The 10-minute watcher owns
+    # the job alone — calling the hourly version too would double-post
+    # every change. send_pitching_change_alerts stays defined as the
+    # fallback if the watcher ever has to come out.
 
     graded_slots = annotate_designed(graded_slots)
 

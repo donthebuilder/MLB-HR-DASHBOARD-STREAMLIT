@@ -1,0 +1,44 @@
+# 🚪 Pen Door Watch (2026-08-08) — near-real-time Discord pings when a
+# pitcher changes in any live game. Every 10 minutes across game hours
+# (day games ~1pm ET → west-coast finals ~2am ET). Each run covers one
+# disjoint 10-minute clock window, so nothing double-posts.
+#
+# Honest limits, stated: GitHub cron at 10-minute grain occasionally skips
+# a beat under runner pressure — a skipped run is a skipped window, and that
+# change simply isn't announced. stdlib-only script, no pip install, so each
+# run is seconds of compute.
+name: Pen Door Watch
+
+on:
+  workflow_dispatch:
+  schedule:
+    # every 10 min, 17:00–06:50 UTC = 1:00pm–2:50am ET
+    - cron: '*/10 17-23 * * *'
+    - cron: '*/10 0-6 * * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pen-door-watch
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Watch the doors
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        run: python bots/pen_door_watch.py
