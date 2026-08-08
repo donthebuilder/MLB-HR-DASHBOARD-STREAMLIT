@@ -287,6 +287,77 @@ def _post_discord(msg: str) -> None:
             print(f"discord post failed: {exc}")
 
 
+def send_pitching_change_alerts(game_cache: Dict[int, Dict[str, Any]], rows: List[Dict[str, Any]]) -> None:
+    """🚪 PEN DOOR alerts (2026-08-08, Donovan: "add a discord noti for when
+    the pitchers change in the game").
+
+    The live feed marks every change explicitly — eventType
+    'pitching_substitution' with a written description ("Pitching Change:
+    Evan Sisk replaces Carmen Mlodzinski.") and a UTC startTime; VERIFIED on
+    a real game feed before this was written. This job runs hourly, so the
+    honest framing is "changes in the last hour", batched into one post.
+
+    Dedupe without state: the window is the PREVIOUS full clock hour
+    [tick-1h, tick). Every hourly run sees a disjoint window, so no change
+    is ever posted twice and none is skipped (a change landing between the
+    tick and this run's start simply ships next hour).
+
+    Why bettors care enough to ping a phone: the door opening is the HR
+    window opening — our own graded pen numbers say relievers bleed homers
+    late. Each line names which of tonight's picks are on the attacking
+    side of the new arm."""
+    if not _discord_urls():
+        return
+    now = dt.datetime.now(dt.UTC)
+    tick = now.replace(minute=0, second=0, microsecond=0)
+    w_start, w_end = tick - dt.timedelta(hours=1), tick
+
+    picks_by_game: Dict[int, List[Dict[str, Any]]] = {}
+    for r in rows:
+        try:
+            picks_by_game.setdefault(int(r.get("game_pk") or 0), []).append(r)
+        except (TypeError, ValueError):
+            continue
+
+    lines: List[str] = []
+    for game_pk, feed in game_cache.items():
+        gteams = (feed.get("gameData", {}) or {}).get("teams", {}) or {}
+        home_ab = (gteams.get("home") or {}).get("abbreviation", "")
+        away_ab = (gteams.get("away") or {}).get("abbreviation", "")
+        for play in ((feed.get("liveData", {}) or {}).get("plays", {}) or {}).get("allPlays", []) or []:
+            about = play.get("about") or {}
+            for ev in play.get("playEvents") or []:
+                det = ev.get("details") or {}
+                if det.get("eventType") != "pitching_substitution":
+                    continue
+                ts = str(ev.get("startTime") or "")
+                try:
+                    t = dt.datetime.fromisoformat(ts.replace("Z", "+00:00"))
+                except ValueError:
+                    continue
+                if not (w_start <= t < w_end):
+                    continue
+                half = str(about.get("halfInning") or "")
+                inning = about.get("inning")
+                pitching_ab = home_ab if half == "top" else away_ab
+                batting_ab = away_ab if half == "top" else home_ab
+                desc = str(det.get("description") or "").rstrip(".")
+                our = [str(r.get("name") or "").split()[-1]
+                       for r in picks_by_game.get(game_pk, [])
+                       if str(r.get("team") or "").upper() == batting_ab][:3]
+                line = f"🚪 **{pitching_ab}** pen, {half} {inning}: {desc}"
+                if our:
+                    line += f" — our bats attacking: {', '.join(our)}"
+                lines.append(line)
+
+    if not lines:
+        return
+    header = (f"🚪 **PEN DOORS — last hour** ({len(lines)} change{'s' if len(lines) != 1 else ''})\n"
+              "Fresh arms are where the late homers live — full pen workloads on the site.")
+    _post_discord(header + "\n" + "\n".join(lines[:15]))
+    print(f"pen-door alert: {len(lines)} change(s) posted")
+
+
 def _render_night_card(tally: dict, date_str: str) -> bytes:
     """The nightly receipt as an IMAGE (2026-08-06) — an artifact that can be
     posted, screenshotted and shared, and that nobody can retroactively edit.
@@ -1987,6 +2058,15 @@ def main() -> int:
             game_status_by_pk[game_pk] = get_game_status(game_cache[game_pk])
         if pid not in actual_by_pid:
             actual_by_pid[pid] = get_player_batting_line(game_cache[game_pk], pid)
+
+    # 🚪 pen-door alerts ride the feeds this run already fetched — zero extra
+    # API calls. Live mode only: a final-only grading pass posting hour-old
+    # pitching changes would be noise. Never allowed to break grading.
+    if live_mode:
+        try:
+            send_pitching_change_alerts(game_cache, rows)
+        except Exception as exc:
+            print(f"pen-door alert skipped: {exc}")
 
     graded_slots = annotate_designed(graded_slots)
 
