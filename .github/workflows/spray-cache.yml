@@ -70,6 +70,15 @@ jobs:
       - name: Run spray_cache.py (pass 2 — mop up any leftover cold-cache players)
         run: python bots/spray_cache.py --slate public/data/today_slate.json
 
+      # Context pack (2026-08-08): the bot's own copy of every context stat
+      # the site computes live — venue HR + vs-self pace, xPA, rest/travel,
+      # bullpen HR/9 + fatigue, wall dimensions. If the site ever goes dark,
+      # the record lives on the data branch. continue-on-error: a bad night
+      # here must never block the zone publish below.
+      - name: Build context pack
+        continue-on-error: true
+        run: python bots/context_pack.py --slate public/data/today_slate.json
+
       - name: Save spray/zone cache
         if: always()
         uses: actions/cache/save@v4
