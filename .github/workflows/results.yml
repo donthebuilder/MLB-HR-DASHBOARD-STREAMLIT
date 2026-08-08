@@ -125,6 +125,12 @@ jobs:
             # -n so today's freshly graded file is never clobbered by the
             # published copy from an earlier run on the same date.
             cp -n /tmp/histout/public/data/current/graded_results_*.txt public/data/ 2>/dev/null || true
+            # THE POOLED-METRICS FIX (2026-08-08, audit #12): backtest_report's
+            # JSON parser emits the per-metric counts pooling needs, but this
+            # restore only ever copied the .txt files — so the report fell back
+            # to the text parser and pooled_metrics stayed empty forever. Copy
+            # the JSON siblings and five more columns pool for free.
+            cp -n /tmp/histout/public/data/current/graded_results_*.json public/data/ 2>/dev/null || true
             echo "Graded files available: $(find public/data -maxdepth 1 -name 'graded_results_*.txt' | wc -l)"
           fi
         continue-on-error: true

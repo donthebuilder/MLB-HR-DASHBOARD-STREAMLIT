@@ -575,6 +575,17 @@ def _zone_cell(df: "pd.DataFrame", zone_id: int) -> dict[str, Any]:
     xwoba = round(float(zdf[xwoba_col].dropna().mean()), 3) if xwoba_col and not zdf[xwoba_col].dropna().empty else None
     xslg  = round(float(zdf[xslg_col].dropna().mean()),  3) if xslg_col  and not zdf[xslg_col].dropna().empty  else None
 
+    # Batted-ball shape per zone (audit #11, 2026-08-08): the site's zone-match
+    # readout wants gb/fly alongside ba. Rates are over BBE, not PA — a zone a
+    # hitter whiffs in isn't a ground-ball zone, it's a whiff zone. bb_type is
+    # Statcast's own label; guard because older pulls may not carry the column.
+    gb_rate = fb_rate = None
+    if "bb_type" in zdf.columns and bbe_count > 0:
+        bb = zdf.loc[bbe_mask, "bb_type"].dropna()
+        if len(bb):
+            gb_rate = round(int((bb == "ground_ball").sum()) / bbe_count, 3)
+            fb_rate = round(int(bb.isin(["fly_ball", "popup"]).sum()) / bbe_count, 3)
+
     return {
         "zone":       zone_id,
         "pa":         pa,
@@ -584,6 +595,8 @@ def _zone_cell(df: "pd.DataFrame", zone_id: int) -> dict[str, Any]:
         "ba":         ba,
         "xwoba":      xwoba,
         "xslg":       xslg,
+        "gb_rate":    gb_rate,
+        "fb_rate":    fb_rate,
         "low_sample": pa < MIN_SAMPLE,
     }
 
@@ -614,6 +627,12 @@ def _read_cache(kind: str, player_id: int) -> dict[str, Any] | None:
 
     age_hours = (dt.datetime.now(dt.UTC) - generated).total_seconds() / 3600
     if age_hours > ZONE_CACHE_TTL_HOURS:
+        return None
+    # Schema bump (audit #11): profiles cached before gb_rate/fb_rate existed
+    # would otherwise be served until TTL expiry and the site would show a
+    # zone grid with no batted-ball shape for days. A stale schema is a miss.
+    cells = cached.get("zones_9") or cached.get("damage") or []
+    if cells and "gb_rate" not in cells[0]:
         return None
     return cached
 
