@@ -11412,13 +11412,19 @@ Use ALT LOOKS as quality variance, not primary plays.
                     import urllib.parse as _up
                     _seq_key = f"discord_slate_seq:{slate_date.isoformat()}"
                     _seq = safe_int((db.get(_seq_key) or {}).get("n"), 0)
-                    # mlb.com/video hits an access wall for logged-out users
-                    # (Donovan got "access denied") — Baseball Savant player
-                    # pages are public and carry the statcast video links.
+                    # LINK POLICY (2026-08-08, Donovan: "sending it to savant
+                    # is kinda backwards — only links to videos and the site").
+                    # Savant links sent readers to someone else's product.
+                    # Every player link now deep-links to OUR site — the hash
+                    # router (#tab=power&p={id}) opens his card right on the
+                    # board. Film Room search is the video link, name-only
+                    # (mlb.com /video player pages hit an access wall, but the
+                    # Film Room SEARCH page is public).
+                    _SITE = "https://moonshot-mlb.vercel.app"
                     def _film(nm, pid=None):
                         if pid:
-                            return f"[📊 savant](https://baseballsavant.mlb.com/savant-player/{safe_int(pid, 0)})"
-                        return f"[📊 savant](https://baseballsavant.mlb.com/statcast_search?player_lookup={_up.quote(str(nm))})"
+                            return f"[📊 his card]({_SITE}/#tab=power&p={safe_int(pid, 0)})"
+                        return f"[🎬 film](https://www.mlb.com/video/search?q={_up.quote(str(nm))})"
                     def _spot(angle):
                         if angle == 0:  # best park tonight
                             _gp = {}
