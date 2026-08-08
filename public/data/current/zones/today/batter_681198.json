@@ -1,0 +1,548 @@
+{
+  "player_id": 681198,
+  "name": "TJ Rumfield",
+  "zone_profile": {
+    "player_id": 681198,
+    "lookback": 120,
+    "total_pa": 1505,
+    "zones_9": [
+      {
+        "zone": 1,
+        "pa": 56,
+        "bbe": 6,
+        "hr": 0,
+        "hr_rate": 0.0,
+        "ba": 0.333,
+        "xwoba": 0.181,
+        "xslg": 0.41,
+        "gb_rate": 0.333,
+        "fb_rate": 0.5,
+        "low_sample": false
+      },
+      {
+        "zone": 2,
+        "pa": 79,
+        "bbe": 25,
+        "hr": 0,
+        "hr_rate": 0.0,
+        "ba": 0.222,
+        "xwoba": 0.294,
+        "xslg": 0.409,
+        "gb_rate": 0.28,
+        "fb_rate": 0.32,
+        "low_sample": false
+      },
+      {
+        "zone": 3,
+        "pa": 42,
+        "bbe": 13,
+        "hr": 0,
+        "hr_rate": 0.0,
+        "ba": 0.167,
+        "xwoba": 0.212,
+        "xslg": 0.254,
+        "gb_rate": 0.077,
+        "fb_rate": 0.692,
+        "low_sample": false
+      },
+      {
+        "zone": 4,
+        "pa": 97,
+        "bbe": 34,
+        "hr": 1,
+        "hr_rate": 0.01,
+        "ba": 0.371,
+        "xwoba": 0.28,
+        "xslg": 0.374,
+        "gb_rate": 0.294,
+        "fb_rate": 0.412,
+        "low_sample": false
+      },
+      {
+        "zone": 5,
+        "pa": 96,
+        "bbe": 40,
+        "hr": 4,
+        "hr_rate": 0.042,
+        "ba": 0.425,
+        "xwoba": 0.396,
+        "xslg": 0.605,
+        "gb_rate": 0.275,
+        "fb_rate": 0.6,
+        "low_sample": false
+      },
+      {
+        "zone": 6,
+        "pa": 63,
+        "bbe": 26,
+        "hr": 1,
+        "hr_rate": 0.016,
+        "ba": 0.346,
+        "xwoba": 0.351,
+        "xslg": 0.506,
+        "gb_rate": 0.538,
+        "fb_rate": 0.308,
+        "low_sample": false
+      },
+      {
+        "zone": 7,
+        "pa": 100,
+        "bbe": 34,
+        "hr": 0,
+        "hr_rate": 0.0,
+        "ba": 0.325,
+        "xwoba": 0.298,
+        "xslg": 0.437,
+        "gb_rate": 0.471,
+        "fb_rate": 0.176,
+        "low_sample": false
+      },
+      {
+        "zone": 8,
+        "pa": 98,
+        "bbe": 41,
+        "hr": 3,
+        "hr_rate": 0.031,
+        "ba": 0.455,
+        "xwoba": 0.35,
+        "xslg": 0.567,
+        "gb_rate": 0.366,
+        "fb_rate": 0.317,
+        "low_sample": false
+      },
+      {
+        "zone": 9,
+        "pa": 60,
+        "bbe": 23,
+        "hr": 2,
+        "hr_rate": 0.033,
+        "ba": 0.296,
+        "xwoba": 0.252,
+        "xslg": 0.413,
+        "gb_rate": 0.348,
+        "fb_rate": 0.261,
+        "low_sample": false
+      }
+    ],
+    "zones_13": [
+      {
+        "zone": 1,
+        "pa": 56,
+        "bbe": 6,
+        "hr": 0,
+        "hr_rate": 0.0,
+        "ba": 0.333,
+        "xwoba": 0.181,
+        "xslg": 0.41,
+        "gb_rate": 0.333,
+        "fb_rate": 0.5,
+        "low_sample": false
+      },
+      {
+        "zone": 2,
+        "pa": 79,
+        "bbe": 25,
+        "hr": 0,
+        "hr_rate": 0.0,
+        "ba": 0.222,
+        "xwoba": 0.294,
+        "xslg": 0.409,
+        "gb_rate": 0.28,
+        "fb_rate": 0.32,
+        "low_sample": false
+      },
+      {
+        "zone": 3,
+        "pa": 42,
+        "bbe": 13,
+        "hr": 0,
+        "hr_rate": 0.0,
+        "ba": 0.167,
+        "xwoba": 0.212,
+        "xslg": 0.254,
+        "gb_rate": 0.077,
+        "fb_rate": 0.692,
+        "low_sample": false
+      },
+      {
+        "zone": 4,
+        "pa": 97,
+        "bbe": 34,
+        "hr": 1,
+        "hr_rate": 0.01,
+        "ba": 0.371,
+        "xwoba": 0.28,
+        "xslg": 0.374,
+        "gb_rate": 0.294,
+        "fb_rate": 0.412,
+        "low_sample": false
+      },
+      {
+        "zone": 5,
+        "pa": 96,
+        "bbe": 40,
+        "hr": 4,
+        "hr_rate": 0.042,
+        "ba": 0.425,
+        "xwoba": 0.396,
+        "xslg": 0.605,
+        "gb_rate": 0.275,
+        "fb_rate": 0.6,
+        "low_sample": false
+      },
+      {
+        "zone": 6,
+        "pa": 63,
+        "bbe": 26,
+        "hr": 1,
+        "hr_rate": 0.016,
+        "ba": 0.346,
+        "xwoba": 0.351,
+        "xslg": 0.506,
+        "gb_rate": 0.538,
+        "fb_rate": 0.308,
+        "low_sample": false
+      },
+      {
+        "zone": 7,
+        "pa": 100,
+        "bbe": 34,
+        "hr": 0,
+        "hr_rate": 0.0,
+        "ba": 0.325,
+        "xwoba": 0.298,
+        "xslg": 0.437,
+        "gb_rate": 0.471,
+        "fb_rate": 0.176,
+        "low_sample": false
+      },
+      {
+        "zone": 8,
+        "pa": 98,
+        "bbe": 41,
+        "hr": 3,
+        "hr_rate": 0.031,
+        "ba": 0.455,
+        "xwoba": 0.35,
+        "xslg": 0.567,
+        "gb_rate": 0.366,
+        "fb_rate": 0.317,
+        "low_sample": false
+      },
+      {
+        "zone": 9,
+        "pa": 60,
+        "bbe": 23,
+        "hr": 2,
+        "hr_rate": 0.033,
+        "ba": 0.296,
+        "xwoba": 0.252,
+        "xslg": 0.413,
+        "gb_rate": 0.348,
+        "fb_rate": 0.261,
+        "low_sample": false
+      },
+      {
+        "zone": 11,
+        "pa": 205,
+        "bbe": 6,
+        "hr": 0,
+        "hr_rate": 0.0,
+        "ba": 0.167,
+        "xwoba": 0.362,
+        "xslg": 0.478,
+        "gb_rate": 0.5,
+        "fb_rate": 0.167,
+        "low_sample": false
+      },
+      {
+        "zone": 12,
+        "pa": 98,
+        "bbe": 8,
+        "hr": 0,
+        "hr_rate": 0.0,
+        "ba": 0.1,
+        "xwoba": 0.326,
+        "xslg": 0.069,
+        "gb_rate": 0.375,
+        "fb_rate": 0.625,
+        "low_sample": false
+      },
+      {
+        "zone": 13,
+        "pa": 285,
+        "bbe": 36,
+        "hr": 0,
+        "hr_rate": 0.0,
+        "ba": 0.122,
+        "xwoba": 0.262,
+        "xslg": 0.248,
+        "gb_rate": 0.778,
+        "fb_rate": 0.056,
+        "low_sample": false
+      },
+      {
+        "zone": 14,
+        "pa": 226,
+        "bbe": 12,
+        "hr": 0,
+        "hr_rate": 0.0,
+        "ba": 0.2,
+        "xwoba": 0.418,
+        "xslg": 0.588,
+        "gb_rate": 0.5,
+        "fb_rate": 0.167,
+        "low_sample": false
+      }
+    ],
+    "generated": "2026-08-08T13:56:06+00:00"
+  },
+  "pitcher_zone_profile": {
+    "pitcher_id": 669461,
+    "lookback": 120,
+    "total_pitches": 1574,
+    "damage": [
+      {
+        "zone": 1,
+        "pa": 49,
+        "bbe": 16,
+        "hr": 1,
+        "hr_rate": 0.02,
+        "ba": 0.235,
+        "xwoba": 0.158,
+        "xslg": 0.288,
+        "gb_rate": 0.188,
+        "fb_rate": 0.688,
+        "low_sample": false
+      },
+      {
+        "zone": 2,
+        "pa": 91,
+        "bbe": 25,
+        "hr": 3,
+        "hr_rate": 0.033,
+        "ba": 0.364,
+        "xwoba": 0.405,
+        "xslg": 0.86,
+        "gb_rate": 0.28,
+        "fb_rate": 0.48,
+        "low_sample": false
+      },
+      {
+        "zone": 3,
+        "pa": 73,
+        "bbe": 17,
+        "hr": 0,
+        "hr_rate": 0.0,
+        "ba": 0.3,
+        "xwoba": 0.343,
+        "xslg": 0.598,
+        "gb_rate": 0.235,
+        "fb_rate": 0.529,
+        "low_sample": false
+      },
+      {
+        "zone": 4,
+        "pa": 98,
+        "bbe": 30,
+        "hr": 1,
+        "hr_rate": 0.01,
+        "ba": 0.286,
+        "xwoba": 0.317,
+        "xslg": 0.545,
+        "gb_rate": 0.467,
+        "fb_rate": 0.3,
+        "low_sample": false
+      },
+      {
+        "zone": 5,
+        "pa": 108,
+        "bbe": 43,
+        "hr": 3,
+        "hr_rate": 0.028,
+        "ba": 0.467,
+        "xwoba": 0.505,
+        "xslg": 0.788,
+        "gb_rate": 0.326,
+        "fb_rate": 0.326,
+        "low_sample": false
+      },
+      {
+        "zone": 6,
+        "pa": 87,
+        "bbe": 35,
+        "hr": 1,
+        "hr_rate": 0.011,
+        "ba": 0.417,
+        "xwoba": 0.326,
+        "xslg": 0.48,
+        "gb_rate": 0.429,
+        "fb_rate": 0.229,
+        "low_sample": false
+      },
+      {
+        "zone": 7,
+        "pa": 86,
+        "bbe": 16,
+        "hr": 2,
+        "hr_rate": 0.023,
+        "ba": 0.143,
+        "xwoba": 0.313,
+        "xslg": 0.853,
+        "gb_rate": 0.312,
+        "fb_rate": 0.25,
+        "low_sample": false
+      },
+      {
+        "zone": 8,
+        "pa": 109,
+        "bbe": 30,
+        "hr": 2,
+        "hr_rate": 0.018,
+        "ba": 0.343,
+        "xwoba": 0.344,
+        "xslg": 0.587,
+        "gb_rate": 0.433,
+        "fb_rate": 0.3,
+        "low_sample": false
+      },
+      {
+        "zone": 9,
+        "pa": 65,
+        "bbe": 9,
+        "hr": 1,
+        "hr_rate": 0.015,
+        "ba": 0.556,
+        "xwoba": 0.376,
+        "xslg": 0.664,
+        "gb_rate": 0.444,
+        "fb_rate": 0.222,
+        "low_sample": false
+      },
+      {
+        "zone": 11,
+        "pa": 112,
+        "bbe": 14,
+        "hr": 0,
+        "hr_rate": 0.0,
+        "ba": 0.111,
+        "xwoba": 0.321,
+        "xslg": 0.273,
+        "gb_rate": 0.5,
+        "fb_rate": 0.429,
+        "low_sample": false
+      },
+      {
+        "zone": 12,
+        "pa": 237,
+        "bbe": 11,
+        "hr": 0,
+        "hr_rate": 0.0,
+        "ba": 0.188,
+        "xwoba": 0.436,
+        "xslg": 0.369,
+        "gb_rate": 0.182,
+        "fb_rate": 0.455,
+        "low_sample": false
+      },
+      {
+        "zone": 13,
+        "pa": 371,
+        "bbe": 16,
+        "hr": 1,
+        "hr_rate": 0.003,
+        "ba": 0.105,
+        "xwoba": 0.2,
+        "xslg": 0.503,
+        "gb_rate": 0.5,
+        "fb_rate": 0.375,
+        "low_sample": false
+      },
+      {
+        "zone": 14,
+        "pa": 88,
+        "bbe": 6,
+        "hr": 0,
+        "hr_rate": 0.0,
+        "ba": 0.286,
+        "xwoba": 0.364,
+        "xslg": 0.304,
+        "gb_rate": 0.667,
+        "fb_rate": 0.0,
+        "low_sample": false
+      }
+    ],
+    "tendency": [
+      {
+        "zone": 1,
+        "pitches": 49,
+        "pct": 0.031
+      },
+      {
+        "zone": 2,
+        "pitches": 91,
+        "pct": 0.058
+      },
+      {
+        "zone": 3,
+        "pitches": 73,
+        "pct": 0.046
+      },
+      {
+        "zone": 4,
+        "pitches": 98,
+        "pct": 0.062
+      },
+      {
+        "zone": 5,
+        "pitches": 108,
+        "pct": 0.069
+      },
+      {
+        "zone": 6,
+        "pitches": 87,
+        "pct": 0.055
+      },
+      {
+        "zone": 7,
+        "pitches": 86,
+        "pct": 0.055
+      },
+      {
+        "zone": 8,
+        "pitches": 109,
+        "pct": 0.069
+      },
+      {
+        "zone": 9,
+        "pitches": 65,
+        "pct": 0.041
+      },
+      {
+        "zone": 11,
+        "pitches": 112,
+        "pct": 0.071
+      },
+      {
+        "zone": 12,
+        "pitches": 237,
+        "pct": 0.151
+      },
+      {
+        "zone": 13,
+        "pitches": 371,
+        "pct": 0.236
+      },
+      {
+        "zone": 14,
+        "pitches": 88,
+        "pct": 0.056
+      }
+    ],
+    "kill_zones": [
+      5,
+      12
+    ],
+    "generated": "2026-08-08T13:56:09+00:00"
+  }
+}

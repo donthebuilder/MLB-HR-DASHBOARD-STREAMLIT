@@ -1,0 +1,106 @@
+LIVE RESULTS TRACKER - 2026-08-08
+------------------------------------------
+Game status: 0/15 graded games final
+Note: live results can change until every game is final.
+
+BETTABLE RESULTS
+Top 15 HR: 0/15 (0.0%)
+HR Picks: 0/15 (0.0%)
+Top Picks: 0/15 (0.0%)
+
+FULL SHEET BASE HIT PERFORMANCE
+Base Hit Accuracy: 0.0%
+
+HR CAPTURE (BETTABLE)
+Total Slate HRs: 0
+Caught in Top 15: 0
+Caught in HR Picks: 0
+
+MODEL VISION (Top 40)
+Model Caught HRs: 0 / 0
+Vision Rate: 0.0%
+
+UNIQUE PLAYER HR ACCURACY
+Unique Players Tracked: 75
+Players Who Homered: 0
+Unique HR Accuracy: 0.0%
+
+HR CATEGORY BREAKDOWN
+------------------------------------------
+🏆 TOP 15 BOARD → 0 HR
+🔥 TOP PICKS → 0 HR
+🧨 HR PICKS → 0 HR
+🏁 HRR PICKS → 0 HR
+💠 HIT PICKS → 0 HR
+⚾ CONTACT PICKS → 0 HR
+Best HR-producing category: 🏆 TOP 15 BOARD
+
+HR RESULTS BY PLAYER
+------------------------------------------
+- none
+
+POOL PERFORMANCE
+------------------------------------------
+4-MAN HR POOL A → 0/4 HR (none)
+4-MAN HR POOL B → 0/4 HR (none)
+4-MAN HR POOL C → 0/4 HR (none)
+4-MAN HR POOL D → 0/4 HR (none)
+6-MAN HR POOL A → 0/6 HR (none)
+6-MAN HR POOL B → 0/6 HR (none)
+6-MAN HR POOL C → 0/6 HR (none)
+6-MAN HR POOL D → 0/6 HR (none)
+
+PAIR PERFORMANCE
+------------------------------------------
+Pair 1 → 0/2 HR (none) | Matt Olson + Pete Crow-Armstrong
+Pair 2 → 0/2 HR (none) | Dillon Dingler + Junior Caminero
+Pair 3 → 0/2 HR (none) | Jackson Chourio + Osleivis Basabe
+Pair 4 → 0/2 HR (none) | Hunter Goodman + Coby Mayo
+
+PLAYER TYPE PERFORMANCE
+------------------------------------------
+🏆 TOP 15 BOARD (15)
+HR: 0.0% | 1+ Hit: 0.0% | XBH: 0.0% | 2+ TB: 0.0% | 2+ HRR: 0.0% | 3+ HRR: 0.0%
+
+🔥 TOP PICKS (15)
+HR: 0.0% | 1+ Hit: 0.0% | XBH: 0.0% | 2+ TB: 0.0% | 2+ HRR: 0.0% | 3+ HRR: 0.0%
+
+🧨 HR PICKS (15)
+HR: 0.0% | 1+ Hit: 0.0% | XBH: 0.0% | 2+ TB: 0.0% | 2+ HRR: 0.0% | 3+ HRR: 0.0%
+
+🏁 HRR PICKS (15)
+HR: 0.0% | 1+ Hit: 0.0% | XBH: 0.0% | 2+ TB: 0.0% | 2+ HRR: 0.0% | 3+ HRR: 0.0%
+
+💠 HIT PICKS (15)
+HR: 0.0% | 1+ Hit: 0.0% | XBH: 0.0% | 2+ TB: 0.0% | 2+ HRR: 0.0% | 3+ HRR: 0.0%
+
+⚾ CONTACT PICKS (15)
+HR: 0.0% | 1+ Hit: 0.0% | XBH: 0.0% | 2+ TB: 0.0% | 2+ HRR: 0.0% | 3+ HRR: 0.0%
+
+
+DESIGNED OUTCOME (did the pick do its job)
+------------------------------------------
+
+HIT RESULTS BY CATEGORY
+------------------------------------------
+
+🔥 TOP PICKS (1+ Hit)
+- none
+
+🧨 HR PICKS (1+ Hit)
+- none
+
+🏁 HRR PICKS (1+ Hit)
+- none
+
+💠 HIT PICKS (1+ Hit)
+- none
+
+⚾ CONTACT PICKS (1+ Hit)
+- none
+
+MODEL DIAGNOSTIC (LOW PRIORITY)
+Full Sheet HR Coverage: 0 / 0 (0.0%)
+
+LIVE / IN-PROGRESS PICKS WITH ACTION
+- none yet
