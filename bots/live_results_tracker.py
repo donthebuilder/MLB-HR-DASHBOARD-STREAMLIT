@@ -662,7 +662,8 @@ def _webhook_transitions(old_payload, new_payload, date_str: str = "") -> None:
         src_tally = tally or live_tally
         ok_t = sum(ok for ok, n in src_tally.values()) if src_tally else None
         n_t = sum(n for ok, n in src_tally.values()) if src_tally else None
-        footer = f"picks {ok_t}/{n_t} on their own bars tonight" if n_t else "moonshot live digest"
+        footer = (f"picks {ok_t}/{n_t} on their own bars tonight" if n_t else "moonshot live digest") \
+            + " · stats & analysis, not financial or betting advice"
         _post_discord_payload({
             "embeds": [{
                 "title": "📡 Moonshot — live digest",

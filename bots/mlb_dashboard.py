@@ -11551,7 +11551,7 @@ Use ALT LOOKS as quality variance, not primary plays.
                         "title": f"🗒 Tonight's edge — {slate_date.isoformat()}",
                         "description": _desc,
                         "color": 0xF97316,
-                        "footer": {"text": "one per category, its own scale · ◻ lineup not confirmed · picks lock at first pitch"},
+                        "footer": {"text": "one per category, its own scale · ◻ lineup not confirmed · picks lock at first pitch · stats & analysis, not financial or betting advice"},
                         "timestamp": dt.datetime.now(dt.timezone.utc).isoformat(),
                     }]}
                     for _dw in _dws:
