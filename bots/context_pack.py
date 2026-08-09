@@ -160,6 +160,32 @@ def pen_stats() -> dict[int, dict]:
     return out
 
 
+def team_defense() -> dict[int, dict]:
+    """BABIP-against per team (2026-08-08, Donovan: defensive stats). The
+    cleanest public defense proxy: (H−HR)/(BF−K−BB−HBP−HR). All input
+    fields verified live on all 30 teams. Published so the graded archive
+    can validate it BEFORE it ever touches a score (two-lane rule)."""
+    yr = dt.date.today().year
+    j = get(f"{API}/teams/stats?season={yr}&group=pitching&stats=season&sportIds=1"
+            "&fields=stats,splits,team,id,stat,hits,homeRuns,strikeOuts,baseOnBalls,battersFaced,hitByPitch")
+    rows = []
+    for sp in ((j or {}).get("stats") or [{}])[0].get("splits", []):
+        s = sp.get("stat") or {}
+        bip = (s.get("battersFaced") or 0) - (s.get("strikeOuts") or 0) \
+            - (s.get("baseOnBalls") or 0) - (s.get("hitByPitch") or 0) - (s.get("homeRuns") or 0)
+        tid = (sp.get("team") or {}).get("id")
+        if not tid or bip < 200:
+            continue
+        rows.append((tid, ((s.get("hits") or 0) - (s.get("homeRuns") or 0)) / bip))
+    rows.sort(key=lambda x: x[1])
+    out = {}
+    for i, (tid, babip) in enumerate(rows):
+        pct = round(100 * i / max(1, len(rows) - 1))
+        out[tid] = {"babip_against": round(babip, 4), "pctile": pct,
+                    "word": "elite glove" if pct <= 20 else "leaky defense" if pct >= 80 else "league-normal"}
+    return out
+
+
 def pen_fatigue(slate_date: str) -> dict[int, dict]:
     yday = dt.date.fromisoformat(slate_date) - dt.timedelta(days=1)
     sched = get(f"{API}/schedule?sportId=1&startDate={yday}&endDate={yday}&fields=dates,games,gamePk")
@@ -271,6 +297,7 @@ def main() -> int:
     pens = pen_stats()
     fat = pen_fatigue(slate_date)
     wall_map = walls()
+    defense = team_defense()
 
     teams_out: dict[str, Any] = {}
     for tid, ab in abbrs.items():
@@ -282,6 +309,8 @@ def main() -> int:
             pen["yesterday"] = fat[tid]
         if pen:
             entry["pen"] = pen
+        if tid in defense:
+            entry["defense"] = defense[tid]
         if entry:
             teams_out[ab] = entry
 
