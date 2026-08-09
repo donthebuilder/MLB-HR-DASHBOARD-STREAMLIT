@@ -149,14 +149,16 @@ MODEL_WEIGHTS: Dict[str, Dict[str, float]] = {
         # drops -- git log has the old values.
         "batted_shape": 0.09,
         "pitch_fit": 0.11,
-        "pitcher_damage": 0.15,
+        # 0.15 → 0.10 (audit 2026-08-08): funds the aligned-stack raise; this
+        # sub-score also just lost its double-counted pitch-match bonus.
+        "pitcher_damage": 0.10,
         "pull_launch": 0.07,
         "park_weather": 0.05,
         "lineup_opportunity": 0.01,
         "season_power": 0.12,
         "damage_conversion_score": 0.16,
         "pitch_match_term": 0.07,
-        "weak_spot_interaction": 0.01,
+        "weak_spot_interaction": 0.06,   # aligned stack (audit 2026-08-08: 27.4% at full stack)
         "bullpen_pitch_fit": 0.01,
         "yesterdays_hitters_score": 0.02,
         # NEW (2026-07-07): pitcher trend (worsening/improving vs his own
@@ -6401,12 +6403,9 @@ def apply_model_v2_layers(h: HitterRecord) -> HitterRecord:
         pitcher_damage = _hr2_clip(pitcher_damage + 5)
     if h.ambush_setup_flag:
         pitcher_damage = _hr2_clip(pitcher_damage + 3)
-    # Pitch-type match: hitter's crush pitch = pitcher's HR-vulnerable pitch.
-    # Bonus scales with match strength (0-120). Cap +6 to avoid overshooting.
-    if getattr(h, "pitch_type_match_flag", False):
-        match_score = safe_float(getattr(h, "pitch_type_match_score", 0.0), 0.0)
-        match_bonus = min(6.0, 1.5 + (match_score / 120.0) * 4.5)
-        pitcher_damage = _hr2_clip(pitcher_damage + match_bonus)
+    # MINI-BOT AUDIT (2026-08-08): the +6 pitch-match bonus here was a
+    # straight double-count — the same signal already enters hr_raw as
+    # pitch_match_term at its own weight. Removed; one signal, one entry.
 
 
     # 10% pull-air / launch shape.
@@ -6434,10 +6433,12 @@ def apply_model_v2_layers(h: HitterRecord) -> HitterRecord:
     elif temp <= 50: temp_score = 30.0
     wind_score = 50.0 + safe_float(getattr(h, "weather_wind_boost", 0.0), 0.0) * 500
     hr_park = safe_float(getattr(h, "park_hr_factor", 1.00), 1.00)
+    # MINI-BOT AUDIT (2026-08-08, B6): these summed to 0.93, quietly
+    # depressing every park/weather score ~7%. Wind takes the difference.
     park_weather = 100 * (
         0.40 * minmax_norm(hr_park, 0.82, 1.20) +
         0.35 * (temp_score / 100.0) +
-        0.18 * minmax_norm(wind_score, 20, 80)
+        0.25 * minmax_norm(wind_score, 20, 80)
     )
     # Weather x park interaction (per audit, 2026-06-27): previously the three
     # terms above were purely additive -- a hot, wind-blowing-out day scored
@@ -6493,7 +6494,17 @@ def apply_model_v2_layers(h: HitterRecord) -> HitterRecord:
     # combination measured ~5pp better than either alone in backtesting.
     sample_hr_for_interaction = safe_int(bbe.get("hr"), 0)
     good_contact_signal = bool(sample_hr_for_interaction >= 2 or max_ev >= 108)
-    weak_spot_interaction = 100.0 if (h.weak_spot_flag and good_contact_signal) else (55.0 if h.weak_spot_flag else 35.0)
+    # MINI-BOT AUDIT (2026-08-08): rebuilt as the ALIGNED STACK — the
+    # largest clean interaction in the 38-day archive: weak_spot alone
+    # 14.7%, pitch_match alone 16.5%, BOTH 22.3% (n=184), both + ISO ≥
+    # .200 → 27.4% (n=106) vs 14.3% base. Tiered by how much of the stack
+    # is present; weight raised 0.01 → 0.06 in MODEL_WEIGHTS to match.
+    _stack_n = sum([
+        1 if h.weak_spot_flag else 0,
+        1 if getattr(h, "pitch_type_match_flag", False) else 0,
+        1 if safe_float(getattr(h, "season_iso", 0.0), 0.0) >= 0.200 else 0,
+    ])
+    weak_spot_interaction = {3: 100.0, 2: 65.0, 1: 45.0}.get(_stack_n, 35.0)
 
     # Pitcher trend flag (per audit, 2026-07-07): is he getting hit harder
     # lately than his own season baseline? Built in
@@ -6947,8 +6958,9 @@ def apply_model_v2_layers(h: HitterRecord) -> HitterRecord:
     ) * _lineup_mult
 
     top_board_raw = 0.45*h.hr_score_v2 + 0.20*pitch_fit + 0.15*h.batted_ball_power_score + 0.10*pull_launch + 0.05*park_weather + 0.05*hrw_timing_score
-    if trap_flag:
-        top_board_raw -= 8
+    # MINI-BOT AUDIT (2026-08-08): the -8 trap penalty is retired — graded
+    # 15.5% vs 15.3% (708/1344 flagged), zero discrimination, while docking
+    # a third of the board 8 points. trap_flag stays as a display caution.
     if hidden:
         top_board_raw += 5
     h.top_board_score_v2 = round(_hr2_clip(top_board_raw), 2)
@@ -8860,33 +8872,41 @@ def build_game_pick_role_map(rows: List[HitterRecord]) -> Dict[Tuple[int, int], 
     role_map: Dict[Tuple[int, int], List[str]] = {}
     for game_pk, hitters in by_game.items():
         used: set[int] = set()
-        top_pick = pick_top(hitters, "overall_score", 1)[0]
-        used.add(top_pick.player_id)
-        role_map.setdefault((game_pk, top_pick.player_id), []).append("TOP")
+        # MINI-BOT AUDIT (2026-08-08). The 38-day replay was blunt: as a
+        # one-pick-per-game ranker, overall_score homered 19.4% while plain
+        # season_iso hit 22.1% and iso+last5 form hit 22.9%; and hr_score
+        # itself added NOTHING once ISO was known (the 3×3 conditional table
+        # was flat across hr_score within every ISO band, with hr70+/thin-ISO
+        # picks at 11.4% — below base). TOP and HR now rank on an explicit
+        # power score, ISO-led with the model as a tiebreaker-weight. The
+        # trap_flag filter is gone from the chain: it graded 15.5% vs 15.3%
+        # (708/1344) — pure noise as a selector (kept as a display caution).
+        # Replay of this exact ladder: TOP 22.9%, HR 18.4%, combined 20.6%
+        # vs 17.9% shipped.
+        def _power_rank(h) -> float:
+            return (100.0 * safe_float(getattr(h, "season_iso", 0.0), 0.0)
+                    + 10.0 * safe_float(getattr(h, "last5_hr", 0.0), 0.0)
+                    + 0.35 * safe_float(getattr(h, "hr_score", 0.0), 0.0))
 
-        # Docket #14 + #17 (2026-08-05). Measured on 1,377 graded HR-type
-        # picks: sub-.18-ISO picks homered 11.5% vs 19.5% above; overall_score
-        # out-predicts hr_score on homers (+7.3 vs +4.7 quartile spread); and
-        # 24 hitters on one recent slate were simultaneously the HR pick and
-        # trap-flagged — a self-contradiction. So the HR slot now ranks by
-        # overall_score behind an ISO floor, skipping trapped bats while any
-        # alternative exists. The fallback chain guarantees a pick in every
-        # game however thin the slate.
-        def _hr_slot() -> HitterRecord:
-            pool = [h for h in hitters if h.player_id not in used and getattr(h, "season_pa", 0) >= 15]
+        def _power_slot(exclude: set) -> HitterRecord:
+            pool = [h for h in hitters if h.player_id not in exclude and getattr(h, "season_pa", 0) >= 15]
             if not pool:
-                pool = [h for h in hitters if h.player_id not in used] or [top_pick]
+                pool = [h for h in hitters if h.player_id not in exclude] or hitters
+            # ISO floor first — the one filter the archive validated
             for cond in (
-                lambda h: getattr(h, "season_iso", 0.0) >= 0.180 and not getattr(h, "trap_flag", False),
                 lambda h: getattr(h, "season_iso", 0.0) >= 0.180,
-                lambda h: not getattr(h, "trap_flag", False),
                 lambda h: True,
             ):
                 tier = [h for h in pool if cond(h)]
                 if tier:
-                    return sorted(tier, key=lambda h: getattr(h, "overall_score", 0.0), reverse=True)[0]
-            return top_pick
-        hr_pick = _hr_slot() if len(hitters) > 1 else top_pick
+                    return sorted(tier, key=_power_rank, reverse=True)[0]
+            return pool[0]
+
+        top_pick = _power_slot(used) if hitters else None
+        used.add(top_pick.player_id)
+        role_map.setdefault((game_pk, top_pick.player_id), []).append("TOP")
+
+        hr_pick = _power_slot(used) if len(hitters) > 1 else top_pick
         used.add(hr_pick.player_id)
         role_map.setdefault((game_pk, hr_pick.player_id), []).append("HR")
 
@@ -9124,8 +9144,16 @@ def _power_signal(rec: HitterRecord) -> bool:
 
 
 def _hr_alignment_score(rec: HitterRecord) -> float:
-    """Controlled final HR selection score: HR ceiling + HRW timing + HRR form."""
-    score = 0.55 * rec.hr_score + 0.25 * rec.hrw_score + 0.20 * rec.hrr_score
+    """Pool/pair leg ranker. MINI-BOT AUDIT (2026-08-08): its heaviest input
+    was its weakest signal — hr_score AUC 0.540 vs season_iso 0.620 and
+    last5_hr 0.599; the pools it built ran 13.8% per leg vs 23.0% for a
+    naive top-4-by-score sort. Rebuilt ISO/form-led with the model scores
+    demoted to tiebreakers."""
+    score = (
+        0.40 * (100.0 * minmax_norm(safe_float(getattr(rec, "season_iso", 0.0), 0.0), 0.10, 0.30))
+        + 0.20 * (100.0 * minmax_norm(safe_float(getattr(rec, "last5_hr", 0.0), 0.0), 0.0, 3.0))
+        + 0.15 * rec.hr_score + 0.15 * rec.hrw_score + 0.10 * rec.hrr_score
+    )
     if rec.hrw_score < 45:
         score *= 0.90
     if rec.hrw_score < 35:
@@ -9669,7 +9697,11 @@ def build_structured_pairs(
     for lst in (hot_pairs, trigger_pairs, hybrid_pairs, value_pairs):
         lst.sort(key=lambda x: x[2], reverse=True)
 
-    used_ids:set[int]=set(); same_game_counter:Dict[int,int]={}; out={}
+    # MINI-BOT AUDIT (2026-08-08, B1): global_exposure was a parameter this
+    # function never read — ALT LOOKS / TOP-30 blocks silently did nothing
+    # for pair lanes. Seed used_ids from it so the blocks actually block.
+    used_ids: set[int] = {pid for pid, v in (global_exposure or {}).items() if v >= 1}
+    same_game_counter:Dict[int,int]={}; out={}
     hot=choose_unique_pairs(hot_pairs,used_ids,2,1,same_game_counter)
     trigger=choose_unique_pairs(trigger_pairs,used_ids,2,1,same_game_counter)
     hybrid_sel=choose_unique_pairs(hybrid_pairs,used_ids,2,1,same_game_counter)
@@ -9810,11 +9842,13 @@ def _s2_pair_tags(a: HitterRecord, b: HitterRecord) -> List[str]:
 
 
 def _s2_risk(score: float) -> str:
-    # Mirrors System 1's _pb_risk thresholds for a consistent risk label
-    # vocabulary across both pair-builder systems.
-    if score >= 50:
+    # MINI-BOT AUDIT (2026-08-08, B12): the old 50/30 thresholds were System
+    # 1's scale (scores in the hundreds). System 2 pair scores live ~5–18,
+    # so every pair printed "Lower" while pools (fed alignment averages
+    # ~50–75) all printed "High". Rescaled to System 2's actual range.
+    if score >= 12:
         return "High"
-    if score >= 30:
+    if score >= 7:
         return "Medium"
     return "Lower"
 
@@ -9997,7 +10031,15 @@ def build_pair_sections(rows: List[HitterRecord]) -> Tuple[str, Dict[str, Any]]:
     lines.append(""); lines.append("🏊 4-MAN HR POOLS")
     lines.extend(format_pool_columns("POOL A — Strongest", pool4_a, "POOL B — HRR+Power", pool4_b, "POOL C — Balanced", pool4_c, "POOL D — Contrarian", pool4_d, pick_tag_map, width=34))
     # 6-man pools use their own exposure budget so C/D do not disappear after pairs + 4-man pools.
+    # MINI-BOT AUDIT (2026-08-08, B4): this budget was seeded only with ALT
+    # ids, so pair/TOP30/4-man players could reappear in 6-man pools. Seed
+    # from the full exposure map — one appearance means one appearance.
     pool6_exposure: Dict[int, int] = {pid: 99 for pid in LAST_ALT_USED_IDS}
+    for _pid, _v in (global_exposure or {}).items():
+        if _v >= 1:
+            pool6_exposure[_pid] = 99
+    for _pid in pair_pool_used_ids:
+        pool6_exposure[_pid] = 99
     pool6_blocked:set[int]=set()
     # REBALANCED (2026-07-25, pass 2): same slot-level backtest as the 4-man
     # pools above -- core ran 10.4% in both 6-Man A and B (consistent
@@ -10038,7 +10080,10 @@ def build_pair_sections(rows: List[HitterRecord]) -> Tuple[str, Dict[str, Any]]:
         reason = f"{name} build" + (" · includes same-game stacking" if same_game else "") + f" · {len(selected)}/{size} players filled"
         return {
             "name": name, "size": size, "pool_score": pool_score,
-            "risk": _s2_risk(pool_score), "tags": pool_tags[:9], "reason": reason,
+            # pool_score is an alignment AVERAGE (~50–75), not a pair score —
+            # rescale into pair units before labeling (audit B12: pools all
+            # printed "High" while pairs all printed "Lower")
+            "risk": _s2_risk((pool_score - 45.0) / 2.5), "tags": pool_tags[:9], "reason": reason,
             "players": [_s2_player_dict(r) for r in selected],
         }
 
@@ -11623,6 +11668,12 @@ Use ALT LOOKS as quality variance, not primary plays.
                 "recommended_pairs": pair_sections_json.get("recommended_pairs", []),
                 "pools_4man": pair_sections_json.get("pools_4man", []),
                 "pools_6man": pair_sections_json.get("pools_6man", []),
+                # MINI-BOT AUDIT (2026-08-08, B2): available_pool is the
+                # frontend's PRIMARY source for Build-a-Pair — it was built
+                # every night and then dropped right here, which is why the
+                # site's builder was silently running on fallback data.
+                "available_pool": pair_sections_json.get("available_pool", []),
+                "recommended_3mans": pair_sections_json.get("recommended_3mans", []),
             }
             pair_dated_path = OUT_DIR / f"mlb_pair_builder_{slate_date.isoformat()}.json"
             pair_latest_path = OUT_DIR / "pair_builder_latest.json"

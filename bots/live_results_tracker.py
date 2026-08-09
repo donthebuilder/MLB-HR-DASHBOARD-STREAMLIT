@@ -1364,31 +1364,43 @@ def build_tracking_slots(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     for _, hitters in by_game.items():
         used = set()
 
-        top_pick = pick_top(hitters, "overall_score", 1, used)[0]
+        # MINI-BOT AUDIT FIX (2026-08-08, B9): this loop used to RE-DERIVE
+        # the picks (overall_score for TOP, hr_score for HR) — which, after
+        # the dashboard's selection changed, meant the tracker was grading a
+        # DIFFERENT player than the site published. The published sheet rows
+        # carry game_pick_role; the designation on the sheet IS the pick.
+        # Re-derivation survives only as the fallback for archive rows that
+        # predate the field.
+        def _designated(role: str):
+            for h in hitters:
+                if int(h.get("player_id") or 0) in used:
+                    continue
+                roles = str(h.get("game_pick_role") or "").upper().split("/")
+                if role in [r.strip() for r in roles]:
+                    return h
+            return None
+
+        top_pick = _designated("TOP") or pick_top(hitters, "overall_score", 1, used)[0]
         used.add(int(top_pick["player_id"]))
         tracking.append({**trim_row(top_pick), "pick_type": "TOP"})
 
-        hr_pick = pick_top(hitters, "hr_score", 1, used)[0] if len(hitters) > 1 else top_pick
+        hr_pick = _designated("HR") or (pick_top(hitters, "hr_score", 1, used)[0] if len(hitters) > 1 else top_pick)
         used.add(int(hr_pick["player_id"]))
         tracking.append({**trim_row(hr_pick), "pick_type": "HR"})
 
         # One per game, matching the game sheet. This was 2, which is why the
         # results board showed 30 HIT and 30 HRR picks against 15 of everything
         # else -- and why the tiers weren't comparable to each other.
-        hit_picks = pick_top(hitters, "hit_score", 1, used)
-        used.update(int(h["player_id"]) for h in hit_picks)
-        for hp in hit_picks:
-            tracking.append({**trim_row(hp), "pick_type": "HIT"})
+        hit_pick = _designated("HIT") or pick_top(hitters, "hit_score", 1, used)[0]
+        used.add(int(hit_pick["player_id"]))
+        tracking.append({**trim_row(hit_pick), "pick_type": "HIT"})
 
-        hrr_picks = pick_top(hitters, "hrr_score", 1, used)
-        used.update(int(h["player_id"]) for h in hrr_picks)
-        for hp in hrr_picks:
-            tracking.append({**trim_row(hp), "pick_type": "HRR"})
+        hrr_pick = _designated("HRR") or pick_top(hitters, "hrr_score", 1, used)[0]
+        used.add(int(hrr_pick["player_id"]))
+        tracking.append({**trim_row(hrr_pick), "pick_type": "HRR"})
 
-        contact_pick = pick_top(hitters, "contact_score", 1, used)
-        if not contact_pick:
-            contact_pick = pick_top(hitters, "contact_score", 1)
-        tracking.append({**trim_row(contact_pick[0]), "pick_type": "CONTACT"})
+        contact_pick = _designated("CONTACT") or (pick_top(hitters, "contact_score", 1, used) or pick_top(hitters, "contact_score", 1))[0]
+        tracking.append({**trim_row(contact_pick), "pick_type": "CONTACT"})
 
     return tracking
 
@@ -1522,7 +1534,9 @@ def load_pair_builder_sections(date_str: str):
         ps = rp.get("players") or []
         if len(ps) != 2 or not ps[0].get("player_id") or not ps[1].get("player_id"):
             continue
-        lane = str(rp.get("type") or rp.get("lane_key") or "Pairs")
+        # lane_key first (audit B15): 'type' is derived from an emoji display
+        # title — renaming a lane would fork its graded history.
+        lane = str(rp.get("lane_key") or rp.get("type") or "Pairs")
         by_lane.setdefault(lane, []).append(
             (ps[0], ps[1], safe_float(rp.get("pair_score")), lane)
         )
@@ -1582,9 +1596,22 @@ def grade_pairs_pools(sections: Dict[str, Any], actual_by_pid: Dict[int, Dict[st
     pool6 = []
     for pool in sections["pools"]:
         players = pool["players"]
-        homer_names = [p["name"] for p in players if safe_int(actual_by_pid.get(int(p["player_id"]), {}).get("hr"), 0) >= 1]
+        # MINI-BOT AUDIT (2026-08-08, B5+B6): a leg whose player never got an
+        # AB is VOIDED (ticket shrinks), matching bar_cleared's rule — a bet
+        # that never existed isn't a miss. And all-or-nothing "cleared" fired
+        # 0 times in 192 archived pools, so the ladder metrics (≥1, ≥2 HR)
+        # ride alongside it — those actually vary night to night.
+        void_names = []
+        active = []
+        for p in players:
+            line = actual_by_pid.get(int(p["player_id"])) or {}
+            if safe_int(line.get("ab"), 0) == 0 and safe_int(line.get("hr"), 0) == 0 and line:
+                void_names.append(p["name"])
+            else:
+                active.append(p)
+        homer_names = [p["name"] for p in active if safe_int(actual_by_pid.get(int(p["player_id"]), {}).get("hr"), 0) >= 1]
         hr_count = len(homer_names)
-        total_count = len(players)
+        total_count = len(active)
         cleared = 1 if total_count > 0 and hr_count == total_count else 0
         entry = {
             "label": pool["label"],
@@ -1593,6 +1620,9 @@ def grade_pairs_pools(sections: Dict[str, Any], actual_by_pid: Dict[int, Dict[st
             "hr_count": hr_count,
             "total_count": total_count,
             "homer_names": homer_names,
+            "void_names": void_names,
+            "hit_any": 1 if hr_count >= 1 else 0,
+            "hit_2plus": 1 if hr_count >= 2 else 0,
         }
         graded_pools.append(entry)
         if pool["label"].startswith("4-MAN"):

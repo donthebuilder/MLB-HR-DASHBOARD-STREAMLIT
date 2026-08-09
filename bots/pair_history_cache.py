@@ -179,15 +179,10 @@ def build_pair_record(a: Dict[str, Any], b: Dict[str, Any], date_str: str) -> Di
 
 
 
-DEFAULT_MANUAL_PAIR_HITS = [
-    {
-        "date": "2026-06-10",
-        "note": "User-confirmed pair hit: Ian Happ + James Wood",
-        "tag": "Manual Hit",
-        "a": {"player_id": 664023, "name": "Ian Happ", "player_name": "Ian Happ", "team": "CHC", "game_pk": 824348, "hr": 1},
-        "b": {"player_id": 695578, "name": "James Wood", "player_name": "James Wood", "team": "WSH", "game_pk": 823215, "hr": 1},
-    }
-]
+# MINI-BOT AUDIT (2026-08-08, B11): the hard-coded Happ+Wood "manual hit"
+# is retired — a fabricated row the feed can't verify poisons every ranking
+# it touches. If a feed miss ever needs patching, do it in data, not code.
+DEFAULT_MANUAL_PAIR_HITS: list = []
 
 
 def add_manual_pair_hit(existing: Dict[str, Any], hit: Dict[str, Any]) -> None:
@@ -259,7 +254,9 @@ def pair_score(item: Dict[str, Any], today: dt.date) -> float:
     except Exception:
         days_since = 999
     recent = 12 if days_since <= 14 else 7 if days_since <= 30 else 3 if days_since <= 60 else 0
-    return season * 18 + total * 3 + same_game * 5 + recent
+    # audit B9: `total` was a copy of `season` (career=season upstream), so
+    # season*18 + total*3 double-counted one variable as season*21. One term.
+    return season * 18 + same_game * 5 + recent
 
 
 def apply_boosts(pairs: Dict[str, Dict[str, Any]], today: dt.date) -> List[Dict[str, Any]]:
