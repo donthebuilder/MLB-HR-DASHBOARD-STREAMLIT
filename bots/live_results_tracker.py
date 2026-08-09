@@ -1258,6 +1258,10 @@ SLOT_FIELDS = {
     "weak_spot_flag", "weak_spot_reason", "best_bet_type", "true_avoid_hr",
     "best_non_hr_category", "top_board_tags", "game_pick_role",
     "lineup_spot", "lineup_confirmed", "venue_name", "game_time",
+    # opp defense validation lane (2026-08-08): opponent rides along so the
+    # grade-time defense stamp can join, and the archive can answer whether
+    # leaky defenses actually lift HIT/TB picks before it touches a score
+    "opponent",
     # Docket #8-10 (2026-08-05): carried through so every score can be
     # backtested against the day it was generated for, instead of joined to
     # tonight's slate — exact for today, wrong for any archived day.
@@ -2089,6 +2093,35 @@ def main() -> int:
             game_status_by_pk[game_pk] = get_game_status(game_cache[game_pk])
         if pid not in actual_by_pid:
             actual_by_pid[pid] = get_player_batting_line(game_cache[game_pk], pid)
+
+    # 🧤 DEFENSE STAMP (2026-08-08): opp BABIP-against percentile onto every
+    # graded slot, so ~2 weeks from now the archive can answer "do picks vs
+    # leaky defenses out-hit picks vs elite gloves" with real counts. Same
+    # earn-your-weight pipeline k_rate went through before it entered the
+    # blend. Never blocks grading.
+    try:
+        yr = dt.date.today().year
+        dj = requests.get(f"https://statsapi.mlb.com/api/v1/teams/stats?season={yr}&group=pitching&stats=season&sportIds=1"
+                          "&fields=stats,splits,team,id,stat,hits,homeRuns,strikeOuts,baseOnBalls,battersFaced,hitByPitch",
+                          timeout=TIMEOUT).json()
+        tj = requests.get("https://statsapi.mlb.com/api/v1/teams?sportId=1&fields=teams,id,abbreviation", timeout=TIMEOUT).json()
+        _abbr = {t["id"]: t.get("abbreviation", "") for t in tj.get("teams", [])}
+        _rows = []
+        for sp in (dj.get("stats") or [{}])[0].get("splits", []):
+            s = sp.get("stat") or {}
+            bip = (s.get("battersFaced") or 0) - (s.get("strikeOuts") or 0) - (s.get("baseOnBalls") or 0) \
+                - (s.get("hitByPitch") or 0) - (s.get("homeRuns") or 0)
+            tid = (sp.get("team") or {}).get("id")
+            if tid and bip >= 200:
+                _rows.append((str(_abbr.get(tid, "")).upper(), ((s.get("hits") or 0) - (s.get("homeRuns") or 0)) / bip))
+        _rows.sort(key=lambda x: x[1])
+        _def_pct = {ab: round(100 * i / max(1, len(_rows) - 1)) for i, (ab, _) in enumerate(_rows) if ab}
+        for g in graded_slots:
+            ab = str(g.get("opponent") or "").upper()
+            if ab in _def_pct:
+                g["opp_def_pctile"] = _def_pct[ab]
+    except Exception as exc:
+        print(f"defense stamp skipped: {exc}")
 
     # 🚪 pen-door alerts moved to bots/pen_door_watch.py + pen-door.yml
     # (2026-08-08, same day they landed here): Donovan wanted the ping when
