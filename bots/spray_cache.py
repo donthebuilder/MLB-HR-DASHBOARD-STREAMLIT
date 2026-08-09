@@ -547,6 +547,13 @@ def build_fence_board(payload: dict[str, Any]) -> list[dict[str, Any]]:
         deep_pull = [h for h in window if h.get("is_pull_air") and dist(h) >= 350]
         hrs = [h for h in window if h.get("is_hr")]
         pull_air_ct = sum(1 for h in window if h.get("is_pull_air"))
+        # stack-ons (2026-08-08): ROBBED = fence-zone pulled balls that were
+        # recorded as OUTS — the track catches a short porch turns into
+        # souvenirs. OPPO OVER = 375+ the OTHER way — all-fields power, the
+        # kind no wall direction can hide from.
+        robbed = [h for h in fence
+                  if not h.get("is_hr") and "out" in str(h.get("event") or h.get("result") or "").lower()]
+        oppo_over = [h for h in over if not h.get("is_pull_air")]
         if not (over or fence or deep_pull):
             continue
         rows.append({
@@ -557,6 +564,7 @@ def build_fence_board(payload: dict[str, Any]) -> list[dict[str, Any]]:
             "over_ct": len(over), "fence_ct": len(fence),
             "deep_pull_ct": len(deep_pull), "hr_ct": len(hrs),
             "pull_air_ct": pull_air_ct,
+            "robbed_ct": len(robbed), "oppo_over_ct": len(oppo_over),
             "longest": max((dist(h) for h in window), default=0),
         })
     rows.sort(key=lambda r: (r["deep_pull_ct"] * 3 + r["fence_ct"] * 1.5 + r["over_ct"]), reverse=True)
