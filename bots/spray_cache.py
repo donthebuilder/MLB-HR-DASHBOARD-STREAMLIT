@@ -515,8 +515,65 @@ def write_zone_files(players_out: dict[str, dict[str, Any]]) -> int:
         written += 1
     return written
 
+def build_fence_board(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    """🧱🚀 FENCE BOARD (2026-08-08, Donovan: "people who pull in the
+    direction and have hit it out or on the fence line in the last 5–15
+    games"). Pure Statcast landing data — measured distances and Savant's
+    own pull-air flag, no invented numbers. Per slate hitter, over his last
+    15 GAME DATES of tracked batted balls:
+      over_ct       375+ ft — over the fence comfortably, any direction
+      fence_ct      pull-air 320–374 ft — the wall-scraper zone, where a
+                    short pull porch turns outs into homers
+      deep_pull_ct  pull-air 350+ — the sharpest single shape for HR
+      hr_ct         actual homers in the window
+    The site joins this with the league's real wall dimensions (fieldInfo)
+    to say: his fence-line balls vs TONIGHT's pull wall."""
+    rows = []
+    for pid, player in (payload.get("players") or {}).items():
+        bbe = player.get("bbe") or []
+        if not bbe:
+            continue
+        dates = sorted({str(h.get("date") or "")[:10] for h in bbe if h.get("date")}, reverse=True)[:15]
+        if not dates:
+            continue
+        window = [h for h in bbe if str(h.get("date") or "")[:10] in set(dates)]
+        def dist(h):
+            try:
+                return float(h.get("distance") or h.get("hit_distance_sc") or 0)
+            except (TypeError, ValueError):
+                return 0.0
+        over = [h for h in window if dist(h) >= 375]
+        fence = [h for h in window if h.get("is_pull_air") and 320 <= dist(h) < 375]
+        deep_pull = [h for h in window if h.get("is_pull_air") and dist(h) >= 350]
+        hrs = [h for h in window if h.get("is_hr")]
+        pull_air_ct = sum(1 for h in window if h.get("is_pull_air"))
+        if not (over or fence or deep_pull):
+            continue
+        rows.append({
+            "player_id": pid, "name": player.get("name", ""),
+            "team": player.get("team", ""), "venue": player.get("venue", ""),
+            "bats": player.get("bats", "?"),
+            "games": len(dates), "bbe": len(window),
+            "over_ct": len(over), "fence_ct": len(fence),
+            "deep_pull_ct": len(deep_pull), "hr_ct": len(hrs),
+            "pull_air_ct": pull_air_ct,
+            "longest": max((dist(h) for h in window), default=0),
+        })
+    rows.sort(key=lambda r: (r["deep_pull_ct"] * 3 + r["fence_ct"] * 1.5 + r["over_ct"]), reverse=True)
+    return rows
+
+
 def write_outputs(payload: dict[str, Any]) -> None:
     date_str = payload["slate_date"]
+
+    # fence board — compact, one file for the whole slate
+    fence = {"slate_date": date_str,
+             "generated": dt.datetime.now(dt.UTC).isoformat(timespec="seconds"),
+             "rows": build_fence_board(payload)}
+    for base in (OUTPUTS_DIR, PUBLIC_DATA_DIR / "current"):
+        base.mkdir(parents=True, exist_ok=True)
+        write_json(base / "fence_board.json", fence)
+    print(f"Written: fence_board.json ({len(fence['rows'])} hitters with fence-line contact)", file=sys.stderr)
 
     # Existing combined cache files
     for base in (OUTPUTS_DIR, PUBLIC_DATA_DIR):

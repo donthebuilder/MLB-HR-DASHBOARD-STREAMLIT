@@ -47,6 +47,8 @@ PUBLISH_FILES=(
   backtest_summary.json
   # the bot's own copy of the site's context lane (2026-08-08)
   context_pack_latest.json
+  # fence-line contact board from spray_cache (2026-08-08)
+  fence_board.json
 )
 
 # Nightly graded files, kept so the backtest has more than one day to look at.
