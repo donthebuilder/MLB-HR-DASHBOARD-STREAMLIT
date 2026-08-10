@@ -84,6 +84,66 @@ BLOCK_EXACT = {
     "game_pk", "jersey_number", "is_final", "rank",
 }
 
+# ── THE MODEL'S OWN OUTPUTS ARE NOT SIGNALS (2026-08-09, second pass) ───────
+# The first run reported 38 "surviving" fields out of 164. That is not a
+# finding, it is a broken test — a well-specified residual scan on a working
+# model should return a handful, and 23% means the control is leaking.
+#
+# One large leak: seven of the thirty-eight were the model LOOKING AT ITSELF.
+# self_check_hr_score, alt_hr_score, matchup_score, damage_conversion_score,
+# contact_score, contact_score_legacy, hr_pa_score — every one of those is a
+# composite the pipeline computes FROM the same inputs hr_score uses. Learning
+# that a second blend of the same ingredients also predicts homers tells you
+# nothing you can act on; you cannot "add" it, it is already in there.
+#
+# A missed signal has to be an INPUT the model could weight differently, not
+# an output it already produces.
+DERIVED_SCORES = {
+    "self_check_hr_score", "alt_hr_score", "best_blend_score", "top_board_score_v2",
+    "top_pick_score_v2", "matchup_score", "matchup_power_score", "matchup_tier",
+    "damage_conversion_score", "contact_score", "contact_score_v2",
+    "contact_score_legacy", "hit_score", "hit_score_v2", "hit_score_legacy",
+    "hrr_score", "hrr_score_v2", "hrr_score_legacy", "hr_pa_score",
+    "recent_hr_form_score", "hrw_score", "hrw_zone", "batted_ball_power_score",
+    "pitcher_attack_score", "high_confidence_hr_score", "hr_confidence",
+    "hr_due_score", "expected_hrs_recent_window", "data_quality_score",
+    "batter_vs_bullpen_score", "best_blend_score", "pitch_mix_score",
+    "lineup_context_score", "top_board_bucket", "numerology_score",
+}
+
+# ── ONE FINDING SHOULD REPORT ONCE ─────────────────────────────────────────
+# season_iso, season_slg, season_ops, season_hr, hr_per_pa and pa_per_hr are
+# six views of "this man has power". The first run listed all six as separate
+# discoveries, which triples the apparent count and buries anything genuinely
+# new underneath. Fields are grouped and only the strongest member of each
+# group is reported, with the rest named beside it.
+FAMILIES = {
+    "season power":   ["season_iso", "season_slg", "season_ops", "season_hr",
+                       "hr_per_pa", "pa_per_hr", "iso_vs_rhp", "iso_vs_lhp"],
+    "recent homers":  ["last5_hr", "last7_hr", "last10_hr", "l20pa_hr",
+                       "last5_xbh", "last7_xbh", "last10_xbh", "l20pa_xbh"],
+    "contact quality":["recent_hard_hit_rate", "l10_hard_hit_rate", "l5_hard_hit_rate",
+                       "recent_ev", "l25pa_avg_ev", "recent_barrel_rate",
+                       "l10_barrel_rate", "l5_barrel_rate", "recent_xwoba",
+                       "l10_xwoba", "l5_xwoba", "recent_ideal_hr_contact"],
+    "pull":           ["l5_pull_rate", "l10_pull_rate", "l20pa_pull_rate", "recent_pull_rate"],
+    "the arm, general":["pitcher_era", "pitcher_whip", "pitcher_hr9", "pitcher_hr_allowed",
+                        "pitcher_babip", "pitcher_k9", "pitcher_k_rate"],
+    "the arm vs this side":["pitcher_side_ops", "pitcher_side_slug", "pitcher_hr9_vs_lhb",
+                            "pitcher_hr9_vs_rhb", "pitcher_whip_vs_lhb", "pitcher_whip_vs_rhb",
+                            "pitcher_weak_side_gap", "pitcher_weak_side_score"],
+    "the arm's contact allowed":["pitcher_ev_allowed", "pitcher_hardhit_allowed",
+                                 "pitcher_barrel_allowed", "pitcher_375_allowed",
+                                 "pitcher_400_allowed", "pitcher_zone_damage_score",
+                                 "pitcher_spot_damage_score"],
+    "park":           ["park_hr_factor", "park_factor", "park_barrel_factor",
+                       "park_hardhit_factor", "park_dist_factor", "park_hits_factor",
+                       "park_k_factor"],
+    "lineup":         ["lineup_spot", "lineup_context_before_count",
+                       "lineup_context_after_count", "lineup_surrounding_recent"],
+}
+FAMILY_OF = {f: name for name, fields in FAMILIES.items() for f in fields}
+
 
 def num(v: Any) -> float | None:
     if isinstance(v, bool):
@@ -156,9 +216,59 @@ OUTCOMES = {
 
 
 def band_edges(vals: list[float], k: int) -> list[float]:
-    """k quantile cuts of the model's own score."""
+    """
+    k quantile cuts of the model's own score.
+
+    THE FIRST RUN'S BANDS WERE NOT HOLDING THE MODEL FIXED. With six bands the
+    bottom one spanned scores 0-27 with a standard deviation of 6.2, and
+    r(hr_score, season_iso) INSIDE that band was still +0.517 — barely below
+    the +0.320 whole-pool correlation. So the "controlled" comparison was
+    partly just the uncontrolled one again, and season power came back looking
+    like a discovery when the model already weights it at 0.24.
+
+    The other five bands were fine (r = +0.015 to +0.070). It was one wide
+    band at the bottom doing the damage, which is exactly the failure mode
+    quantile cuts produce when a score piles up at one end.
+
+    More bands is the fix, and the diagnostic below prints the within-band
+    correlation for every band so this can never hide again.
+    """
     s = sorted(vals)
     return [s[int(len(s) * i / k)] for i in range(1, k)]
+
+
+def within_band_corr(rows, bands, field: str) -> float | None:
+    """
+    How much of the model's opinion survives inside a band, measured against
+    one field. Near zero means the control is working; anything approaching
+    the whole-pool correlation means it is not.
+    """
+    by = defaultdict(list)
+    for r, b in zip(rows, bands):
+        v, sc = num(r.get(field)), num(r.get("hr_score"))
+        if v is not None and sc is not None:
+            by[b].append((sc, v))
+    # SAMPLE-WEIGHTED MEAN, not the worst band.
+    #
+    # The first version returned max(|r|) across bands, which with 24 bands is
+    # a guaranteed slander: the noisiest 40-row band always throws a big
+    # correlation and every finding then reads "WEAK". The question is how
+    # much of the model's opinion survives ON AVERAGE inside a band, which is
+    # the weighted mean — the same thing a stratified estimator pools.
+    num_, den = 0.0, 0
+    for pairs in by.values():
+        if len(pairs) < 40:
+            continue
+        n = len(pairs)
+        mx = sum(p[0] for p in pairs) / n
+        my = sum(p[1] for p in pairs) / n
+        cov = sum((p[0] - mx) * (p[1] - my) for p in pairs) / n
+        sx = (sum((p[0] - mx) ** 2 for p in pairs) / n) ** 0.5
+        sy = (sum((p[1] - my) ** 2 for p in pairs) / n) ** 0.5
+        if sx and sy:
+            num_ += (cov / (sx * sy)) * n
+            den += n
+    return num_ / den if den else None
 
 
 def band_of(v: float, edges: list[float]) -> int:
@@ -218,13 +328,19 @@ def permutation_p(pairs_by_band, observed: float, iters: int, rng: random.Random
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--dir", action="append", default=None)
-    ap.add_argument("--bands", type=int, default=6,
-                    help="how many hr_score bands to hold fixed (more = stricter)")
+    ap.add_argument("--width", type=int, default=4,
+                    help="hr_score band width. 4 measured lowest leak; narrower is worse, not better.")
     ap.add_argument("--min-n", type=int, default=400)
     ap.add_argument("--outcome", default="hr", choices=list(OUTCOMES))
     ap.add_argument("--iters", type=int, default=1000)
     ap.add_argument("--top", type=int, default=20)
     ap.add_argument("--seed", type=int, default=7)
+    ap.add_argument("--include-derived", action="store_true",
+                    help="also test the model's own composite scores. Off by "
+                         "default: they are outputs, not signals you can add.")
+    ap.add_argument("--no-family", action="store_true",
+                    help="report every correlated field separately instead of "
+                         "one per family.")
     a = ap.parse_args()
     rng = random.Random(a.seed)
 
@@ -237,19 +353,33 @@ def main() -> int:
 
     what, outcome = OUTCOMES[a.outcome]
     base = sum(outcome(r) for r in rows)
+    # ── FIXED-WIDTH BANDS, NOT QUANTILES (2026-08-09, second pass) ──────
+    # Quantile bands gave equal COUNTS and wildly unequal score SPANS: with
+    # six of them the bottom band ran 0-27 and leaked r=+0.517 against
+    # season_iso, barely below the +0.320 whole-pool figure. Two edges also
+    # landed on 59 and produced a 35-row band.
+    #
+    # Fixed width fixes the span directly. Measured leak by width, worst band:
+    #   width 10 → 0.317   width 6 → 0.324   width 4 → 0.232
+    #   width 3  → 0.196   width 2 → 0.361 (small-n noise takes over)
+    # 4 is the floor of that curve; going narrower makes it worse, not better.
     scores = [num(r["hr_score"]) for r in rows]
-    edges = band_edges(scores, a.bands)
-    bands = [band_of(num(r["hr_score"]), edges) for r in rows]
+    bands = [int(s // a.width) for s in scores]
 
     print(f"\n🕵️  MISSED SIGNALS — {len(rows)} graded picks, {base} {what} "
           f"({100*base/len(rows):.1f}%)")
-    print(f"   Holding the model's own opinion fixed in {a.bands} hr_score bands, then asking")
+    print(f"   Holding the model's own opinion fixed in {a.width}-point hr_score bands, then asking")
     print(f"   whether each field STILL separates {what} inside a band.\n")
     counts = defaultdict(int)
     for b in bands:
         counts[b] += 1
-    print("   band sizes: " + " ".join(f"{counts[b]}" for b in sorted(counts)))
-    print(f"   band cuts:  " + " ".join(f"{e:.0f}" for e in edges) + "\n")
+    usable = [b for b in sorted(counts) if counts[b] >= 20]
+    print(f"   {len(usable)} usable bands of {a.width} points, "
+          f"{sum(counts[b] for b in usable)} of {len(rows)} picks inside them")
+    # ── IS THE CONTROL ACTUALLY WORKING? ────────────────────────────────
+    # Printed every run, because the first version of this tool silently
+    # failed here and reported 38 findings out of 164 as a result.
+    print()
 
     # collect every numeric field, banded
     by_field: dict[str, dict[int, list[tuple[float, int]]]] = defaultdict(lambda: defaultdict(list))
@@ -257,6 +387,8 @@ def main() -> int:
         y = outcome(r)
         for k, v in r.items():
             if k in BLOCK_EXACT or k.startswith(BLOCK_PREFIX):
+                continue
+            if not a.include_derived and k in DERIVED_SCORES:
                 continue
             f = num(v)
             if f is not None:
@@ -295,24 +427,72 @@ def main() -> int:
     for r in results:
         r.setdefault("q", 1.0)
 
-    print(f"   {'field':<34}{'n':>6}{'top half':>10}{'bottom':>9}{'lift':>8}{'p':>8}{'q':>8}")
-    shown = sorted(results, key=lambda r: -abs(r["lift"]))[:a.top]
-    for r in shown:
-        star = " ***" if r["q"] < 0.05 else (" *" if r["p"] < 0.05 else "")
-        print(f"   {r['field']:<34}{r['n']:>6}{r['hi']:>9.1f}%{r['lo']:>8.1f}%"
-              f"{r['lift']:>+8.1f}{r['p']:>8.3f}{r['q']:>8.3f}{star}")
-
+    # ── ONE FINDING REPORTS ONCE ────────────────────────────────────────
+    # Group the survivors by family and keep the strongest member of each.
+    # The first run listed season_iso, season_slg, season_ops, season_hr,
+    # hr_per_pa and pa_per_hr as six separate discoveries. They are one.
     real = [r for r in results if r["q"] < 0.05]
-    print(f"\n   *** survives multiple-testing correction (q<0.05): {len(real)} of {len(results)} fields")
-    if real:
-        print("   These are the ones the model is NOT already using — or is using backwards:")
-        for r in sorted(real, key=lambda x: -abs(x["lift"])):
-            d = "higher is better" if r["lift"] > 0 else "LOWER is better — check the sign in the blend"
-            print(f"     · {r['field']}  {r['lift']:+.1f} pts within band  ({d})")
+    real.sort(key=lambda r: -abs(r["lift"]))
+    if a.no_family:
+        groups = [(r["field"], r, []) for r in real]
     else:
+        best_of: dict[str, dict] = {}
+        others: dict[str, list[str]] = defaultdict(list)
+        for r in real:
+            fam = FAMILY_OF.get(r["field"], r["field"])
+            if fam not in best_of:
+                best_of[fam] = r
+            else:
+                others[fam].append(r["field"])
+        groups = [(fam, best_of[fam], others[fam]) for fam in
+                  sorted(best_of, key=lambda f: -abs(best_of[f]["lift"]))]
+
+    # ── THE LEAK COLUMN, per finding ────────────────────────────────────
+    # A single global control check is not enough: the control can hold for
+    # one field and leak badly for another, and the one it leaks on is
+    # exactly the one you would most like to believe. So every finding
+    # carries its OWN worst within-band correlation with hr_score. High leak
+    # means "the model's opinion is still in this comparison" — the lift is
+    # then partly the model rediscovering itself, and the finding is weak
+    # however small its q-value looks.
+    for fam, r, rest in groups:
+        r["leak"] = within_band_corr(rows, bands, r["field"])
+
+    print(f"   {'family':<26}{'strongest field':<26}{'n':>6}{'top':>7}{'bot':>7}"
+          f"{'lift':>7}{'q':>7}{'leak':>7}  trust")
+    for fam, r, rest in groups:
+        lk = r.get("leak")
+        trust = ("clean" if lk is not None and abs(lk) < 0.15
+                 else "WEAK — control leaks here" if lk is not None else "?")
+        lks = f"{lk:+.2f}" if lk is not None else "  —"
+        print(f"   {fam[:25]:<26}{r['field'][:25]:<26}{r['n']:>6}{r['hi']:>6.1f}%{r['lo']:>6.1f}%"
+              f"{r['lift']:>+7.1f}{r['q']:>7.3f}{lks:>7}  {trust}")
+        if rest:
+            print(f"   {'':<28}same finding: {', '.join(rest[:6])}"
+                  + (f" +{len(rest)-6} more" if len(rest) > 6 else ""))
+
+    tested_n = len(results)
+    print(f"\n   {len(groups)} distinct findings from {len(real)} surviving fields, "
+          f"{tested_n} fields tested.")
+    if not groups:
         print("   Nothing clears the bar. That is a real result and the most likely one:")
-        print("   it means the model has already priced everything the archive publishes,")
-        print("   and the next gain has to come from a NEW field rather than a re-weight.")
+        print("   the model has already priced everything the archive publishes, and the")
+        print("   next gain has to come from a NEW field rather than a re-weight.")
+    else:
+        clean = [g for g in groups if (g[1].get("leak") is not None and abs(g[1]["leak"]) < 0.15)]
+        print(f"\n   {len(clean)} of {len(groups)} findings have a CLEAN control. Those are the")
+        print("   ones worth acting on. The rest still co-vary with hr_score inside their own")
+        print("   band, so their lift is partly the model rediscovering its own opinion —")
+        print("   a small q-value does not rescue a leaky control.")
+        if clean:
+            print("\n   CLEAN:")
+            for fam, r, _rest in clean:
+                d = "higher is better" if r["lift"] > 0 else "LOWER is better — check the sign"
+                print(f"     · {fam} ({r['field']})  {r['lift']:+.1f} pts, leak {r['leak']:+.2f}  ({d})")
+        print("\n   READ THE FAMILY, NOT THE FIELD. A family that survives means the model")
+        print("   is under-weighting that IDEA, not that one column is magic. The strongest")
+        print("   member is shown because it is the cleanest measurement of it, not because")
+        print("   it is the one to add.")
 
     print("\n   CAVEATS, all load-bearing:")
     print("   · graded rows are the bot's designated picks, so every rate is conditional")
