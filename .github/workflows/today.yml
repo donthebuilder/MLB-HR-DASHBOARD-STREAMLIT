@@ -72,6 +72,26 @@ jobs:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         run: python bots/mlb_dashboard.py --today
 
+      # 📌 THE LOCK (2026-08-09). Runs BEFORE make_slim so the correction
+      # happens once, at the source, and every downstream file inherits it.
+      #
+      # build_game_pick_role_map() recomputes every designation from scratch on
+      # all thirteen daily runs, and it ranks on inputs that move during the
+      # day (last5_hr updates as early games finish, lineups go from projected
+      # to real). So a pick made at 11am could silently belong to someone else
+      # by 4pm — reported by Donovan as "two people who were on the bot that
+      # went, then later it says the bot didn't have them at all."
+      #
+      # This freezes each game's designations at ITS first pitch and rewrites
+      # the sheet to match. Pre-game re-picks stay legal and are logged; a
+      # change after first pitch is refused and announced. The receipts card
+      # has claimed "locked at first pitch, never edited" for weeks — this is
+      # the step that makes that sentence true.
+      - name: Lock designations at first pitch
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        run: python bots/pick_lock.py --apply
+
       # Shrinks the 76 MB slate JSON to ~3 MB for the Streamlit app by
       # dropping the per-player raw logs the dashboard never reads. Only the
       # slim file is published; the full one stays on the runner.
