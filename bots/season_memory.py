@@ -79,8 +79,11 @@ def num(v: Any, d: float = 0.0) -> float:
         return d
 
 
-def rows_of(payload: dict) -> list[dict]:
-    return payload.get("graded_slots") or payload.get("results") or []
+# One shape assumption used to live in each of these three scripts, and all
+# three were wrong the same way: the archive also contains bare top-level lists
+# (every graded night from 2026-04-16 to 2026-05-18) and a payload.get() on a
+# list raises AttributeError. Shared in bots/archive.py now.
+from archive import rows_of  # noqa: E402
 
 
 def dedupe(rows: list[dict]) -> dict[int, dict]:
@@ -131,21 +134,17 @@ def cleared(role: str, r: dict) -> bool | None:
 
 
 def load_archive(days: int | None) -> list[tuple[str, dict]]:
-    files: list[tuple[str, Path]] = []
-    for p in PUBLIC_CURRENT.glob("graded_results_*.json"):
-        m = DATE_RE.search(p.name)
-        if m:
-            files.append((m.group(1), p))
-    files.sort()
-    if days:
-        files = files[-days:]
-    out = []
-    for date, p in files:
-        try:
-            out.append((date, json.loads(p.read_text())))
-        except Exception as e:                       # a corrupt night is skipped,
-            print(f"  ! skipped {p.name}: {e}")      # never fatal
-    return out
+    # 2026-08-09: was globbing PUBLIC_CURRENT and nothing else, which on a
+    # laptop is an empty folder — the graded files live on the data branch —
+    # and on CI holds only the last few published runs. bots/archive.py knows
+    # every place a graded night can be, including Donovan's results folder.
+    # See the note at the top of that module for why this was a class of bug
+    # rather than one bug.
+    from archive import describe, load_local
+    found, notes = load_local(REPO_ROOT)
+    print("  " + describe(found, notes))
+    out = sorted(found.items())
+    return out[-days:] if days else out
 
 
 def build(days: int | None = None) -> dict:

@@ -79,8 +79,11 @@ def num(v: Any) -> float | None:
         return None
 
 
-def rows_of(p: dict) -> list[dict]:
-    return p.get("graded_slots") or p.get("results") or []
+# One shape assumption used to live in each of these three scripts, and all
+# three were wrong the same way: the archive also contains bare top-level lists
+# (every graded night from 2026-04-16 to 2026-05-18) and a payload.get() on a
+# list raises AttributeError. Shared in bots/archive.py now.
+from archive import rows_of  # noqa: E402
 
 
 def role_of(r: dict) -> str:
@@ -104,19 +107,15 @@ def cleared(role: str, r: dict) -> bool | None:
 
 
 def load(days: int) -> tuple[list[tuple[str, list[dict]]], list[str]]:
-    files = []
-    for p in PUBLIC_CURRENT.glob("graded_results_*.json"):
-        m = DATE_RE.search(p.name)
-        if m:
-            files.append((m.group(1), p))
-    files.sort()
-    files = files[-days:]
+    # See bots/archive.py. The autopsy picks the worst misses out of a window,
+    # so a loader that could only see a handful of nights was choosing "the
+    # three worst" from whatever was lying around.
+    from archive import describe, load_local
+    _found, _notes = load_local(REPO_ROOT)
+    print("  " + describe(_found, _notes))
+    files = sorted(_found.items())[-days:]
     out, dates = [], []
-    for date, p in files:
-        try:
-            payload = json.loads(p.read_text())
-        except Exception:
-            continue
+    for date, payload in files:
         # one row per player per night
         seen, rows = set(), []
         for r in rows_of(payload):

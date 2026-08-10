@@ -137,25 +137,25 @@ FLAGS = [
 ]
 
 
-def rows_of(payload: dict) -> list[dict]:
-    return payload.get("graded_slots") or payload.get("results") or []
+# One shape assumption used to live in each of these three scripts, and all
+# three were wrong the same way: the archive also contains bare top-level lists
+# (every graded night from 2026-04-16 to 2026-05-18) and a payload.get() on a
+# list raises AttributeError. Shared in bots/archive.py now.
+from archive import rows_of  # noqa: E402
 
 
 def load_rows(days: int | None) -> tuple[list[dict], list[str]]:
-    files = []
-    for p in PUBLIC_CURRENT.glob("graded_results_*.json"):
-        m = DATE_RE.search(p.name)
-        if m:
-            files.append((m.group(1), p))
-    files.sort()
+    # See bots/archive.py — this used to read PUBLIC_CURRENT only, so the
+    # weekly verdict on which context stats earn their weight was being made
+    # from whatever handful of nights happened to be in the checkout.
+    from archive import describe, load_local
+    _found, _notes = load_local(REPO_ROOT)
+    print("  " + describe(_found, _notes))
+    files = sorted(_found.items())
     if days:
         files = files[-days:]
     rows, dates = [], []
-    for date, p in files:
-        try:
-            payload = json.loads(p.read_text())
-        except Exception:
-            continue
+    for date, payload in files:
         dates.append(date)
         # ONE ROW PER PLAYER PER DAY. Without this a hitter designated in two
         # categories is counted twice and every rate is quietly weighted
