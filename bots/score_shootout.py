@@ -63,6 +63,8 @@ import json
 import math
 import random
 import re
+import ssl
+import urllib.error
 import urllib.request
 from pathlib import Path
 from typing import Any
@@ -114,6 +116,39 @@ RAW = ("https://raw.githubusercontent.com/donthebuilder/"
        "MLB-HR-DASHBOARD-STREAMLIT/data/public/data/current")
 
 
+def _open(url: str):
+    """
+    One fetch, with the two things that break urllib on a stock Mac handled.
+
+    1. NO CERTIFICATES. Python from python.org ships without the system trust
+       store wired up, so every https call raises CERTIFICATE_VERIFY_FAILED
+       until someone runs "Install Certificates.command". That is not a thing
+       to make a person go and do to answer one question about their own data,
+       so a verification failure retries unverified — and SAYS so, because
+       silently dropping TLS verification is not something to do quietly. The
+       payload is public read-only JSON from a public repo.
+    2. NO USER-AGENT. Some endpoints reject urllib's default outright.
+    """
+    req = urllib.request.Request(url, headers={"User-Agent": "moonshot-shootout/1.0"})
+    try:
+        return urllib.request.urlopen(req, timeout=25)
+    except urllib.error.URLError as e:
+        if isinstance(getattr(e, "reason", None), ssl.SSLCertVerificationError):
+            global _WARNED_TLS
+            if not _WARNED_TLS:
+                print("  (this Python has no certificate store — retrying without TLS "
+                      "verification; the data is public read-only JSON)")
+                _WARNED_TLS = True
+            ctx = ssl.create_default_context()
+            ctx.check_hostname = False
+            ctx.verify_mode = ssl.CERT_NONE
+            return urllib.request.urlopen(req, timeout=25, context=ctx)
+        raise
+
+
+_WARNED_TLS = False
+
+
 def fetch_archive(days: int) -> list[tuple[str, dict]]:
     """
     Pull the graded nights straight from the data branch.
@@ -124,24 +159,39 @@ def fetch_archive(days: int) -> list[tuple[str, dict]]:
     branch and copy files around to answer one question, the tool fetches what
     it needs. Walks backwards from today; a missing date is a night that wasn't
     graded, not an error.
+
+    THE FIRST VERSION SWALLOWED EVERY EXCEPTION, which meant a TLS failure and
+    a night that simply wasn't played produced the identical message: "nothing
+    found on the data branch". That is the failure mode where the tool wastes
+    the user's time instead of its own — so the first real error is printed
+    verbatim now. A 404 stays quiet; anything else gets shown once.
     """
     out = []
     today = dt.date.today()
     misses = 0
-    for i in range(days * 2):                 # look back further than we need,
+    shown = False
+    for i in range(days * 3):                 # look back further than we need,
         if len(out) >= days:                  # since off-days leave gaps
             break
         d = (today - dt.timedelta(days=i)).isoformat()
         url = f"{RAW}/graded_results_{d}.json"
         try:
-            with urllib.request.urlopen(url, timeout=25) as r:
+            with _open(url) as r:
                 out.append((d, json.loads(r.read().decode())))
             print(f"  · {d}", flush=True)
-        except Exception:
+        except urllib.error.HTTPError as e:
+            if e.code != 404 and not shown:    # 404 = no game graded that day
+                print(f"  ! {d}: HTTP {e.code} {e.reason}")
+                shown = True
             misses += 1
-            if misses > 12 and not out:
-                print("  ! nothing found on the data branch — is it reachable?")
-                break
+        except Exception as e:
+            if not shown:
+                print(f"  ! {d}: {type(e).__name__}: {e}")
+                shown = True
+            misses += 1
+        if misses > 20 and not out:
+            print("  ! gave up — nothing readable on the data branch. The error above says why.")
+            break
     out.reverse()
     return out
 
