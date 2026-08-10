@@ -67,7 +67,7 @@ jobs:
       - name: Stage
         run: |
           mkdir -p bots
-          cp _src/bots/season_memory.py _src/bots/validate_context.py _src/bots/autopsy.py bots/
+          cp _src/bots/season_memory.py _src/bots/validate_context.py _src/bots/autopsy.py _src/bots/score_shootout.py bots/
           rm -rf _src
 
       - name: Season memory
@@ -90,6 +90,13 @@ jobs:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         run: python bots/validate_context.py
 
+      # Answers "which ordering actually put the homers on top" against the
+      # whole archive, so the raw-vs-adjusted question stays settled by data
+      # rather than by whoever last had an opinion about it.
+      - name: Score shootout
+        if: steps.weekly.outputs.go == 'yes'
+        run: python bots/score_shootout.py
+
       - name: Autopsy
         if: steps.weekly.outputs.go == 'yes'
         env:
@@ -98,7 +105,7 @@ jobs:
 
       - name: Publish
         run: |
-          rm -f bots/season_memory.py bots/validate_context.py bots/autopsy.py
+          rm -f bots/season_memory.py bots/validate_context.py bots/autopsy.py bots/score_shootout.py
           rmdir bots 2>/dev/null || true
           git config user.name  "moonshot-bot"
           git config user.email "bot@users.noreply.github.com"
