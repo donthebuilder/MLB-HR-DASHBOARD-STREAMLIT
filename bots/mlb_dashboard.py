@@ -147,16 +147,51 @@ MODEL_WEIGHTS: Dict[str, Dict[str, float]] = {
         # numbers measured DC as already well-calibrated at 0.13. Re-run
         # backtest_report.py after ~2 weeks and revert if HR_PICKS hit rate
         # drops -- git log has the old values.
-        "batted_shape": 0.09,
-        "pitch_fit": 0.11,
+        # SEASON_POWER 0.12 -> 0.24 (2026-08-09). Donovan chose to carry the
+        # ISO signal inside the model rather than adjust it on the site, and
+        # this is that change. The weight sweep over the graded archive:
+        #
+        #     weight   top-20 HR%   vs today (paired, 49 nights)
+        #     0.00        19.5%     7W-7L
+        #     0.12        19.7%     ← today
+        #     0.18        20.5%     10W-3L  p=0.092
+        #     0.24        21.1%     17W-7L  p=0.064   ← the knee
+        #     0.30        21.0%     19W-10L
+        #     0.50        21.0%     22W-18L
+        #     0.70        21.5%     23W-19L p=0.644
+        #     1.00        20.8%     19W-18L
+        #
+        # 0.24 is where the curve turns. Everything past it is flat and 1.00
+        # comes back down, so doubling the weight buys the whole gain and
+        # going further buys nothing while making the board more and more a
+        # season-long power ranking. p=0.064 is not 0.05, and the honest
+        # summary is "well-supported knee" rather than "proven".
+        #
+        # A CORRECTION WORTH KEEPING. On 2026-08-09 I reported this sweep as
+        # climbing monotonically to 0.70 "without a single reversal" and
+        # called that shape the finding. It was an artifact: season_power's
+        # reconstruction needed season_slg, 26 of 58 graded nights don't
+        # publish it, and the sweep was silently running on 32 nights while
+        # its header said 58. SLG = AVG + ISO by definition, so those nights
+        # are recoverable; with all 49 the monotone climb disappears and a
+        # clean knee at 0.24 appears instead. Same conclusion, better reason,
+        # and the earlier reasoning was wrong.
+        #
+        # Funded from the weights the 2026-07-25 recalibration already flagged
+        # as weakest-per-point: batted_shape (30th of 43 signals, +4.0pp)
+        # takes the largest cut, damage_conversion gives back most of its
+        # 7/26 judgement-call raise. Sums to exactly 1.00 — asserted in test.
+        "batted_shape": 0.05,
+        "pitch_fit": 0.09,
         # 0.15 → 0.10 (audit 2026-08-08): funds the aligned-stack raise; this
         # sub-score also just lost its double-counted pitch-match bonus.
-        "pitcher_damage": 0.10,
-        "pull_launch": 0.07,
+        # → 0.08 (2026-08-09) funding season_power.
+        "pitcher_damage": 0.08,
+        "pull_launch": 0.06,
         "park_weather": 0.05,
         "lineup_opportunity": 0.01,
-        "season_power": 0.12,
-        "damage_conversion_score": 0.16,
+        "season_power": 0.24,
+        "damage_conversion_score": 0.13,
         "pitch_match_term": 0.07,
         "weak_spot_interaction": 0.06,   # aligned stack (audit 2026-08-08: 27.4% at full stack)
         "bullpen_pitch_fit": 0.01,

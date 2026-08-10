@@ -154,16 +154,42 @@ def season_power(r: dict) -> float | None:
     throws = str(r.get("pitcher_throws") or "").upper()
     split = num(r.get("iso_vs_lhp")) if throws.startswith("L") else num(r.get("iso_vs_rhp"))
     best_iso = max([x for x in (iso, split) if x is not None], default=None)
+    if best_iso is None:
+        return None
+
     hpp = num(r.get("hr_per_pa"))
     if hpp is None:
         hr, pa = num(r.get("season_hr")), num(r.get("season_pa"))
         hpp = hr / pa if hr is not None and pa else None
+
+    # SLG = AVG + ISO. That is the DEFINITION of isolated power, not an
+    # estimate — verified against 3,511 archive rows carrying all three, where
+    # the maximum disagreement was exactly 0.000000. Worth reconstructing
+    # rather than skipping: 26 of 58 graded nights publish season_avg and
+    # season_iso but no season_slg, and without this the sweep silently ran on
+    # 32 nights while the header said 58.
     slg = num(r.get("season_slg"))
-    if best_iso is None or slg is None:
-        return None
-    return 100 * (0.50 * minmax(best_iso, 0.08, 0.38)
-                  + 0.30 * minmax(hpp, 0.015, 0.085)
-                  + 0.20 * minmax(slg, 0.330, 0.700))
+    if slg is None:
+        avg = num(r.get("season_avg"))
+        if avg is not None:
+            slg = avg + best_iso
+
+    # RENORMALISE OVER WHAT IS PRESENT rather than treating an absent component
+    # as zero. hr_per_pa needs season_pa, which those same 26 nights never
+    # published and which cannot be derived from anything else on the row. The
+    # old code returned None and threw the night away; scoring 0.0 for it would
+    # have been worse, quietly ranking every hitter on a legacy night as
+    # powerless. Weights are rescaled across the terms that exist, so a night
+    # with two of three components produces a comparable 0-100 number.
+    parts = [(0.50, minmax(best_iso, 0.08, 0.38))]
+    if hpp is not None:
+        parts.append((0.30, minmax(hpp, 0.015, 0.085)))
+    if slg is not None:
+        parts.append((0.20, minmax(slg, 0.330, 0.700)))
+    if len(parts) < 2:
+        return None                    # ISO alone is not season_power
+    w = sum(p[0] for p in parts)
+    return 100 * sum(p[0] * p[1] for p in parts) / w
 
 
 # Re-weighting the blend without re-running the pipeline. hr_raw = Σ wᵢxᵢ, so
