@@ -181,18 +181,53 @@ MODEL_WEIGHTS: Dict[str, Dict[str, float]] = {
         # as weakest-per-point: batted_shape (30th of 43 signals, +4.0pp)
         # takes the largest cut, damage_conversion gives back most of its
         # 7/26 judgement-call raise. Sums to exactly 1.00 — asserted in test.
-        "batted_shape": 0.05,
-        "pitch_fit": 0.09,
+        # ─── TWO TERMS FOUND BY bots/missed_signals.py (2026-08-09) ─────────
+        # Donovan: "there has to be a way to find missed signals, things that
+        # we miss on HR hitters."
+        #
+        # There was, and it is not the scan we had been running. Every audit to
+        # date asked "does this field separate homers?" — which mostly
+        # rediscovers the model's OWN INPUTS and ranks them by how loudly they
+        # shout. season_iso separates homers beautifully and hr_score already
+        # knows about season_iso; finding it again is not actionable.
+        #
+        # The right question is conditional: among hitters the model scored the
+        # SAME, does this field still separate them? Only a residual can be a
+        # missed signal. Run across 4,995 graded picks in six hr_score bands,
+        # with a within-band permutation test and a Benjamini-Hochberg
+        # correction (170 fields means ~8 false positives at raw p<0.05):
+        #
+        #   pitcher_side_ops     20.3% vs 13.7%   +6.7   q=0.034
+        #   pitcher_side_slug    19.6% vs 14.4%   +5.3   p=0.047
+        #
+        # Both are the opposing arm's production allowed TO THIS BATTER'S SIDE.
+        # Both were computed, stored on the record, and then used by nothing —
+        # they appear exactly twice in this file, at the dataclass default and
+        # at the assignment. A field that survives a stratified test at +6.7
+        # while carrying zero weight is the definition of a missed signal.
+        "pitcher_side_prod": 0.04,
+        # last5_hr measured +7.8 within band, the single largest residual on
+        # the board. It reaches hr_raw only indirectly through batted_shape,
+        # and recent_hr_form_score — which is 34% last5_hr and already computed
+        # for other purposes — carried no blend weight at all. Recency is now
+        # a first-class term rather than a by-product.
+        "recent_form": 0.05,
+        "batted_shape": 0.03,
+        "pitch_fit": 0.06,
         # 0.15 → 0.10 (audit 2026-08-08): funds the aligned-stack raise; this
         # sub-score also just lost its double-counted pitch-match bonus.
-        # → 0.08 (2026-08-09) funding season_power.
-        "pitcher_damage": 0.08,
+        # → 0.08 (2026-08-09) funding season_power, → 0.06 funding
+        # pitcher_side_prod, which is the same idea (this arm is hittable)
+        # measured against the batter's actual side instead of pooled.
+        "pitcher_damage": 0.06,
         "pull_launch": 0.06,
         "park_weather": 0.05,
         "lineup_opportunity": 0.01,
         "season_power": 0.24,
         "damage_conversion_score": 0.13,
-        "pitch_match_term": 0.07,
+        # 0.07 → 0.05 (2026-08-09), the other half of pitcher_side_prod's
+        # funding. Both are matchup terms; the new one is the measured one.
+        "pitch_match_term": 0.05,
         "weak_spot_interaction": 0.06,   # aligned stack (audit 2026-08-08: 27.4% at full stack)
         "bullpen_pitch_fit": 0.01,
         "yesterdays_hitters_score": 0.02,
@@ -6614,7 +6649,17 @@ def apply_model_v2_layers(h: HitterRecord) -> HitterRecord:
     times_through_term = 100.0 * _third_look
 
     _w = MODEL_WEIGHTS["hr_blend"]
+    # The two 2026-08-09 residual terms. Both normalise against league-ish
+    # ranges rather than the slate, so a night where every arm is good does not
+    # manufacture a strong signal out of the least-bad one.
+    pitcher_side_prod = 100.0 * (
+        0.60 * minmax_norm(safe_float(getattr(h, "pitcher_side_ops", 0.720), 0.720), 0.620, 0.900)
+        + 0.40 * minmax_norm(safe_float(getattr(h, "pitcher_side_slug", 0.400), 0.400), 0.330, 0.560)
+    )
+    recent_form = safe_float(getattr(h, "recent_hr_form_score", 0.0), 0.0)
     hr_raw = (
+        _w["pitcher_side_prod"] * pitcher_side_prod +
+        _w["recent_form"] * recent_form +
         _w["batted_shape"] * batted_shape +
         _w["pitch_fit"] * pitch_fit +
         _w["pitcher_damage"] * pitcher_damage +
@@ -9779,7 +9824,40 @@ def build_structured_pairs(
         )
 
     def shared_day_bonus(a: HitterRecord, b: HitterRecord) -> float:
-        """Bonus when both players have the SAME reason to homer today."""
+        """
+        Bonus when both players have the SAME reason to homer today.
+
+        VALIDATED, AND ONE THING NEARBY WAS NOT (2026-08-09). Sampling 186,000
+        same-night pairs out of 58 graded nights and measuring how often BOTH
+        halves actually homered, against a same-night random pair at 2.2%:
+
+            both TOP designated        5.3%   +3.1
+            both ISO >= .230           4.8%   +2.6
+            both L5 HR >= 1            3.6%   +1.4
+            both arm HR/9 >= 1.4       2.9%   +0.6
+            both weak-spot flagged     2.8%   +0.6
+            ----------------------------------------
+            opposing teams, same game  2.4%   +0.1
+            SAME GAME                  2.2%   -0.0
+            same TEAM                  2.0%   -0.2
+            same PARK, other game      1.9%   -0.3
+
+        Everything this function rewards is in the top half. Everything
+        SHARED-ENVIRONMENT is at or below random, which is why the bonus stays.
+
+        THE THING THAT DIED. Dividing observed by the independence expectation
+        (p1 x p2, using each night's own HR rate) gives the correlation ratio:
+        same game 1.05, same team 1.04 — that is 1.00 to within noise. Two
+        picks in the same ballpark are, as far as 58 nights can tell, two
+        independent coin flips. Meanwhile both-TOP runs 2.61 and both-big-ISO
+        1.93, and ALL of that comes from better legs rather than any
+        same-night togetherness.
+
+        So the honest construction of a pair is: take the two best individual
+        bats and stop. No same-game preference, no stacking a hot park. That
+        is not what a pair product usually claims and it is what the archive
+        says.
+        """
         bonus = 0.0
         # Both facing weak pitchers
         if (a.pitcher_hr9 or 0) >= 1.20 and (b.pitcher_hr9 or 0) >= 1.20: bonus += 5.0
