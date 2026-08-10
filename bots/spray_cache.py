@@ -169,6 +169,7 @@ def extract_players(raw: Any) -> list[dict[str, Any]]:
         for row in raw.get(key) or []:
             add_player(players, row)
 
+    raw = raw if isinstance(raw, dict) else {}   # shape guard, see bots/check_shapes.py
     for game in raw.get("games") or []:
         if not isinstance(game, dict):
             continue
@@ -680,6 +681,7 @@ def _read_cache(kind: str, player_id: int) -> dict[str, Any] | None:
     except (json.JSONDecodeError, OSError):
         return None
 
+    cached = cached if isinstance(cached, dict) else {}   # shape guard, see bots/check_shapes.py
     generated_str = cached.get("generated")
     if not generated_str:
         return None

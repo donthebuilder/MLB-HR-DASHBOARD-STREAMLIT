@@ -63,6 +63,28 @@ def archive_dirs(repo_root: Path | None = None) -> list[Path]:
     return out
 
 
+def meta_of(payload: Any) -> dict:
+    """
+    The header of a payload, as a dict, whatever shape the file is.
+
+    2026-08-10. This is the other half of rows_of, and its absence took the
+    slate down. bots/pick_lock.py did:
+
+        base = json.loads(...)
+        rows = list(iter_rows(base))       # shape-safe
+        date = str(base.get("date") ...)   # NOT shape-safe
+
+    A bare-list payload sails through the first line and raises
+    AttributeError on the second. Yesterday I fixed exactly this bug in four
+    files and did not grep for the fifth, which is the actual mistake: the
+    class was known and I patched instances.
+
+    A list has no header, so this returns {} for one — callers then fall back
+    to deriving the date from the rows, which pick_lock already knew how to do.
+    """
+    return payload if isinstance(payload, dict) else {}
+
+
 def rows_of(payload: Any) -> list[dict]:
     """The graded rows, whatever shape the file is."""
     if isinstance(payload, list):

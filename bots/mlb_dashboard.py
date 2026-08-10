@@ -534,6 +534,7 @@ def sync_breakdown_to_website_repo_v2(slate_date: dt.date, slate_label: str, jso
         "history_path": f"/data/history/{date_str}-{slate_label}.json",
     }
 
+    idx = idx if isinstance(idx, dict) else {}   # shape guard, see bots/check_shapes.py
     history = idx.get("history", [])
     if not isinstance(history, list):
         history = []

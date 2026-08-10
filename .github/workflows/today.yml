@@ -122,7 +122,16 @@ jobs:
       # change after first pitch is refused and announced. The receipts card
       # has claimed "locked at first pitch, never edited" for weeks — this is
       # the step that makes that sentence true.
+      # 2026-08-10: this step's AttributeError turned a SUCCESSFUL slate build
+      # red and stopped the workflow before publishing. The scoring step above
+      # had already printed "FINISHED TODAY BOT" — the slate existed, and a
+      # bookkeeping job killed the run anyway.
+      #
+      # pick_lock records which name was designated at first pitch. Useful, and
+      # not worth a night's slate. continue-on-error surfaces the failure in the
+      # Actions UI without letting it stop anything downstream.
       - name: Lock designations at first pitch
+        continue-on-error: true
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         run: python bots/pick_lock.py --apply

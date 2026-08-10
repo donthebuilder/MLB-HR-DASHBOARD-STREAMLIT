@@ -71,6 +71,7 @@ def main() -> int:
         if bp.exists():
             try:
                 base = json.loads(bp.read_text(encoding="utf-8"))
+                base = base if isinstance(base, dict) else {}   # shape guard, see bots/check_shapes.py
                 base_to = str(base.get("meta", {}).get("to") or "")
                 base_from = str(base.get("meta", {}).get("from") or "")
                 base_days = _i(base.get("meta", {}).get("days"))

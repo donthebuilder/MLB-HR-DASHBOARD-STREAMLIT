@@ -60,7 +60,9 @@ PLAYER_KEYS = ("players", "all_players", "player_pool", "slate_players", "rows",
 
 def load_slate(path: Path) -> tuple[str, list[dict]]:
     data = json.loads(path.read_text(encoding="utf-8"))
-    date = str(data.get("slate_date") or data.get("date") or dt.date.today().isoformat())[:10]
+    # Shape guard: a bare-list slate has no header, so fall through to today.
+    _meta = data if isinstance(data, dict) else {}
+    date = str(_meta.get("slate_date") or _meta.get("date") or dt.date.today().isoformat())[:10]
     seen: dict[str, dict] = {}
 
     def eat(rows):

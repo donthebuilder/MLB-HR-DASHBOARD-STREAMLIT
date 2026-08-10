@@ -121,6 +121,7 @@ def iter_rows(payload: Any):
         for r in payload.get(k) or []:
             if isinstance(r, dict):
                 yield r
+    payload = payload if isinstance(payload, dict) else {}   # shape guard, see bots/check_shapes.py
     for g in payload.get("games") or []:
         if not isinstance(g, dict):
             continue
@@ -212,7 +213,16 @@ def main() -> int:
         print("slate has no player rows — nothing to lock")
         return 0
 
-    date = str(base.get("date") or base.get("slate_date") or "")
+    # ⚠️ THE LINE THAT KILLED THE 2026-08-10 RUN. `base` is a bare LIST on
+    # some slate files, and a list has no .get. iter_rows above already
+    # handled both shapes, which is what made this so easy to miss — the
+    # rows came back fine and the very next line exploded.
+    #
+    # meta_of() returns {} for a list, so the fallback below (derive the date
+    # from the earliest first pitch) takes over, which was always the right
+    # answer for a headerless payload.
+    meta = base if isinstance(base, dict) else {}
+    date = str(meta.get("date") or meta.get("slate_date") or "")
     if not date:
         t = first_pitch_of(rows)
         date = min(t.values()).date().isoformat() if t else now_utc().date().isoformat()
@@ -296,6 +306,8 @@ def main() -> int:
         for path in slate_paths:
             try:
                 payload = json.loads(path.read_text())
+                if not isinstance(payload, dict):
+                    continue          # a bare list carries no lock metadata
             except Exception as e:
                 print(f"  ! could not read {path.name}: {e}")
                 continue

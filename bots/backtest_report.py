@@ -139,6 +139,7 @@ def parse_json_file(filepath):
     except (OSError, ValueError):
         return None
 
+    payload = payload if isinstance(payload, dict) else {}   # shape guard, see bots/check_shapes.py
     rows = payload.get("graded_slots") or []
     if not rows:
         return None

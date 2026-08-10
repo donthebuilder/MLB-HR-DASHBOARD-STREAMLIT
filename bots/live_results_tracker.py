@@ -258,6 +258,7 @@ def _hr_highlight_url(game_pk, batter_name: str) -> str:
                 pbs = it.get("playbacks") or []
                 best = ""
                 for pb in pbs:
+                    pb = pb if isinstance(pb, dict) else {}   # shape guard, see bots/check_shapes.py
                     u2 = str(pb.get("url", ""))
                     if u2.endswith(".mp4"):
                         best = u2  # later entries are higher bitrate
@@ -1531,6 +1532,7 @@ def load_pair_builder_sections(date_str: str):
         pb = json.loads(path.read_text(encoding="utf-8"))
     except Exception:
         return None
+    pb = pb if isinstance(pb, dict) else {}   # shape guard, see bots/check_shapes.py
     if str(pb.get("date") or "") != str(date_str):
         print(f"pair_builder_latest is for {pb.get('date')}, grading {date_str} — using internal pools instead")
         return None
