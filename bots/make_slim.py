@@ -24,9 +24,33 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
+import urllib.request
 from pathlib import Path
 from typing import Any, Dict, List
+
+class SlateTooSmall(RuntimeError):
+    """Raised when the payload we were asked to publish isn't a slate."""
+
+
+def _alert_bad_slate(name: str, how: str) -> None:
+    """Say it out loud. A guard that silently skips is a guard nobody knows
+    fired, and this is exactly the failure that hides."""
+    hook = os.environ.get("DISCORD_WEBHOOK", "")
+    if not hook:
+        return
+    msg = ("**\u26a0\ufe0f Slate publish blocked** \u2014 `" + name + "` is not a slate (" + how + ").\n"
+           "The data branch keeps its previous slate rather than serving a fragment. "
+           "The site would have shown every hitter as one the model never picked.")
+    body = json.dumps({"content": msg}).encode()
+    for url in [u.strip() for u in hook.split(",") if u.strip()]:
+        try:
+            req = urllib.request.Request(url, data=body, headers={"Content-Type": "application/json"})
+            urllib.request.urlopen(req, timeout=15).read()
+        except Exception:
+            pass
+
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = REPO_ROOT / "public" / "data"
@@ -152,6 +176,53 @@ def write_detail_files(rows: List[Dict[str, Any]], out_dir: Path) -> int:
     return written
 
 
+# ── THE PUBLISH GUARD (2026-08-09) ──────────────────────────────────────────
+#
+# On 2026-08-09 the branch's current/today_slim.json became a bare six-row
+# array from ONE July 26 game at Tropicana Field. It published cleanly, the
+# site served it, and every homer that night rendered as though the model had
+# never heard of the hitter — because the bot tag is applied by matching a
+# homer back to a slate row, and there were six rows to match against.
+#
+# Nothing in this pipeline had an opinion about whether the thing it was
+# writing was a slate. It slimmed the bytes it was handed and published them.
+#
+# The check is deliberately loose, because the failure it stops is gross: the
+# smallest real slate MLB plays is around four games and every one carries two
+# lineups, so a genuine slate is never under ~40 hitters or under 3 distinct
+# game_pks. Anything that fails BOTH is not a thin night, it is a broken file.
+#
+# On failure this refuses to write and exits non-zero, which aborts the job
+# before the publish step. That is the whole point: the branch keeps the last
+# GOOD slate instead of being overwritten with a fragment. A stale-but-real
+# slate is a bad night; a six-row slate is a silent lie about the model.
+MIN_ROWS = 40
+MIN_GAMES = 3
+
+
+def _rows_of(payload: Any) -> List[dict]:
+    if isinstance(payload, list):
+        return [r for r in payload if isinstance(r, dict)]
+    if not isinstance(payload, dict):
+        return []
+    out: List[dict] = []
+    for k in ("players", "all_players", "rows", "slate_players"):
+        out += [r for r in (payload.get(k) or []) if isinstance(r, dict)]
+    for g in payload.get("games") or []:
+        if isinstance(g, dict):
+            for k in ("players", "away_players", "home_players"):
+                out += [r for r in (g.get(k) or []) if isinstance(r, dict)]
+    return out
+
+
+def slate_is_real(payload: Any) -> tuple[bool, str]:
+    rows = _rows_of(payload)
+    games = {r.get("game_pk") for r in rows if r.get("game_pk") is not None}
+    if len(rows) >= MIN_ROWS or len(games) >= MIN_GAMES:
+        return True, f"{len(rows)} rows across {len(games)} games"
+    return False, f"only {len(rows)} rows across {len(games)} game(s)"
+
+
 def slim_file(src: Path, dest: Path) -> bool:
     if not src.exists():
         print(f"skip (missing): {src}", file=sys.stderr)
@@ -161,6 +232,16 @@ def slim_file(src: Path, dest: Path) -> bool:
     except Exception as exc:
         print(f"skip (unreadable): {src}: {exc}", file=sys.stderr)
         return False
+
+    # GUARD BEFORE ANY WRITE. If this isn't a slate, the previous slim file on
+    # the branch is better than what we're holding — leave it alone.
+    ok, how = slate_is_real(payload)
+    if not ok and os.environ.get("ALLOW_SMALL_SLATE") != "1":
+        print(f"REFUSING TO PUBLISH: {src.name} is not a slate — {how}.", file=sys.stderr)
+        print(f"  {dest.name} left untouched, so the branch keeps its last good slate.", file=sys.stderr)
+        print("  Set ALLOW_SMALL_SLATE=1 to override if this really is the schedule.", file=sys.stderr)
+        _alert_bad_slate(src.name, how)
+        raise SlateTooSmall(f"{src.name}: {how}")
 
     detail_written = 0
     if isinstance(payload, list):
@@ -232,17 +313,32 @@ def main() -> int:
     if args.src:
         src = Path(args.src)
         dest = Path(args.dest) if args.dest else src.with_name(src.stem + "_slim.json")
-        return 0 if slim_file(src, dest) else 1
+        try:
+            return 0 if slim_file(src, dest) else 1
+        except SlateTooSmall:
+            return 2
 
     collect_bot_outputs()
 
     ok = False
+    bad = []
     for label in ("today", "tomorrow"):
         for base in (CURRENT_DIR, DATA_DIR):
             src = base / f"{label}.json"
             if src.exists():
-                ok = slim_file(src, CURRENT_DIR / f"{label}_slim.json") or ok
+                try:
+                    ok = slim_file(src, CURRENT_DIR / f"{label}_slim.json") or ok
+                except SlateTooSmall as exc:
+                    bad.append(str(exc))
                 break
+    if bad:
+        # Exit 2 fails the workflow step, which aborts the job BEFORE publish.
+        # Nothing reaches the data branch, so the last good slate survives —
+        # which is the entire purpose of the guard.
+        print(f"\naborting: {len(bad)} slate(s) failed the shape check", file=sys.stderr)
+        for b in bad:
+            print(f"  - {b}", file=sys.stderr)
+        return 2
     return 0 if ok else 1
 
 

@@ -54,6 +54,8 @@ jobs:
         run: python bots/mlb_dashboard.py --tomorrow
 
       - name: Build slim payload for Streamlit
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         run: python bots/make_slim.py
 
       # Day/night, home/away, day-of-week and win/loss splits. The
