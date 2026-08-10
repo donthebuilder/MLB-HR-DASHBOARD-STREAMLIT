@@ -58,11 +58,12 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import json
 import math
 import random
 import re
-import statistics
+import urllib.request
 from pathlib import Path
 from typing import Any
 
@@ -109,6 +110,42 @@ def wilson(ok: int, n: int) -> tuple[float, float]:
     return (max(0.0, (mid - half) * 100), min(100.0, (mid + half) * 100))
 
 
+RAW = ("https://raw.githubusercontent.com/donthebuilder/"
+       "MLB-HR-DASHBOARD-STREAMLIT/data/public/data/current")
+
+
+def fetch_archive(days: int) -> list[tuple[str, dict]]:
+    """
+    Pull the graded nights straight from the data branch.
+
+    This exists because the checkout you run this from is the SCRIPTS branch —
+    the graded files live on `data`, so a local run finds an empty folder and
+    concludes there is no archive. Rather than make someone clone a second
+    branch and copy files around to answer one question, the tool fetches what
+    it needs. Walks backwards from today; a missing date is a night that wasn't
+    graded, not an error.
+    """
+    out = []
+    today = dt.date.today()
+    misses = 0
+    for i in range(days * 2):                 # look back further than we need,
+        if len(out) >= days:                  # since off-days leave gaps
+            break
+        d = (today - dt.timedelta(days=i)).isoformat()
+        url = f"{RAW}/graded_results_{d}.json"
+        try:
+            with urllib.request.urlopen(url, timeout=25) as r:
+                out.append((d, json.loads(r.read().decode())))
+            print(f"  · {d}", flush=True)
+        except Exception:
+            misses += 1
+            if misses > 12 and not out:
+                print("  ! nothing found on the data branch — is it reachable?")
+                break
+    out.reverse()
+    return out
+
+
 def load_nights(days: int | None) -> list[tuple[str, list[dict]]]:
     files = []
     for p in PUBLIC_CURRENT.glob("graded_results_*.json"):
@@ -119,12 +156,20 @@ def load_nights(days: int | None) -> list[tuple[str, list[dict]]]:
     if days:
         files = files[-days:]
 
-    out = []
+    raw_nights = []
     for date, p in files:
         try:
-            payload = json.loads(p.read_text())
+            raw_nights.append((date, json.loads(p.read_text())))
         except Exception:
             continue
+
+    # Nothing on disk? Go and get it. See fetch_archive().
+    if not raw_nights:
+        print(f"no graded files in {PUBLIC_CURRENT} — fetching from the data branch:")
+        raw_nights = fetch_archive(days or 45)
+
+    out = []
+    for date, payload in raw_nights:
         rows, seen = [], set()
         for r in payload.get("graded_slots") or payload.get("results") or []:
             pid = r.get("player_id")
