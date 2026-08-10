@@ -1,0 +1,113 @@
+# 🧠⚖️🔬 Accountability — memory nightly, verdicts weekly.
+#
+# 2026-08-09. Three jobs that all read the same thing (the graded archive) and
+# write small files back to the data branch:
+#
+#   season_memory.py     NIGHTLY, after grading. The site's memory — streaks,
+#                        droughts, rolling form, how each park has actually
+#                        played. Folded here so the browser fetches one ~45 KB
+#                        file instead of forty graded files.
+#   validate_context.py  WEEKLY. The cron behind the two-lane rule: which
+#                        context stats have earned a place in the scoring.
+#   autopsy.py           WEEKLY. The three worst misses and what the model was
+#                        looking at when it made them.
+#
+# Memory runs nightly because it's what the site reads; the two verdict jobs
+# run weekly because a daily verdict on a 12%-base-rate outcome is noise with a
+# schedule. Both post to Discord.
+#
+# stdlib only — no pip install, so a run is seconds of compute.
+name: Accountability
+
+on:
+  workflow_dispatch:
+    inputs:
+      which:
+        description: 'memory | weekly | both'
+        required: false
+        default: 'both'
+  schedule:
+    # 09:20 UTC = 5:20am ET — after the nightly grading run has settled.
+    - cron: '20 9 * * *'
+    # Mondays 14:00 UTC = 10am ET, for the weekly verdicts.
+    - cron: '0 14 * * 1'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: accountability
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout the data branch
+        uses: actions/checkout@v4
+        with:
+          ref: data
+          fetch-depth: 1
+
+      - name: Bring in the scripts from main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: _src
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # The scripts resolve paths from their own location, so they're copied
+      # next to the data rather than run out of _src.
+      - name: Stage
+        run: |
+          mkdir -p bots
+          cp _src/bots/season_memory.py _src/bots/validate_context.py _src/bots/autopsy.py bots/
+          rm -rf _src
+
+      - name: Season memory
+        if: github.event_name == 'schedule' || github.event.inputs.which != 'weekly'
+        run: python bots/season_memory.py
+
+      # Weekly work runs on the Monday cron, or on demand.
+      - name: Is this the weekly slot?
+        id: weekly
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            [ "${{ github.event.inputs.which }}" != "memory" ] && echo "go=yes" >> $GITHUB_OUTPUT || true
+          elif [ "$(date -u +%u)" = "1" ] && [ "$(date -u +%H)" = "14" ]; then
+            echo "go=yes" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Two-lane validation
+        if: steps.weekly.outputs.go == 'yes'
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        run: python bots/validate_context.py
+
+      - name: Autopsy
+        if: steps.weekly.outputs.go == 'yes'
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        run: python bots/autopsy.py --days 7
+
+      - name: Publish
+        run: |
+          rm -f bots/season_memory.py bots/validate_context.py bots/autopsy.py
+          rmdir bots 2>/dev/null || true
+          git config user.name  "moonshot-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add public/data/current/season_memory.json \
+                  public/data/current/context_validation.json \
+                  public/data/current/autopsy_latest.json 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "nothing changed"
+          else
+            git commit -m "accountability: memory + verdicts $(date -u +%F)"
+            git push
+          fi
