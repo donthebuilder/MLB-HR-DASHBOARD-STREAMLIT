@@ -5361,7 +5361,12 @@ def build_team_bullpen_profile(client: MLBClient, db: CacheDB, team_id: int, tea
                     r_mix = {"mix": {}, "sample_pitches": 0}
                 relievers_out.append({
                     "pitcher_id": pid,
-                    "name": clean(person.get("fullName"), ""),
+                    # `clean` does not exist in this module — it was a
+                    # NameError swallowed by the enclosing `except Exception:
+                    # continue`, which meant EVERY reliever was silently
+                    # dropped from the bullpen mix since 2026-07-25. Found by
+                    # pyflakes while hunting today's crash.
+                    "name": str(person.get("fullName") or ""),
                     "ip": ip,
                     "mix": r_mix.get("mix", {}),
                     "sample_pitches": safe_int(r_mix.get("sample_pitches"), 0),
@@ -6656,7 +6661,22 @@ def apply_model_v2_layers(h: HitterRecord) -> HitterRecord:
         0.60 * minmax_norm(safe_float(getattr(h, "pitcher_side_ops", 0.720), 0.720), 0.620, 0.900)
         + 0.40 * minmax_norm(safe_float(getattr(h, "pitcher_side_slug", 0.400), 0.400), 0.330, 0.560)
     )
-    recent_form = safe_float(getattr(h, "recent_hr_form_score", 0.0), 0.0)
+    # ⚠️ COMPUTED INLINE, NOT READ OFF THE RECORD. h.recent_hr_form_score is
+    # assigned ~230 lines BELOW this point, so reading it here returned the
+    # dataclass default of 0.0 on every first pass — the 0.05 weight was dead
+    # and, worse, the other terms had already been scaled down to fund it, so
+    # the blend was quietly running at 0.95 mass. Silent, and exactly the class
+    # of bug that does not raise.
+    #
+    # Same formula as the assignment below; duplicated on purpose rather than
+    # reordered, because moving that assignment up would put it before the
+    # inputs IT depends on and just move the bug.
+    recent_form = 100.0 * (
+        0.34 * minmax_norm(h.last5_hr, 0, 3)
+        + 0.22 * minmax_norm(h.last10_hr, 0, 5)
+        + 0.22 * minmax_norm(h.l20pa_hr, 0, 3)
+        + 0.22 * minmax_norm(h.last5_xbh + h.l20pa_xbh, 0, 7)
+    )
     hr_raw = (
         _w["pitcher_side_prod"] * pitcher_side_prod +
         _w["recent_form"] * recent_form +
@@ -10257,6 +10277,34 @@ def build_top30_pairs(top30: List[HitterRecord]) -> Tuple[str, List[Dict[str, An
 
 
 def build_pair_sections(rows: List[HitterRecord]) -> Tuple[str, Dict[str, Any]]:
+    """
+    Pairs and pools. WRAPPED, because a failure here must not cost the slate.
+
+    2026-08-09, Donovan: "the site's bot crashed today." This function is the
+    biggest thing I changed — retiring the 6-man pool, restructuring the
+    recipes, rewriting pair_score — and it sits in the middle of a run that
+    also produces the HR board, the four markets and every published payload.
+    A pool recipe that comes back empty, a bucket that does not exist on a
+    thin slate, an index into a list that is shorter than it was yesterday:
+    any of those raise, and before this wrapper any of them took the WHOLE
+    NIGHT'S SLATE with them.
+
+    That trade is indefensible. Pairs and pools are a side dish; the board is
+    the product. So the section now degrades to empty and the run continues,
+    and the error is printed loudly enough to find in the Actions log rather
+    than swallowed.
+    """
+    try:
+        return _build_pair_sections(rows)
+    except Exception as e:
+        import traceback
+        print("!! pairs/pools section failed — slate continues without it")
+        print(f"!! {type(e).__name__}: {e}")
+        traceback.print_exc()
+        return "", {"recommended_pairs": [], "pools_4man": [], "pools_6man": [], "pools_3man": []}
+
+
+def _build_pair_sections(rows: List[HitterRecord]) -> Tuple[str, Dict[str, Any]]:
     global LAST_HR_SECTION_USED_IDS
     LAST_HR_SECTION_USED_IDS = set()
     if len(rows) < 6: return "", {"recommended_pairs": [], "pools_4man": [], "pools_6man": []}
@@ -10435,16 +10483,16 @@ def build_pair_sections(rows: List[HitterRecord]) -> Tuple[str, Dict[str, Any]]:
         }
 
     json_pools_4man = [
-        _s2_pool_json("Pool A — Strongest", pool4_a, 4),
-        _s2_pool_json("Pool B — HRR+Power", pool4_b, 4),
-        _s2_pool_json("Pool C — Balanced", pool4_c, 4),
-        _s2_pool_json("Pool D — Contrarian", pool4_d, 4),
+        _s2_pool_json("Pool A — Strongest", pool4_a, len(pool4_a)),
+        _s2_pool_json("Pool B — HRR+Power", pool4_b, len(pool4_b)),
+        _s2_pool_json("Pool C — Balanced", pool4_c, len(pool4_c)),
+        _s2_pool_json("Pool D — Contrarian", pool4_d, len(pool4_d)),
     ]
     json_pools_6man = [
-        _s2_pool_json("Pool A — Strongest", pool6_a, 6),
-        _s2_pool_json("Pool B — Balanced", pool6_b, 6),
-        _s2_pool_json("Pool C — Mid / Var", pool6_c, 6),
-        _s2_pool_json("Pool D — Contrarian", pool6_d, 6),
+        _s2_pool_json("Pool A — Strongest", pool6_a, len(pool6_a)),
+        _s2_pool_json("Pool B — Balanced", pool6_b, len(pool6_b)),
+        _s2_pool_json("Pool C — Mid / Var", pool6_c, len(pool6_c)),
+        _s2_pool_json("Pool D — Contrarian", pool6_d, len(pool6_d)),
     ]
     json_payload = {
         # available_pool added per audit (2026-06-27) -- the frontend
