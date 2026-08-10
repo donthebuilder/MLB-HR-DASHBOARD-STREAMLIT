@@ -196,32 +196,88 @@ def fetch_archive(days: int) -> list[tuple[str, dict]]:
     return out
 
 
-def load_nights(days: int | None) -> list[tuple[str, list[dict]]]:
-    files = []
-    for p in PUBLIC_CURRENT.glob("graded_results_*.json"):
-        m = DATE_RE.search(p.name)
-        if m:
-            files.append((m.group(1), p))
-    files.sort()
-    if days:
-        files = files[-days:]
+# ── where the archive lives ──────────────────────────────────────────────────
+# 2026-08-09, Donovan: "why didn't you also look at the results folder on the
+# computer I gave access to — it has all the results. Refer to those as well
+# when doing data grades and updates and running results and backtests."
+#
+# He was right and it changed an answer. The first run of this tool saw only
+# what the data branch publishes — 14 nights — and reported "no measurable
+# difference" between the orderings. His local results folder holds 37 more
+# graded nights going back to 2026-04-16. On the combined 51 the difference is
+# no longer inside the noise. Fourteen nights was not a small sample by
+# accident; it was a small sample because the tool never asked where the rest
+# of the data was.
+#
+# So local directories are searched FIRST and merged with the remote, and the
+# search list is overridable. Order does not matter — nights are keyed by date
+# and de-duplicated, with the local copy winning on a tie because a file on
+# disk is the one the operator can actually inspect.
+ARCHIVE_DIRS = [
+    PUBLIC_CURRENT,
+    Path.home() / "Desktop" / "results",
+    Path.home() / "results",
+]
 
-    raw_nights = []
-    for date, p in files:
-        try:
-            raw_nights.append((date, json.loads(p.read_text())))
-        except Exception:
+
+def _slots(payload: Any) -> list[dict]:
+    """
+    Pull the graded rows out of a payload, whatever shape it is.
+
+    THE ARCHIVE IS NOT ONE SHAPE. Across 39 local files there are four:
+    a bare top-level list (Apr 16 – May 18, 10 files), a dict under
+    `graded_slots` (24 files), a dict under `results` (4 files), and one
+    schema_version-tagged dict that carries neither. The previous loader did
+    `payload.get(...)` unguarded, so a bare-list file raised AttributeError and
+    took the whole run down — which is exactly why nobody had ever pointed this
+    tool at the local folder and seen it work.
+    """
+    if isinstance(payload, list):
+        return [r for r in payload if isinstance(r, dict)]
+    if isinstance(payload, dict):
+        for key in ("graded_slots", "results", "graded", "rows", "picks"):
+            v = payload.get(key)
+            if isinstance(v, list) and v:
+                return [r for r in v if isinstance(r, dict)]
+    return []
+
+
+def load_nights(days: int | None, dirs: list[Path] | None = None) -> list[tuple[str, list[dict]]]:
+    by_date: dict[str, Any] = {}
+    searched = []
+    for d in (dirs if dirs is not None else ARCHIVE_DIRS):
+        if not d or not d.is_dir():
             continue
+        found = 0
+        for p in d.glob("graded_results_*.json"):
+            m = DATE_RE.search(p.name)
+            if not m:
+                continue                       # e.g. "... 2026-04-24 copy.txt"
+            try:
+                by_date.setdefault(m.group(1), json.loads(p.read_text()))
+                found += 1
+            except Exception:
+                continue                       # unreadable file is not a crash
+        if found:
+            searched.append(f"{found} from {d}")
 
-    # Nothing on disk? Go and get it. See fetch_archive().
-    if not raw_nights:
-        print(f"no graded files in {PUBLIC_CURRENT} — fetching from the data branch:")
-        raw_nights = fetch_archive(days or 45)
+    # Whatever the local folders didn't have, go and get. Local wins ties.
+    remote = fetch_archive(days or 45) if len(by_date) < (days or 45) else []
+    for date, payload in remote:
+        by_date.setdefault(date, payload)
+    if remote:
+        searched.append(f"{len(remote)} from the data branch")
+    if searched:
+        print("archive: " + " · ".join(searched))
+
+    raw_nights = sorted(by_date.items())
+    if days:
+        raw_nights = raw_nights[-days:]
 
     out = []
     for date, payload in raw_nights:
         rows, seen = [], set()
-        for r in payload.get("graded_slots") or payload.get("results") or []:
+        for r in _slots(payload):
             pid = r.get("player_id")
             if pid is None or pid in seen:
                 continue                       # one row per player per night
@@ -253,10 +309,23 @@ def main() -> int:
     ap.add_argument("--days", type=int, default=None)
     ap.add_argument("--top", type=int, nargs="*", default=[10, 20, 50])
     ap.add_argument("--seed", type=int, default=7)
+    ap.add_argument("--dir", action="append", default=None,
+                    help="extra folder of graded_results_*.json; repeatable. "
+                         "Defaults search public/data/current and ~/Desktop/results.")
+    ap.add_argument("--since", default=None, metavar="YYYY-MM-DD",
+                    help="ignore nights before this date — use it to exclude "
+                         "older scoring versions from the comparison.")
     a = ap.parse_args()
     random.seed(a.seed)
 
-    nights = load_nights(a.days)
+    dirs = None
+    if a.dir:
+        dirs = ARCHIVE_DIRS + [Path(d).expanduser() for d in a.dir]
+    nights = load_nights(a.days, dirs)
+    if a.since:
+        before = len(nights)
+        nights = [(d, r) for d, r in nights if d >= a.since]
+        print(f"--since {a.since}: {len(nights)} of {before} nights kept")
     if not nights:
         print("no graded archive found — nothing to compare")
         return 0
@@ -324,6 +393,25 @@ def main() -> int:
             adj_win = sum(1 for x, y in zip(rn, an) if y > x)
             tie = len(rn) - raw_win - adj_win
             print(f"   night-by-night: raw won {raw_win}, adjusted won {adj_win}, tied {tie}")
+            # SIGN TEST on the decisive nights. This matters: the two pooled
+            # intervals above are computed as if the samples were independent,
+            # but they are not — both orderings rank the SAME rows on the SAME
+            # nights, so a night where everybody homers inflates both. The
+            # paired test throws that shared variance away and is far more
+            # powerful. On the 51-night archive the pooled test says "can't
+            # separate them" while the sign test says the opposite, and the
+            # sign test is the one to believe.
+            dec = raw_win + adj_win
+            if dec >= 6:
+                w = max(raw_win, adj_win)
+                p = 2 * sum(math.comb(dec, k) for k in range(w, dec + 1)) / (2 ** dec)
+                p = min(1.0, p)
+                who = "adjusted" if adj_win > raw_win else "raw"
+                call = ("that is a real edge" if p < 0.05
+                        else "leaning, but not conclusive" if p < 0.20
+                        else "well inside coin-flip range")
+                print(f"   → paired sign test on {dec} decisive nights: {who} ahead, "
+                      f"p={p:.3f} — {call}")
         print()
 
     print("Graded files hold the bot's DESIGNATED PICKS, not the full slate, so this measures how "
