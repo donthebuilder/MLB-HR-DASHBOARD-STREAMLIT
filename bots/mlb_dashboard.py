@@ -6928,15 +6928,113 @@ def apply_model_v2_layers(h: HitterRecord) -> HitterRecord:
     # the recency re-anchor this is reasoned from component correlations
     # rather than backtested end to end. Grade the Contact tier's XBH rate in
     # ~2 weeks; git log has the old weights.
-    contact_v2 = 100 * (
-        0.26 * (0.22 * minmax_norm(avg_ev_handed, 86, 96) + 0.20 * minmax_norm(hard_rate_handed, 0.25, 0.65) + 0.18 * minmax_norm(barrel_rate_handed, 0.02, 0.20) + 0.16 * minmax_norm(h.recent_sweet_spot_rate, 0.22, 0.52) + 0.14 * minmax_norm(h.recent_xwoba, 0.280, 0.470) + 0.10 * minmax_norm(r375, 0.02, 0.22)) +
-        0.40 * (0.32 * minmax_norm(h.last5_xbh, 0, 5) + 0.24 * minmax_norm(h.last10_xbh, 0, 7) + 0.18 * minmax_norm(h.l20pa_xbh, 0, 4) + 0.13 * minmax_norm(h.last7_xbh, 0, 5) + 0.13 * minmax_norm(h.l20pa_350_num / max(1, h.l20pa_350_den), 0.04, 0.34)) +
-        0.16 * iso_power_boost +
-        0.12 * (0.32 * minmax_norm(h.pitcher_ev_allowed, 86, 92.5) + 0.28 * minmax_norm(h.pitcher_hardhit_allowed, 0.30, 0.52) + 0.22 * minmax_norm(h.pitcher_barrel_allowed, 0.03, 0.13) + 0.18 * minmax_norm(h.pitcher_whip, 1.05, 1.60)) +
-        0.03 * (_spot["weight"] * _spot["slg"] + (1 - _spot["weight"]) * 0.5) +
-        0.03 * (0.50 * k_floor + 0.30 * minmax_norm(split_avg, 0.180, 0.360) + 0.20 * minmax_norm(h.season_avg, 0.200, 0.330))
-    ) * (0.92 + 0.16 * minmax_norm(park_bar, 0.94, 1.07))
-    h.contact_score_v2 = round(_hr2_clip(contact_v2), 2)
+    # ── CONTACT v3 (2026-08-09) ──────────────────────────────────────────────
+    # Donovan: "contact score needs to find XBH, triples for sure and doubles.
+    # Rebuild it based on everything you can find from the results."
+    #
+    # WHY IT NEEDED REBUILDING, not re-weighting. Backtested for the first time
+    # across 37 graded nights: the top 20 by contact_score got 2+ total bases
+    # 41.5% of the time against 41.1% for twenty names drawn at RANDOM off the
+    # same slate. It won 16 of 32 decisive nights. That is a coin flip with a
+    # formula attached. The v2 note above admitted it had never been graded
+    # end to end -- it was reasoned from component correlations -- and this is
+    # what that turned out to be worth.
+    #
+    # THE STRUCTURAL MISTAKE, which the archive makes obvious. v2 was built out
+    # of HOME RUN ingredients: quality of contact, barrels, exit velocity, ISO.
+    # But split the outcome up and the pieces point opposite ways. Of the 40.3%
+    # of picks that clear 2 TB, 15.0% did it WITH a homer, 8.7% with two
+    # singles, and 16.6% with an actual double or triple. And against that last
+    # group -- the extra-base hit this market is named for -- power is
+    # NEGATIVELY correlated:
+    #
+    #     season_hr      top decile 11.0% vs bottom 24.2%   -13.2
+    #     season_iso                10.6%            22.6%   -11.9
+    #     hr_per_pa                  9.0%            21.0%   -11.9
+    #
+    # Which is obvious once seen: a 40-homer bat turns a double into a homer.
+    # v2 was loading up on the one trait that converts the outcome away.
+    #
+    # WHAT ACTUALLY SEPARATES 2+ TB, measured top vs bottom decile over 3,454
+    # graded picks:
+    #
+    #     park_hits_factor          52.1% vs 31.2%   +20.8   (strongest field)
+    #     park_k_factor             26.4%    45.1%   -18.7
+    #     pitcher_putaway_pct       28.5%    45.1%   -16.7
+    #     last7_xbh                 42.4%    28.6%   +13.8
+    #     last10_hits               44.7%    31.5%   +13.2
+    #     pitcher_hr9               45.4%    32.5%   +12.9
+    #     last10_xbh                42.6%    31.0%   +11.6
+    #
+    # Recent extra-base FORM, the arm's contact-allowed profile, and the
+    # building. Note park_hits_factor is the single best field on the board and
+    # v2 scaled by park_BARREL_factor instead -- which measures -11.1 against
+    # extra-base hits. It was multiplying by the wrong park number.
+    #
+    # WEIGHTS. Fit on the first 22 nights only and tested on the last 15, so
+    # nothing below saw its own test set. Each term's weight is its measured
+    # top-vs-bottom-tercile lift on the training half; terms below +0.02 were
+    # dropped rather than kept at a small weight.
+    #
+    # HOW WELL IT WORKS, and this is the part not to oversell. On the 15
+    # held-out nights v3 beat v2 in all nine (outcome x cutoff) configurations
+    # tested -- 2+ TB, 3+ TB and XBH, at top 10/20/40 -- by +1.0 to +10.0
+    # points. It did NOT reliably beat a random shuffle in any of them.
+    #
+    # So: strictly better than what shipped, built on measurement instead of
+    # reasoning, and STILL NOT PROVEN to sort. My read is that the ceiling here
+    # is structural rather than a weighting problem. By the time the bot has
+    # designated ~100 hitters the pool is homogeneous, the base rate is 40%,
+    # and whether one of them gets two bases in one game is close to a coin
+    # flip. The two biggest signals above -- park_hits_factor and
+    # pitcher_side_slug -- are GAME-level, not hitter-level, which hints the
+    # honest version of this market may be "which games produce bases" rather
+    # than "which hitter does". That is a bigger change than a formula and it
+    # should be Donovan's call, so v3 ships as the better formula and the site
+    # should keep saying what it is.
+    #
+    # Re-run: python3 bots/backtest_all.py --dir ~/Desktop/results --only markets
+    _pk_hits = safe_float(getattr(h, "park_hits_factor", 1.00), 1.00)
+    _pk_k = safe_float(getattr(h, "park_k_factor", 1.00), 1.00)
+    _putaway = safe_float(getattr(h, "pitcher_putaway_pct", 0.180), 0.180)
+    _fps = safe_float(getattr(h, "pitcher_first_pitch_strike_pct", 0.60), 0.60)
+    contact_v3 = 100 * (
+        # ── recent extra-base form, 0.55 ── the three windows that measured
+        # strongest and, unlike a rate, describe the event itself.
+        0.55 * (
+            0.38 * minmax_norm(h.last5_xbh, 0, 5) +
+            0.35 * minmax_norm(h.last7_xbh, 0, 5) +
+            0.22 * minmax_norm(h.last10_xbh, 0, 7) +
+            0.05 * minmax_norm(h.l20pa_xbh, 0, 4)
+        ) +
+        # ── the arm's contact-allowed profile, 0.24 ── who gives up loud
+        # contact, and (inverted) who ends at-bats before contact happens.
+        0.24 * (
+            0.28 * minmax_norm(getattr(h, "pitcher_375_allowed", 0), 0, 8) +
+            0.22 * (1.0 - minmax_norm(_putaway, 0.14, 0.28)) +
+            0.18 * minmax_norm(h.pitcher_whip, 1.05, 1.60) +
+            0.13 * minmax_norm(h.pitcher_hardhit_allowed, 0.30, 0.52) +
+            0.11 * minmax_norm(h.pitcher_hr9, 0.6, 2.2) +
+            0.08 * (1.0 - minmax_norm(_fps, 0.55, 0.68))
+        ) +
+        # ── opportunity and hit volume, 0.13 ── more trips, more chances.
+        0.13 * (
+            0.55 * (1.0 - minmax_norm(safe_int(getattr(h, "lineup_spot", 5), 5), 1, 9)) +
+            0.45 * minmax_norm(h.last10_hits, 0, 14)
+        ) +
+        # ── power, 0.08 and no more ── a homer IS four bases, so this cannot
+        # be zero. It was 0.16 plus a whole quality-of-contact block, and that
+        # is what pushed the score toward hitters who convert doubles away.
+        0.08 * iso_power_boost
+    ) * (
+        # ── the building ── park_hits_factor, not park_barrel_factor. This
+        # multiplier is deliberately wider than v2's (0.92-1.08) because it is
+        # the strongest measured field on the board, not a garnish.
+        (0.88 + 0.24 * minmax_norm(_pk_hits, 0.94, 1.08))
+        # a park that eats at-bats with strikeouts takes bases off the table
+        * (1.04 - 0.08 * minmax_norm(_pk_k, 0.94, 1.08))
+    )
+    h.contact_score_v2 = round(_hr2_clip(contact_v3), 2)
 
     hrw_timing_score = hrw_zone_score_value(h.hrw_score)
     h.best_blend_score = round(0.45*h.hr_score_v2 + 0.15*hrw_timing_score + 0.15*pitch_fit + 0.10*h.hrr_score_v2 + 0.10*h.recent_hr_form_score + 0.05*h.matchup_power_score, 2)
