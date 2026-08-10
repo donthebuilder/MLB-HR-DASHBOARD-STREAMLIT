@@ -1618,21 +1618,52 @@ def grade_pairs_pools(sections: Dict[str, Any], actual_by_pid: Dict[int, Dict[st
         hr_count = len(homer_names)
         total_count = len(active)
         cleared = 1 if total_count > 0 and hr_count == total_count else 0
+        # ─── THE BAR IS NOW REACHABLE (2026-08-09) ─────────────────────────
+        # Donovan: "maybe break down two pools of 3-4 and pick the best lines
+        # that went or convert... I was using it as another pool of players to
+        # use since a decent portion did go every night."
+        #
+        # Joining every pool leg to its graded row across 40 nights showed he
+        # was reading it right and the GRADE was reading it wrong:
+        #
+        #     4-MAN  0 went 51.2% | 1 went 35.0% | 2 went 13.1% | 3 went 0.6%
+        #     6-MAN  0 went 46.2% | 1 went 37.5% | 2 went 11.9% | 3+ went 4.4%
+        #
+        # A pool leg homers 17.5% against a 14.9% slate baseline, and at least
+        # one lands about half of all nights. The selection works. But
+        # all-or-nothing "cleared" went 0-for-320, so the only number anyone
+        # ever saw said the product had never once worked. That is not a
+        # measurement of the pools, it is a measurement of an impossible bar.
+        #
+        # So `primary` is the headline the site reads: 1+ homered for a 3- or
+        # 4-man, 2+ for anything larger. `cleared` keeps its old all-or-nothing
+        # meaning so nothing downstream silently changes its mind, and
+        # `bar_label` carries the wording so the site never has to guess.
+        size = total_count or len(players)
+        need = 1 if size <= 4 else 2
+        primary = 1 if hr_count >= need else 0
         entry = {
             "label": pool["label"],
             "players": players,
             "cleared": cleared,
+            "primary": primary,
+            "bar": need,
+            "bar_label": f"{need}+ of {size}",
             "hr_count": hr_count,
             "total_count": total_count,
             "homer_names": homer_names,
             "void_names": void_names,
             "hit_any": 1 if hr_count >= 1 else 0,
             "hit_2plus": 1 if hr_count >= 2 else 0,
+            "hit_3plus": 1 if hr_count >= 3 else 0,
         }
         graded_pools.append(entry)
         if pool["label"].startswith("4-MAN"):
             pool4.append(entry)
-        elif pool["label"].startswith("6-MAN"):
+        elif pool["label"].startswith(("3-MAN", "6-MAN")):
+            # 6-MAN was retired 2026-08-09 and split into two 3-mans. The key
+            # stays `pool6` so an older payload and a newer one land in the
+            # same place for anything reading the archive.
             pool6.append(entry)
         if cleared:
             cleared_pools.append(entry)

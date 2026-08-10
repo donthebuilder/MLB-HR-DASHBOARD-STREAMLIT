@@ -1045,6 +1045,10 @@ class HitterRecord:
     contact_score_legacy: float = 0.0
     overall_score_legacy: float = 0.0
     hr_score_v2: float = 0.0
+    # The unblended model output, kept alongside the published hr_score so the
+    # 2026-08-09 opportunity fold (0.70 hr + 0.20 hrr + 0.10 hit) can always be
+    # measured against what it replaced. See the fold's comment block.
+    hr_score_pure: float = 0.0
     hit_score_v2: float = 0.0
     hrr_score_v2: float = 0.0
     contact_score_v2: float = 0.0
@@ -7615,6 +7619,65 @@ def score_hitter(h: HitterRecord) -> HitterRecord:
     # in the file is already clipped to 0-100 via _hr2_clip.
     h.hr_score = round(max(0.0, min(100.0, h.hr_score)), 2)
 
+    # ─── THE OPPORTUNITY FOLD (2026-08-09) ─────────────────────────────────
+    # Donovan: "fold the hrr and hit score into hr for use."
+    #
+    # WHERE THIS CAME FROM. Auditing designations across 4,620 graded picks
+    # turned up something embarrassing: the bucket named HR is not the best
+    # bucket at home runs.
+    #
+    #     TOP       671 picks   21.9% homered   95% CI 18.9-25.2
+    #     HR        672 picks   15.9% homered   95% CI 13.4-18.9
+    #     all picks 4620        14.9%
+    #
+    # The intervals do not overlap, so it is not noise. And the HR bucket beats
+    # the all-picks baseline by one point — the designation whose entire job is
+    # finding home runs is barely distinguishable from picking any designated
+    # hitter at all.
+    #
+    # WHY TOP WINS. TOP is drawn from overall_score, which is hr_score blended
+    # with the other three markets. So the thing beating the HR score at home
+    # runs is THE HR SCORE MIXED WITH HRR AND HIT. Tested directly on 27
+    # held-out nights, every blend beat hr_score alone and the direction never
+    # once flipped:
+    #
+    #     top 20 by...                       HR%      vs hr_score alone
+    #     hr_score alone                    20.7%     baseline
+    #     0.90 hr + 0.10 hrr                21.9%     10W-4L
+    #     0.80 hr + 0.20 hrr                22.4%     11W-4L
+    #     0.70 hr + 0.20 hrr + 0.10 hit     22.6%     13W-4L  p=0.049
+    #     0.70 hr + 0.30 hrr                22.8%     13W-5L  p=0.096
+    #
+    # WHAT THE MODEL WAS MISSING, in one word: OPPORTUNITY. hrr_score knows
+    # how many times he will bat, whether the lineup around him turns over, and
+    # whether this is a game where runs happen at all. hr_score was scoring the
+    # SWING and ignoring how many swings he gets. You cannot homer in the
+    # dugout, and no amount of barrel rate fixes batting eighth behind a lineup
+    # that goes down in order.
+    #
+    # 0.70/0.20/0.10 is the blend that reached p<0.05. Deliberately not 0.70 hr
+    # + 0.30 hrr even though it scored a hair higher — hrr at 0.30 starts
+    # ranking run-scorers rather than home-run hitters, and the two are only
+    # correlated up to a point. contact_score is left out on purpose: it is the
+    # one score that does not beat a random shuffle (42.6% vs 40.7%), so
+    # folding it in would be adding noise on evidence.
+    #
+    # hr_score_pure keeps the unblended model output so the fold can always be
+    # measured against what it replaced, and so a future backtest can tell the
+    # two apart in the archive.
+    h.hr_score_pure = h.hr_score
+    _fold_hrr = safe_float(getattr(h, "hrr_score", 0.0), 0.0)
+    _fold_hit = safe_float(getattr(h, "hit_score", 0.0), 0.0)
+    if _fold_hrr > 0.0 or _fold_hit > 0.0:
+        # A missing sibling score falls back to hr_score rather than to zero,
+        # so a row with no HRR published is ranked on what it does have instead
+        # of being pushed 30% of the way to the bottom of the board.
+        _fold_hrr = _fold_hrr if _fold_hrr > 0.0 else h.hr_score
+        _fold_hit = _fold_hit if _fold_hit > 0.0 else h.hr_score
+        h.hr_score = round(_hr2_clip(
+            0.70 * h.hr_score + 0.20 * _fold_hrr + 0.10 * _fold_hit
+        ), 2)
+
     # overall_score is computed inside apply_model_v2_layers (lines ~6161 and ~6209,
     # the second pass using recency-adjusted components). Computing it here would
     # be immediately overwritten -- removed per audit (2026-06-29).
@@ -9749,9 +9812,50 @@ def build_structured_pairs(
         if mode == "hybrid" and power_a >= 0.50 and power_b >= 0.50: score += 3.0
         if mode == "value" and (_power_signal(a) and _power_signal(b)): score += 2.0
 
+        # ─── LEG QUALITY (2026-08-09) ──────────────────────────────────────
+        # Donovan: "pair scoring needs to be rebuilt, yes."
+        #
+        # It did. Graded against the archive, the pair score ranked BACKWARDS:
+        # its top third of pairs cleared 3.4% and its bottom third cleared
+        # 5.3%. Whatever it was ordering, it was not the thing that happens.
+        #
+        # The legs themselves are fine — a name inside a pair or pool homers
+        # 19.0% of the time against a 14.9% slate baseline, so the SELECTION
+        # is working and the RANKING was not. Splitting 1,588 graded legs at
+        # each field's median showed what actually separates a leg that goes
+        # deep from one that doesn't:
+        #
+        #     season_iso            23.0% vs 14.9%   +8.2   intervals separate
+        #     pitcher_whip          22.8%    14.8%   +7.9   intervals separate
+        #     season_k_rate         22.9%    15.7%   +7.2   intervals separate
+        #     last5_hr              22.5%    15.4%   +7.2   intervals separate
+        #     weak_spot_flag        23.3%    17.3%   +6.0
+        #     recent_barrel_rate    17.3%    20.7%   -3.4   (backwards)
+        #
+        # THE BUG, and it is the whole ballgame: season_k_rate is one of the
+        # three strongest POSITIVE leg signals, and this function was docking
+        # 6 points for it. High-strikeout hitters are power hitters — that is
+        # the same swing viewed from two sides — and the penalty was
+        # systematically demoting exactly the bats that convert. Two hitters at
+        # 30% K each lost 6 points and another 2 on top, which is enough to
+        # invert an ordering all on its own.
+        #
+        # The penalty is replaced by a bonus at the same magnitude, and a
+        # positive term for the other three measured signals. Barrel rate is
+        # left alone rather than inverted — a negative reading at -3.4 with
+        # overlapping intervals is not evidence of anything, and inverting it
+        # would be fitting the noise.
+        _k = (safe_float(a.season_k_rate, 0.22) + safe_float(b.season_k_rate, 0.22)) / 2.0
+        score += 6.0 * minmax_norm(_k, 0.18, 0.32)
+        score += 5.0 * (minmax_norm(a.season_iso, 0.120, 0.320)
+                        + minmax_norm(b.season_iso, 0.120, 0.320))
+        score += 4.0 * (minmax_norm(safe_float(a.pitcher_whip, 1.25), 1.05, 1.60)
+                        + minmax_norm(safe_float(b.pitcher_whip, 1.25), 1.05, 1.60))
+        score += 3.0 * (minmax_norm(a.last5_hr, 0, 3) + minmax_norm(b.last5_hr, 0, 3))
+        if getattr(a, "weak_spot_flag", False): score += 2.5
+        if getattr(b, "weak_spot_flag", False): score += 2.5
+
         # Hard penalties
-        if a.season_k_rate >= 0.30 and b.season_k_rate >= 0.30: score -= 6.0
-        if a.season_k_rate >= 0.28 or b.season_k_rate >= 0.28: score -= 2.0
         if not _power_signal(a) or not _power_signal(b): score -= 5.0
         if (a.hrw_score or 0) < 40: score -= 6.0
         if (b.hrw_score or 0) < 40: score -= 6.0
@@ -10146,13 +10250,45 @@ def build_pair_sections(rows: List[HitterRecord]) -> Tuple[str, Dict[str, Any]]:
     # a 3rd hybrid, and swapped B's hrr slot (7.8% in this exact pool) for a
     # 3rd hybrid. C and D unchanged -- D's mid slot in particular is running
     # 15.1% and rising, no reason to touch it.
-    pool6_a=build_structured_pool(candidate_rows,{"core":1,"hrr":1,"hybrid":3,"wtf":1},buckets,pool6_exposure,blocked_ids=pool6_blocked); pool6_a=top_up_pool(pool6_a,6,candidate_rows,pool6_blocked,pick_tag_map); pool6_blocked.update(r.player_id for r in pool6_a); pair_pool_used_ids.update(r.player_id for r in pool6_a)
-    pool6_b=build_structured_pool(candidate_rows,{"hybrid":4,"mid":1,"wtf":1},buckets,pool6_exposure,blocked_ids=pool6_blocked); pool6_b=top_up_pool(pool6_b,6,candidate_rows,pool6_blocked,pick_tag_map); pool6_blocked.update(r.player_id for r in pool6_b); pair_pool_used_ids.update(r.player_id for r in pool6_b)
-    pool6_c=build_structured_pool(candidate_rows,{"mid":2,"wtf":4},buckets,pool6_exposure,blocked_ids=pool6_blocked); pool6_c=top_up_pool(pool6_c,6,candidate_rows,pool6_blocked,pick_tag_map,prefer_variance=True); pool6_blocked.update(r.player_id for r in pool6_c); pair_pool_used_ids.update(r.player_id for r in pool6_c)
-    pool6_d=build_structured_pool(candidate_rows,{"wtf":4,"mid":2},buckets,pool6_exposure,blocked_ids=pool6_blocked,blocked_top_ids=top5_ids); pool6_d=top_up_pool(pool6_d,6,candidate_rows,pool6_blocked,pick_tag_map,avoid_top_ids=top5_ids,prefer_variance=True)
-    pair_pool_used_ids.update(r.player_id for r in pool6_d)
-    lines.append(""); lines.append("🏊 6-MAN HR POOLS")
-    lines.extend(format_pool_columns("POOL A — Strongest", pool6_a, "POOL B — Balanced", pool6_b, "POOL C — Mid / Var", pool6_c, "POOL D — Contrarian", pool6_d, pick_tag_map, width=34))
+    # ─── THE 6-MAN IS RETIRED (2026-08-09) ─────────────────────────────────
+    # Donovan: "retire the six man. I was using it as another pool of players
+    # to use since a decent portion did go every night, but yes it is clearly
+    # missing the mark."
+    #
+    # He had it exactly right, on both halves. Joining every pool leg to its
+    # graded row across 40 nights:
+    #
+    #     4-MAN   0 went 51.2% | 1 went 35.0% | 2 went 13.1% | 3 went 0.6%
+    #     6-MAN   0 went 46.2% | 1 went 37.5% | 2 went 11.9% | 3 went 3.8% | 4 went 0.6%
+    #
+    # So a decent portion DOES go every night — 1+ lands 48.8% of the time on
+    # the 4-man and 53.8% on the 6-man, and a pool leg homers 17.5% against a
+    # 14.9% slate baseline. The selection was never the problem.
+    #
+    # ALL SIX is the problem. Six independent 17.5% shots is one in ~34,000;
+    # the archive has now watched 160 six-man pools and seen a maximum of four.
+    # A product that cannot hit is not a product, however good its legs are.
+    #
+    # So the six splits into TWO THREES. Same players, same buckets, same
+    # exposure budget — the only thing that changes is that the unit you are
+    # asked to believe in got small enough to be reachable. Three legs at 17.5%
+    # gives roughly a 44% chance of at least one and 8% of at least two, and
+    # unlike "all six" those are outcomes the archive actually contains.
+    #
+    # Recipes come straight off the retired six-man ones, split down the
+    # middle: A keeps the core+hybrid spine, its partner takes the hrr+wtf
+    # side; B splits its four hybrids two and two.
+    pool3_a=build_structured_pool(candidate_rows,{"core":1,"hybrid":2},buckets,pool6_exposure,blocked_ids=pool6_blocked); pool3_a=top_up_pool(pool3_a,3,candidate_rows,pool6_blocked,pick_tag_map); pool6_blocked.update(r.player_id for r in pool3_a); pair_pool_used_ids.update(r.player_id for r in pool3_a)
+    pool3_b=build_structured_pool(candidate_rows,{"hrr":1,"hybrid":1,"wtf":1},buckets,pool6_exposure,blocked_ids=pool6_blocked); pool3_b=top_up_pool(pool3_b,3,candidate_rows,pool6_blocked,pick_tag_map); pool6_blocked.update(r.player_id for r in pool3_b); pair_pool_used_ids.update(r.player_id for r in pool3_b)
+    pool3_c=build_structured_pool(candidate_rows,{"hybrid":2,"mid":1},buckets,pool6_exposure,blocked_ids=pool6_blocked); pool3_c=top_up_pool(pool3_c,3,candidate_rows,pool6_blocked,pick_tag_map); pool6_blocked.update(r.player_id for r in pool3_c); pair_pool_used_ids.update(r.player_id for r in pool3_c)
+    pool3_d=build_structured_pool(candidate_rows,{"wtf":2,"mid":1},buckets,pool6_exposure,blocked_ids=pool6_blocked,blocked_top_ids=top5_ids); pool3_d=top_up_pool(pool3_d,3,candidate_rows,pool6_blocked,pick_tag_map,avoid_top_ids=top5_ids,prefer_variance=True)
+    pair_pool_used_ids.update(r.player_id for r in pool3_d)
+    lines.append(""); lines.append("🏊 3-MAN HR POOLS  (replaces the 6-man — see the note in the code)")
+    lines.append("   Graded on HOW MANY went, not all-or-nothing. 1+ is the bar; 2+ is a good night.")
+    lines.extend(format_pool_columns("POOL A — Strongest", pool3_a, "POOL B — HRR+Var", pool3_b, "POOL C — Balanced", pool3_c, "POOL D — Contrarian", pool3_d, pick_tag_map, width=34))
+    # Kept under the old names so downstream consumers that read pool6_* keep
+    # working; they now hold three names each rather than six.
+    pool6_a, pool6_b, pool6_c, pool6_d = pool3_a, pool3_b, pool3_c, pool3_d
     LAST_HR_SECTION_USED_IDS = set(pair_pool_used_ids)
 
     # JSON pools added per audit (2026-06-27) -- mirrors System 1's pool
