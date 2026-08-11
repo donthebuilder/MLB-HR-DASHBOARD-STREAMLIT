@@ -1531,7 +1531,39 @@ class MLBClient:
         # connectivity, API key status, or anything else downstream. This
         # was the actual root cause of weather being empty for the entire
         # slate -- not the OWM/Open-Meteo provider choice fixed earlier.
-        return self.get_json(f"{MLB_BASE}/venues/{venue_id}", params={"hydrate": "location"})
+        # ── AND fieldInfo, FOR THE SAME REASON (2026-08-11) ───────────────
+        #
+        # The note above diagnosed this exact bug for coordinates and fixed
+        # only that half. infer_roof() reads v["fieldInfo"]["roofType"], which
+        # hydrate=location never returns, and then falls back:
+        #
+        #     if not roof: return "open"
+        #
+        # So EVERY park in baseball has been reported open-air, forever. The
+        # archive proves it: `roof` is the string 'open' on all 3,511 rows that
+        # carry it, and on 178 of 178 rows of a live slate — while the league
+        # has seven retractable or domed parks (Tampa Bay, Milwaukee, Houston,
+        # Toronto, Arizona, Miami, Texas). A dome cannot be 'open' 100% of the
+        # time; a constant is the tell.
+        #
+        # It matters twice. Wind and temperature adjustments are applied to
+        # games played INDOORS, where there is no wind and the temperature is
+        # controlled. And enrich_weather_payload_for_website gates on
+        # `has_roof_only_weather = roof in {closed, dome}` to decide that a
+        # domed game legitimately HAS weather data without a fetch — a branch
+        # that has therefore never once been taken.
+        #
+        # Same failure shape as the 0-for-unknown weather bug: a default that
+        # silently answers a question nobody actually asked the API.
+        #
+        # FALLBACK IS DELIBERATE. If the API rejects the combined hydration we
+        # must not lose coordinates too — that would re-break weather, which is
+        # precisely what the note above was written about. So a response with
+        # no venues falls back to the known-good location-only call.
+        blob = self.get_json(f"{MLB_BASE}/venues/{venue_id}", params={"hydrate": "location,fieldInfo"})
+        if not (blob or {}).get("venues"):
+            return self.get_json(f"{MLB_BASE}/venues/{venue_id}", params={"hydrate": "location"})
+        return blob
 
 
 def safe_float(value: Any, default: float = 0.0) -> float:
