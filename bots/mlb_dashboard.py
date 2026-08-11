@@ -1652,9 +1652,30 @@ def display_avg(value: float) -> str:
     return f"{value:.3f}".lstrip("0") if value < 1 else f"{value:.3f}"
 
 
-def infer_roof(venue_blob: Dict[str, Any]) -> str:
+def infer_roof(venue_blob: Dict[str, Any], team_abbr: str = "") -> str:
+    """The park's roof, from the API if it answered and from our own table if not.
+
+    THE TABLE FALLBACK IS THE POINT (2026-08-11). This read only
+    fieldInfo.roofType, which the venue fetch never hydrated, and then returned
+    "open" — so every park in baseball was open-air on all 3,511 archived rows
+    that carry it and 178 of 178 of a live slate, while the league has seven
+    retractable roofs.
+
+    The hydration is fixed in CacheDB.venue(), but the answer was ALREADY IN
+    THIS FILE the whole time: PARK_FACTORS_V2 carries a "roof" key per park and
+    correctly marks MIA, ARI, HOU, TOR, MIL, TEX and SEA as Retractable. So the
+    fallback is now our own table rather than a guess, which means this returns
+    the right answer even when the API is slow, rate-limited or reshaped —
+    exactly the failure mode that produced the bug.
+
+    Only reached when the API gives nothing, so a live roofType still wins:
+    a retractable roof that is CLOSED tonight is a fact only the API knows,
+    and the table can only say the park has one.
+    """
     v = venue_blob.get("venues", [{}])[0] if "venues" in venue_blob else venue_blob
     roof = v.get("fieldInfo", {}).get("roofType") or v.get("roofType")
+    if not roof and team_abbr:
+        roof = (PARK_FACTORS_V2.get(str(team_abbr).upper(), {}) or {}).get("roof") or ""
     if not roof:
         return "open"
     txt = str(roof).lower()
@@ -7840,7 +7861,7 @@ def build_hitter_records(client: MLBClient, db: CacheDB, game: Dict[str, Any], s
     venue_name = venue.get("name", "Unknown venue")
     venue_blob = client.venue(safe_int(venue.get("id"), 0)) if venue.get("id") else {}
     lat, lon = get_venue_coords(venue_blob)
-    roof = infer_roof(venue_blob)
+    roof = infer_roof(venue_blob, home_abbr)
     # Weather caching added (per audit, 2026-06-27): fetch_weather previously
     # had ZERO caching -- every single game hit Open-Meteo fresh, every run,
     # with no fallback to a recent cached value if the provider was slow or
