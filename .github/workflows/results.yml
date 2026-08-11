@@ -17,7 +17,16 @@ on:
     # Phoenix 9am-11pm hourly, plus 1am and 3am for the final sweep. Grading
     # now starts before first pitch so early games are picked up as they go,
     # not two hours after they end.
-    - cron: "0 16,17,18,19,20,21,22,23,0,1,2,3,4,5,6,8,10 * * *"
+    # 07:00 UTC ADDED 2026-08-11 (Donovan: "make sure the result run to when
+    # the day switches over so the site updates too"). The list above ran
+    # hourly 16:00 -> 06:00 UTC and then jumped to 08:00, so 07:00 was the
+    # single hole in an otherwise continuous block — and 07:00 UTC is midnight
+    # Phoenix exactly. That is the moment the local date rolls, so the one hour
+    # with no grading run was the one hour the site needed a fresh publish to
+    # carry the finished night across the switch. A West-coast game ending
+    # 11:40pm was graded at 06:00, then nothing published again until 08:00,
+    # an hour after the day had already turned over.
+    - cron: "0 16,17,18,19,20,21,22,23,0,1,2,3,4,5,6,7,8,10 * * *"
   workflow_dispatch: {}
 
 # One group PER WORKFLOW, not one shared across all of them.
