@@ -56,15 +56,51 @@ def discord_urls() -> list[str]:
     return [u.strip() for u in raw.replace(",", "\n").split() if u.strip().startswith("http")]
 
 
-def post(msg: str) -> None:
-    for url in discord_urls():
+def post(msg: str) -> tuple[int, int]:
+    """Send to every configured webhook. Returns (delivered, failed).
+
+    WHY THIS REPORTS (2026-08-11, Donovan: "I wanted notis for when I'm not on
+    the site for my phone — didn't work").
+
+    This used to return None and swallow everything, which gave the run three
+    separate ways to be silent and still look fine:
+
+      · DISCORD_WEBHOOK unset, empty, or rotated to a value that no longer
+        starts with http -> discord_urls() is [], the loop body never runs,
+        nothing is sent and nothing is logged. The run goes green.
+      · a DELETED webhook answers 404. urlopen raises, the except printed one
+        stderr line, and the run still exited 0. Green again.
+      · main then printed "posted N alert(s)" whether or not a single byte
+        left the machine -- the log actively said it had posted.
+
+    A notification channel that can fail green is a channel you cannot trust,
+    and the only symptom is the thing Donovan actually reported: nothing
+    arrives and nothing anywhere says why. So delivery is now counted, the
+    HTTP status is logged per hook, and main turns a total failure into a RED
+    run (see the tail of main).
+    """
+    urls = discord_urls()
+    if not urls:
+        print("DISCORD_WEBHOOK is unset or holds no http(s) URL — nothing can be delivered",
+              file=sys.stderr)
+        return 0, 0
+    ok = bad = 0
+    for i, url in enumerate(urls, 1):
         try:
             req = urllib.request.Request(
                 url, data=json.dumps({"content": msg[:1900]}).encode("utf-8"),
                 headers={"Content-Type": "application/json", "User-Agent": "moonshot-bot"})
-            urllib.request.urlopen(req, timeout=10)
+            with urllib.request.urlopen(req, timeout=10) as r:
+                print(f"discord hook {i}/{len(urls)}: HTTP {r.status}")
+            ok += 1
         except Exception as exc:
-            print(f"discord post failed: {exc}", file=sys.stderr)
+            # 404 = webhook deleted in Discord; 401 = token rotated. Both mean
+            # the Actions secret is stale and only a human can refresh it.
+            code = getattr(exc, "code", None)
+            hint = " (webhook deleted — refresh the DISCORD_WEBHOOK secret)" if code == 404 else ""
+            print(f"discord hook {i}/{len(urls)} FAILED: {exc}{hint}", file=sys.stderr)
+            bad += 1
+    return ok, bad
 
 
 def load_state() -> dict:
@@ -262,13 +298,32 @@ def main() -> int:
                     lines.append(f"🚨 **{p['name']}** ({p['role']} pick) at the plate RIGHT NOW with the {spot}"
                                  f" — inning {inn}, {away_ab}@{home_ab}")
 
-    if lines:
-        post("\n".join(lines[:12]))
-        print(f"posted {len(lines)} alert(s)")
-    else:
+    if not lines:
         print("quiet window")
-    save_state(st)
-    return 0
+        save_state(st)
+        return 0
+
+    ok, bad = post("\n".join(lines[:12]))
+    if ok:
+        print(f"delivered {len(lines)} alert(s) to {ok} webhook(s)" + (f", {bad} failed" if bad else ""))
+        save_state(st)
+        return 0
+
+    # NOTHING GOT THROUGH. Two things have to happen, and the old code did
+    # neither.
+    #
+    # 1. The run must go RED. A silent green run is why this went unnoticed
+    #    for however long it has been broken -- the Actions tab is the only
+    #    place the failure is visible and it was showing a checkmark.
+    # 2. The state must NOT be saved. seen()/mark() are stamped while the
+    #    lines are being BUILT, before any delivery is attempted, so saving
+    #    here would record "already alerted" for alerts that never left the
+    #    building -- and every one of them is once-per-game-per-player. A
+    #    single failed run would burn tonight's scratch alert permanently.
+    #    Dropping the state means the next run re-detects and re-sends.
+    print(f"DELIVERED NOTHING — {len(lines)} alert(s) had nowhere to go. "
+          f"State not saved, so the next run will retry them.", file=sys.stderr)
+    return 1
 
 
 if __name__ == "__main__":
