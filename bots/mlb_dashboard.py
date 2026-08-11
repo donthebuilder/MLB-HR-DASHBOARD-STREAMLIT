@@ -11076,6 +11076,65 @@ def _weather_display(row: Dict[str, Any]) -> str:
     return " · ".join(parts)
 
 
+def mark_hidden_hr_value(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Flag the hitters the v2 rewrite promoted hardest — the actual "hidden value".
+
+    WHY THIS MOVED OUT OF THE PER-HITTER PATH (2026-08-11).
+
+    hidden_hr_value was False on ALL 2,534 archived rows carrying it and on
+    178 of 178 rows of a live slate. The badge is rendered in three site
+    components and had never once appeared.
+
+    The gate was:
+
+        old_hr_score < 42 and hr_score_new >= 48 and not trap_flag and (...)
+
+    which asks for a hitter the OLD model scored under 42 and the NEW model
+    scores 48+. That was written when the two scores shared a scale. They no
+    longer do: across a real slate hr_score_v2 runs a median 22.8 points BELOW
+    hr_score_old. So the gate wants a jump upward across a seam that the
+    rewrite moved the other way, and the window is empty — 0 of 178 rows.
+
+    Rescaling the constants does not fix it either, because hr_score_old is
+    itself degenerate: seven different hitters on one slate share exactly
+    55.6, so any absolute cut on it lumps Ohtani and Harper in with the
+    genuinely overlooked bats and defeats the point of the flag.
+
+    RANK IS SCALE-FREE, which is why this is now a slate pass instead of a
+    per-hitter test. "Hidden" means the new model ranks him much better than
+    the old one did AND he now ranks well enough to actually back:
+
+        moved up >= 30 places, and sits in the top 30 of the v2 ranking
+
+    On a 178-hitter slate that is ~4.5% and it lands on Coby Mayo, Hunter
+    Goodman, Jake McCarthy, Max Muncy, Mickey Moniak — overlooked names with
+    strong ISO, which is exactly what the badge was for, rather than the stars
+    every absolute threshold surfaced.
+
+    Runs after all rows are scored; leaves any row missing either score alone.
+    """
+    scored = [r for r in rows
+              if isinstance(r.get("hr_score_old"), (int, float))
+              and isinstance(r.get("hr_score_v2"), (int, float))]
+    if len(scored) < 20:            # too thin a slate to rank meaningfully
+        return rows
+    old_rank = {id(r): i + 1 for i, r in enumerate(sorted(scored, key=lambda r: -r["hr_score_old"]))}
+    new_rank = {id(r): i + 1 for i, r in enumerate(sorted(scored, key=lambda r: -r["hr_score_v2"]))}
+    for r in scored:
+        moved = old_rank[id(r)] - new_rank[id(r)]
+        hidden = bool(moved >= 30 and new_rank[id(r)] <= 30 and not r.get("trap_flag"))
+        if hidden:
+            r["hidden_hr_value"] = True
+            r["hidden_value_reason"] = (
+                f"Underrated play — the current model ranks him #{new_rank[id(r)]} tonight, "
+                f"{moved} places above where the legacy score had him"
+            )
+            tags = r.get("top_board_tags")
+            if isinstance(tags, list) and "Hidden HR Value" not in tags:
+                tags.append("Hidden HR Value")
+    return rows
+
+
 def enrich_weather_payload_for_website(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """Add flat aliases + nested weather object so every dashboard section can read weather.
 
@@ -11798,6 +11857,9 @@ Use ALT LOOKS as quality variance, not primary plays.
         except Exception as _xexc:
             print(f"xHR finalize skipped: {_xexc}", file=sys.stderr)
         rows_payload = enrich_weather_payload_for_website([dataclasses.asdict(r) for r in all_rows])
+        # Slate-level, so it can rank. See mark_hidden_hr_value for why the
+        # per-hitter version could never fire.
+        rows_payload = mark_hidden_hr_value(rows_payload)
         rows_payload = enrich_hr_pa_payload(rows_payload)
         rows_payload = enrich_signal_pills_and_best_non_hr(rows_payload)
 
