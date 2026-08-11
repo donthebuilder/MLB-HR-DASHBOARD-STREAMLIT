@@ -1308,6 +1308,42 @@ SLOT_FIELDS = {
     # decorations. These were shown but never kept.
     "pitch_type_match_flag", "pitch_type_match_score", "games_since_last_hr",
     "hidden_hr_value", "high_confidence_hr_flag",
+    # ── YOU CANNOT SWEEP A WEIGHT YOU NEVER RECORDED (2026-08-11) ──────────
+    #
+    # Found while trying to answer two of Donovan's questions off the archive
+    # and discovering neither was answerable, for the same reason: this is a
+    # WHITELIST, and anything not named here is dropped by trim_row before the
+    # night is written. Three gaps, all silent:
+    #
+    #   longest_hr_score      0 of 5,766 archived rows. The longest-HR model
+    #                         has therefore never been gradeable AT ALL -- and
+    #                         now that the backfill records each homer's actual
+    #                         distance, it is the one model that could finally
+    #                         be scored against ground truth. It just needs to
+    #                         start being written down.
+    #   hr_due_score          on 1,767 rows from an older writer that bypassed
+    #                         trim_row, and absent since. Partial history is
+    #                         worse than none, because it looks like a sample.
+    #   weather_hr_effect_pct  present on 2,369 rows and ZERO on every single
+    #   wind_boost             one of them, while tonight's live slate carries
+    #                          -2% to +8%. So no weather question has ever been
+    #                          answerable from this archive either.
+    #
+    # Adding them is additive and costs a few bytes a row. In two or three
+    # weeks the questions become answerable; today they are not, and no amount
+    # of re-analysis fixes that.
+    #
+    # NOTE the weather pair may still land as 0 even after this, if the zero
+    # originates upstream in the breakdown file rather than here. Check the
+    # first graded night after this ships before trusting it -- if it is still
+    # 0, the bug is in how the picks file is built, not in this whitelist.
+    "longest_hr_score", "hr_due_score",
+    "weather_hr_effect_pct", "weather_wind_boost", "wind_boost",
+    "park_dist_factor", "weather_label",
+    # the lift terms the model selects on -- needed to test whether its
+    # moonshot skew (+8.9pp vs the rest of the slate) is weather-fragile
+    "l20pa_fb_rate", "l20pa_barrel_rate", "l20pa_ideal_hr_contact",
+    "l20pa_hard_hit_rate", "recent_ev", "pitcher_trend_direction",
 }
 
 
