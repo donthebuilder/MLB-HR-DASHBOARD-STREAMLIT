@@ -792,13 +792,41 @@ def fetch_game_feed(game_pk: int) -> Dict[str, Any]:
     return resp.json()
 
 
-def get_player_batting_line(game_feed: Dict[str, Any], player_id: int) -> Dict[str, int]:
+def get_player_batting_line(game_feed: Dict[str, Any], player_id: int) -> Dict[str, Any]:
     teams = game_feed.get("liveData", {}).get("boxscore", {}).get("teams", {})
     for side in ("home", "away"):
         players = teams.get(side, {}).get("players", {}) or {}
         pdata = players.get(f"ID{player_id}")
         if pdata:
             batting = pdata.get("stats", {}).get("batting", {}) or {}
+            # Extract homer events for this player (2026-08-11: JOB 1)
+            hr_events = []
+            plays = ((game_feed.get("liveData") or {}).get("plays") or {}).get("allPlays") or []
+            for play in plays:
+                result = play.get("result") or {}
+                if str(result.get("eventType") or result.get("event") or "").lower() not in (
+                        "home_run", "home run"):
+                    continue
+                batter = ((play.get("matchup") or {}).get("batter") or {})
+                if safe_int(batter.get("id"), 0) != player_id:
+                    continue
+                # Extract homer details
+                hit = {}
+                for ev in reversed(play.get("playEvents") or []):
+                    if ev.get("hitData"):
+                        hit = ev["hitData"]
+                        break
+                pitcher = ((play.get("matchup") or {}).get("pitcher") or {})
+                hr_events.append({
+                    "inning": safe_int(play.get("about", {}).get("inning"), None),
+                    "pitcher_id": safe_int(pitcher.get("id"), None),
+                    "pitcher_name": pitcher.get("fullName", ""),
+                    "launch_speed": safe_float(hit.get("launchSpeed"), None) if hit.get("launchSpeed") is not None else None,
+                    "launch_angle": safe_float(hit.get("launchAngle"), None) if hit.get("launchAngle") is not None else None,
+                    "total_distance": safe_float(hit.get("totalDistance"), None) if hit.get("totalDistance") is not None else None,
+                    "pitch_type": "",
+                    "event": result.get("event", ""),
+                })
             return {
                 "hits": safe_int(batting.get("hits"), 0),
                 "hr": safe_int(batting.get("homeRuns"), 0),
@@ -814,8 +842,12 @@ def get_player_batting_line(game_feed: Dict[str, Any], player_id: int) -> Dict[s
                 "bb": safe_int(batting.get("baseOnBalls"), 0),
                 "doubles": safe_int(batting.get("doubles"), 0),
                 "triples": safe_int(batting.get("triples"), 0),
+                "hr_events": hr_events,  # JOB 1: per-homer batted-ball capture
             }
-    return {"hits": 0, "hr": 0, "runs": 0, "rbi": 0, "tb": 0, "ab": 0, "k": 0, "bb": 0, "doubles": 0, "triples": 0}
+    return {
+        "hits": 0, "hr": 0, "runs": 0, "rbi": 0, "tb": 0, "ab": 0, "k": 0, "bb": 0,
+        "doubles": 0, "triples": 0, "hr_events": [],
+    }
 
 
 
@@ -1411,9 +1443,9 @@ def build_tracking_slots(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return tracking
 
 
-def grade_slot(slot: Dict[str, Any], actual: Dict[str, int]) -> Dict[str, Any]:
+def grade_slot(slot: Dict[str, Any], actual: Dict[str, Any]) -> Dict[str, Any]:
     hrr_total = actual["hits"] + actual["runs"] + actual["rbi"]
-    return {
+    graded = {
         **slot,
         # An extra-base hit is always 2+ total bases, but two singles are 2 TB
         # with no XBH -- so these are genuinely different questions and the
@@ -1441,6 +1473,11 @@ def grade_slot(slot: Dict[str, Any], actual: Dict[str, int]) -> Dict[str, Any]:
         "hrr_2_plus": 1 if hrr_total >= 2 else 0,
         "hrr_3_plus": 1 if hrr_total >= 3 else 0,
     }
+    # JOB 1: per-homer batted-ball capture (2026-08-11)
+    # Include homer events if present in actual
+    if actual.get("hr_events"):
+        graded["hr_events"] = actual["hr_events"]
+    return graded
 
 
 def merge_homer_entries(graded_slots: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
