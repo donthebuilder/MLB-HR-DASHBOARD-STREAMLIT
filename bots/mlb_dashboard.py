@@ -4734,8 +4734,16 @@ def _weak_spot_reason_for(pitcher: "PitcherSummary", spot: int) -> str:
     if pa < 4:
         return "Weak lineup spot vs this pitcher (limited sample)."
     if hr > 0:
-        return f"Pitcher has allowed {hr} HR to the #{spot} spot in {pa} PA this season (.{int(slg*1000):03d} SLG)."
-    return f"Pitcher allows a .{int(slg*1000):03d} SLG to the #{spot} spot in {pa} PA this season."
+        # display_avg, not a hand-rolled "." + int(slg*1000) (fixed 2026-08-11).
+        # That pattern is right below .999 and WRONG at or above it: 1.034 SLG
+        # printed as ".1034". It therefore broke on exactly the rows this
+        # sentence exists to flag — a spot a pitcher is getting destroyed at is
+        # a spot slugging over 1.000. 6 of the 40 weak-spot lines on the
+        # 2026-08-11 slate were malformed, including a 1.250. display_avg has
+        # been in this file since line 1619 and does the leading-zero rule
+        # properly; these two call sites just never used it.
+        return f"Pitcher has allowed {hr} HR to the #{spot} spot in {pa} PA this season ({display_avg(slg)} SLG)."
+    return f"Pitcher allows a {display_avg(slg)} SLG to the #{spot} spot in {pa} PA this season."
 
 
 def _finalize_spot_damage(bucket: Dict[str, Any], label_name: str = "") -> Dict[str, Any]:
@@ -6044,7 +6052,7 @@ def apply_decision_engine_v31(h: HitterRecord) -> HitterRecord:
         if max_ev < 104:
             specific.append(f"Max EV only {max_ev:.0f} mph")
         if iso < 0.180:
-            specific.append(f"ISO only .{int(iso*1000):03d}")
+            specific.append(f"ISO only {display_avg(iso)}")
         if gb_rate >= 0.48:
             specific.append(f"{gb_rate*100:.0f}% GB rate")
         if k_rate >= 0.30:
