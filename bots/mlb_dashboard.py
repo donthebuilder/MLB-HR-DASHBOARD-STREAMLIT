@@ -11075,9 +11075,41 @@ def enrich_weather_payload_for_website(rows: List[Dict[str, Any]]) -> List[Dict[
         r["wind_mph"] = wind
         r["wind_deg"] = wind_deg
         r["wind_direction_label"] = r.get("weather_wind_direction_label") or ""
-        r["wind_boost"] = wind_boost
-        r["environment_boost"] = round(pct / 100.0, 4)
-        r["weather_hr_effect_pct"] = pct
+
+        # ── 0 IS NOT "NO WEATHER" (2026-08-11) ────────────────────────────
+        #
+        # Found by trying to test whether the model's home runs are
+        # weather-fragile and getting an empty table back:
+        # weather_hr_effect_pct sat on 2,369 archived rows and was ZERO on
+        # every single one, while a live slate carries -2% to +8%.
+        #
+        # The cause is not the grader's whitelist (fixed separately) — it is
+        # here. wind_boost and weather_wind_boost are dataclass fields
+        # defaulting to 0.0, and _weather_env_pct returns 0 when there is
+        # nothing to compute from. So on every night the weather fetch did not
+        # land, this wrote a confident 0 that means "we never knew" and reads
+        # identically to "calm night, neutral conditions". weather_temp_f is
+        # populated on only 1,191 of 5,766 archived rows, so that is most
+        # nights.
+        #
+        # has_data already exists to make the distinction, but a consumer that
+        # reads the NUMBER without checking the FLAG — which is every
+        # consumer, because a number is the obvious thing to read — silently
+        # treats unknown as neutral. That is the same trap as Number(null)
+        # being 0 rather than NaN, and it cost this archive its entire weather
+        # history.
+        #
+        # None serializes to JSON null, which no analysis will mistake for a
+        # measurement. Callers that want a number still have has_data to gate
+        # on, and the site's own reader already checks weather_has_data first.
+        if has_data:
+            r["wind_boost"] = wind_boost
+            r["environment_boost"] = round(pct / 100.0, 4)
+            r["weather_hr_effect_pct"] = pct
+        else:
+            r["wind_boost"] = None
+            r["environment_boost"] = None
+            r["weather_hr_effect_pct"] = None
         r["weather_label"] = display
         r["weather_has_data"] = has_data
 
