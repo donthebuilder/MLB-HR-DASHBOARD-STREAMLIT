@@ -1383,6 +1383,16 @@ SLOT_FIELDS = {
     "pitcher_hr9_vs_lhb", "pitcher_hr9_vs_rhb",
     "pitcher_weak_side_score", "pitcher_weak_side_gap",
     "season_pa", "beginner_label", "damage_conversion_score",
+
+    # ── PITCHER BATTED-BALL PROFILE (2026-08-12) ────────────────────────
+    #
+    # pitcher_gb_rate/pitcher_ld_rate/pitcher_popup_rate now compute for
+    # real (mlb_dashboard.py's build_pitcher_statcast_profile reads the
+    # same bb_type column pitcher_statcast_fb_rate already used, just adds
+    # three more groupby buckets). Archived here so the Pitchers.js caption
+    # that's been telling users these publish as 0 can be checked against
+    # actual graded values instead of taken on faith.
+    "pitcher_gb_rate", "pitcher_ld_rate", "pitcher_popup_rate",
 }
 
 

@@ -853,6 +853,14 @@ class PitcherSummary:
     statcast_fb_rate: float = 0.34
     dist375_allowed: int = 0
     dist400_allowed: int = 0
+    # PITCHER BATTED-BALL PROFILE (2026-08-12): bb_type was already being read
+    # off the same statcast pull to derive statcast_fb_rate -- these three add
+    # nothing to the query, just three more groupby buckets on data already in
+    # hand. Site caption on Pitchers.js has been saying gb/ld publish as 0
+    # since this was never computed; now it is.
+    gb_allowed: float = 0.42
+    ld_allowed: float = 0.21
+    popup_allowed: float = 0.05
     pitcher_attack_score: float = 0.0
     pitcher_attack_tag: str = ""
     hr9_vs_lhb: float = 1.05
@@ -1045,6 +1053,12 @@ class HitterRecord:
     pitcher_hardhit_allowed: float
     pitcher_barrel_allowed: float
     pitcher_statcast_fb_rate: float
+    # PITCHER BATTED-BALL PROFILE (2026-08-12): the two the site page has been
+    # captioning as "published as 0" -- ground_ball/line_drive rate allowed,
+    # same bb_type column pitcher_statcast_fb_rate already reads.
+    pitcher_gb_rate: float
+    pitcher_ld_rate: float
+    pitcher_popup_rate: float
     pitcher_375_allowed: int
     pitcher_400_allowed: int
     pitcher_attack_score: float
@@ -3530,7 +3544,10 @@ def build_pitcher_statcast_profile(db: CacheDB, pitcher_id: int, end_date: Optio
     Rates are decimals, not percentages. Missing pulls stay marked as missing.
     """
     end_date = end_date or statcast_data_end_date(TODAY)
-    key = f"pitcher_statcast_damage_v6_xhr:{SEASON}:{pitcher_id}:{end_date.isoformat()}"
+    # v7: adds gb_allowed/ld_allowed/popup_allowed (2026-08-12) -- bumped so
+    # every pitcher re-pulls once instead of serving the placeholder defaults
+    # below for up to a day under the old v6 cache key.
+    key = f"pitcher_statcast_damage_v7_battedball:{SEASON}:{pitcher_id}:{end_date.isoformat()}"
     defaults = {
         "statcast_bbe": 0,
         "statcast_games": 0,
@@ -3541,6 +3558,9 @@ def build_pitcher_statcast_profile(db: CacheDB, pitcher_id: int, end_date: Optio
         "hardhit_allowed": 0.38,
         "barrel_allowed": 0.07,
         "statcast_fb_rate": 0.34,
+        "gb_allowed": 0.42,
+        "ld_allowed": 0.21,
+        "popup_allowed": 0.05,
         "dist375_allowed": 0,
         "dist400_allowed": 0,
         "babip_statcast": 0.300,
@@ -3648,6 +3668,9 @@ def build_pitcher_statcast_profile(db: CacheDB, pitcher_id: int, end_date: Optio
                 "hard": 0.38,
                 "barrel": 0.07,
                 "fb": 0.34,
+                "gb": 0.42,
+                "ld": 0.21,
+                "pu": 0.05,
                 "dist375": 0,
                 "dist400": 0,
                 "babip": 0.300,
@@ -3664,6 +3687,12 @@ def build_pitcher_statcast_profile(db: CacheDB, pitcher_id: int, end_date: Optio
                 metrics["barrel"] = float(((bbe["launch_speed"] >= 98) & (bbe["launch_angle"] >= 24) & (bbe["launch_angle"] <= 32)).fillna(False).mean())
                 if "bb_type" in bbe.columns:
                     metrics["fb"] = float((bbe["bb_type"] == "fly_ball").mean())
+                    # Same bb_type column the fb rate above already reads --
+                    # PITCHER BATTED-BALL PROFILE (2026-08-12), completes the
+                    # four-way split (gb/ld/fb/popup) the site only had fb for.
+                    metrics["gb"] = float((bbe["bb_type"] == "ground_ball").mean())
+                    metrics["ld"] = float((bbe["bb_type"] == "line_drive").mean())
+                    metrics["pu"] = float((bbe["bb_type"] == "popup").mean())
                 else:
                     metrics["fb"] = float((bbe["launch_angle"] >= 25).fillna(False).mean())
                 metrics["dist375"] = int((bbe["hit_distance_sc"] >= 375).fillna(False).sum())
@@ -3703,6 +3732,9 @@ def build_pitcher_statcast_profile(db: CacheDB, pitcher_id: int, end_date: Optio
         out["hardhit_allowed"] = float(_blend("hard", 0.38))
         out["barrel_allowed"] = float(_blend("barrel", 0.07))
         out["statcast_fb_rate"] = float(_blend("fb", 0.34))
+        out["gb_allowed"] = float(_blend("gb", 0.42))
+        out["ld_allowed"] = float(_blend("ld", 0.21))
+        out["popup_allowed"] = float(_blend("pu", 0.05))
         # For display and longest-HR environment, show the sharper 5G trend counts.
         out["dist375_allowed"] = int(m5["dist375"] if m5["bbe"] > 0 else m8["dist375"])
         out["dist400_allowed"] = int(m5["dist400"] if m5["bbe"] > 0 else m8["dist400"])
@@ -5191,6 +5223,9 @@ def build_pitcher_profile(client: MLBClient, db: CacheDB, pitcher_id: int, team_
         "hardhit_allowed": safe_float(psc.get("hardhit_allowed"), 0.38),
         "barrel_allowed": safe_float(psc.get("barrel_allowed"), 0.07),
         "statcast_fb_rate": safe_float(psc.get("statcast_fb_rate"), 0.34),
+        "gb_allowed": safe_float(psc.get("gb_allowed"), 0.42),
+        "ld_allowed": safe_float(psc.get("ld_allowed"), 0.21),
+        "popup_allowed": safe_float(psc.get("popup_allowed"), 0.05),
         "dist375_allowed": safe_int(psc.get("dist375_allowed"), 0),
         "dist400_allowed": safe_int(psc.get("dist400_allowed"), 0),
         "pitcher_attack_score": attack_score,
@@ -8153,6 +8188,9 @@ def build_hitter_records(client: MLBClient, db: CacheDB, game: Dict[str, Any], s
                 pitcher_hardhit_allowed=pitcher.hardhit_allowed,
                 pitcher_barrel_allowed=pitcher.barrel_allowed,
                 pitcher_statcast_fb_rate=pitcher.statcast_fb_rate,
+                pitcher_gb_rate=getattr(pitcher, "gb_allowed", 0.42),
+                pitcher_ld_rate=getattr(pitcher, "ld_allowed", 0.21),
+                pitcher_popup_rate=getattr(pitcher, "popup_allowed", 0.05),
                 pitcher_375_allowed=pitcher.dist375_allowed,
                 pitcher_400_allowed=pitcher.dist400_allowed,
                 pitcher_attack_score=pitcher.pitcher_attack_score,
