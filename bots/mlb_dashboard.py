@@ -914,6 +914,11 @@ class PitcherSummary:
     tb_allowed: int = 0
     bb_allowed: int = 0
     bb_pct: float = 0.080
+    # BB/9 (2026-08-12, Donovan: walks data for the site). Same extended-
+    # stats block as bb_pct/bb_allowed just above -- ip is already in scope
+    # in compute_pitcher_extended_stats for FIP, so this is one more line on
+    # data already fetched, not a new call.
+    bb9: float = 3.20
     barrels_allowed_count: int = 0
     hr_fb_pct: float = 0.100
     extended_stats_status: str = "missing"
@@ -1044,6 +1049,8 @@ class HitterRecord:
     pitcher_era: float
     pitcher_whip: float
     pitcher_hr9: float
+    # BB/9 (2026-08-12) -- walks allowed per 9 innings, same shape as hr9.
+    pitcher_bb9: float
     pitcher_hr_allowed: int
     pitcher_babip: float
     pitcher_fb_rate: float
@@ -5084,6 +5091,9 @@ def compute_pitcher_extended_stats(stat: Dict[str, Any], flat: Dict[str, float],
 
     fip = ((13 * hr + 3 * (bb + hbp) - 2 * so) / ip) + FIP_CONSTANT if ip > 0 else 4.00
     bb_pct = (bb / bf) if bf else 0.080
+    # BB/9 (2026-08-12): same ip already pulled for FIP above, walks already
+    # pulled for bb_pct above -- zero new fields fetched.
+    bb9 = (bb * 9.0 / ip) if ip > 0 else 3.20
 
     return {
         "fip": round(fip, 2),
@@ -5096,6 +5106,7 @@ def compute_pitcher_extended_stats(stat: Dict[str, Any], flat: Dict[str, float],
         "tb_allowed": int(tb),
         "bb_allowed": int(bb),
         "bb_pct": round(bb_pct, 3),
+        "bb9": round(bb9, 2),
         "barrels_allowed_count": safe_int(psc.get("barrels_allowed_count_season"), 0),
         "hr_fb_pct": round(safe_float(psc.get("hr_fb_pct"), 0.100), 3),
         "extended_stats_status": "ok" if (ab > 0 or bf > 0) else "missing",
@@ -8190,6 +8201,7 @@ def build_hitter_records(client: MLBClient, db: CacheDB, game: Dict[str, Any], s
                 pitcher_era=pitcher.era,
                 pitcher_whip=pitcher.whip,
                 pitcher_hr9=pitcher.hr9,
+                pitcher_bb9=getattr(pitcher, "bb9", 3.20),
                 pitcher_hr_allowed=pitcher.hr_allowed,
                 pitcher_k_rate=getattr(pitcher, "k_rate", 0.0),
                 pitcher_k9=getattr(pitcher, "k9", 0.0),

@@ -1307,6 +1307,9 @@ SLOT_FIELDS = {
     # tonight's slate — exact for today, wrong for any archived day.
     "hrw_score", "pitch_mix_score", "top_board_score_v2", "recent_375_num",
     "pitcher_name", "pitcher_id", "pitcher_hr9",
+    # Walks data (2026-08-12, Donovan): batter BB% was already archived
+    # (season_bb_rate, below) -- these two are the pitcher-side half.
+    "pitcher_bb_pct", "pitcher_bb9",
     "park_factor", "park_hr_factor", "wind_direction_label",
     "weather_wind_direction_label", "season_k_rate", "season_bb_rate",
     "trap_flag", "alt_look_tag", "final_hr_role",
