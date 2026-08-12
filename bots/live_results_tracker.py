@@ -1344,6 +1344,45 @@ SLOT_FIELDS = {
     # moonshot skew (+8.9pp vs the rest of the slate) is weather-fragile
     "l20pa_fb_rate", "l20pa_barrel_rate", "l20pa_ideal_hr_contact",
     "l20pa_hard_hit_rate", "recent_ev", "pitcher_trend_direction",
+    # ── MATCHUP AUDIT TRAIL (2026-08-12) ────────────────────────────────
+    #
+    # Caught live, mid-game: the site showed "WEAK SIDE -- none published"
+    # for a pitcher who actually had a real split (1.51 HR/9 vs RHB, 0.60
+    # vs LHB). side_weakness() correctly declined to call it -- its own
+    # gates (15 BF/side, 12% relative gap, 45 floor) weren't cleared -- but
+    # there was no way to check that from the archive, because none of the
+    # fields the gate reads were ever kept. Same disease as the block
+    # above: a WHITELIST silently drops anything not named here, so "was
+    # the weak-side call right" has never been answerable after the fact --
+    # only "was there a call at all."
+    #
+    #   pitcher_hr9_vs_lhb/_vs_rhb   the raw split side_weakness() gates on.
+    #   pitcher_weak_side_score     the composite (HR/9 27%, SLG 22%,
+    #                                ISO 16%, OPS 13%, BA 10%, BABIP 7%,
+    #                                WHIP 5%) that decides which side, if
+    #                                any, gets called weak.
+    #   pitcher_weak_side_gap       the relative gap between sides -- the
+    #                                number the 12%-plus-45-floor gate
+    #                                actually tests.
+    #
+    #   season_pa                   _power_slot()'s eligibility gate is
+    #                                PA >= 15. Without this archived, no
+    #                                graded slot can be checked against
+    #                                that gate after the fact.
+    #
+    #   beginner_label               the plain-language tier text shown on
+    #                                 the card (final_hr_role, the emoji
+    #                                 tier, was already archived -- this
+    #                                 sibling field wasn't).
+    #   damage_conversion_score      the score beginner_label is partly
+    #                                 built from.
+    #
+    # All seven are one-line copies from the slate row, same as every
+    # field above. See BOT-DATA-REQUESTS.md, "Live audit, 2026-08-12" for
+    # the full case.
+    "pitcher_hr9_vs_lhb", "pitcher_hr9_vs_rhb",
+    "pitcher_weak_side_score", "pitcher_weak_side_gap",
+    "season_pa", "beginner_label", "damage_conversion_score",
 }
 
 
