@@ -7475,12 +7475,16 @@ def apply_model_v2_layers(h: HitterRecord) -> HitterRecord:
     h.hrr_reason = "Lineup context + recent runs/RBI + pitcher traffic"
     h.contact_reason = "XBH form + EV/hard-hit + 375 contact"
     h.top_pick_reason = h.beginner_label
+    # 2026-08-12: same fix as simple_reason_1-3/risk_reason above — this is
+    # displayed verbatim on the Games page's ALT chip (every card, per
+    # GameStrip's own comment: "ALT ON EVERY CARD"), and h.alt_hr_score is
+    # already the exact number deciding which branch fires, just never shown.
     if h.alt_hr_score >= 58 and h.hr_score_v2 < 42:
-        h.alt_reason = "Missed main HR cut but has pitch mix/contact/bullpen upside"
+        h.alt_reason = f"Missed main HR cut but has pitch mix/contact/bullpen upside (alt score {h.alt_hr_score:.0f})"
     elif h.alt_hr_score >= 50:
-        h.alt_reason = "Secondary HR look"
+        h.alt_reason = f"Secondary HR look (alt score {h.alt_hr_score:.0f})"
     else:
-        h.alt_reason = "Low alt HR priority"
+        h.alt_reason = f"Low alt HR priority (alt score {h.alt_hr_score:.0f})"
 
     # V31 final decision layer: keeps risky power bats alive as Power Watch and makes Avoid HR strict.
     apply_decision_engine_v31(h)
