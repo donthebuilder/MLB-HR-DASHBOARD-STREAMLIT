@@ -9692,7 +9692,14 @@ def game_pick_type_map(rows: List[HitterRecord]) -> Dict[int, str]:
         used: set[int] = set()
         top_pick = pick_top(hitters, "overall_score", 1)[0]
         used.add(top_pick.player_id)
-        tag_map[top_pick.player_id] = "🔥TOP"
+        # 2026-08-12, on request ("distinguishable, different emojis and
+        # wording"): this pick_type tag set used to be near-identical to the
+        # site's game_pick_role badges (🏆/🧨/🏁/💠/⚾) -- same categories,
+        # almost the same icons, easy to mistake one list for the other even
+        # though they can disagree (pick_type has no TOP/HR double-up, picks
+        # 2 for HIT/HRR where game_pick_role picks 1+). New set shares zero
+        # icons with game_pick_role OR final_hr_role (best_bet_type).
+        tag_map[top_pick.player_id] = "🥇TOP"
 
         # Docket #14 + #17 (2026-08-05). Measured on 1,377 graded HR-type
         # picks: sub-.18-ISO picks homered 11.5% vs 19.5% above; overall_score
@@ -9718,20 +9725,20 @@ def game_pick_type_map(rows: List[HitterRecord]) -> Dict[int, str]:
             return top_pick
         hr_pick = _hr_slot() if len(hitters) > 1 else top_pick
         used.add(hr_pick.player_id)
-        tag_map[hr_pick.player_id] = "🧨HR"
+        tag_map[hr_pick.player_id] = "🎆HR"
 
         hit_picks = pick_top(hitters, "hit_score", 2, used)
         used.update(h.player_id for h in hit_picks)
         for hp in hit_picks:
-            tag_map.setdefault(hp.player_id, "💠HIT")
+            tag_map.setdefault(hp.player_id, "➕HIT")
 
         hrr_picks = pick_top(hitters, "hrr_score", 2, used)
         used.update(h.player_id for h in hrr_picks)
         for hp in hrr_picks:
-            tag_map.setdefault(hp.player_id, "🏁HRR")
+            tag_map.setdefault(hp.player_id, "🔺HRR")
 
         anchor = pick_top(hitters, "contact_score", 1, used)[0] if len(hitters) > len(used) else pick_top(hitters, "contact_score", 1)[0]
-        tag_map.setdefault(anchor.player_id, "⚾CON")
+        tag_map.setdefault(anchor.player_id, "🟢CON")
     return tag_map
 
 
@@ -9848,35 +9855,35 @@ def clean_pick_tag(tag: str) -> str:
     """Convert internal category tags to emoji-only display for pairs/pools."""
     if not tag:
         return ""
-    if "🔥" in tag:
-        return "🔥"
-    if "🧨" in tag:
-        return "🧨"
-    if "🏁" in tag:
-        return "🏁"
-    if "💠" in tag:
-        return "💠"
-    if "⚾" in tag:
-        return "⚾"
+    if "🥇" in tag:
+        return "🥇"
+    if "🎆" in tag:
+        return "🎆"
+    if "🔺" in tag:
+        return "🔺"
+    if "➕" in tag:
+        return "➕"
+    if "🟢" in tag:
+        return "🟢"
     return ""
 
 
 def inferred_display_emoji(rec: HitterRecord, current: str = "") -> str:
     """Fallback emoji for unique/cross-check names that are not game-slot picks."""
-    if current in {"🔥", "🧨", "🏁", "⚾"}:
+    if current in {"🥇", "🎆", "🔺", "🟢"}:
         return current
-    if current == "💠" and (_power_signal(rec) or rec.hr_score >= 28 or rec.recent_ideal_hr_contact >= 0.12):
+    if current == "➕" and (_power_signal(rec) or rec.hr_score >= 28 or rec.recent_ideal_hr_contact >= 0.12):
         return current
     if rec.hr_score >= 38 and rec.hrr_score >= 55:
-        return "🔥"
+        return "🥇"
     if rec.hr_score >= 33 and _power_signal(rec):
-        return "🧨"
+        return "🎆"
     if rec.hrr_score >= 60 and _power_signal(rec):
-        return "🏁"
+        return "🔺"
     if rec.contact_score >= 62 and (rec.last5_xbh >= 2 or rec.recent_ideal_hr_contact >= 0.12):
-        return "⚾"
+        return "🟢"
     if rec.hit_score >= 72 and (_power_signal(rec) or rec.last5_xbh >= 2):
-        return "💠"
+        return "➕"
     return ""
 
 
@@ -10261,7 +10268,7 @@ def top_up_pool(
         ], key=variance_score, reverse=True)
         underlisted = sorted([
             r for r in ranked
-            if pick_tag_map.get(r.player_id) not in {"🔥TOP", "🧨HR"}
+            if pick_tag_map.get(r.player_id) not in {"🥇TOP", "🎆HR"}
             and r.player_id not in avoid_top_ids
             and (_power_signal(r) or r.hrw_score >= 55 or r.hrr_score >= 58)
         ], key=variance_score, reverse=True)
@@ -10766,10 +10773,10 @@ def build_hrr_builder(rows: List[HitterRecord]) -> str:
             and not (r.hrw_score < 30 and r.recent_ideal_hr_contact < 0.10 and r.hr_score < 28 and r.hit_score < 72)
         )
 
-    game_slot_hrr = [r for r in eligible_all if "🏁" in tag_map.get(r.player_id, "") and hrr_builder_viable(r)]
+    game_slot_hrr = [r for r in eligible_all if "🔺" in tag_map.get(r.player_id, "") and hrr_builder_viable(r)]
     hit_pick_upgrades = [
         r for r in eligible_all
-        if "💠" in tag_map.get(r.player_id, "")
+        if "➕" in tag_map.get(r.player_id, "")
         and r.player_id not in {x.player_id for x in game_slot_hrr}
         and r.hit_score >= 70
         and r.hrr_score >= 54
@@ -11078,17 +11085,17 @@ def render_game_block(game: Dict[str, Any], hitters: List[HitterRecord]) -> str:
         header += "\n(UNCONFIRMED LINEUP)"
 
     blocks = [section_bar(), header, "\n".join(target_lines), section_bar(), ""]
-    blocks.append(render_pick_line("🔥 Top Pick |", top_pick, "OVR", top_pick.overall_score))
+    blocks.append(render_pick_line("🥇 Top Pick |", top_pick, "OVR", top_pick.overall_score))
     blocks.append("")
-    blocks.append(render_pick_line("🧨 HR Pick |", hr_pick, "HR", hr_pick.hr_score))
+    blocks.append(render_pick_line("🎆 HR Pick |", hr_pick, "HR", hr_pick.hr_score))
     for hp in hit_picks:
         blocks.append("")
-        blocks.append(render_pick_line("💠 Hit Pick |", hp, "HIT", hp.hit_score))
+        blocks.append(render_pick_line("➕ Hit Pick |", hp, "HIT", hp.hit_score))
     for hp in hrr_picks:
         blocks.append("")
-        blocks.append(render_pick_line("🏁 HRR Pick |", hp, "HRR", hp.hrr_score))
+        blocks.append(render_pick_line("🔺 HRR Pick |", hp, "HRR", hp.hrr_score))
     blocks.append("")
-    blocks.append(render_pick_line("⚾ Base Pick |", anchor, "CON", anchor.contact_score))
+    blocks.append(render_pick_line("🟢 Base Pick |", anchor, "CON", anchor.contact_score))
     return "\n".join(blocks)
 
 
@@ -11878,12 +11885,12 @@ ATK = Pitcher Attack Score from recent pitcher damage allowed
 Projected HR Total = model estimate for full-slate home runs
 Longest HR Targets = distance-ceiling section, not safest HR picks
 
-Emoji / Category Keys:
-🔥 TOP = best overall/model blend from that game or board
-🧨 HR = pure HR/power pick
-🏁 HRR = hits + runs + RBI production profile; also used for hot production bats
-💠 HIT = base-hit profile / hit-floor pick
-⚾ CON = Base Pick; contact/XBH anchor, gap-power or total-base profile
+Emoji / Category Keys — tonight's game-slot picks (pick_type; this report only, not the site):
+🥇 TOP = best overall/model blend from that game or board
+🎆 HR = pure HR/power pick
+🔺 HRR = hits + runs + RBI production profile; also used for hot production bats
+➕ HIT = base-hit profile / hit-floor pick
+🟢 CON = Base Pick; contact/XBH anchor, gap-power or total-base profile
 ⭐ = batter lines up in a pitcher weak spot
 🎯 = pitcher throws a pitch type this batter crushes (pitch-type match)
 🧩 = Aligned Signals: weak-spot + pitch-match + real recent contact quality all stacking together (strongest validated combo)
@@ -11894,13 +11901,16 @@ Emoji / Category Keys:
 ⚠️ LIMITED = sample/variance warning (soft caution, score not forced down)
 ⛔ = hard score suppression in effect (e.g. True Avoid HR -- score actively capped, not just flagged)
 
-Role Tags (final_hr_role, separate from the TOP/HR/HRR/HIT/CON pick_type keys above):
-🏆 HR Bet = model's top-confidence home run play
-🔥 HR Lean = good home run shot, strong but not airtight
-🏁 HRR / XBH = good bet for extra-base hits even if HR isn't a lock
+Role Tags (final_hr_role -- a DIFFERENT system from the game-slot picks above:
+his general profile for the season, not tonight's designation. Also on the
+site, on every card. Corrected here 2026-08-12 -- this legend had drifted
+behind the actual code, still teaching the emoji final_hr_role moved off of):
+💎 HR Bet = model's top-confidence home run play
+📈 HR Lean = good home run shot, strong but not airtight
+🧲 HRR / XBH = good bet for extra-base hits even if HR isn't a lock
 🔭 Power Watch = real raw power, more matchup uncertainty
-💠 Contact / Monitor = not projecting a home run; may suit contact bets
-🚫 / ⛔ True Avoid HR = model expects no home run; score actively capped
+🧭 Contact / Monitor = not projecting a home run; may suit contact bets
+⛔ True Avoid HR = model expects no home run; score actively capped
 
 Player Output Keys:
 BA = batting average
