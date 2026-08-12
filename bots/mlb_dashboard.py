@@ -10451,7 +10451,7 @@ def build_pair_sections(rows: List[HitterRecord]) -> Tuple[str, Dict[str, Any]]:
 def _build_pair_sections(rows: List[HitterRecord]) -> Tuple[str, Dict[str, Any]]:
     global LAST_HR_SECTION_USED_IDS
     LAST_HR_SECTION_USED_IDS = set()
-    if len(rows) < 6: return "", {"recommended_pairs": [], "pools_4man": [], "pools_6man": []}
+    if len(rows) < 6: return "", {"recommended_pairs": [], "pools_4man": [], "pools_6man": [], "pools_3man": []}
     candidate_rows = top_pool_candidates(rows, 62)
     ranked = sorted(candidate_rows, key=_hr_alignment_score, reverse=True)
     pick_tag_map = game_pick_type_map(rows)
@@ -10632,10 +10632,22 @@ def _build_pair_sections(rows: List[HitterRecord]) -> Tuple[str, Dict[str, Any]]
         _s2_pool_json("Pool C — Balanced", pool4_c, len(pool4_c)),
         _s2_pool_json("Pool D — Contrarian", pool4_d, len(pool4_d)),
     ]
-    json_pools_6man = [
+    # PUBLISHED KEY FIX (2026-08-12): pool6_a-d have held the retired-6-man's
+    # 3-man replacement since 2026-08-09 ("kept under the old names so
+    # downstream consumers keep working," above) — but this JSON kept
+    # shipping them under the OLD "pools_6man" key, while Pools.js (updated
+    # the SAME day) was already reading a "pools_3man" key this file never
+    # sent. Two halves of one fix, done on the same day, that never actually
+    # met: real 3-man pools have been arriving under "pools_6man" and getting
+    # labelled "(retired)" on the site ever since. Ships under the name the
+    # site already expects; labels match the text output above (Strongest /
+    # HRR+Var / Balanced / Contrarian) instead of the stale pre-retirement
+    # set. pools_6man goes genuinely empty rather than carrying today's data
+    # under yesterday's name.
+    json_pools_3man = [
         _s2_pool_json("Pool A — Strongest", pool6_a, len(pool6_a)),
-        _s2_pool_json("Pool B — Balanced", pool6_b, len(pool6_b)),
-        _s2_pool_json("Pool C — Mid / Var", pool6_c, len(pool6_c)),
+        _s2_pool_json("Pool B — HRR+Var", pool6_b, len(pool6_b)),
+        _s2_pool_json("Pool C — Balanced", pool6_c, len(pool6_c)),
         _s2_pool_json("Pool D — Contrarian", pool6_d, len(pool6_d)),
     ]
     json_payload = {
@@ -10652,7 +10664,8 @@ def _build_pair_sections(rows: List[HitterRecord]) -> Tuple[str, Dict[str, Any]]
         # handles this key being empty/missing gracefully.
         "recommended_3mans": [],
         "pools_4man": json_pools_4man,
-        "pools_6man": json_pools_6man,
+        "pools_3man": json_pools_3man,
+        "pools_6man": [],
     }
     return "\n".join(lines), json_payload
 
@@ -11924,7 +11937,7 @@ Use ALT LOOKS as quality variance, not primary plays.
             report_text += "\n\n" + the_four_text
         if args.full and game_by_game_text:
             report_text += "\n\n" + game_by_game_text
-        pair_sections_json: Dict[str, Any] = {"recommended_pairs": [], "pools_4man": [], "pools_6man": []}
+        pair_sections_json: Dict[str, Any] = {"recommended_pairs": [], "pools_4man": [], "pools_6man": [], "pools_3man": []}
         if not args.no_pairs:
             pair_text, pair_sections_json = build_pair_sections(all_rows)
             if pair_text and hot_power_pairs_text:
@@ -12300,6 +12313,7 @@ Use ALT LOOKS as quality variance, not primary plays.
                 "source": "bot_system2",
                 "recommended_pairs": pair_sections_json.get("recommended_pairs", []),
                 "pools_4man": pair_sections_json.get("pools_4man", []),
+                "pools_3man": pair_sections_json.get("pools_3man", []),
                 "pools_6man": pair_sections_json.get("pools_6man", []),
                 # MINI-BOT AUDIT (2026-08-08, B2): available_pool is the
                 # frontend's PRIMARY source for Build-a-Pair — it was built

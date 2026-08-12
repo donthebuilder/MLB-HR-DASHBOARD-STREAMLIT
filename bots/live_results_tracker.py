@@ -1259,12 +1259,18 @@ def build_pair_pool_sections(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
         pool, used_for_pools = build_pool(rows, 4, "4", used_for_pools)
         pool4_buckets.append({"label": label, "players": [trim_row(r) for r, _ in pool]})
 
-    pool6_buckets = []
-    for label in ["6-MAN HR POOL A", "6-MAN HR POOL B", "6-MAN HR POOL C", "6-MAN HR POOL D"]:
-        pool, used_for_pools = build_pool(rows, 6, "6", used_for_pools)
-        pool6_buckets.append({"label": label, "players": [trim_row(r) for r, _ in pool]})
+    # 6-MAN RETIRED (2026-08-09, matches mlb_dashboard.py's build_pair_sections)
+    # -- this internal rebuild is the last-resort fallback for when neither
+    # the published "latest" nor the dated archive is available (see
+    # load_pair_builder_sections below), so it was still quietly building
+    # six-man pools nobody ships anymore. Renamed to match: same fallback
+    # scoring, three-man pools instead of six.
+    pool3_buckets = []
+    for label in ["3-MAN HR POOL A", "3-MAN HR POOL B", "3-MAN HR POOL C", "3-MAN HR POOL D"]:
+        pool, used_for_pools = build_pool(rows, 3, "3", used_for_pools)
+        pool3_buckets.append({"label": label, "players": [trim_row(r) for r, _ in pool]})
 
-    return {"pair_groups": pair_groups, "pools": pool4_buckets + pool6_buckets}
+    return {"pair_groups": pair_groups, "pools": pool4_buckets + pool3_buckets}
 
 # Fields this script actually reads from a player row, anywhere in the file
 # (tracking slots, grading, pair/pool scoring, missed-HR diagnostics). Built
@@ -1646,18 +1652,32 @@ def load_pair_builder_sections(date_str: str):
     slate date, convert it into the sections shape grade_pairs_pools expects
     and grade THOSE. Missing/stale file falls back to the internal builder,
     so a broken publish never blanks live grading.
+
+    ALIGNMENT PT.2 (2026-08-12): "latest" is a single shared file that the
+    NEXT slate's run overwrites, so a grading run any time after a newer
+    slate has already generated found "latest" stamped with the wrong date
+    and gave up straight to the internal builder — a THIRD, different pair
+    generator (see build_pair_pool_sections) — even though
+    mlb_dashboard.py has been writing a dated copy right next to "latest"
+    (mlb_pair_builder_{date}.json) the whole time. Try that before giving up.
     """
-    path = OUT_DIR / "pair_builder_latest.json"
-    if not path.exists():
-        return None
-    try:
-        pb = json.loads(path.read_text(encoding="utf-8"))
-    except Exception:
-        return None
-    pb = pb if isinstance(pb, dict) else {}   # shape guard, see bots/check_shapes.py
-    if str(pb.get("date") or "") != str(date_str):
-        print(f"pair_builder_latest is for {pb.get('date')}, grading {date_str} — using internal pools instead")
-        return None
+    def _load(p: Path):
+        if not p.exists():
+            return None
+        try:
+            data = json.loads(p.read_text(encoding="utf-8"))
+        except Exception:
+            return None
+        return data if isinstance(data, dict) else None   # shape guard, see bots/check_shapes.py
+
+    pb = _load(OUT_DIR / "pair_builder_latest.json")
+    if not pb or str(pb.get("date") or "") != str(date_str):
+        dated = _load(OUT_DIR / f"mlb_pair_builder_{date_str}.json")
+        if dated and str(dated.get("date") or "") == str(date_str):
+            pb = dated
+        else:
+            print(f"pair_builder_latest is for {(pb or {}).get('date')}, no dated archive for {date_str} either — using internal pools instead")
+            return None
     by_lane: Dict[str, list] = {}
     for rp in (pb.get("recommended_pairs") or []):
         ps = rp.get("players") or []
@@ -1671,7 +1691,11 @@ def load_pair_builder_sections(date_str: str):
         )
     pair_groups = [{"label": lane, "pairs": pairs} for lane, pairs in by_lane.items()]
     pools = []
-    for key, prefix in (("pools_4man", "4-MAN"), ("pools_6man", "6-MAN")):
+    # pools_3man added 2026-08-12 -- the retired 6-man's actual replacement
+    # key (see mlb_dashboard.py's build_pair_sections). pools_6man kept for
+    # any older dated archive file that still carries real 6-man data from
+    # before 2026-08-09.
+    for key, prefix in (("pools_4man", "4-MAN"), ("pools_3man", "3-MAN"), ("pools_6man", "6-MAN")):
         for pl in (pb.get(key) or []):
             players = [x for x in (pl.get("players") or []) if x.get("player_id")]
             if not players:
