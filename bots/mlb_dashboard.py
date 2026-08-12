@@ -5801,35 +5801,53 @@ def _hr2_first_reasons(rec: "HitterRecord", bbe: Dict[str, Any], pitch_fit: floa
     max_dist = safe_float(bbe.get("max_distance"), 0.0)
     if hidden:
         reasons.append("Underrated play — pitch matchup and contact quality say more than his name suggests")
+    # 2026-08-12 (Donovan: "repeaded words ... it needs to be intentional and
+    # useful"): every branch below used to append flat tier text with nothing
+    # tying it to the player who earned it — two guys who both cleared "barrel
+    # >= 0.12" read as the identical sentence. d400 was worse: an f-string
+    # with no variable in it at all. Every number here (max_dist, pitch_fit,
+    # air_pull, barrel, max_ev/avg_la, pitcher_hr9) was already sitting in
+    # scope; this just uses it, so the SAME gate now reads differently per
+    # player instead of copy-pasting.
     if d400 >= 1:
-        reasons.append(f"Reached 400+ feet recently — true leave-yard power")
+        reasons.append(f"Reached {max_dist:.0f} feet recently — true leave-yard power" if max_dist >= 400
+                        else f"Hit {d400} ball{'s' if d400 != 1 else ''} 400+ feet recently — true leave-yard power")
     elif d375 >= 2:
         reasons.append(f"Hit {d375} balls 375+ feet recently — legitimate power")
     if pitch_fit >= 70:
-        reasons.append("His best damage pitch matches what this pitcher throws most")
+        reasons.append(f"His best damage pitch matches what this pitcher throws most (fit {pitch_fit:.0f})")
     elif pitch_fit >= 60:
-        reasons.append("The pitch mix gives him a playable power lane")
+        reasons.append(f"The pitch mix gives him a playable power lane (fit {pitch_fit:.0f})")
     if air_pull >= 0.40:
-        reasons.append("Pulls the ball in the air frequently — good HR shape")
+        reasons.append(f"Pulls the ball in the air {air_pull*100:.0f}% of the time — good HR shape")
     elif air_pull >= 0.28 or fb >= 0.35:
-        reasons.append("Getting enough balls in the air for a HR path")
+        reasons.append(f"Getting enough balls in the air for a HR path ({air_pull*100:.0f}% air pull)")
     if barrel >= 0.12:
-        reasons.append("Barreling the ball at an elite rate right now")
+        reasons.append(f"Barreling the ball at an elite rate right now ({barrel*100:.0f}%)")
     if max_ev >= 97 and 20 <= avg_la <= 35:
-        reasons.append("Exit velocity and launch angle are both in the ideal home run window")
+        reasons.append(f"Exit velocity and launch angle are both in the ideal home run window ({max_ev:.0f} mph, {avg_la:.0f}°)")
     if max_dist >= 390 and len(reasons) < 3:
-        reasons.append("Recent distance ceiling is already near home run range")
+        reasons.append(f"Recent distance ceiling is already near home run range ({max_dist:.0f} ft)")
     if safe_float(getattr(rec, "pitcher_hr9", 0.0), 0.0) >= 1.40 and len(reasons) < 3:
-        reasons.append("Facing a pitcher giving up home runs at a high rate")
+        reasons.append(f"Facing a pitcher giving up home runs at a high rate ({safe_float(getattr(rec, 'pitcher_hr9', 0.0), 0.0):.2f} HR/9)")
     if safe_int(getattr(rec, "last10_hr", 0), 0) >= 2 and len(reasons) < 3:
         reasons.append(f"Hot home run form right now — hit {getattr(rec, 'last10_hr', 0)} HRs in last 10 games")
     if trap_reason and len(reasons) < 3:
         reasons.append(trap_reason)
+    # Padding for thin-signal players was 3 flat strings picked by list
+    # position only — nothing about them referenced the player, so every
+    # thin-signal player on a slate read identically. hr_score_v2 is already
+    # set on rec by the time this runs (assigned right before this call), and
+    # pitch_fit is already a param here, so the two most-used filler slots can
+    # at least state the real number instead of a bare adjective. The third
+    # slot is left as a plain closer — it only fires alongside two already-
+    # specific lines, so it reads as a wrap-up rather than the repeated text.
+    score = safe_float(getattr(rec, "hr_score_v2", 0.0), 0.0)
     while len(reasons) < 3:
         if len(reasons) == 0:
-            reasons.append("Power path is playable, but not fully confirmed")
+            reasons.append(f"Power path is playable at a {score:.0f} score, but not fully confirmed")
         elif len(reasons) == 1:
-            reasons.append("Check the risk warning before using him for a HR slip")
+            reasons.append(f"Pitch-mix fit is {pitch_fit:.0f} — check the risk warning before using him for a HR slip")
         else:
             reasons.append("Better as a smaller exposure unless the full shape confirms")
     return reasons[:3]
@@ -6985,14 +7003,21 @@ def apply_model_v2_layers(h: HitterRecord) -> HitterRecord:
     h.best_bet_type, h.beginner_label = _hr2_best_bet_and_label(h, h.hr_score_v2, pitch_fit, trap_flag, hidden, strong_confirmed)
     reasons = _hr2_first_reasons(h, bbe, pitch_fit, h.trap_reason, hidden)
     h.simple_reason_1, h.simple_reason_2, h.simple_reason_3 = reasons
+    # 2026-08-12: the three non-trap branches below used to be flat strings —
+    # "Playable power, but one of the key HR-shape signals is missing" showed
+    # up byte-for-byte on unrelated players the same night (spotted directly
+    # in a screenshot: Jake McCarthy and Victor Mesa Jr. both carried it).
+    # h.hr_score_v2 and h.lineup_spot are already set above; using them here
+    # costs nothing and means two players in the same branch no longer read
+    # as one copy-pasted sentence.
     if trap_flag:
         h.risk_reason = h.trap_reason
     elif not strong_confirmed and h.hr_score_v2 >= 45:
-        h.risk_reason = "Playable power, but one of the key HR-shape signals is missing"
+        h.risk_reason = f"Playable power ({h.hr_score_v2:.0f} score), but one of the key HR-shape signals is missing"
     elif h.lineup_spot >= 7:
-        h.risk_reason = "Lower lineup spot can reduce plate appearances"
+        h.risk_reason = f"Batting #{h.lineup_spot} — a lower lineup spot can reduce plate appearances"
     else:
-        h.risk_reason = "No major HR-shape trap found"
+        h.risk_reason = f"No major HR-shape trap found ({h.hr_score_v2:.0f} score)"
     h.advanced_reason = f"HR2 {h.hr_score_v2:.1f}: BBE {batted_shape:.1f}, PMix {pitch_fit:.1f}, P-DMG {pitcher_damage:.1f}, Air/LA {pull_launch:.1f}, Park {park_weather:.1f}; old {old_hr_score:.1f} Δ {h.hr_score_delta:+.1f}"
     h.pitch_fit_summary = f"{h.pitch_mix_note} vs {h.pitcher_primary_mix}"
     h.park_fit_summary = str((h.park_fit or {}).get("reason", "Park fit neutral")) if isinstance(h.park_fit, dict) else "Park fit neutral"
