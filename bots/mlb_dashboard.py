@@ -9229,7 +9229,34 @@ def build_game_pick_role_map(rows: List[HitterRecord]) -> Dict[Tuple[int, int], 
         used.add(top_pick.player_id)
         role_map.setdefault((game_pk, top_pick.player_id), []).append("TOP")
 
-        hr_pick = _power_slot(used) if len(hitters) > 1 else top_pick
+        # TOP/HR DOUBLE-UP (2026-08-12). Was: HR = _power_slot(used), which
+        # excluded TOP's own player and re-ranked the REMAINDER by the same
+        # ISO-led power rank TOP uses -- so on any night TOP's pick was also
+        # the game's best hr_score bat (measured at 63.9% of games, n=790),
+        # HR was handed to a forced second choice instead. Backtested the
+        # cost on the 129 games since 2026-07-27 where that forced swap
+        # happened: the excluded true-best-hr_score player homered 29.5% of
+        # the time vs the actual badge-holder's 13.2% (McNemar p<0.01; see
+        # BOT-DATA-REQUESTS.md, "Pick-slot overlap," 2026-08-12). TOP is now
+        # the only role allowed to also hold HR: HR ranks by raw hr_score
+        # over the same PA/ISO-eligible pool TOP draws from, without
+        # excluding TOP's player. If they're genuinely the same hitter,
+        # role_map carries "TOP/HR" for that one player_id (the existing
+        # "/".join(v) return already supported this; it just never fired
+        # before). HIT/HRR/CONTACT below are unchanged -- they still exclude
+        # both TOP and HR, same as always.
+        def _hr_slot() -> HitterRecord:
+            pool = [h for h in hitters if getattr(h, "season_pa", 0) >= 15] or list(hitters)
+            for cond in (
+                lambda h: getattr(h, "season_iso", 0.0) >= 0.180,
+                lambda h: True,
+            ):
+                tier = [h for h in pool if cond(h)]
+                if tier:
+                    return sorted(tier, key=lambda h: safe_float(getattr(h, "hr_score", 0.0), 0.0), reverse=True)[0]
+            return pool[0]
+
+        hr_pick = _hr_slot() if hitters else top_pick
         used.add(hr_pick.player_id)
         role_map.setdefault((game_pk, hr_pick.player_id), []).append("HR")
 
