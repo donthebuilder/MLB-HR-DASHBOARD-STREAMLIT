@@ -9276,7 +9276,24 @@ def build_game_pick_role_map(rows: List[HitterRecord]) -> Dict[Tuple[int, int], 
         for hp in hrr_picks:
             role_map.setdefault((game_pk, hp.player_id), []).append("HRR")
 
-        anchor = pick_top(hitters, "contact_score", 1, used)[0] if len(hitters) > len(used) else pick_top(hitters, "contact_score", 1)[0]
+        # CONTACT DOUBLE-UP (2026-08-12 pt.2). Same test as TOP/HR, run
+        # against CONTACT: on the 98 games since 2026-07-27 where CONTACT's
+        # exclusion forced a substitution, the excluded true-best
+        # contact_score player hit 2+ total bases 52.0% of the time vs the
+        # actual badge-holder's 28.6% (chi2~9.98, p<0.01) -- the largest gap
+        # of the four non-TOP roles, bigger than HR's own (BOT-DATA-REQUESTS.md,
+        # "Pick-slot overlap," 2026-08-12). Unlike HR, CONTACT never had one
+        # clean partner role stealing its best candidate -- it sits at the
+        # end of the chain, excluded by whichever of TOP/HR/HIT/HRR got there
+        # first. So instead of excluding one specific role, CONTACT now
+        # excludes no one: it ranks by raw contact_score over every hitter in
+        # the game, same scoring as always, just without the used-set filter
+        # (pick_top's own PA-less, unfiltered pool -- CONTACT never had a PA
+        # gate, so none is added here either). If the true best already
+        # holds another role, role_map's "/".join(v) carries the combined
+        # tag, same mechanism as TOP/HR. HIT and HRR are untouched -- their
+        # backtest gap didn't clear significance (+6.2pp, +6.6pp, both n.s.).
+        anchor = pick_top(hitters, "contact_score", 1)[0]
         role_map.setdefault((game_pk, anchor.player_id), []).append("CONTACT")
 
     return {k: "/".join(v) for k, v in role_map.items()}
