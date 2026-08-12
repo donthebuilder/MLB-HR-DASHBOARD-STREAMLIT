@@ -1292,6 +1292,7 @@ SLOT_FIELDS = {
     "last5_hits", "last5_hr", "last5_xbh", "last10_xbh",
     "avg_vs_lhp", "avg_vs_rhp", "iso_vs_lhp", "iso_vs_rhp",
     "recent_350_num", "recent_350_den", "recent_barrel_rate", "recent_fb_rate",
+    "recent_ld_rate", "recent_gb_rate", "recent_popup_rate",
     "pitcher_hr_allowed", "pitcher_fb_rate", "pitcher_weak_side",
     "weather_temp_f", "weather_wind_mph", "numerology_score",
     "weak_spot_flag", "weak_spot_reason", "best_bet_type", "true_avoid_hr",

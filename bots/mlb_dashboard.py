@@ -993,6 +993,9 @@ class HitterRecord:
     recent_sweet_spot_rate: float
     recent_ideal_hr_contact: float
     recent_fb_rate: float
+    recent_ld_rate: float
+    recent_gb_rate: float
+    recent_popup_rate: float
     recent_barrel_rate: float
     recent_xwoba: float
     recent_pull_rate: float
@@ -3081,7 +3084,7 @@ def finalize_xhr_fields(rows: List["HitterRecord"], db: CacheDB) -> None:
 
 
 def build_batter_statcast_profile(db: CacheDB, player_id: int, end_date: dt.date) -> Dict[str, Any]:
-    key = f"batter_statcast_v7_xhr:{SEASON}:{player_id}:{end_date.isoformat()}"
+    key = f"batter_statcast_v8_ldgbpu:{SEASON}:{player_id}:{end_date.isoformat()}"
     out = {
         "recent_350_num": 0,
         "recent_350_den": 1,
@@ -3096,6 +3099,9 @@ def build_batter_statcast_profile(db: CacheDB, player_id: int, end_date: dt.date
         "recent_sweet_spot_rate": 0.0,
         "recent_ideal_hr_contact": 0.0,
         "recent_fb_rate": 0.0,
+        "recent_ld_rate": 0.0,
+        "recent_gb_rate": 0.0,
+        "recent_popup_rate": 0.0,
         "recent_barrel_rate": 0.0,
         "recent_xwoba": 0.320,
         "recent_pull_rate": 0.38,
@@ -3297,6 +3303,15 @@ def build_batter_statcast_profile(db: CacheDB, player_id: int, end_date: dt.date
         gb_rate = float((bbe.get("bb_type") == "ground_ball").mean()) if len(bbe) and "bb_type" in bbe.columns else 0.0
         ld_rate = float((bbe.get("bb_type") == "line_drive").mean()) if len(bbe) and "bb_type" in bbe.columns else 0.0
         pu_rate = float((bbe.get("bb_type") == "popup").mean()) if len(bbe) and "bb_type" in bbe.columns else 0.0
+        # Promoted to top-level fields (2026-08-12, on request: "add ld% to
+        # the filter for the board and watchlist") -- gb_rate/ld_rate/pu_rate
+        # were already computed for bbe_profile below, just never exposed at
+        # the top level HitterRecord reads from. Same recent window as
+        # recent_fb_rate/recent_pull_rate, so a Band filter switched between
+        # them compares apples to apples.
+        out["recent_ld_rate"] = ld_rate
+        out["recent_gb_rate"] = gb_rate
+        out["recent_popup_rate"] = pu_rate
 
         # Bat speed: native Statcast column on the swing-tracking feed.
         # "Yesterdays Hitters" highlight criterion: a sweet-spot speed BAND
@@ -8124,6 +8139,9 @@ def build_hitter_records(client: MLBClient, db: CacheDB, game: Dict[str, Any], s
                 recent_sweet_spot_rate=sc["recent_sweet_spot_rate"],
                 recent_ideal_hr_contact=sc["recent_ideal_hr_contact"],
                 recent_fb_rate=sc["recent_fb_rate"],
+                recent_ld_rate=safe_float(sc.get("recent_ld_rate"), 0.0),
+                recent_gb_rate=safe_float(sc.get("recent_gb_rate"), 0.0),
+                recent_popup_rate=safe_float(sc.get("recent_popup_rate"), 0.0),
                 recent_barrel_rate=sc["recent_barrel_rate"],
                 recent_xwoba=safe_float(sc.get("recent_xwoba"), 0.320),
                 recent_pull_rate=safe_float(sc.get("recent_pull_rate"), 0.38),
