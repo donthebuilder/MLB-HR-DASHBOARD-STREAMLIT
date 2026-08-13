@@ -1099,6 +1099,9 @@ class HitterRecord:
     weak_spot_flag: bool = False
     weak_spot_bonus: float = 0.0
     weak_spot_reason: str = ""
+    multi_hit_score: float = 0.0
+    multi_hit_flag: bool = False
+    multi_hit_reason: str = ""
     hr_score: float = 0.0
     # Shadow A/B fields (2026-07-13): power-anchored score with NO recency
     # multiplier, plus its board rank. Exported via asdict for grading.
@@ -7090,6 +7093,54 @@ def apply_model_v2_layers(h: HitterRecord) -> HitterRecord:
         0.02 * minmax_norm(safe_float(getattr(h, "pitcher_attack_score", 50.0), 50.0), 35, 75)
     )
     h.hit_score_v2 = round(_hr2_clip(hit_v2), 2)
+
+    # 2026-08-13, Donovan: "how can we use the data we have to find players
+    # that will get two hits and how can we flag or tag them." He named the
+    # weak_spot star as "a good indicator" -- it is, but checked line by
+    # line, damage_score (what actually drives weak_spot_flag) is 28% HR
+    # rate + 18% XBH rate + 18% SLG + 14% ISO + 12% hard-hit% + 10% barrel% --
+    # zero plain-contact signal in it. Reusing it here would miss exactly the
+    # games this flag exists to catch: two seeing-eye singles trips no power
+    # threshold at all.
+    #
+    # Built the way hit_score_v2 just above already validates "gets a hit":
+    # contact skill (K-rate, season AVG, BABIP, recent hit volume) -- plus
+    # the piece that matters more for a SECOND hit than a first: raw PA
+    # volume. A second hit needs a second (often third) at-bat to land in,
+    # and lineup spot is the real driver of that -- a leadoff man sees
+    # roughly a full extra plate appearance a game over the 9-hole across a
+    # season. Pitcher side is rebuilt from the contact stats weak_spot
+    # deliberately doesn't use -- WHIP, AVG/OBP allowed, BABIP allowed --
+    # instead of copying its HR/XBH-anchored damage_score.
+    #
+    # HONEST CAVEAT, carried into the site-side tooltip too: unlike
+    # weak_spot_flag (18.0% vs 13.9% across the graded archive) this is a
+    # brand-new signal with zero games graded yet. First cut, not a proven
+    # one, until there's a real sample to check it against.
+    _pa_volume = {
+        1: 1.00, 2: 0.97, 3: 0.94, 4: 0.90, 5: 0.86,
+        6: 0.80, 7: 0.74, 8: 0.68, 9: 0.62,
+    }.get(int(h.lineup_spot or 0), 0.75)
+    _contact_skill = (
+        0.32 * k_floor +
+        0.28 * minmax_norm(h.season_avg, 0.200, 0.330) +
+        0.24 * minmax_norm(h.babip, 0.250, 0.370) +
+        0.16 * (0.5 * minmax_norm(h.last5_hits, 0, 9) + 0.5 * minmax_norm(h.last10_hits, 0, 14))
+    )
+    _pitcher_hittable = (
+        0.35 * minmax_norm(h.pitcher_whip, 1.05, 1.60) +
+        0.30 * minmax_norm(h.pitcher_avg_against, 0.220, 0.290) +
+        0.20 * minmax_norm(h.pitcher_obp_against, 0.280, 0.360) +
+        0.15 * minmax_norm(h.pitcher_babip, 0.260, 0.330)
+    )
+    multi_hit_raw = 100 * (0.50 * _contact_skill + 0.30 * _pa_volume + 0.20 * _pitcher_hittable)
+    h.multi_hit_score = round(_hr2_clip(multi_hit_raw), 2)
+    _multi_hit_gate = h.season_avg >= 0.270 or h.babip >= 0.300 or h.last10_hits >= 10
+    h.multi_hit_flag = bool(h.multi_hit_score >= 62 and _multi_hit_gate and _pa_volume >= 0.80)
+    h.multi_hit_reason = (
+        f"Strong contact skill, lineup spot {h.lineup_spot} (real PA volume), "
+        f"and a hittable arm (multi-hit score {h.multi_hit_score:.0f})"
+    ) if h.multi_hit_flag else ""
 
     # HRR score: weights spread wider. Lineup context (which now includes
     # surrounding-batter recent form) is the lead. Fly-ball rate added — air
