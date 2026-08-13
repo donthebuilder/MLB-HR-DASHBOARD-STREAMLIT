@@ -835,6 +835,16 @@ class PitcherSummary:
     throws: str = "?"
     era: float = 4.00
     whip: float = 1.30
+    # Instrumentation (2026-08-13): era/whip/hr9 come straight from
+    # client.person_stats(..., stat_type="season") a few lines below, which
+    # -- unlike the hitter-side version of this exact call, and unlike this
+    # class's own statcast_status/advanced_stats_status/extended_stats_status
+    # -- had no try/except and no status tracking at all. A failed pull here
+    # silently produces this class's own defaults (era 4.00, whip 1.30) with
+    # nothing on the record distinguishing that from a real league-average
+    # arm. Same "missing" until a real pull sets it otherwise as every
+    # sibling status field on this class.
+    season_stats_status: str = "missing"
     hr9: float = 1.10
     hr_allowed: int = 0
     k_rate: float = 0.0
@@ -1313,6 +1323,16 @@ class HitterRecord:
     pitch_type_summary: List[Dict[str, Any]] = dataclasses.field(default_factory=list)
     game_log: List[Dict[str, Any]] = dataclasses.field(default_factory=list)
     statcast_pull_status: str = "unknown"
+    # Instrumentation (2026-08-13): two more "did the real pull work" flags,
+    # same shape as statcast_pull_status just above and
+    # pitcher_statcast_status/pitcher_fb_velo_status further up -- added
+    # after last5_runs/last5_rbi/pitcher_whip/pitcher_era sat un-populating
+    # in the graded archive for weeks with nothing on the record able to say
+    # why. Defaulted (not required) so old locked/saved rows that predate
+    # this field still reconstruct fine -- see build_hitter_records() for
+    # where these get their real values.
+    last5_status: str = "unknown"
+    pitcher_season_stats_status: str = "unknown"
     # park_dimensions removed (audit 2026-06-29): was declared here but the
     # assignment (h.park_dimensions = park_dims) was never written. The local
     # variable park_dims at line ~6798 is only passed into compute_spray_park_fit()
@@ -5202,11 +5222,23 @@ def build_pitcher_profile(client: MLBClient, db: CacheDB, pitcher_id: int, team_
 
     person_blob = client.person(pitcher_id)
     person = (person_blob.get("people") or [{}])[0]
-    sblob = client.person_stats(pitcher_id, group="pitching", stat_type="season")
-    stats_list = sblob.get("stats") or []
-    first = stats_list[0] if stats_list else {}
-    splits = first.get("splits") or []
-    stat = (splits[0].get("stat") if splits else {}) or {}
+    # Instrumentation (2026-08-13): this call had no try/except at all --
+    # unlike the hitter-side equivalent a few thousand lines down, which
+    # already catches and falls back to stat={}. A raised exception here
+    # would propagate out of this function with nothing catching it before
+    # the per-game loop that calls build_pitcher_profile(), so this also
+    # closes a real (if apparently rare in practice) crash risk, not just
+    # an instrumentation gap.
+    try:
+        sblob = client.person_stats(pitcher_id, group="pitching", stat_type="season")
+        stats_list = sblob.get("stats") or []
+        first = stats_list[0] if stats_list else {}
+        splits = first.get("splits") or []
+        stat = (splits[0].get("stat") if splits else {}) or {}
+        season_stats_status = "ok" if stat else "empty"
+    except Exception as exc:
+        stat = {}
+        season_stats_status = f"error:{type(exc).__name__}"
     flat = flatten_pitching(stat)
     split_meta = parse_pitcher_handed_splits(client, db, pitcher_id)
     psc = build_pitcher_statcast_profile(db, pitcher_id, data_end_date)
@@ -5234,6 +5266,7 @@ def build_pitcher_profile(client: MLBClient, db: CacheDB, pitcher_id: int, team_
         "throws": (person.get("pitchHand") or {}).get("code", "?"),
         "era": flat["era"],
         "whip": flat["whip"],
+        "season_stats_status": season_stats_status,
         "hr9": flat["hr9"],
         "hr_allowed": flat["hr_allowed"],
         "k_rate": flat.get("k_rate", 0.0),
@@ -8116,7 +8149,21 @@ def build_hitter_records(client: MLBClient, db: CacheDB, game: Dict[str, Any], s
             except Exception:
                 stat = {}
             season = flatten_season_hitting(stat)
-            glog = client.person_game_log(pid)
+            # Instrumentation (2026-08-13): unlike the person_stats call just
+            # above (which already catches and falls back to stat={}), this
+            # call had no try/except and compute_window_from_gamelog() has no
+            # status field of its own -- a failed or empty pull here silently
+            # produces {"avg": 0.250, "hits": 0, ...} for last5/7/10 with
+            # nothing on the record to distinguish that from a real 0-for-5.
+            # last5_runs/last5_rbi specifically have sat un-populating in the
+            # graded archive for weeks with no way to tell why -- this is the
+            # first point that can actually say so.
+            try:
+                glog = client.person_game_log(pid)
+                last5_status = "ok" if (glog.get("stats") or []) else "empty"
+            except Exception as exc:
+                glog = {}
+                last5_status = f"error:{type(exc).__name__}"
             l5 = compute_window_from_gamelog(glog, 5)
             l7 = compute_window_from_gamelog(glog, 7)
             l10 = compute_window_from_gamelog(glog, 10)
@@ -8203,6 +8250,7 @@ def build_hitter_records(client: MLBClient, db: CacheDB, game: Dict[str, Any], s
                 last5_xbh=l5["xbh"],
                 last5_runs=l5["runs"],
                 last5_rbi=l5["rbi"],
+                last5_status=last5_status,
                 last7_avg=l7["avg"],
                 last7_hits=l7["hits"],
                 last7_hr=l7["hr"],
@@ -8280,6 +8328,7 @@ def build_hitter_records(client: MLBClient, db: CacheDB, game: Dict[str, Any], s
                 pitcher_throws=pitcher.throws,
                 pitcher_era=pitcher.era,
                 pitcher_whip=pitcher.whip,
+                pitcher_season_stats_status=getattr(pitcher, "season_stats_status", "missing"),
                 pitcher_hr9=pitcher.hr9,
                 pitcher_bb9=getattr(pitcher, "bb9", 3.20),
                 pitcher_hr_allowed=pitcher.hr_allowed,

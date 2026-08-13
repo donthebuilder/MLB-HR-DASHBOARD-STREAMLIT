@@ -1318,6 +1318,20 @@ SLOT_FIELDS = {
     # decorations. These were shown but never kept.
     "pitch_type_match_flag", "pitch_type_match_score", "games_since_last_hr",
     "hidden_hr_value", "high_confidence_hr_flag",
+    # DATA-GAP INSTRUMENTATION (2026-08-13): recent_ev/pitcher_ev_allowed/
+    # pitcher_hardhit_allowed/last5_runs/last5_rbi/pitcher_whip/pitcher_era
+    # all quietly stopped populating for a real stretch (~2026-06-22 onward,
+    # some fields still not recovered as of this writing) and nothing caught
+    # it for 7+ weeks, because every one of these silently falls back to a
+    # plausible-looking default on a failed pull with nothing archived to
+    # say so. mlb_dashboard.py already computes (or, for last5/pitcher
+    # season-stats, now computes as of this same date) an "ok"/"empty"/
+    # "error:<Type>" status right at the pull for every field in that list --
+    # it just wasn't being kept past the live slate. These five let a future
+    # gap surface from the archive in days, not weeks: watch for any of them
+    # drifting away from "ok" across consecutive slates.
+    "statcast_pull_status", "pitcher_statcast_status", "pitcher_statcast_bbe",
+    "last5_status", "pitcher_season_stats_status",
     # ── YOU CANNOT SWEEP A WEIGHT YOU NEVER RECORDED (2026-08-11) ──────────
     #
     # Found while trying to answer two of Donovan's questions off the archive
