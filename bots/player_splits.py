@@ -97,6 +97,20 @@ def build_splits(games: List[Dict[str, Any]]) -> Dict[str, Any]:
         "day_of_week": defaultdict(blank),
         "win_loss": defaultdict(blank),
     }
+    # One raw row per game, alongside the four pre-aggregated tables below
+    # (2026-08-13). Donovan: "how a player does on monday splits then at
+    # home in a win day game... i can't filter like that." The four
+    # families above are independent, single-dimension aggregates -- they
+    # can't answer a combined question like that. But day-of-week,
+    # home/away, win/loss and day/night are all GAME-level facts, and this
+    # loop already visits every game once with all four in hand -- keeping
+    # one row per game costs nothing new (no extra API call) and lets the
+    # site build any AND-combination of these four client-side. This is
+    # NOT the same as full play-by-play: PA-level things like RISP, outs,
+    # or count still aren't here, and combining THOSE with anything still
+    # needs a bigger build. See PlayerSplits.js's ComboFilter for the
+    # consumer side of this.
+    games_raw: List[Dict[str, Any]] = []
     for g in games:
         stat = g.get("stat") or {}
         if not stat:
@@ -104,20 +118,36 @@ def build_splits(games: List[Dict[str, Any]]) -> Dict[str, Any]:
         game = g.get("game") or {}
 
         dn = str(game.get("dayNight") or "").lower()
-        if dn in ("day", "night"):
-            add(buckets["day_night"]["Day" if dn == "day" else "Night"], stat)
+        dn_label = "Day" if dn == "day" else "Night" if dn == "night" else None
+        if dn_label:
+            add(buckets["day_night"][dn_label], stat)
 
-        if g.get("isHome") is not None:
-            add(buckets["home_away"]["Home" if g["isHome"] else "Away"], stat)
+        home = g.get("isHome")
+        if home is not None:
+            add(buckets["home_away"]["Home" if home else "Away"], stat)
 
-        if g.get("isWin") is not None:
-            add(buckets["win_loss"]["Win" if g["isWin"] else "Loss"], stat)
+        win = g.get("isWin")
+        if win is not None:
+            add(buckets["win_loss"]["Win" if win else "Loss"], stat)
 
+        dow_label = None
         try:
             d = dt.date.fromisoformat(str(g.get("date")))
-            add(buckets["day_of_week"][DOW[d.weekday()]], stat)
+            dow_label = DOW[d.weekday()]
+            add(buckets["day_of_week"][dow_label], stat)
         except Exception:
             pass
+
+        games_raw.append({
+            "date": str(g.get("date") or ""), "dow": dow_label,
+            "home": home, "win": win, "dn": dn_label,
+            "pa": num(stat.get("plateAppearances")), "ab": num(stat.get("atBats")),
+            "h": num(stat.get("hits")), "hr": num(stat.get("homeRuns")),
+            "2b": num(stat.get("doubles")), "3b": num(stat.get("triples")),
+            "bb": num(stat.get("baseOnBalls")), "k": num(stat.get("strikeOuts")),
+            "rbi": num(stat.get("rbi")), "r": num(stat.get("runs")),
+            "tb": num(stat.get("totalBases")),
+        })
 
     out: Dict[str, Any] = {}
     for family, groups in buckets.items():
@@ -126,6 +156,7 @@ def build_splits(games: List[Dict[str, Any]]) -> Dict[str, Any]:
     if out.get("day_of_week"):
         out["day_of_week"] = {d: out["day_of_week"][d] for d in DOW
                               if d in out["day_of_week"]}
+    out["games"] = games_raw
     return out
 
 
