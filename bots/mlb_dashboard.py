@@ -1285,6 +1285,29 @@ class HitterRecord:
     spray_chart: List[Dict[str, Any]] = dataclasses.field(default_factory=list)
     contact_log: List[Dict[str, Any]] = dataclasses.field(default_factory=list)
     batted_ball_log: List[Dict[str, Any]] = dataclasses.field(default_factory=list)
+    # PERSONAL HR SHAPE (2026-08-14, Donovan: "each player needs to be
+    # categorized by the homers they hit this season... maybe it will help
+    # figure out when a certain batter is in their form -- not the overall
+    # shape but their personal shape"). hr_shape_profile is his season homer
+    # mix in the same five bands the site's lib/hrShape.js cuts (wall-scraper
+    # / laser / standard / moonshot / no-doubter -- percentile slices of the
+    # archive's homer distribution, not physics; see that file), plus his own
+    # homer launch-angle window (la_lo/la_hi). The personal_shape_* fields
+    # are the "is he in HIS form" read: of recent hard-hit balls, the share
+    # landing inside HIS OWN homer launch-angle window, minus the same share
+    # season-long -- positive means his recent contact is trending toward the
+    # shape his homers actually take. DELIBERATELY NOT WIRED INTO ANY SCORE:
+    # the generic version of this idea (recent_barrel_rate) does not predict
+    # which night a hitter homers (p=0.58 on the graded archive), so this
+    # ships as a computed + ARCHIVED field only -- a few weeks of graded
+    # slates will say whether the PERSONAL version predicts anything before
+    # it ever touches hr_score. Defaulted so old locked/saved rows still
+    # reconstruct (same rule as every recent field addition here).
+    hr_shape_profile: Dict[str, Any] = dataclasses.field(default_factory=dict)
+    personal_shape_match: float = 0.0
+    personal_shape_recent_rate: float = 0.0
+    personal_shape_season_rate: float = 0.0
+    personal_shape_status: str = "missing"
     pitcher_pitch_mix: Dict[str, Any] = dataclasses.field(default_factory=dict)
     # Full LHB/RHB pitch mix splits, kept separate from pitcher_pitch_mix (which
     # is selected to match THIS batter's own hand, for scoring). The frontend
@@ -3114,7 +3137,7 @@ def finalize_xhr_fields(rows: List["HitterRecord"], db: CacheDB) -> None:
 
 
 def build_batter_statcast_profile(db: CacheDB, player_id: int, end_date: dt.date) -> Dict[str, Any]:
-    key = f"batter_statcast_v8_ldgbpu:{SEASON}:{player_id}:{end_date.isoformat()}"
+    key = f"batter_statcast_v9_hrshape:{SEASON}:{player_id}:{end_date.isoformat()}"
     out = {
         "recent_350_num": 0,
         "recent_350_den": 1,
@@ -3178,6 +3201,11 @@ def build_batter_statcast_profile(db: CacheDB, player_id: int, end_date: dt.date
         "spray_chart": [],
         "contact_log": [],
         "batted_ball_log": [],
+        "hr_shape_profile": {},
+        "personal_shape_match": 0.0,
+        "personal_shape_recent_rate": 0.0,
+        "personal_shape_season_rate": 0.0,
+        "personal_shape_status": "missing",
         "statcast_pull_status": "missing",
     }
     cached = db.get(key, max_age_days=1)
@@ -3473,6 +3501,90 @@ def build_batter_statcast_profile(db: CacheDB, player_id: int, end_date: dt.date
         out["spray_chart"] = spray_points
         out["contact_log"] = spray_points
         out["batted_ball_log"] = spray_points
+
+        # ── PERSONAL HR SHAPE (2026-08-14) ──────────────────────────────────
+        # What KIND of homers does HE hit, and is his recent contact trending
+        # toward that shape? Bands mirror the site's lib/hrShape.js HR_CUTS
+        # exactly (366ft / 428ft / 25deg / 34deg, distance rules tested
+        # first) -- keep the two in sync BY HAND if either changes. The bands
+        # are percentile slices of the archive's 801-homer distribution, not
+        # physics; see hrShape.js's header for why the handoff's proposed
+        # physics-flavored cuts were dropped. Computed from the SAME season
+        # dataframe already in hand -- zero new pulls.
+        HR_SHORT_FT, HR_LONG_FT, HR_FLAT_DEG, HR_STEEP_DEG = 366.0, 428.0, 25.0, 34.0
+
+        def _hr_band(la_v, dist_v):
+            if dist_v is not None and dist_v < HR_SHORT_FT:
+                return "wall_scraper"
+            if dist_v is not None and dist_v >= HR_LONG_FT:
+                return "no_doubter"
+            if la_v is None:
+                return "standard" if dist_v is not None else None
+            if la_v < HR_FLAT_DEG:
+                return "laser"
+            if la_v >= HR_STEEP_DEG:
+                return "moonshot"
+            return "standard"
+
+        season_bbe_all = bbe_spray if len(bbe_spray) else bbe
+        hr_rows = (
+            season_bbe_all[season_bbe_all["events"].fillna("") == "home_run"]
+            if len(season_bbe_all) and "events" in season_bbe_all.columns
+            else season_bbe_all.iloc[0:0]
+        )
+        shape_counts = {"wall_scraper": 0, "laser": 0, "standard": 0, "moonshot": 0, "no_doubter": 0}
+        hr_las = []
+        for _, hrow in hr_rows.iterrows():
+            la_v = _clean_num(hrow.get("launch_angle"), 1)
+            dist_v = _clean_num(hrow.get("hit_distance_sc"), 1)
+            band = _hr_band(la_v, dist_v)
+            if band:
+                shape_counts[band] += 1
+            if la_v is not None:
+                hr_las.append(float(la_v))
+        n_hr_shaped = sum(shape_counts.values())
+        shape_profile: Dict[str, Any] = {"n": n_hr_shaped}
+        shape_profile.update(shape_counts)
+        if len(hr_las) >= 3:
+            # His own homer launch-angle window: median +/- max(4deg, half
+            # the IQR). With 4-6 homers the IQR can collapse to a degree or
+            # two, and a 2deg window would call almost nothing "his shape" --
+            # the 4deg floor keeps the window usable at real sample sizes.
+            s_las = sorted(hr_las)
+            m = len(s_las)
+            med = s_las[m // 2] if m % 2 else (s_las[m // 2 - 1] + s_las[m // 2]) / 2.0
+            q1 = s_las[int(0.25 * (m - 1))]
+            q3 = s_las[int(0.75 * (m - 1))]
+            half = max(4.0, (q3 - q1) / 2.0)
+            la_lo, la_hi = med - half, med + half
+            shape_profile["la_lo"] = round(la_lo, 1)
+            shape_profile["la_hi"] = round(la_hi, 1)
+
+            def _shape_rate(frame):
+                # Of the hard-hit balls (95+, the EV floor a homer basically
+                # requires), what share left the bat inside HIS homer window?
+                if frame is None or len(frame) == 0:
+                    return 0.0, 0
+                hard = frame[(frame["launch_speed"] >= 95).fillna(False)]
+                den = int(len(hard))
+                if den == 0:
+                    return 0.0, 0
+                inw = hard[((hard["launch_angle"] >= la_lo) & (hard["launch_angle"] <= la_hi)).fillna(False)]
+                return float(len(inw)) / den, den
+
+            season_rate, _season_den = _shape_rate(season_bbe_all)
+            recent_rate, recent_den = _shape_rate(bbe)
+            out["personal_shape_season_rate"] = round(season_rate, 3)
+            out["personal_shape_recent_rate"] = round(recent_rate, 3)
+            out["personal_shape_match"] = round(recent_rate - season_rate, 3)
+            out["personal_shape_status"] = (
+                "ok" if (n_hr_shaped >= 4 and recent_den >= 5)
+                else "thin_recent" if n_hr_shaped >= 4
+                else "thin_hr"
+            )
+        else:
+            out["personal_shape_status"] = "no_hr" if n_hr_shaped == 0 else "thin_hr"
+        out["hr_shape_profile"] = shape_profile
 
         played_dates = list(played[played <= pd.Timestamp(end_date)].drop_duplicates().sort_values())
         l10_dates = played_dates[-10:]
@@ -8387,6 +8499,11 @@ def build_hitter_records(client: MLBClient, db: CacheDB, game: Dict[str, Any], s
                 spray_chart=sc.get("spray_chart", []),
                 contact_log=sc.get("contact_log", sc.get("spray_chart", [])),
                 batted_ball_log=sc.get("batted_ball_log", sc.get("spray_chart", [])),
+                hr_shape_profile=sc.get("hr_shape_profile", {}) or {},
+                personal_shape_match=safe_float(sc.get("personal_shape_match"), 0.0),
+                personal_shape_recent_rate=safe_float(sc.get("personal_shape_recent_rate"), 0.0),
+                personal_shape_season_rate=safe_float(sc.get("personal_shape_season_rate"), 0.0),
+                personal_shape_status=str(sc.get("personal_shape_status") or "missing"),
                 pitcher_pitch_mix=pitch_mix_data,
                 pitcher_pitch_mix_vs_lhb=pitch_mix_vs_L,
                 pitcher_pitch_mix_vs_rhb=pitch_mix_vs_R,

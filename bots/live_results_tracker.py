@@ -1332,6 +1332,19 @@ SLOT_FIELDS = {
     # drifting away from "ok" across consecutive slates.
     "statcast_pull_status", "pitcher_statcast_status", "pitcher_statcast_bbe",
     "last5_status", "pitcher_season_stats_status",
+    # PERSONAL HR SHAPE (2026-08-14, Donovan: categorize each hitter by the
+    # KIND of homers he hits -- lasers/moonshots/wall-scrapers -- and whether
+    # his recent contact matches HIS OWN shape, "not the overall shape").
+    # Archived UNSCORED on purpose: recent_barrel_rate (the generic version
+    # of this idea) doesn't predict which night a hitter homers, so the
+    # personal version earns its way into scoring from this archive or not
+    # at all. After a few weeks, test: do nights with personal_shape_match
+    # meaningfully above 0 (recent hard-hit contact landing in his own homer
+    # launch-angle window MORE than his season baseline) homer more often,
+    # holding hr_score fixed? personal_shape_status gates thin samples
+    # ("ok" needs 4+ shaped homers and 5+ recent hard-hit balls).
+    "hr_shape_profile", "personal_shape_match", "personal_shape_recent_rate",
+    "personal_shape_season_rate", "personal_shape_status",
     # ── YOU CANNOT SWEEP A WEIGHT YOU NEVER RECORDED (2026-08-11) ──────────
     #
     # Found while trying to answer two of Donovan's questions off the archive
