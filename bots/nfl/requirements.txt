@@ -1,0 +1,7 @@
+# NFL bot deps. Deliberately separate from bots/requirements.txt (the MLB
+# bot's) so a football run never drags pybaseball and its transitive tree onto
+# the runner, and so a break in one sport's dependency set can't ground the
+# other.
+nflreadpy>=0.2.0
+polars>=1.0.0
+requests>=2.31.0

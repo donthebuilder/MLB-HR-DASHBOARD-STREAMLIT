@@ -49,6 +49,13 @@ PUBLISH_FILES=(
   context_pack_latest.json
   # fence-line contact board from spray_cache (2026-08-08)
   fence_board.json
+  # NFL (2026-08-14). The football bot writes into public/data/current/ with an
+  # nfl_ prefix specifically so it can ride this script rather than fork it --
+  # the orphan-branch force-push and the concurrent-publisher merge below are
+  # the parts worth not reimplementing per sport.
+  nfl_week.json
+  nfl_report_card.json
+  nfl_meta.json
 )
 
 # Nightly graded files, kept so the backtest has more than one day to look at.

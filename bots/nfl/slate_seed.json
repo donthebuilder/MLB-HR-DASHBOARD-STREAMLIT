@@ -1,0 +1,8 @@
+{
+  "_note": "Fallback slate used only when the ESPN scoreboard is unreachable at build time. Verified against ESPN 2026-08-14. The bot prefers live ESPN and only reads this if that returns nothing.",
+  "games": [
+    {"game_id":"seed-den-atl","kickoff":"2026-08-14T23:00Z","away":"DEN","home":"ATL","away_name":"Denver Broncos","home_name":"Atlanta Falcons","state":"pre","detail":"Fri 7:00 PM ET","completed":false,"week":2,"season_type":1,"source":"seed"},
+    {"game_id":"seed-tb-nyj","kickoff":"2026-08-14T23:00Z","away":"TB","home":"NYJ","away_name":"Tampa Bay Buccaneers","home_name":"New York Jets","state":"pre","detail":"Fri 7:00 PM ET","completed":false,"week":2,"season_type":1,"source":"seed"},
+    {"game_id":"seed-mia-was","kickoff":"2026-08-14T23:00Z","away":"MIA","home":"WAS","away_name":"Miami Dolphins","home_name":"Washington Commanders","state":"pre","detail":"Fri 7:00 PM ET","completed":false,"week":2,"season_type":1,"source":"seed"}
+  ]
+}

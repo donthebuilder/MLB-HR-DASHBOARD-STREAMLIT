@@ -1,0 +1,147 @@
+name: NFL Bot — slate + report card (data branch only)
+
+# FOOTBALL IS NOT BASEBALL, and the schedule is where that shows up first.
+# The MLB bot runs ~14 times a day, every day, because the slate turns over
+# nightly and lineups drop in a rolling window. The NFL gives you one slate a
+# week, three kickoff waves, and an injury report that only moves on
+# Wednesday, Friday and 90 minutes before kickoff. Running this hourly would
+# burn Actions minutes to republish an identical file.
+#
+# All times UTC. Phoenix is UTC-7 year-round.
+
+on:
+  schedule:
+    # ── the weekly spine ──
+    - cron: "0 13 * * 2"    # Tue 6am PHX  — week opens, the league's data lands
+    - cron: "0 23 * * 3"    # Wed 4pm PHX  — first practice report
+    - cron: "0 21 * * 4"    # Thu 2pm PHX  — TNF lock
+    - cron: "30 4 * * 5"    # Thu 9:30pm PHX — grade TNF
+    - cron: "0 23 * * 5"    # Fri 4pm PHX  — official Q/D/O designations
+    # ── Sunday ──
+    - cron: "0 15 * * 0"    # Sun 8am PHX  — main slate build
+    - cron: "30 18 * * 0"   # Sun 11:30am PHX — inactives, 90 min before the 1pm ET wave
+    - cron: "30 20,23 * * 0" # Sun 1:30pm / 4:30pm PHX — live waves
+    - cron: "30 3 * * 1"    # Sun 8:30pm PHX — night game
+    - cron: "0 7 * * 1"     # Sun midnight PHX — final grade
+    # ── Monday ──
+    - cron: "0 0 * * 2"     # Mon 5pm PHX  — MNF lock
+    - cron: "30 6 * * 2"    # Mon 11:30pm PHX — close the week
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "preseason or week"
+        required: false
+        default: "preseason"
+      week:
+        description: "regular-season week number (week mode only)"
+        required: false
+        default: ""
+      report:
+        description: "also rebuild the report card (slow — full backtest)"
+        required: false
+        default: "false"
+
+# Its own group, per the lesson in today.yml: a group shared across workflows
+# made GitHub cancel queued runs and silently killed whole publishes.
+concurrency:
+  group: nfl-slate
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  run-nfl-bot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install deps
+        run: pip install -r bots/nfl/requirements.txt
+
+      # nflreadpy caches the parquet releases it downloads. Play-by-play for a
+      # season is ~50MB and the feature build reads two seasons, so a cold
+      # cache costs a couple of minutes every run for files that only change
+      # once a week.
+      - name: Restore nflverse cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/nflreadpy
+          key: nflverse-${{ github.run_id }}
+          restore-keys: |
+            nflverse-
+
+      # MODE. Preseason until the regular season starts, because nflverse
+      # carries no preseason at all and the whole board has to come from last
+      # season's baselines. A manual dispatch can force either.
+      - name: Decide mode
+        id: mode
+        run: |
+          set -euo pipefail
+          MODE="${{ github.event.inputs.mode || '' }}"
+          if [ -z "$MODE" ]; then
+            # Week 1 of the 2026 regular season kicks off Sept 9.
+            if [ "$(date -u +%s)" -lt "$(date -u -d 2026-09-09 +%s)" ]; then
+              MODE=preseason
+            else
+              MODE=week
+            fi
+          fi
+          echo "mode=$MODE" >> "$GITHUB_OUTPUT"
+          echo "Running in $MODE mode"
+
+      - name: Build slate
+        working-directory: bots/nfl
+        run: |
+          set -euo pipefail
+          mkdir -p "$GITHUB_WORKSPACE/public/data/current"
+          ARGS="--mode ${{ steps.mode.outputs.mode }} --season 2026"
+          if [ -n "${{ github.event.inputs.week }}" ]; then
+            ARGS="$ARGS --week ${{ github.event.inputs.week }}"
+          fi
+          python nfl_bot.py $ARGS \
+            --out "$GITHUB_WORKSPACE/public/data/current" --prefix nfl_
+
+      # The report card is a full backtest over two seasons — minutes, not
+      # seconds, and it only changes when the WEIGHTS change, not when the
+      # slate does. So it rebuilds on the Tuesday open and on demand, never on
+      # a live Sunday wave where the runner should be turning a slate around
+      # fast.
+      - name: Rebuild report card
+        if: github.event.inputs.report == 'true' || github.event.schedule == '0 13 * * 2'
+        working-directory: bots/nfl
+        run: |
+          python export_report.py --seasons 2024 2025 \
+            --out "$GITHUB_WORKSPACE/public/data/current" --prefix nfl_
+
+      # A failed build must not publish an empty slate over a good one. The
+      # site's fetch validates `players.length > 0` before accepting a payload,
+      # but the cheaper place to stop it is here, before it ever ships.
+      - name: Verify payload
+        run: |
+          set -euo pipefail
+          python - <<'EOF'
+          import json, sys, pathlib
+          p = pathlib.Path("public/data/current/nfl_week.json")
+          if not p.exists():
+              sys.exit("nfl_week.json was never written")
+          d = json.loads(p.read_text())
+          n, g = len(d.get("players", [])), len(d.get("games", []))
+          print(f"{n} players, {g} games, mode={d.get('mode')}")
+          if n == 0:
+              sys.exit("refusing to publish: zero players")
+          EOF
+
+      - name: Publish to data branch
+        run: bash .github/scripts/publish_data.sh "NFL slate"
