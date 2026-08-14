@@ -34,29 +34,35 @@ from nfl_scoring import MODELS, OUTCOME, score, derive, _pctile
 PHX = dt.timezone(dt.timedelta(hours=-7))
 
 # What the Research tab shows. Order is the column order on the site.
+# (column, short label, description, decimal places, render as percent?)
+#
+# `dp` is NOT cosmetic. DenseTable defaults to toFixed(0), so every rate on
+# this table -- target share, xTD, TDs per game, TDoE -- rendered as 0 or 1
+# and the whole board read as noise. Precision is a property of the stat, so
+# it's declared here with the stat and shipped in the payload.
 RESEARCH = [
-    ("f_target_share", "TGT%", "Share of his team's targets"),
-    ("f_wopr", "WOPR", "Weighted opportunity — target share + air yards share"),
-    ("f_targets", "TGT", "Targets per game"),
-    ("f_receptions", "REC", "Receptions per game"),
-    ("f_receiving_yards", "RECYD", "Receiving yards per game"),
-    ("f_receiving_air_yards", "AIRYD", "Air yards per game — depth of target"),
-    ("f_receiving_20", "20+", "Receptions of 20+ yards per game"),
-    ("f_carries", "CAR", "Carries per game"),
-    ("f_rushing_yards", "RUYD", "Rushing yards per game"),
-    ("f_rz_opp", "RZ", "Red-zone touches per game"),
-    ("f_gl_opp", "GL", "Goal-line touches — inside-10 targets, inside-5 carries"),
-    ("f_xtd", "xTD", "Expected TDs per game from field position"),
-    ("f_td_actual", "TD", "Actual TDs per game"),
-    ("td_regression", "TDoE", "Expected minus actual — positive means he's due"),
-    ("f_ngs_avg_separation", "SEP", "Average separation at the catch point (NGS)"),
-    ("f_ngs_avg_yac_above_expectation", "YACOE", "YAC above expected (NGS)"),
-    ("f_ngs_rush_yards_over_expected_per_att", "RYOE", "Rush yards over expected per attempt (NGS)"),
-    ("f_passing_yards", "PAYD", "Passing yards per game"),
-    ("f_attempts", "ATT", "Pass attempts per game"),
-    ("f_passing_cpoe", "CPOE", "Completion % over expected"),
-    ("f_fg_made", "FGM", "Field goals made per game"),
-    ("f_pat_made", "PAT", "Extra points made per game"),
+    ("f_target_share", "TGT%", "Share of his team's targets", 1, True),
+    ("f_wopr", "WOPR", "Weighted opportunity — target share + air yards share", 3, False),
+    ("f_targets", "TGT", "Targets per game", 1, False),
+    ("f_receptions", "REC", "Receptions per game", 1, False),
+    ("f_receiving_yards", "RECYD", "Receiving yards per game", 1, False),
+    ("f_receiving_air_yards", "AIRYD", "Air yards per game — depth of target", 1, False),
+    ("f_receiving_20", "20+", "Receptions of 20+ yards per game", 2, False),
+    ("f_carries", "CAR", "Carries per game", 1, False),
+    ("f_rushing_yards", "RUYD", "Rushing yards per game", 1, False),
+    ("f_rz_opp", "RZ", "Red-zone touches per game", 2, False),
+    ("f_gl_opp", "GL", "Goal-line touches — inside-10 targets, inside-5 carries", 2, False),
+    ("f_xtd", "xTD", "Expected TDs per game from field position", 2, False),
+    ("f_td_actual", "TD", "Actual TDs per game", 2, False),
+    ("td_regression", "TDoE", "Expected minus actual — positive means he's due", 2, False),
+    ("f_ngs_avg_separation", "SEP", "Average separation at the catch point (NGS)", 2, False),
+    ("f_ngs_avg_yac_above_expectation", "YACOE", "YAC above expected (NGS)", 2, False),
+    ("f_ngs_rush_yards_over_expected_per_att", "RYOE", "Rush yards over expected per attempt (NGS)", 2, False),
+    ("f_passing_yards", "PAYD", "Passing yards per game", 1, False),
+    ("f_attempts", "ATT", "Pass attempts per game", 1, False),
+    ("f_passing_cpoe", "CPOE", "Completion % over expected", 1, False),
+    ("f_fg_made", "FGM", "Field goals made per game", 2, False),
+    ("f_pat_made", "PAT", "Extra points made per game", 2, False),
 ]
 
 
@@ -115,7 +121,7 @@ def _fill_missing(d: pl.DataFrame) -> pl.DataFrame:
     for c, dflt in needed.items():
         if c not in d.columns:
             add.append(pl.lit(dflt).cast(pl.Float64).alias(c))
-    for c, _, _ in RESEARCH:
+    for c, _, _, _dp, _pct in RESEARCH:
         if c not in d.columns and c != "td_regression":
             add.append(pl.lit(None).cast(pl.Float64).alias(c))
     return d.with_columns(add) if add else d
@@ -151,12 +157,17 @@ def score_all(tbl: pl.DataFrame, context_ok: bool) -> dict:
         tot = parts[0]
         for p in parts[1:]:
             tot = tot + p
+        # ORDER MATTERS HERE. `tot` is a LAZY expression over the c_ columns,
+        # so it has to be materialised BEFORE those columns are rescaled --
+        # otherwise it resolves against the already-x100 values and the score
+        # comes out x10000 (98.88 shipped as 9888, which is what the Research
+        # table was showing).
+        d = d.with_columns((tot * 100).alias("score"))
         # Components go out as 0-100 too, not the raw 0-1 percentile. The modal
         # renders them as "90 = top 10% of this slate on that input"; shipping
         # the fraction made every one of them round to 1.
         d = d.with_columns([(pl.col(f"c_{r.lstrip('-')}") * 100).round(0)
                             .alias(f"c_{r.lstrip('-')}") for r in avail])
-        d = d.with_columns((tot * 100).alias("score"))
         out[key] = {"df": d, "dropped": missing,
                     "weights": {k.lstrip("-"): round(v, 3) for k, v in avail.items()}}
     return out
@@ -222,7 +233,7 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
             p["scores"][key] = _num(r.get("score"))
             p["components"][key] = {c[2:]: _num(r.get(c)) for c in comp_cols
                                     if _num(r.get(c)) is not None}
-            for col, short, _ in RESEARCH:
+            for col, short, _, _dp, _pct in RESEARCH:
                 v = _num(r.get(col))
                 # Skip exact zeros: a running back carries PAYD/ATT/CPOE/FGM/PAT
                 # as 0.000 and a wall of zeroes in the modal reads as data when
@@ -258,7 +269,8 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
              "dropped": scored.get(k, {}).get("dropped", [])}
             for k, m in MODELS.items() if k in scored
         ],
-        "research_columns": [{"key": s, "label": s, "desc": d} for _, s, d in RESEARCH],
+        "research_columns": [{"key": s, "label": s, "desc": d, "dp": dp, "pct": pct}
+                             for _, s, d, dp, pct in RESEARCH],
         "counts": {"players": len(rows), "games": len(upcoming)},
     }
 
