@@ -56,6 +56,12 @@ PUBLISH_FILES=(
   nfl_week.json
   nfl_report_card.json
   nfl_meta.json
+  # The research layer (2026-08-14): defence-vs-position by depth role,
+  # coverage shells, explosive allowed, team usage, and per-game logs for the
+  # hit-rate chart. Separate files on purpose — only one tab reads each, and a
+  # 300 KB payload the Games tab never opens is 300 KB it waits for.
+  nfl_matchup.json
+  nfl_logs.json
 )
 
 # Nightly graded files, kept so the backtest has more than one day to look at.

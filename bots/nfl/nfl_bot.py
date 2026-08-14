@@ -31,6 +31,10 @@ import polars as pl
 
 import nfl_espn
 from nfl_splits import splits_for, SPLIT_PAIRS, SPLIT_LABELS
+import nfl_dvp
+import nfl_gamelog
+import nfl_coverage
+import nfl_explosive
 from nfl_features import build, season_baseline, PLAYER_FORM, USAGE_FORM
 from nfl_scoring import MODELS, OUTCOME, score, derive, _pctile
 
@@ -387,7 +391,30 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
     rows = sorted(players.values(),
                   key=lambda p: -(p["scores"].get("TD") or 0))
 
+    # ── the research layer ───────────────────────────────────────────────────
+    # Written as SEPARATE files rather than folded into week.json. The slate is
+    # what every tab needs on load; game logs and defence-vs-position are what
+    # ONE tab needs, and a 500 KB payload the Games tab never reads is 500 KB
+    # the Games tab waits for.
+    stat_season = season - 1 if mode == "preseason" else season
+    extras: dict = {}
+    for name, fn in (
+        ("dvp", lambda: nfl_dvp.build(stat_season)),
+        ("coverage_team", lambda: nfl_coverage.team_profile(stat_season)),
+        ("coverage_player", lambda: nfl_coverage.player_vs_coverage(stat_season)),
+        ("def_explosive", lambda: nfl_explosive.defense_explosive(stat_season)),
+        ("player_explosive", lambda: nfl_explosive.player_explosive(stat_season)),
+        ("usage", lambda: nfl_explosive.team_usage(stat_season)),
+    ):
+        try:
+            extras[name] = fn()
+        except Exception as exc:
+            print(f"{name} unavailable ({type(exc).__name__}: {exc})")
+            extras[name] = {}
+
     return {
+        "extras": extras,
+        "stat_season": stat_season,
         "mode": mode,
         "season": season,
         "week": week,
@@ -428,6 +455,49 @@ def main() -> int:
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     payload = build_payload(a.mode, a.season, a.week, out)
+
+    extras = payload.pop("extras", {})
+    stat_season = payload.get("stat_season")
+
+    # Player-level research is filtered to the slate. Team-level (defence vs
+    # position, coverage shells, explosive allowed) is NOT: you look up any
+    # defence from the matchup tab, and 32 teams is small. The player maps are
+    # the league's 349 receivers, of whom this card has ~100 — shipping the
+    # other 249 quadrupled the file for rows nothing can render.
+    on_slate = {pp["player_id"] for pp in payload.get("players", [])}
+    for k in ("coverage_player", "player_explosive"):
+        if extras.get(k):
+            extras[k] = {i: v for i, v in extras[k].items() if i in on_slate}
+    if extras.get("usage"):
+        teams_on_slate = {g[s] for g in payload.get("games", []) for s in ("home", "away")}
+        extras["usage"] = {t: v for t, v in extras["usage"].items() if t in teams_on_slate}
+
+    # Defence-vs-position, coverage, explosive and usage: one file, one tab.
+    (out / f"{a.prefix}matchup.json").write_text(json.dumps({
+        "season": stat_season,
+        "dvp": extras.get("dvp", {}),
+        "dvp_roles": nfl_dvp.ROLE_ORDER,
+        "dvp_stats": nfl_dvp.DVP_STATS,
+        "dvp_labels": nfl_dvp.STAT_LABELS,
+        "coverage_team": extras.get("coverage_team", {}),
+        "coverage_player": extras.get("coverage_player", {}),
+        "def_explosive": extras.get("def_explosive", {}),
+        "player_explosive": extras.get("player_explosive", {}),
+        "usage": extras.get("usage", {}),
+    }, separators=(",", ":")))
+
+    # Game logs, for the hit-rate chart. Only the players on this slate — the
+    # league's full log is 2,100 players and nobody is looking at 2,000 of them.
+    try:
+        on_slate = {p["player_id"] for p in payload["players"]}
+        logs = nfl_gamelog.build([stat_season - 1, stat_season])
+        logs = {k: v for k, v in logs.items() if k in on_slate}
+    except Exception as exc:
+        print(f"game logs unavailable ({type(exc).__name__}: {exc})")
+        logs = {}
+    (out / f"{a.prefix}logs.json").write_text(json.dumps({
+        "bars": nfl_gamelog.MARKET_VALUE, "logs": logs}, separators=(",", ":")))
+
     (out / f"{a.prefix}week.json").write_text(json.dumps(payload, separators=(",", ":")))
     (out / f"{a.prefix}meta.json").write_text(json.dumps({
         "built_at": payload["built_at"],
@@ -435,9 +505,12 @@ def main() -> int:
         "mode": payload["mode"], "label": payload["label"],
         "counts": payload["counts"],
     }, indent=2))
-    kb = (out / f"{a.prefix}week.json").stat().st_size / 1024
-    print(f"wrote {out}/{a.prefix}week.json  ({kb:.0f} KB, "
-          f"{payload['counts']['players']} players, {payload['counts']['games']} games)")
+    for f in ("week", "matchup", "logs", "meta"):
+        fp = out / f"{a.prefix}{f}.json"
+        if fp.exists():
+            print(f"  {fp.name:22} {fp.stat().st_size/1024:7.0f} KB")
+    print(f"{payload['counts']['players']} players, {payload['counts']['games']} games, "
+          f"stats from {stat_season}")
     return 0
 
 
