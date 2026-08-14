@@ -35,6 +35,7 @@ import nfl_dvp
 import nfl_gamelog
 import nfl_coverage
 import nfl_explosive
+import nfl_field
 from nfl_features import build, season_baseline, PLAYER_FORM, USAGE_FORM
 from nfl_scoring import MODELS, OUTCOME, score, derive, _pctile
 
@@ -405,6 +406,7 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
         ("def_explosive", lambda: nfl_explosive.defense_explosive(stat_season)),
         ("player_explosive", lambda: nfl_explosive.player_explosive(stat_season)),
         ("usage", lambda: nfl_explosive.team_usage(stat_season)),
+        ("field", lambda: nfl_field.build(stat_season)),
     ):
         try:
             extras[name] = fn()
@@ -465,6 +467,10 @@ def main() -> int:
     # the league's 349 receivers, of whom this card has ~100 — shipping the
     # other 249 quadrupled the file for rows nothing can render.
     on_slate = {pp["player_id"] for pp in payload.get("players", [])}
+    if extras.get("field"):
+        for k in ("player_pass", "player_rush"):
+            if extras["field"].get(k):
+                extras["field"][k] = {i: v for i, v in extras["field"][k].items() if i in on_slate}
     for k in ("coverage_player", "player_explosive"):
         if extras.get(k):
             extras[k] = {i: v for i, v in extras[k].items() if i in on_slate}
@@ -484,6 +490,11 @@ def main() -> int:
         "def_explosive": extras.get("def_explosive", {}),
         "player_explosive": extras.get("player_explosive", {}),
         "usage": extras.get("usage", {}),
+        "field": extras.get("field", {}),
+        "zones_pass": nfl_field.ZONES_PASS,
+        "zones_rush": nfl_field.ZONES_RUSH,
+        "rush_labels": nfl_field.RUSH_LABEL,
+        "depth_labels": nfl_field.DEPTH_LABEL,
     }, separators=(",", ":")))
 
     # Game logs, for the hit-rate chart. Only the players on this slate — the
