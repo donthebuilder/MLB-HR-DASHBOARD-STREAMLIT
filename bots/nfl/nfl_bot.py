@@ -30,6 +30,7 @@ from statistics import NormalDist
 import polars as pl
 
 import nfl_espn
+from nfl_splits import splits_for, SPLIT_PAIRS, SPLIT_LABELS
 from nfl_features import build, season_baseline, PLAYER_FORM, USAGE_FORM
 from nfl_scoring import MODELS, OUTCOME, score, derive, _pctile
 
@@ -326,6 +327,14 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
             ref = ref.filter(pl.col("week") == week)
         ref = ref.with_columns(pl.col("player_display_name").alias("name"))
 
+    # SPLITS. Same season the form comes from, so a row's splits and its
+    # baseline are describing the same football rather than two different years.
+    try:
+        splits = splits_for(season - 1 if mode == "preseason" else season)
+    except Exception as exc:
+        print(f"splits unavailable ({type(exc).__name__}: {exc}) — continuing without")
+        splits = {}
+
     scored = score_all(tbl, context_ok, ref)
 
     # merge every market's score onto one player row
@@ -353,6 +362,7 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
                     and (r.get("position") in ("RB", "WR", "TE"))
                 ),
                 "scores": {}, "components": {}, "stats": {},
+                "splits": splits.get(pid, {}),
             })
             p["scores"][key] = _num(r.get("score"))
             p["components"][key] = {c[2:]: _num(r.get(c)) for c in comp_cols
@@ -395,6 +405,8 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
         ],
         "research_columns": [{"key": s, "label": s, "desc": d, "dp": dp, "pct": pct}
                              for _, s, d, dp, pct in RESEARCH],
+        "split_pairs": SPLIT_PAIRS,
+        "split_labels": SPLIT_LABELS,
         "counts": {"players": len(rows), "games": len(upcoming)},
     }
 
