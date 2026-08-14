@@ -2,6 +2,12 @@
 # bot's) so a football run never drags pybaseball and its transitive tree onto
 # the runner, and so a break in one sport's dependency set can't ground the
 # other.
-nflreadpy>=0.2.0
+#
+# nflreadpy is pre-1.0 and 0.1.5 is the current release — the whole feature
+# table and all seven models were built and backtested against it. The upper
+# bound is deliberate: this bot runs unattended on a schedule, and a pre-1.0
+# package is free to move its API on a minor bump. Bump the ceiling on purpose,
+# after re-running bots/nfl/nfl_backtest.py, not by surprise on a Sunday.
+nflreadpy>=0.1.5,<0.2.0
 polars>=1.0.0
 requests>=2.31.0

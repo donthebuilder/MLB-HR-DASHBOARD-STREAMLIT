@@ -43,6 +43,19 @@ on:
     # who is even playing.
     - cron: "0 12,15,16,17,18,19,20,21,22,23,0,1 * * *"
     - cron: "30 21 * * *"   # 2:30pm Phoenix - most lineups are in by now
+    # HALF-HOURLY THROUGH THE LINEUP WINDOW (2026-08-14, Donovan: "add a few
+    # more slate runs to catch the lineups").
+    #
+    # The block above is hourly, and a card can post at any minute inside it --
+    # so a lineup landing at 16:05 UTC was not picked up until 17:00, and
+    # lineup_confirmed carries 0.17 weight in the blend plus its own HR2
+    # multiplier. Up to 55 minutes of every slate was being scored on a
+    # projection that had already been superseded.
+    #
+    # These are the :30s for 9am-4:30pm Phoenix, the window cards actually drop
+    # in (21:30 is already covered by the line above). Outside it the hourly
+    # cadence is fine: nothing posts a lineup at 4am.
+    - cron: "30 16,17,18,19,20,22,23 * * *"
     #
     # LATE-CARD SWEEP (2026-08-10, by request: "add any more as possible").
     #

@@ -49,6 +49,19 @@ RAW_BASE = f"https://raw.githubusercontent.com/{GITHUB_REPO}/{DATA_BRANCH}"
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 OUT_DIR = Path(__file__).resolve().parent / "outputs"
+# CREATE IT HERE, AT IMPORT (2026-08-14). This mkdir used to live at the bottom
+# of main(), AFTER the pair_builder write and behind the `slate_cached` early
+# return -- so on a fresh CI checkout it had not run yet when the pair-builder
+# write fired. bots/outputs/ is gitignored, so the directory genuinely does not
+# exist on a runner: pb_dest.write_text() raised FileNotFoundError, the bare
+# `except Exception` below swallowed it as "pair_builder fetch skipped", and
+# live_results_tracker fell through to its OWN internal pool builder.
+#
+# That is the "pairs cashed on one side, different pairs on the other" report:
+# the Pairs tab renders the published pair_builder_latest.json while the
+# Results tab was rendering a completely different set of tickets the grader
+# invented from the same top hitters -- same people, different pairings.
+OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def phoenix_today() -> dt.date:
@@ -92,7 +105,11 @@ def main() -> int:
         else:
             print(f"No pair_builder_latest published (HTTP {pb.status_code}); grader will use internal pools.")
     except Exception as exc:
-        print(f"pair_builder fetch skipped: {exc}")
+        # NOT silent. If this ever fails again the grader will quietly grade
+        # tickets nobody was shown, so it needs to be findable in the log.
+        print(f"::warning::pair_builder fetch FAILED ({type(exc).__name__}: {exc}) "
+              f"— grader will invent its own pools and the Results tab will "
+              f"disagree with the Pairs tab.", file=sys.stderr)
 
     if slate_cached:
         return 0
@@ -118,7 +135,6 @@ def main() -> int:
         print("Published slate is empty; nothing to grade.", file=sys.stderr)
         return 1
 
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
     blob = json.dumps(rows)
     dest.write_text(blob, encoding="utf-8")
     print(f"Wrote {len(rows)} picks to {dest}")
