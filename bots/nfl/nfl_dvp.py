@@ -190,6 +190,23 @@ def build(season: int) -> dict:
     return out
 
 
+def current_roles(season: int) -> dict:
+    """{player_id: role} as of the freshest week we have usage for.
+
+    The site needs this to point a player at his own row in the DvP table.
+    Deriving it browser-side from published usage would be a SECOND
+    implementation of depth_roles(), and the failure mode is the bad kind:
+    the table and the highlight disagree, both look internally consistent,
+    and nothing errors. One source, shipped.
+    """
+    r = depth_roles(season)
+    if r.height == 0 or "role" not in r.columns:
+        return {}
+    last = r["week"].max()
+    return {row["player_id"]: row["role"]
+            for row in r.filter(pl.col("week") == last).iter_rows(named=True)}
+
+
 ROLE_ORDER = ["WR1", "WR2", "WR3", "Other WR", "TE1", "TE2", "Other TE",
               "RB1", "RB2", "Other RB", "QB"]
 

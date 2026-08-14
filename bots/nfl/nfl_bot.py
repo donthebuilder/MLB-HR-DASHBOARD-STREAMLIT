@@ -401,6 +401,7 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
     extras: dict = {}
     for name, fn in (
         ("dvp", lambda: nfl_dvp.build(stat_season)),
+        ("roles", lambda: nfl_dvp.current_roles(stat_season)),
         ("coverage_team", lambda: nfl_coverage.team_profile(stat_season)),
         ("coverage_player", lambda: nfl_coverage.player_vs_coverage(stat_season)),
         ("def_explosive", lambda: nfl_explosive.defense_explosive(stat_season)),
@@ -471,7 +472,7 @@ def main() -> int:
         for k in ("player_pass", "player_rush"):
             if extras["field"].get(k):
                 extras["field"][k] = {i: v for i, v in extras["field"][k].items() if i in on_slate}
-    for k in ("coverage_player", "player_explosive"):
+    for k in ("coverage_player", "player_explosive", "roles"):
         if extras.get(k):
             extras[k] = {i: v for i, v in extras[k].items() if i in on_slate}
     if extras.get("usage"):
@@ -485,6 +486,8 @@ def main() -> int:
         "dvp_roles": nfl_dvp.ROLE_ORDER,
         "dvp_stats": nfl_dvp.DVP_STATS,
         "dvp_labels": nfl_dvp.STAT_LABELS,
+        # Which DvP row each player on this card actually belongs to.
+        "roles": extras.get("roles", {}),
         "coverage_team": extras.get("coverage_team", {}),
         "coverage_player": extras.get("coverage_player", {}),
         "def_explosive": extras.get("def_explosive", {}),
