@@ -21,9 +21,11 @@ browser has to fetch.
 from __future__ import annotations
 import argparse
 import datetime as dt
+import bisect
 import json
 import math
 from pathlib import Path
+from statistics import NormalDist
 
 import polars as pl
 
@@ -97,13 +99,15 @@ def preseason_rows(prior_season: int, teams: set[str]) -> pl.DataFrame:
                  .with_columns(pl.coalesce(["team_now", "team"]).alias("team"))
     except Exception:
         pass
-    d = base.join(who, on="player_id", how="inner").filter(pl.col("team").is_in(list(teams)))
-    # rename b_* -> f_* so the same scoring code runs unchanged
-    ren = {c: "f_" + c[2:] for c in d.columns if c.startswith("b_") and c != "b_gp"}
-    return d.rename(ren).with_columns(
+    full = base.join(who, on="player_id", how="inner")
+    ren = {c: "f_" + c[2:] for c in full.columns if c.startswith("b_") and c != "b_gp"}
+    full = full.rename(ren).with_columns(
         pl.lit(1).cast(pl.Int8).alias("is_carryover"),
         pl.lit(0).cast(pl.Int8).alias("inj_q"),
     )
+    # (slate, league reference). The reference is EVERY qualified player, not
+    # just the teams on this card — that's what makes the score absolute.
+    return full.filter(pl.col("team").is_in(list(teams))), full
 
 
 def _fill_missing(d: pl.DataFrame) -> pl.DataFrame:
@@ -127,9 +131,72 @@ def _fill_missing(d: pl.DataFrame) -> pl.DataFrame:
     return d.with_columns(add) if add else d
 
 
-def score_all(tbl: pl.DataFrame, context_ok: bool) -> dict:
+def _league_pct(ref_vals: list[float], invert: bool):
+    """Percentile of a value against a FIXED league population.
+
+    This is the difference between a score that means something and a score
+    that's just a row number. Ranking inside the slate forces a uniform 0-100
+    every week: the best goal-line back among six teams gets a 100 whether he's
+    Bijan Robinson or a backup, and a 100 on a three-game preseason card reads
+    identically to a 100 on a full Sunday. The MLB side never had this problem
+    because hr_score is an absolute model output — 78+ is elite, most of the
+    board lives in the 40s and 50s, and a weak slate genuinely scores low.
+
+    So each component is ranked against every qualified player in the league,
+    not against whoever happens to be playing. A thin slate now scores thin.
+    """
+    vals = sorted(v for v in ref_vals if v is not None and math.isfinite(v))
+    n = len(vals)
+    if n == 0:
+        return lambda x: None
+
+    def pct(x):
+        if x is None:
+            return None
+        try:
+            f = float(x)
+        except (TypeError, ValueError):
+            return None
+        if not math.isfinite(f):
+            return None
+        lo = bisect.bisect_left(vals, f)
+        hi = bisect.bisect_right(vals, f)
+        q = ((lo + hi) / 2) / n          # midpoint handles ties without bias
+        return (1.0 - q) if invert else q
+    return pct
+
+
+# MLB hr_score, measured off a published slate: min ~24, median ~45, max ~57,
+# and its ladder puts A+ at 78 / A at 70 / A- 62 / B+ 54 / B 46. That is a
+# roughly normal spread centred just under 50, NOT a uniform 0-100. Match it.
+SCALE_MEAN = 47.0
+SCALE_SD = 11.0
+_ND = NormalDist()
+
+
+def _mlb_scale(ref_raw: list[float]):
+    """Map a composite onto the MLB score distribution."""
+    vals = sorted(v for v in ref_raw if v is not None and math.isfinite(v))
+    n = len(vals)
+
+    def to_score(x):
+        if x is None or not math.isfinite(float(x)):
+            return None
+        lo = bisect.bisect_left(vals, float(x))
+        hi = bisect.bisect_right(vals, float(x))
+        q = ((lo + hi) / 2) / n if n else 0.5
+        q = min(max(q, 0.0005), 0.9995)         # keep inv_cdf finite
+        return round(max(5.0, min(95.0, SCALE_MEAN + SCALE_SD * _ND.inv_cdf(q))), 1)
+    return to_score
+
+
+def score_all(tbl: pl.DataFrame, context_ok: bool, ref: pl.DataFrame | None = None) -> dict:
     """Score every market. When context is missing, its weight is redistributed
-    across the components that ARE present rather than scored as zero."""
+    across the components that ARE present rather than scored as zero.
+
+    `ref` is the league population every component is ranked against. Without
+    it the slate ranks against itself and the top row is always ~100.
+    """
     out = {}
     for key, m in MODELS.items():
         avail, missing = {}, []
@@ -147,22 +214,71 @@ def score_all(tbl: pl.DataFrame, context_ok: bool) -> dict:
         d = derive(tbl).filter(pl.col("position").is_in(m["pos"]))
         if d.height == 0:
             continue
-        parts = []
+        # The reference is the same positions, league-wide — comparing a tight
+        # end's red-zone work against quarterbacks would be meaningless.
+        rd = None
+        if ref is not None:
+            rd = derive(ref).filter(pl.col("position").is_in(m["pos"]))
+            if rd.height < 30:           # too thin to be a population
+                rd = None
+
+        parts, ref_parts = [], []
         for raw, w in avail.items():
             inv = raw.startswith("-")
             col = raw.lstrip("-")
             nm = f"c_{col}"
-            d = d.with_columns(_pctile(d, col, inv).alias(nm))
+            if rd is not None and col in rd.columns:
+                fn = _league_pct(rd[col].to_list(), inv)
+                d = d.with_columns(
+                    pl.col(col).map_elements(fn, return_dtype=pl.Float64).alias(nm))
+                d = d.with_columns(
+                    pl.when(pl.col(nm).is_null()).then(_pctile(d, col, inv))
+                      .otherwise(pl.col(nm)).alias(nm))
+                # the reference gets the SAME transform, so its composite is
+                # measured on the same axis as the slate's
+                rd = rd.with_columns(
+                    pl.col(col).map_elements(fn, return_dtype=pl.Float64)
+                      .fill_null(0.5).alias(nm))
+                ref_parts.append(pl.col(nm) * w)
+            else:
+                d = d.with_columns(_pctile(d, col, inv).alias(nm))
             parts.append(pl.col(nm) * w)
         tot = parts[0]
         for p in parts[1:]:
             tot = tot + p
-        # ORDER MATTERS HERE. `tot` is a LAZY expression over the c_ columns,
-        # so it has to be materialised BEFORE those columns are rescaled --
-        # otherwise it resolves against the already-x100 values and the score
-        # comes out x10000 (98.88 shipped as 9888, which is what the Research
-        # table was showing).
-        d = d.with_columns((tot * 100).alias("score"))
+
+        # ORDER MATTERS. `tot` is a LAZY expression over the c_ columns, so it
+        # must be materialised BEFORE those columns are rescaled to 0-100 --
+        # otherwise it resolves against the already-scaled values and the score
+        # comes out x10000 (98.88 shipping as 9888).
+        d = d.with_columns(tot.alias("_raw"))
+
+        # ── PUT IT ON THE MLB SCALE ──────────────────────────────────────────
+        # A weighted average of percentiles is not uniform: averaging k of them
+        # piles up near 0.5, so it can't be read as a rank and it can't be
+        # graded on the MLB ladder. Two steps fix that.
+        #
+        #   1. rank the composite against the LEAGUE's composites -> a true
+        #      percentile, absolute rather than slate-relative
+        #   2. push that percentile through the normal quantile function and
+        #      land it at mean 47, sd 11
+        #
+        # Step 2 is what makes an NFL 78 mean what an MLB 78 means. hr_score
+        # runs roughly 24-75 and sits around 45, which is why its ladder puts
+        # A+ at 78 and B at 46 — on a uniform 0-100 percentile those cutoffs
+        # would hand out A+ to the top fifth of every slate. After this an 80
+        # is genuinely ~99.7th percentile of the league, and a thin card full
+        # of backups scores in the 30s and 40s the way a bad MLB slate does.
+        if ref_parts and rd is not None:
+            rtot = ref_parts[0]
+            for rp in ref_parts[1:]:
+                rtot = rtot + rp
+            ref_raw = rd.with_columns(rtot.alias("_raw"))["_raw"].to_list()
+            to_scale = _mlb_scale(ref_raw)
+            d = d.with_columns(
+                pl.col("_raw").map_elements(to_scale, return_dtype=pl.Float64).alias("score"))
+        else:
+            d = d.with_columns((pl.col("_raw") * 100).alias("score"))
         # Components go out as 0-100 too, not the raw 0-1 percentile. The modal
         # renders them as "90 = top 10% of this slate on that input"; shipping
         # the fraction made every one of them round to 1.
@@ -189,7 +305,9 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
         if not upcoming and seed.exists():
             upcoming = json.loads(seed.read_text()).get("games", [])
         teams = {t for g in upcoming for t in (g["home"], g["away"])}
-        tbl = _fill_missing(preseason_rows(season - 1, teams))
+        slate, league = preseason_rows(season - 1, teams)
+        tbl = _fill_missing(slate)
+        ref = _fill_missing(league)
         context_ok = False
         label = f"Preseason · {now:%b %-d}"
     else:
@@ -201,8 +319,14 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
         context_ok = True
         label = f"Week {week}"
         tbl = tbl.with_columns(pl.col("player_display_name").alias("name"))
+        # In-season the reference is every player league-wide in the same week,
+        # which is what build() already returns before the week filter.
+        ref = build(season)
+        if week:
+            ref = ref.filter(pl.col("week") == week)
+        ref = ref.with_columns(pl.col("player_display_name").alias("name"))
 
-    scored = score_all(tbl, context_ok)
+    scored = score_all(tbl, context_ok, ref)
 
     # merge every market's score onto one player row
     players: dict[str, dict] = {}
