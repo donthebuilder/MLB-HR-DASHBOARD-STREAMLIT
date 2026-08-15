@@ -164,6 +164,16 @@ jobs:
       # pick_lock records which name was designated at first pitch. Useful, and
       # not worth a night's slate. continue-on-error surfaces the failure in the
       # Actions UI without letting it stop anything downstream.
+      # ODDS. Runs BEFORE the lock so odds_latest.json exists for the same
+      # publish, and after the scoring bot so today.json is there to join names
+      # against. continue-on-error and a soft-fail inside the script both: a
+      # book outage, a spent quota or an unset key must never cost you a slate.
+      - name: Fetch odds
+        continue-on-error: true
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+        run: python bots/odds_fetch.py --out public/data/current
+
       - name: Lock designations at first pitch
         continue-on-error: true
         env:

@@ -63,6 +63,11 @@ PUBLISH_FILES=(
   # The receipts card has been printing "locked at first pitch, never edited"
   # over that the whole time.
   pick_lock.json
+  # The book's line beside the bot's score (2026-08-15). Fetched by the BOT
+  # with ODDS_API_KEY from repo secrets — the site is a static build and can
+  # never hold a key. Absent when no key is configured; every surface that
+  # reads it degrades to the score alone.
+  odds_latest.json
   # NFL (2026-08-14). The football bot writes into public/data/current/ with an
   # nfl_ prefix specifically so it can ride this script rather than fork it --
   # the orphan-branch force-push and the concurrent-publisher merge below are
