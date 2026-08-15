@@ -513,13 +513,70 @@ def oaio(path: str, key: str, **params) -> object:
         raise
 
 
+# NOT A BATTER PROP, no matter what substring it contains. Straight off the
+# live market list (2026-08-15): "Team Total (Hits) Away" contains "hit", and
+# without this guard a TEAM's hit total would have been published as a
+# player's 1+ hit price — a wrong number wearing a real player's name, which
+# is worse than no number at all. Team and inning markets are excluded first.
+_NOT_PROP = ("team total", "team_total", "1st 3 innings", "1st 5 innings",
+             "1st 7 innings", "innings", " ht", "half", "spread", "moneyline",
+             "totals", "ml")
+
+
 def _prop_key(label: str) -> str | None:
     """Which of our markets a prop LABEL describes, most-specific-first."""
-    nm = str(label or "").lower()
+    nm = str(label or "").lower().strip()
+    if any(bad in nm for bad in _NOT_PROP) or nm in ("ml", "totals", "spread"):
+        return None
     for ours, hints in PROP_HINTS:
         if any(h in nm for h in hints):
             return ours
     return None
+
+
+# Words that describe the BET, not the batter. Stripped when a player's name
+# has to be recovered from a combined label.
+_NOISE = ("over", "under", "o/u", "batter", "player", "props", "prop", "total",
+          "totals", "yes", "no", "-", "–", "—", "|", ":", "+")
+
+
+def _split_prop(o: dict) -> tuple[str, str | None]:
+    """A generic 'Player Props' row -> (player, our market key).
+
+    2026-08-15, from the live run: odds-api.io serves 17 markets and the props
+    all arrive under ONE named "Player Props" — so the prop TYPE is not on the
+    market, it is inside each row. Explicit fields win when they exist; when
+    the row only carries a combined label ("Aaron Judge Home Runs"), the
+    matched prop phrase is removed and what remains is the name.
+    """
+    who = (o.get("player") or o.get("participant") or o.get("playerName")
+           or o.get("competitor"))
+    kind = (o.get("prop") or o.get("type") or o.get("market") or o.get("category")
+            or o.get("marketName") or o.get("selection"))
+    label = str(o.get("label") or o.get("name") or "")
+
+    ours = _prop_key(kind) if kind else None
+    if not ours:
+        ours = _prop_key(label)
+    if not ours:
+        return ("", None)
+
+    if not who:
+        nm = label
+        # strip the phrase that identified the market, then the bet words
+        for _o, hints in PROP_HINTS:
+            for h in hints:
+                idx = nm.lower().find(h)
+                if idx >= 0:
+                    nm = nm[:idx] + nm[idx + len(h):]
+        # len<2 drops the orphan "s" left behind when "Home Runs" loses its
+        # "home run" — the plural's tail, not part of anybody's name.
+        parts = [w for w in nm.split()
+                 if w.lower().strip(".,()") not in _NOISE
+                 and len(w.strip(".,()")) > 1
+                 and not any(ch.isdigit() for ch in w)]
+        who = " ".join(parts).strip(" -–—|:")
+    return (str(who or "").strip(), ours)
 
 
 def _dec_to_american(v) -> int | None:
@@ -697,6 +754,10 @@ def fetch_oddsapiio(key: str, books: str, _wide: bool = False) -> list[dict]:
     # "what do they CALL the home run prop", which is the one thing no
     # documentation publishes and PROP_HINTS is entirely built on.
     market_names: set[str] = set()
+    # Raw rows from a props bucket we could not decode — printed verbatim when
+    # the run comes up empty, because the field names inside that bucket are
+    # the last unknown and no documentation publishes them.
+    prop_samples: list = []
     for payload in payloads:
         # DOCUMENTED SHAPE (their own player-props guide, read 2026-08-15):
         #   event.bookmakers = { "DraftKings": [ {name, odds:[{label, hdp,
@@ -715,15 +776,30 @@ def fetch_oddsapiio(key: str, books: str, _wide: bool = False) -> list[dict]:
                 for mk in mkts or []:
                     if not isinstance(mk, dict):
                         continue
-                    if mk.get("name"):
-                        market_names.add(str(mk["name"]))
-                    ours = _prop_key(mk.get("name"))
-                    if not ours:
+                    mname = str(mk.get("name") or "")
+                    if mname:
+                        market_names.add(mname)
+                    # TWO SHAPES, ONE PARSER. A market named for its prop
+                    # ("Batter Home Runs") keys every row it holds; a generic
+                    # bucket ("Player Props" — what THIS API actually serves,
+                    # confirmed on the live run) keys each row individually.
+                    by_market = _prop_key(mname)
+                    generic = by_market is None and "prop" in mname.lower()
+                    if by_market is None and not generic:
                         continue
                     for o in mk.get("odds") or []:
                         if not isinstance(o, dict):
                             continue
-                        who = o.get("label") or o.get("player") or o.get("participant")
+                        if by_market:
+                            ours = by_market
+                            who = (o.get("label") or o.get("player")
+                                   or o.get("participant"))
+                        else:
+                            who, ours = _split_prop(o)
+                            if not ours or not who:
+                                if len(prop_samples) < 3:
+                                    prop_samples.append(o)
+                                continue
                         if not who:
                             continue
                         line = o.get("hdp", o.get("line", o.get("handicap")))
@@ -755,10 +831,16 @@ def fetch_oddsapiio(key: str, books: str, _wide: bool = False) -> list[dict]:
         print(f"  odds-api.io: {len(got)} market name(s) served, none matched our "
               f"prop hints" + (f": {', '.join(got[:25])}" if got else
                                " — these events carry no markets at all"))
+        if prop_samples:
+            print("  odds-api.io: a props bucket WAS served but its rows didn't "
+                  "decode — here they are verbatim:")
+            for s in prop_samples:
+                print("    " + json.dumps(s)[:300])
         _rec("oddsapiio", "·result",
              note=f"call shape '{mode}' accepted; {len(got)} market names served, "
                   f"none matched PROP_HINTS",
-             market_names=got[:30])
+             market_names=got[:30],
+             prop_samples=[json.dumps(s)[:300] for s in prop_samples])
     return rows
 
 
