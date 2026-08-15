@@ -301,13 +301,42 @@ CONTEXT_COLS = {"implied_total", "total_line", "opp_td_soft", "opp_pass_soft",
                 "f_tm_fg_drive_rate", "f_tm_rz_td_rate", "f_tm_drives"}
 
 
+# One wave of football, not the rest of the calendar.
+#
+# 2026-08-14 shipped 66 games and 545 players on a card labelled "Preseason ·
+# Aug 14": the filter was "every game still to come", which in mid-August is
+# all of preseason weeks 2 and 3. Most of that card was a week away and the
+# boards were ranking players who weren't playing for days.
+#
+# Anchors on the earliest kickoff STILL AHEAD and takes four days from there,
+# which covers a Thursday-through-Monday wave and stops before the next one.
+# Deliberately NOT keyed on ESPN's `week` field: fetch() reads that off the
+# payload's top-level block, so every game in one response carries the same
+# number and grouping by it would be a no-op on a whole-season fetch.
+WAVE_DAYS = 4
+
+
+def _next_wave(games: list[dict], today: dt.date) -> list[dict]:
+    day = lambda g: str(g.get("kickoff", ""))[:10]
+    ahead = [g for g in games if day(g) and day(g) >= today.isoformat()]
+    if not ahead:
+        return []
+    try:
+        first = dt.date.fromisoformat(min(day(g) for g in ahead))
+    except ValueError:
+        return ahead
+    cutoff = (first + dt.timedelta(days=WAVE_DAYS)).isoformat()
+    return [g for g in ahead if day(g) <= cutoff]
+
+
 def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> dict:
     now = dt.datetime.now(PHX)
 
     if mode == "preseason":
         games = nfl_espn.fetch(seasontype=1, year=season)
-        today = now.date().isoformat()
-        upcoming = [g for g in games if str(g.get("kickoff", ""))[:10] >= today] or games
+        upcoming = _next_wave(games, now.date())
+        # This fallback used to be unreachable: the line above ended in
+        # `or games`, so `upcoming` was never empty and the seed never loaded.
         seed = out_dir / "slate_seed.json"
         if not upcoming and seed.exists():
             upcoming = json.loads(seed.read_text()).get("games", [])
