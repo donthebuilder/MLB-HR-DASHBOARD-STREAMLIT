@@ -170,6 +170,21 @@ def norm_name(s: str) -> str:
 # data branch — readable with nothing but a browser, no Actions tab needed.
 FORENSICS: list = []
 
+# --insecure (PROBE-ONLY DIAGNOSTIC). Donovan's own Mac fails TLS verification
+# against every odds host — "self-signed certificate in certificate chain" —
+# which is a local interception (VPN / security software / cert store), not
+# the servers: the same hosts verify cleanly elsewhere, and the GitHub runner
+# is unaffected. This flag exists so the probe can still SHOW him the API's
+# answers from that machine. Production runs never set it.
+_SSL = None
+
+
+def _open_kw() -> dict:
+    kw = {"timeout": 45}
+    if _SSL is not None:
+        kw["context"] = _SSL
+    return kw
+
 
 def _rec(provider: str, path: str, key: str = "", **kw) -> None:
     if len(FORENSICS) >= 24:
@@ -196,7 +211,7 @@ def api(path: str, key: str, **params) -> object:
             {k: v for k, v in params.items() if v not in (None, "")})
     req = urllib.request.Request(url, headers={"x-api-key": key})
     try:
-        with urllib.request.urlopen(req, timeout=45) as r:
+        with urllib.request.urlopen(req, **_open_kw()) as r:
             body = r.read().decode()
             _rec("theoddsapi", path, key, http=getattr(r, "status", 200), bytes=len(body))
             return json.loads(body)
@@ -233,8 +248,11 @@ def implied(odds: int | None) -> float | None:
 
 def probe(key: str) -> int:
     """Answer 'what does my key actually see' before anything depends on it."""
-    print(f"probing {BASE} …\n")
-    for path, params in (("/me", {}), ("/me/usage", {}), ("/sports/", {})):
+    if not key:
+        print("no ODDS_API_KEY — skipping the theoddsapi probe\n")
+    else:
+        print(f"probing {BASE} …\n")
+    for path, params in ((("/me", {}), ("/me/usage", {}), ("/sports/", {})) if key else ()):
         try:
             j = api(path, key, **params)
             txt = json.dumps(j, indent=1)
@@ -251,12 +269,12 @@ def probe(key: str) -> int:
 
     # The one that decides the whole design: do player props come back on
     # /odds directly, or does each event need its own request?
-    for path, params in (
+    for path, params in ((
         ("/odds/", {"sport_key": SPORT, "markets": ",".join(MARKETS),
                     "regions": "us", "oddsFormat": "american"}),
         ("/props/", {"sport_key": SPORT, "markets": ",".join(MARKETS),
                      "regions": "us", "oddsFormat": "american"}),
-    ):
+    ) if key else ()):
         try:
             j = api(path, key, **params)
             n = len(j) if isinstance(j, list) else "?"
@@ -267,6 +285,54 @@ def probe(key: str) -> int:
             print(f"── {path}\n  HTTP {e.code}: {e.read()[:400].decode(errors='replace')}\n")
         except Exception as e:
             print(f"── {path}\n  {type(e).__name__}: {e}\n")
+
+    # ── the PRIMARY, if its key is set (probe upgrade, 2026-08-15) ──────────
+    # The one unknown their docs don't publish is what their MLB prop MARKETS
+    # are actually named — PROP_HINTS matches by name, so seeing the real
+    # names once settles the mapping for good.
+    k2 = os.environ.get("ODDSAPI_IO_KEY", "").strip()
+    if k2:
+        print(f"probing {OAIO} …\n")
+        for slug in ("mlb", "baseball"):
+            try:
+                evs = _listish(oaio("/events", k2, sport=slug, limit=25), "events")
+                print(f"── /events sport={slug}\n  {len(evs)} event(s)")
+                ids = [str(e.get('id') or e.get('eventId')) for e in evs[:3]
+                       if isinstance(e, dict)]
+                ids = [i for i in ids if i and i != 'None']
+                if ids:
+                    payload = oaio("/odds/multi", k2, eventIds=",".join(ids),
+                                   bookmakers=OAIO_BOOKS_FALLBACK)
+                    names = set()
+                    for ev in _listish(payload, "events", "odds"):
+                        for _bk, mkts in (ev.get("bookmakers") or {}).items():
+                            for mk in mkts or []:
+                                if isinstance(mk, dict) and mk.get("name"):
+                                    names.add(str(mk["name"]))
+                    print(f"  market names seen ({len(names)}):")
+                    for nm2 in sorted(names)[:40]:
+                        print(f"    · {nm2}")
+                    smp = json.dumps(payload, indent=1)[:1500]
+                    print("  sample:\n" + smp + "\n")
+                    break
+            except urllib.error.HTTPError as e:
+                print(f"── /events sport={slug}\n  HTTP {e.code}: {e.read()[:300].decode(errors='replace')}\n")
+            except Exception as e:
+                print(f"── /events sport={slug}\n  {type(e).__name__}: {e}\n")
+
+    # ── the backup, if its key is set ───────────────────────────────────────
+    k3 = os.environ.get("ODDSPAPI_KEY", "").strip()
+    if k3:
+        print(f"probing {PAPI} …\n")
+        for path, params in (("/tournaments", {"sport": "baseball"}),
+                             ("/markets", {"sport": "baseball"})):
+            try:
+                j = papi(path, k3, **params)
+                print(f"── {path}\n" + json.dumps(j, indent=1)[:1200] + "\n")
+            except urllib.error.HTTPError as e:
+                print(f"── {path}\n  HTTP {e.code}: {e.read()[:300].decode(errors='replace')}\n")
+            except Exception as e:
+                print(f"── {path}\n  {type(e).__name__}: {e}\n")
     return 0
 
 
@@ -427,7 +493,7 @@ def oaio(path: str, key: str, **params) -> object:
     q["apiKey"] = key
     url = f"{OAIO}{path}?" + urllib.parse.urlencode(q)
     try:
-        with urllib.request.urlopen(urllib.request.Request(url), timeout=45) as r:
+        with urllib.request.urlopen(urllib.request.Request(url), **_open_kw()) as r:
             body = r.read().decode()
             _rec("oddsapiio", path, key, http=getattr(r, "status", 200), bytes=len(body))
             return json.loads(body)
@@ -460,14 +526,24 @@ def _dec_to_american(v) -> int | None:
 
 
 def fetch_oddsapiio(key: str, books: str, _wide: bool = False) -> list[dict]:
+    # Their documented listing is GET /events?sport={slug}&to=&limit=&skip= —
+    # the old call sent status/from params the docs don't know. The slug for
+    # baseball isn't published anywhere reachable, so try the two candidates
+    # in order and keep whichever returns events; the forensics record both.
     now = dt.datetime.now(dt.timezone.utc)
-    try:
-        evs = _listish(oaio("/events", key, sport="baseball", status="pending",
-                            **{"from": now.isoformat(),
-                               "to": (now + dt.timedelta(days=2)).isoformat()},
-                            limit=200), "events")
-    except Exception as e:
-        print(f"  odds-api.io: events failed ({type(e).__name__}: {e})")
+    evs = []
+    for slug in ("mlb", "baseball"):
+        try:
+            evs = _listish(oaio("/events", key, sport=slug,
+                                to=(now + dt.timedelta(days=2)).isoformat(),
+                                limit=200), "events")
+        except Exception as e:
+            print(f"  odds-api.io: events sport={slug} failed ({type(e).__name__}: {e})")
+            continue
+        if evs:
+            print(f"  odds-api.io: sport slug '{slug}' returned {len(evs)} event(s)")
+            break
+    if not evs:
         return []
 
     # Baseball is not only MLB. Keep the ones whose league says so, and if no
@@ -491,33 +567,40 @@ def fetch_oddsapiio(key: str, books: str, _wide: bool = False) -> list[dict]:
         chunk = ids[i:i + 10]
         try:
             payload = oaio("/odds/multi", key, eventIds=",".join(chunk),
-                           bookmakers=books, markets=OAIO_MARKETS)
+                           bookmakers=books)
         except Exception as e:
             print(f"  odds-api.io: odds chunk {i // 10 + 1} failed "
                   f"({type(e).__name__}: {e})")
             continue
+        # DOCUMENTED SHAPE (their own player-props guide, read 2026-08-15):
+        #   event.bookmakers = { "DraftKings": [ {name, odds:[{label, hdp,
+        #   over, under}]} ] } — the MARKET's name is on the market object,
+        #   the PLAYER is each odds row's `label`, the line is `hdp`, and the
+        #   prices are decimal. The old parser ran the market hints against
+        #   the PLAYER'S NAME (o.label) and then looked for the player under
+        #   keys that don't exist — two independent kills, every outcome
+        #   dropped, "0 prop quotes" forever. This is that bug's funeral.
         for ev in _listish(payload, "events", "odds"):
             if not isinstance(ev, dict):
                 continue
-            home, away = ev.get("home"), ev.get("away")
-            # bookmakers is a MAP of book -> [market objects], not a list.
+            home, away = (ev.get("home") or ev.get("homeTeam"),
+                          ev.get("away") or ev.get("awayTeam"))
             for book, mkts in (ev.get("bookmakers") or {}).items():
                 for mk in mkts or []:
                     if not isinstance(mk, dict):
                         continue
+                    ours = _prop_key(mk.get("name"))
+                    if not ours:
+                        continue
                     for o in mk.get("odds") or []:
                         if not isinstance(o, dict):
                             continue
-                        label = o.get("label") or o.get("player") or mk.get("name")
-                        ours = _prop_key(label)
-                        if not ours:
-                            continue
-                        who = o.get("player") or o.get("participant") or o.get("name")
+                        who = o.get("label") or o.get("player") or o.get("participant")
                         if not who:
                             continue
-                        line = o.get("line", o.get("handicap", o.get("total")))
-                        for side, raw in (("over", o.get("over", o.get("home"))),
-                                          ("under", o.get("under", o.get("away")))):
+                        line = o.get("hdp", o.get("line", o.get("handicap")))
+                        for side, raw in (("over", o.get("over")),
+                                          ("under", o.get("under"))):
                             price = _dec_to_american(raw)
                             if price is None:
                                 continue
@@ -525,7 +608,8 @@ def fetch_oddsapiio(key: str, books: str, _wide: bool = False) -> list[dict]:
                                 "name": str(who), "norm": norm_name(who),
                                 "market": ours, "side": side, "book": str(book),
                                 "point": line, "price": price,
-                                "home": home, "away": away, "commence": ev.get("date"),
+                                "home": home, "away": away,
+                                "commence": ev.get("date") or ev.get("startTime"),
                             })
     seen = sorted({r["book"] for r in rows})
     print(f"  odds-api.io: {len(rows)} prop quote(s) from {len(seen)} book(s)"
@@ -551,7 +635,7 @@ def papi(path: str, key: str, **params) -> object:
     url = f"{PAPI}{path}?" + urllib.parse.urlencode(q)
     req = urllib.request.Request(url)
     try:
-        with urllib.request.urlopen(req, timeout=45) as r:
+        with urllib.request.urlopen(req, **_open_kw()) as r:
             body = r.read().decode()
             _rec("oddspapi", path, key, http=getattr(r, "status", 200), bytes=len(body))
             return json.loads(body)
@@ -671,27 +755,36 @@ def fetch_oddspapi(key: str) -> list[dict]:
 
 
 def fetch_theoddsapi(key: str, regions: str) -> list[dict]:
-    try:
-        raw = api("/odds/", key, sport_key=SPORT, markets=",".join(MARKETS),
-                  regions=regions, oddsFormat="american")
-    except urllib.error.HTTPError as e:
-        print(f"  theoddsapi: HTTP {e.code}: {e.read()[:300].decode(errors='replace')}")
-        return []
-    except Exception as e:
-        print(f"  theoddsapi: {type(e).__name__}: {e}")
-        return []
-    items = unwrap(raw)
-    rows = walk_outcomes(items)
-    shape = "nested"
-    if not rows:
-        rows = flat_rows(items)
-        shape = "flat"
-    print(f"  theoddsapi: {len(items)} item(s) · {len(rows)} quote(s) · {shape}")
-    if not rows and isinstance(raw, (list, dict)):
-        keys = sorted(raw) if isinstance(raw, dict) else (
-            sorted(raw[0]) if raw and isinstance(raw[0], dict) else [])
-        print(f"  theoddsapi: unrecognised shape · keys {keys[:15]}")
-    return rows
+    # /props/ IS THE PLAYER-PROP ENDPOINT (verified against their live docs,
+    # 2026-08-15 — the forensics hunt). /odds/ only carries h2h/spreads/totals,
+    # which is why calling it with batter_* markets returned nothing forever.
+    # /props/ leads; /odds/ stays as a fallback so a plan that surfaces props
+    # there anyway still works. NOTE their docs mark /props/ as Business tier —
+    # a lower-tier key gets an honest 403 here, which the forensics publish.
+    for path in ("/props/", "/odds/"):
+        try:
+            raw = api(path, key, sport_key=SPORT, markets=",".join(MARKETS),
+                      regions=regions, oddsFormat="american")
+        except urllib.error.HTTPError as e:
+            print(f"  theoddsapi {path}: HTTP {e.code}: {e.read()[:300].decode(errors='replace')}")
+            continue
+        except Exception as e:
+            print(f"  theoddsapi {path}: {type(e).__name__}: {e}")
+            continue
+        items = unwrap(raw)
+        rows = walk_outcomes(items)
+        shape = "nested"
+        if not rows:
+            rows = flat_rows(items)
+            shape = "flat"
+        print(f"  theoddsapi {path}: {len(items)} item(s) · {len(rows)} quote(s) · {shape}")
+        if rows:
+            return rows
+        if isinstance(raw, (list, dict)):
+            keys = sorted(raw) if isinstance(raw, dict) else (
+                sorted(raw[0]) if raw and isinstance(raw[0], dict) else [])
+            print(f"  theoddsapi {path}: unrecognised shape · keys {keys[:15]}")
+    return []
 
 
 # ── THE REQUEST LOCK ─────────────────────────────────────────────────────────
@@ -805,8 +898,16 @@ def main() -> int:
     ap.add_argument("--regions", type=str, default="us")
     ap.add_argument("--force", action="store_true",
                     help="ignore the request lock — fetch even if a fresh snapshot exists")
+    ap.add_argument("--insecure", action="store_true",
+                    help="PROBE DIAGNOSTIC ONLY: skip TLS verification, for machines "
+                         "whose network intercepts certificates")
     a = ap.parse_args()
     out = Path(a.out)
+
+    if a.insecure:
+        import ssl
+        globals()["_SSL"] = ssl._create_unverified_context()
+        print("⚠ TLS verification OFF — diagnostic run only, never for publishing")
 
     key = os.environ.get("ODDS_API_KEY", "").strip()
     backup = os.environ.get("ODDSPAPI_KEY", "").strip()
@@ -822,7 +923,9 @@ def main() -> int:
         return 0
 
     if a.probe:
-        return probe(key) if key else 0
+        # runs with whichever provider keys are in the environment — a probe
+        # with no theoddsapi key still probes the primary and the backup
+        return probe(key)
 
     # ORDER MATTERS AND IS THE WHOLE POINT OF A BACKUP. The primary is one
     # request for the entire slate. The backup's free tier is 250 requests a
