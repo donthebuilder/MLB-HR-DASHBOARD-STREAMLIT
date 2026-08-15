@@ -159,14 +159,55 @@ def norm_name(s: str) -> str:
     return " ".join(parts)
 
 
+# ── FORENSICS (2026-08-15, Donovan: "the odds never ran wtf") ────────────────
+#
+# Three providers, three request shapes written blind (the sandbox can't reach
+# any of these hosts), zero quotes — and the only evidence lived in an Actions
+# log nobody opens. Every HTTP attempt now leaves a sanitized record: endpoint
+# path, status code, and the first bytes of the response body, with the key
+# scrubbed if a body ever echoes it. The records ride odds_status.json on
+# every write, so the next scheduled run publishes its own diagnosis to the
+# data branch — readable with nothing but a browser, no Actions tab needed.
+FORENSICS: list = []
+
+
+def _rec(provider: str, path: str, key: str = "", **kw) -> None:
+    if len(FORENSICS) >= 24:
+        return
+    row = {"provider": provider, "path": path, **kw}
+    if key:
+        for k2, v in list(row.items()):
+            if isinstance(v, str) and key in v:
+                row[k2] = v.replace(key, "•KEY•")
+    FORENSICS.append(row)
+
+
+def _snip(e) -> str:
+    try:
+        return e.read()[:220].decode(errors="replace")
+    except Exception:
+        return ""
+
+
 def api(path: str, key: str, **params) -> object:
     url = f"{BASE}{path}"
     if params:
         url += "?" + urllib.parse.urlencode(
             {k: v for k, v in params.items() if v not in (None, "")})
     req = urllib.request.Request(url, headers={"x-api-key": key})
-    with urllib.request.urlopen(req, timeout=45) as r:
-        return json.loads(r.read().decode())
+    try:
+        with urllib.request.urlopen(req, timeout=45) as r:
+            body = r.read().decode()
+            _rec("theoddsapi", path, key, http=getattr(r, "status", 200), bytes=len(body))
+            return json.loads(body)
+    except urllib.error.HTTPError as e:
+        # NOTE: reading the body here consumes it — callers printing e.read()
+        # will see b''. The forensics record is the copy that survives.
+        _rec("theoddsapi", path, key, http=e.code, body=_snip(e))
+        raise
+    except Exception as e:
+        _rec("theoddsapi", path, key, error=f"{type(e).__name__}: {e}")
+        raise
 
 
 def american(v) -> int | None:
@@ -385,8 +426,17 @@ def oaio(path: str, key: str, **params) -> object:
     q = {k: v for k, v in params.items() if v not in (None, "")}
     q["apiKey"] = key
     url = f"{OAIO}{path}?" + urllib.parse.urlencode(q)
-    with urllib.request.urlopen(urllib.request.Request(url), timeout=45) as r:
-        return json.loads(r.read().decode())
+    try:
+        with urllib.request.urlopen(urllib.request.Request(url), timeout=45) as r:
+            body = r.read().decode()
+            _rec("oddsapiio", path, key, http=getattr(r, "status", 200), bytes=len(body))
+            return json.loads(body)
+    except urllib.error.HTTPError as e:
+        _rec("oddsapiio", path, key, http=e.code, body=_snip(e))
+        raise
+    except Exception as e:
+        _rec("oddsapiio", path, key, error=f"{type(e).__name__}: {e}")
+        raise
 
 
 def _prop_key(label: str) -> str | None:
@@ -500,8 +550,17 @@ def papi(path: str, key: str, **params) -> object:
     q["apiKey"] = key
     url = f"{PAPI}{path}?" + urllib.parse.urlencode(q)
     req = urllib.request.Request(url)
-    with urllib.request.urlopen(req, timeout=45) as r:
-        return json.loads(r.read().decode())
+    try:
+        with urllib.request.urlopen(req, timeout=45) as r:
+            body = r.read().decode()
+            _rec("oddspapi", path, key, http=getattr(r, "status", 200), bytes=len(body))
+            return json.loads(body)
+    except urllib.error.HTTPError as e:
+        _rec("oddspapi", path, key, http=e.code, body=_snip(e))
+        raise
+    except Exception as e:
+        _rec("oddspapi", path, key, error=f"{type(e).__name__}: {e}")
+        raise
 
 
 def _listish(payload, *keys):
@@ -700,6 +759,10 @@ def write_status(out: Path, **kw) -> None:
                           "providers_tried", "keys_present", "next_eligible_at"):
                     if kw.get(k) not in (None, "", [], {}):
                         fh.write(f"- **{k}**: `{kw[k]}`\n")
+                if kw.get("forensics"):
+                    fh.write("\n<details><summary>request forensics</summary>\n\n```json\n"
+                             + json.dumps(kw["forensics"], indent=1)[:3500]
+                             + "\n```\n\n</details>\n")
                 fh.write("\n")
         except Exception:
             pass
@@ -834,6 +897,7 @@ def main() -> int:
             continue
         print(f"trying {name} …")
         rows = fn()
+        _rec(name, "·result", quotes=len(rows))
         if rows:
             source = name
             break
@@ -848,7 +912,8 @@ def main() -> int:
                             "no props posted for this slate yet.",
                      providers_tried=[n for n in order if n in available],
                      keys_present=[n for n in order
-                                   if n in available and available[n][0]])
+                                   if n in available and available[n][0]],
+                     forensics=FORENSICS)
         write_empty_board(
             out,
             "every configured provider was tried and none returned a quote",
@@ -1028,7 +1093,10 @@ def main() -> int:
                  players=len(matched), priced=len(board),
                  match_rate=payload["match_rate"],
                  fetches_this_slate=payload["fetches_this_slate"],
-                 snapshot_players=len(slim))
+                 snapshot_players=len(slim),
+                 # kept on the good path too — a fallback provider succeeding
+                 # while the primary 401s is a finding worth publishing
+                 forensics=FORENSICS)
 
     try:
         u = api("/me/usage", key)
