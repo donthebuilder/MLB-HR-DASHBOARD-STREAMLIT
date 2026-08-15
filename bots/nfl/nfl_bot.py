@@ -560,7 +560,13 @@ def main() -> int:
             print(f"report card unreadable ({type(exc).__name__}) — card ships without edges")
     card = nfl_picks.build(payload["players"], edges=edges, depth=nfl_picks.DEPTH)
     (out / f"{a.prefix}picks.json").write_text(json.dumps({
-        "season": season, "week": week, "mode": mode,
+        # a.season / a.week / a.mode — NOT bare names. Those are locals of
+        # build_payload; here they were NameErrors, and the very first live run
+        # of this workflow died on this line (2026-08-15, Donovan's Actions
+        # log) after matchup.json and logs.json had already been written — so
+        # the crash also threw away two files that had built fine. main() sees
+        # the argparse namespace and the payload, nothing else.
+        "season": a.season, "week": a.week, "mode": a.mode,
         "built_at": payload["built_at"],
         "built_at_human": payload["built_at_human"],
         "depth": nfl_picks.DEPTH,
