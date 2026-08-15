@@ -290,8 +290,8 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--probe", action="store_true",
                     help="report what the key can see; write nothing")
-    ap.add_argument("--slate", type=str, default="public/data/current/today.json",
-                    help="slate to join names against (for the match-rate report)")
+    ap.add_argument("--slate", type=str, default="",
+                    help="slate to join names against; default tries both known locations")
     ap.add_argument("--out", type=str, default="public/data/current")
     ap.add_argument("--regions", type=str, default="us")
     a = ap.parse_args()
@@ -338,8 +338,19 @@ def main() -> int:
 
     # ── join to the slate, and REPORT the miss rate ────────────────────────
     matched, unmatched = {}, []
-    slate_path = Path(a.slate)
+    # BOTH LOCATIONS. mlb_dashboard writes public/data/today.json; other
+    # payloads land in public/data/current/. pick_lock.py already carries the
+    # same pair for the same reason, and defaulting to current/ alone would
+    # have made this join silently match nobody on the very first run — the
+    # file would publish, look fine, and be keyed only by name.
+    candidates = ([Path(a.slate)] if a.slate else
+                  [Path("public/data/today.json"),
+                   Path("public/data/current/today.json"),
+                   Path("public/data/today_slim.json"),
+                   Path("public/data/current/today_slim.json")])
+    slate_path = next((c for c in candidates if c.exists()), candidates[0])
     if slate_path.exists():
+        print(f"  joining against {slate_path}")
         try:
             slate = json.loads(slate_path.read_text())
             players = slate.get("players") if isinstance(slate, dict) else slate
