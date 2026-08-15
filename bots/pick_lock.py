@@ -88,6 +88,48 @@ CATEGORIES = ("TOP", "HR", "HIT", "HRR", "CONTACT")
 SLATE_FILES = ["current/today.json", "current/today_slim.json",
                "today.json", "today_slim.json"]
 
+# ── POOLS AND PAIRS ──────────────────────────────────────────────────────────
+#
+# REPORTED 2026-08-15, Donovan: "WHY DID THE pools changsed thru ought the day
+# that not cool someone just called ann ask about it."
+#
+# Same bug as the one above, in a file this script never opened. `SLATE_FILES`
+# covers today.json and today_slim.json — the per-game designations — and
+# nothing else. `pair_builder_latest.json`, which is where Pools and Pairs
+# come from, is rebuilt from scratch by _build_pair_sections() on every one of
+# today.yml's thirteen daily runs, ranked on the same drifting inputs. So
+# "Pool A — Strongest" is four names at 11am and a different four at 4pm, and
+# a user who wrote his ticket down in the morning finds it gone by the
+# afternoon. That is worse here than on a single pick: a pool is a TICKET, and
+# a ticket whose legs change is not a ticket.
+#
+# THE SLOT IS THE THING THAT PERSISTS. Pools carry a stable `label`
+# ("Pool A — Strongest"); pairs carry a stable `lane_key` ("TOP30"). Those are
+# slots that exist every run while their occupants change — so they are what
+# the lock keys on.
+#
+# WHEN A TICKET FREEZES: when its EARLIEST leg's game starts. A parlay goes
+# live with its first leg, and from that moment its composition has to be
+# fixed or nothing about it can be graded or trusted. Before that, re-rostering
+# is legitimate for exactly the reasons re-picking is — lineups post, hitters
+# scratch — and every change is kept in history[].
+#
+# A locked ticket is NOT re-rostered when a leg scratches. That leg is a void
+# leg, which is the honest outcome and what a real ticket would do; swapping in
+# a replacement after the ticket is live would be inventing a bet nobody made.
+POOL_FILES = ["current/pair_builder_latest.json", "pair_builder_latest.json"]
+POOL_SECTIONS = ("recommended_pairs", "recommended_3mans",
+                 "pools_4man", "pools_3man", "pools_6man")
+
+# Restored verbatim onto a locked ticket, because they were computed FOR that
+# roster. Leaving today's score on yesterday's names is how you get a pool
+# labelled "Strongest" that is arithmetically nothing of the sort.
+TICKET_FIELDS = ("label", "type", "lane_key", "pair_key", "pair_score",
+                 "score", "pool_score", "risk", "tags", "reason")
+
+# Enough to render a locked man who has since vanished from the candidate pool.
+STUB_FIELDS = ("player_id", "name", "team", "opponent", "game_pk", "lineup_spot")
+
 PLAYER_KEYS = ("players", "all_players", "player_pool", "slate_players", "rows",
                "picks", "top_picks", "hr_picks", "hit_picks", "hrr_picks",
                "contact_picks", "top_board", "hr_board", "alt_looks", "results")
@@ -132,7 +174,24 @@ def iter_rows(payload: Any):
 
 
 def fetch_lock(date: str) -> dict:
-    """Last run's ledger, from the data branch. A miss is a fresh start."""
+    """Last run's ledger. A miss is a fresh start.
+
+    LOCAL FIRST. In CI the runner checks out `main`, which never carries this
+    file — it's published to `data` — so the network fetch below is the real
+    path. But if a ledger for THIS SLATE is already sitting in the checkout,
+    it is by definition fresher than anything on the branch: it was written by
+    an earlier invocation in this same job. Reading the branch instead would
+    silently discard a lock taken minutes ago.
+    """
+    local = CURRENT / "pick_lock.json"
+    if local.exists():
+        try:
+            j = json.loads(local.read_text())
+            if isinstance(j, dict) and j.get("date") == date:
+                return j
+        except Exception as e:
+            print(f"  · local ledger unreadable ({e}) — falling back to the branch")
+
     url = f"{RAW}/pick_lock.json?t={int(now_utc().timestamp())}"
     try:
         with urllib.request.urlopen(url, timeout=20) as r:
@@ -178,6 +237,59 @@ def first_pitch_of(rows: list[dict]) -> dict[str, dt.datetime]:
         t = parse_ts(r.get("game_time"))
         if gp and t and gp not in out:
             out[gp] = t
+    return out
+
+
+# ── ticket helpers ───────────────────────────────────────────────────────────
+
+def ticket_key(section: str, idx: int, blob: dict) -> str:
+    """The SLOT's identity, not the roster's — see the POOL_FILES comment."""
+    slot = blob.get("label") or blob.get("lane_key")
+    return f"{section}|{slot or idx}"
+
+
+def ticket_pids(blob: dict) -> list[int]:
+    out = []
+    for p in blob.get("players") or []:
+        try:
+            pid = int(p.get("player_id") or 0)
+        except (TypeError, ValueError):
+            continue
+        if pid:
+            out.append(pid)
+    return out
+
+
+def ticket_first_pitch(blob: dict, fp: dict[str, dt.datetime]) -> dt.datetime | None:
+    """A ticket goes live with its earliest leg."""
+    times = [fp[str(p.get("game_pk"))] for p in blob.get("players") or []
+             if str(p.get("game_pk") or "") in fp]
+    return min(times) if times else None
+
+
+def index_players(payload: dict) -> dict[int, dict]:
+    """Every player dict anywhere in the pair payload, by id.
+
+    Used to rebuild a locked roster from TODAY's dicts, so the names are frozen
+    but their stats stay current — which is what you want. The ledger only has
+    to remember WHO, not carry a copy of every field.
+    """
+    out: dict[int, dict] = {}
+    buckets = [payload.get("available_pool") or []]
+    for sec in POOL_SECTIONS:
+        for t in payload.get(sec) or []:
+            if isinstance(t, dict):
+                buckets.append(t.get("players") or [])
+    for b in buckets:
+        for p in b:
+            if not isinstance(p, dict):
+                continue
+            try:
+                pid = int(p.get("player_id") or 0)
+            except (TypeError, ValueError):
+                continue
+            if pid and pid not in out:
+                out[pid] = p
     return out
 
 
@@ -298,6 +410,115 @@ def main() -> int:
 
     rejected.extend(rejects)
 
+    # ── tickets: pools and pairs ────────────────────────────────────────────
+    tickets: dict[str, dict] = lock.get("tickets") or {}
+    t_changed, t_froze = 0, 0
+    t_rejects: list[dict] = []
+    pool_paths = [PUBLIC / p for p in POOL_FILES]
+    pool_paths = [p for p in pool_paths if p.exists()]
+
+    pool_payloads: list[tuple[Path, dict]] = []
+    for p in pool_paths:
+        try:
+            j = json.loads(p.read_text())
+            if isinstance(j, dict):
+                pool_payloads.append((p, j))
+        except Exception as e:
+            print(f"  ! could not read {p.name}: {e}")
+
+    if pool_payloads:
+        # One payload decides the ledger; the rest are the same file under
+        # another name and get the same restoration applied.
+        _, lead = pool_payloads[0]
+        for section in POOL_SECTIONS:
+            for idx, blob in enumerate(lead.get(section) or []):
+                if not isinstance(blob, dict):
+                    continue
+                pids = ticket_pids(blob)
+                if not pids:
+                    continue
+                key = ticket_key(section, idx, blob)
+                tfp = ticket_first_pitch(blob, fp)
+                started = bool(tfp and now >= tfp)
+                slot = tickets.get(key)
+
+                snap = {
+                    "pids": pids,
+                    "meta": {k: blob[k] for k in TICKET_FIELDS if k in blob},
+                    "stubs": {str(p.get("player_id")): {k: p.get(k) for k in STUB_FIELDS}
+                              for p in (blob.get("players") or [])
+                              if isinstance(p, dict) and p.get("player_id")},
+                }
+
+                if slot is None:
+                    tickets[key] = {
+                        "section": section,
+                        "first_pitch": tfp.isoformat() if tfp else None,
+                        **snap,
+                        "at": stamp, "locked": started, "locked_late": started,
+                        "history": [{"pids": pids, "at": stamp}],
+                    }
+                    if started:
+                        t_froze += 1
+                    continue
+
+                if slot.get("locked"):
+                    if slot.get("pids") != pids:
+                        t_rejects.append({"ticket": key, "at": stamp,
+                                          "locked": slot.get("pids"), "attempted": pids})
+                    continue
+
+                if started:
+                    # Same ordering trap as the designation lock above: freeze
+                    # what was standing at first pitch, NOT what this post-game
+                    # recompute just produced.
+                    slot["locked"] = True
+                    slot["locked_at"] = stamp
+                    t_froze += 1
+                    if slot.get("pids") != pids:
+                        t_rejects.append({"ticket": key, "at": stamp,
+                                          "locked": slot.get("pids"), "attempted": pids})
+                    continue
+
+                if slot.get("pids") != pids:
+                    slot.update(**snap, at=stamp)
+                    slot.setdefault("history", []).append({"pids": pids, "at": stamp})
+                    t_changed += 1
+
+    rejected.extend(t_rejects)
+
+    # ── restore locked tickets onto every pool payload ──────────────────────
+    t_restored = 0
+    if a.apply and not a.dry_run:
+        for path, payload in pool_payloads:
+            idx_players = index_players(payload)
+            touched = False
+            for section in POOL_SECTIONS:
+                for i, blob in enumerate(payload.get(section) or []):
+                    if not isinstance(blob, dict):
+                        continue
+                    slot = tickets.get(ticket_key(section, i, blob))
+                    if not slot or not slot.get("locked"):
+                        continue
+                    if ticket_pids(blob) == slot.get("pids"):
+                        continue
+                    # Rebuild from today's dicts where possible so the frozen
+                    # names carry live stats; fall back to the stub for a man
+                    # who has dropped out of the candidate pool entirely.
+                    rebuilt = []
+                    for pid in slot.get("pids") or []:
+                        rebuilt.append(idx_players.get(pid)
+                                       or (slot.get("stubs") or {}).get(str(pid))
+                                       or {"player_id": pid, "name": "(scratched)"})
+                    blob["players"] = rebuilt
+                    blob.update(slot.get("meta") or {})
+                    blob["locked"] = True
+                    blob["locked_at"] = slot.get("locked_at")
+                    touched = True
+                    t_restored += 1
+            if touched:
+                path.write_text(json.dumps(payload, indent=2))
+
     # ── apply the lock back onto the published rows ─────────────────────────
     # Only locked games are touched. For those, the role is stripped from
     # whoever the recompute handed it to and restored to the locked hitter.
@@ -362,10 +583,17 @@ def main() -> int:
         # after the lock. He stays in the ledger; grading voids him for having
         # no at-bat, which is the correct outcome and not a miss.
         "gone_from_slate": missing,
+        # Pools and pairs, keyed by SLOT (label / lane_key). Same rule, applied
+        # to tickets instead of designations — added 2026-08-15 after a user
+        # rang Donovan about pools changing during the day.
+        "tickets": tickets,
         "rule": ("Before a game's first pitch a designation may change and every change is kept in "
                  "history[]. At first pitch it freezes: the published sheet is rewritten to match the "
                  "lock and any later change is recorded in rejected[] instead of being applied. "
-                 "locked_late marks games first seen after they had already started."),
+                 "locked_late marks games first seen after they had already started. "
+                 "Pools and pairs follow the same rule keyed on their slot (label / lane_key), "
+                 "freezing when their EARLIEST leg starts; a locked ticket is never re-rostered "
+                 "when a leg scratches — that leg voids, which is what a real ticket does."),
     }
 
     if not a.dry_run:
@@ -377,6 +605,13 @@ def main() -> int:
     print(f"pick lock — {date}, run #{ledger['runs']}")
     print(f"  {len(games)} games · {n_locked} designations locked ({n_late} locked late)")
     print(f"  pre-game re-picks recorded: {changed_before} · froze this run: {froze_now}")
+    n_tlock = sum(1 for t in tickets.values() if t.get("locked"))
+    print(f"  {len(tickets)} tickets · {n_tlock} locked · "
+          f"pre-lock re-rosters: {t_changed} · froze this run: {t_froze}")
+    if t_rejects:
+        print(f"  ! {len(t_rejects)} ticket re-roster(s) REJECTED after lock")
+    if a.apply and not a.dry_run and t_restored:
+        print(f"  restored {t_restored} locked ticket(s) onto the published payload")
     if a.apply and not a.dry_run:
         print(f"  applied to sheet: {restored} restored, {stripped} stripped")
     if missing:

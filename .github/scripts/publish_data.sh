@@ -49,6 +49,20 @@ PUBLISH_FILES=(
   context_pack_latest.json
   # fence-line contact board from spray_cache (2026-08-08)
   fence_board.json
+  # ── pick_lock's LEDGER (added 2026-08-15) ──
+  # This file was missing from this list from the day pick_lock.py shipped
+  # (2026-08-09), and its absence made the whole feature a no-op.
+  #
+  # pick_lock keeps its state HERE and fetches it back over HTTPS next run,
+  # because the runner checks out `main` and a previous run's output only ever
+  # exists on `data`. Never publishing it meant every fetch 404'd, every run
+  # started from an empty ledger, and a lock taken at 11am was gone by the
+  # 11:30 run — so no designation was ever actually frozen and no re-pick was
+  # ever actually rejected. Verified 2026-08-15: the URL returns 404.
+  #
+  # The receipts card has been printing "locked at first pitch, never edited"
+  # over that the whole time.
+  pick_lock.json
   # NFL (2026-08-14). The football bot writes into public/data/current/ with an
   # nfl_ prefix specifically so it can ride this script rather than fork it --
   # the orphan-branch force-push and the concurrent-publisher merge below are
