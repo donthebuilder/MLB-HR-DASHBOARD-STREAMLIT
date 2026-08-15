@@ -47,6 +47,45 @@ from pathlib import Path
 BASE = "https://api.theoddsapi.com"
 SPORT = "baseball_mlb"
 
+# ── BACKUP PROVIDER ──────────────────────────────────────────────────────────
+#
+# 2026-08-15, Donovan asked for oddspapi.io as a backup. Two things from their
+# own docs that shape how it's used, and both argue for BACKUP rather than
+# co-primary:
+#
+#   1. THE FREE TIER IS 250 REQUESTS A MONTH. today.yml fires 13 times a day.
+#      Even at one request per run that is ~400/month — over the cap. As a
+#      fallback that only fires when the primary returns nothing, it might burn
+#      a handful a month, which is exactly what a backup should cost.
+#
+#   2. MLB PLAYER PROPS ARE ADVERTISED BUT NOT DOCUMENTED. The site says
+#      "player props"; the docs enumerate no baseball prop markets and the one
+#      market they name is soccer's 1X2. So nothing here hardcodes a market id —
+#      it asks /markets what exists and matches on NAME. If baseball props
+#      aren't there, discovery comes back empty, the provider yields nothing,
+#      and the run says so instead of publishing an empty file.
+#
+# Uses /odds-by-tournaments, not /odds: the per-fixture endpoint would be one
+# request per game, and this is one request for the whole slate.
+PAPI = "https://api.oddspapi.io/v4"
+
+# What a market has to be CALLED to count as one of ours. Substring match,
+# case-folded, because no id is knowable from here without calling the API.
+#
+# ORDERED MOST-SPECIFIC-FIRST, AND THAT ORDER IS LOad-BEARING. "hit" is a
+# substring of "Hits + Runs + RBIs", so a dict-order scan filed the compound
+# market as plain hits and the HRR board would have carried the wrong price
+# with nothing to show it was wrong. A list, first match wins, compound
+# markets ahead of the single they contain.
+PAPI_MARKET_HINTS = [
+    ("batter_hits_runs_rbis", ("hits+runs", "hits + runs", "hits runs rbis",
+                               "h+r+rbi", "hits runs and rbis")),
+    ("batter_total_bases", ("total base",)),
+    ("batter_home_runs", ("home run",)),
+    # Last, and only after the compounds have had their turn.
+    ("batter_hits", ("hit",)),
+]
+
 # pick category -> the market that actually settles it
 CATEGORY_MARKET = {
     "TOP": "batter_home_runs",
@@ -286,6 +325,149 @@ def consensus(rows: list[dict]) -> dict:
     return out
 
 
+# ── the backup provider ──────────────────────────────────────────────────────
+
+def papi(path: str, key: str, **params) -> object:
+    """oddspapi.io. Auth is a QUERY PARAM, not a header — different from above."""
+    q = {k: v for k, v in params.items() if v not in (None, "")}
+    q["apiKey"] = key
+    url = f"{PAPI}{path}?" + urllib.parse.urlencode(q)
+    req = urllib.request.Request(url)
+    with urllib.request.urlopen(req, timeout=45) as r:
+        return json.loads(r.read().decode())
+
+
+def _listish(payload, *keys):
+    """Their responses vary in wrapper; take the first list we recognise."""
+    if isinstance(payload, list):
+        return payload
+    if isinstance(payload, dict):
+        for k in (*keys, "data", "items", "results"):
+            v = payload.get(k)
+            if isinstance(v, list):
+                return v
+    return []
+
+
+def _named(o: dict) -> str:
+    for k in ("name", "title", "marketName", "tournamentName", "sportName", "label"):
+        v = o.get(k)
+        if v:
+            return str(v)
+    return ""
+
+
+def _ident(o: dict, *keys) -> str:
+    for k in (*keys, "id", "_id"):
+        v = o.get(k)
+        if v not in (None, ""):
+            return str(v)
+    return ""
+
+
+def papi_discover(key: str) -> tuple[str, dict[str, str]]:
+    """(mlb_tournament_id, {their_market_id: our_market_key}).
+
+    NOTHING IS HARDCODED. Their ids aren't knowable without calling the API, so
+    this asks what exists and matches on name. An empty result is a real answer
+    — it means baseball props aren't on this plan — and the caller treats it as
+    "no backup available" rather than publishing an empty file.
+    """
+    tid = ""
+    try:
+        for t in _listish(papi("/tournaments", key, sport="baseball"), "tournaments"):
+            nm = _named(t).lower()
+            if "mlb" in nm or "major league baseball" in nm:
+                tid = _ident(t, "tournamentId")
+                print(f"  oddspapi: tournament '{_named(t)}' -> {tid}")
+                break
+    except Exception as e:
+        print(f"  oddspapi: tournament lookup failed ({type(e).__name__}: {e})")
+
+    markets: dict[str, str] = {}
+    try:
+        for m in _listish(papi("/markets", key, sport="baseball"), "markets"):
+            nm = _named(m).lower()
+            for ours, hints in PAPI_MARKET_HINTS:
+                if any(h in nm for h in hints):
+                    mid = _ident(m, "marketId")
+                    if mid:
+                        markets[mid] = ours
+                    break
+    except Exception as e:
+        print(f"  oddspapi: market lookup failed ({type(e).__name__}: {e})")
+
+    if markets:
+        print(f"  oddspapi: matched {len(markets)} prop market(s) by name")
+    else:
+        print("  oddspapi: no baseball prop markets found by name — backup unusable")
+    return tid, markets
+
+
+def fetch_oddspapi(key: str) -> list[dict]:
+    """Rows in the SAME shape walk_outcomes() produces, so consensus() is shared."""
+    tid, markets = papi_discover(key)
+    if not tid or not markets:
+        return []
+    try:
+        payload = papi("/odds-by-tournaments", key, tournamentIds=tid)
+    except Exception as e:
+        print(f"  oddspapi: odds fetch failed ({type(e).__name__}: {e})")
+        return []
+
+    rows = []
+    for ev in _listish(payload, "fixtures", "events", "odds"):
+        if not isinstance(ev, dict):
+            continue
+        home, away = ev.get("homeTeam") or ev.get("home_team"), ev.get("awayTeam") or ev.get("away_team")
+        for o in _listish(ev, "odds", "markets", "outcomes"):
+            if not isinstance(o, dict):
+                continue
+            ours = markets.get(_ident(o, "marketId"))
+            if not ours:
+                continue
+            who = (o.get("player") or o.get("playerName") or o.get("participant")
+                   or o.get("outcomeName") or _named(o))
+            side = str(o.get("outcomeName") or o.get("side") or o.get("type") or "").lower()
+            side = ("over" if "over" in side or side == "yes"
+                    else "under" if "under" in side or side == "no" else "")
+            if not who or not side:
+                continue
+            rows.append({
+                "name": str(who), "norm": norm_name(who), "market": ours,
+                "side": side, "book": str(o.get("bookmaker") or o.get("bookmakerName") or "?"),
+                "point": o.get("handicap", o.get("line", o.get("point"))),
+                "price": american(o.get("price", o.get("odds", o.get("decimal")))),
+                "home": home, "away": away, "commence": ev.get("startTime"),
+            })
+    print(f"  oddspapi: {len(rows)} prop quote(s)")
+    return rows
+
+
+def fetch_theoddsapi(key: str, regions: str) -> list[dict]:
+    try:
+        raw = api("/odds/", key, sport_key=SPORT, markets=",".join(MARKETS),
+                  regions=regions, oddsFormat="american")
+    except urllib.error.HTTPError as e:
+        print(f"  theoddsapi: HTTP {e.code}: {e.read()[:300].decode(errors='replace')}")
+        return []
+    except Exception as e:
+        print(f"  theoddsapi: {type(e).__name__}: {e}")
+        return []
+    items = unwrap(raw)
+    rows = walk_outcomes(items)
+    shape = "nested"
+    if not rows:
+        rows = flat_rows(items)
+        shape = "flat"
+    print(f"  theoddsapi: {len(items)} item(s) · {len(rows)} quote(s) · {shape}")
+    if not rows and isinstance(raw, (list, dict)):
+        keys = sorted(raw) if isinstance(raw, dict) else (
+            sorted(raw[0]) if raw and isinstance(raw[0], dict) else [])
+        print(f"  theoddsapi: unrecognised shape · keys {keys[:15]}")
+    return rows
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--probe", action="store_true",
@@ -297,42 +479,38 @@ def main() -> int:
     a = ap.parse_args()
 
     key = os.environ.get("ODDS_API_KEY", "").strip()
-    if not key:
+    backup = os.environ.get("ODDSPAPI_KEY", "").strip()
+    if not key and not backup:
         # Not an error: no key configured means the site simply has no odds
         # file and every surface that reads it degrades to the score alone.
-        print("ODDS_API_KEY not set — skipping odds (this is not a failure)")
+        print("no odds key set (ODDS_API_KEY / ODDSPAPI_KEY) — skipping (not a failure)")
         return 0
 
     if a.probe:
-        return probe(key)
+        return probe(key) if key else 0
 
-    try:
-        events = api("/odds/", key, sport_key=SPORT, markets=",".join(MARKETS),
-                     regions=a.regions, oddsFormat="american")
-    except urllib.error.HTTPError as e:
-        body = e.read()[:400].decode(errors="replace")
-        print(f"odds fetch failed — HTTP {e.code}: {body}")
-        return 0            # never fail the slate build over odds
-    except Exception as e:
-        print(f"odds fetch failed — {type(e).__name__}: {e}")
-        return 0
+    # ORDER MATTERS AND IS THE WHOLE POINT OF A BACKUP. The primary is one
+    # request for the entire slate. The backup's free tier is 250 requests a
+    # MONTH against a workflow that fires 13 times a day, so it must only ever
+    # run when the primary came back empty — never alongside it.
+    rows, source = [], ""
+    for name, k, fn in (("theoddsapi", key, lambda: fetch_theoddsapi(key, a.regions)),
+                        ("oddspapi", backup, lambda: fetch_oddspapi(backup))):
+        if not k:
+            print(f"{name}: no key configured — skipping")
+            continue
+        print(f"trying {name} …")
+        rows = fn()
+        if rows:
+            source = name
+            break
+        print(f"  {name} yielded nothing — falling through")
 
-    items = unwrap(events)
-    rows = walk_outcomes(items)
-    shape = "nested"
     if not rows:
-        rows = flat_rows(items)
-        shape = "flat"
-    print(f"{len(items)} item(s) · {len(rows)} prop quote(s) · {shape} shape")
-    if not rows:
-        # Say exactly what came back rather than "no odds" — the top-level keys
-        # are the whole diagnosis and they cost nothing to print.
-        if isinstance(events, dict):
-            print(f"  top-level keys: {sorted(events)[:15]}")
-        elif isinstance(events, list) and events and isinstance(events[0], dict):
-            print(f"  first item keys: {sorted(events[0])[:15]}")
-        print("  no player-prop outcomes recognised — paste this log and I'll fix the parser")
+        print("no odds from any provider — publishing nothing, "
+              "the site falls back to scores alone")
         return 0
+    print(f"using {source} · {len(rows)} quote(s)")
 
     board = consensus(rows)
 
@@ -377,7 +555,7 @@ def main() -> int:
 
     now = dt.datetime.now(dt.timezone.utc)
     payload = {
-        "source": "theoddsapi",
+        "source": source,
         "sport": SPORT,
         "regions": a.regions,
         "fetched_at": now.isoformat(),

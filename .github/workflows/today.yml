@@ -172,6 +172,10 @@ jobs:
         continue-on-error: true
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          # Backup, only consulted when the primary returns nothing — its free
+          # tier is 250 requests a MONTH against a workflow that fires 13 times
+          # a day, so it must never run alongside the primary.
+          ODDSPAPI_KEY: ${{ secrets.ODDSPAPI_KEY }}
         run: python bots/odds_fetch.py --out public/data/current
 
       - name: Lock designations at first pitch
