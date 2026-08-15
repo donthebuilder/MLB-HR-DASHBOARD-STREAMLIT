@@ -171,11 +171,17 @@ jobs:
       - name: Fetch odds
         continue-on-error: true
         env:
+          # Three providers, tried in order, first one with quotes wins. Order
+          # is a repo VARIABLE so it can change without a code edit; the
+          # default leads with odds-api.io.
+          ODDSAPI_IO_KEY: ${{ secrets.ODDSAPI_IO_KEY }}
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
-          # Backup, only consulted when the primary returns nothing — its free
-          # tier is 250 requests a MONTH against a workflow that fires 13 times
-          # a day, so it must never run alongside the primary.
+          # Last resort: its free tier is 250 requests a MONTH against a
+          # workflow that fires 13 times a day, so it must only ever run when
+          # the two above came back empty.
           ODDSPAPI_KEY: ${{ secrets.ODDSPAPI_KEY }}
+          ODDS_PROVIDER_ORDER: ${{ vars.ODDS_PROVIDER_ORDER }}
+          ODDSAPI_IO_BOOKMAKERS: ${{ vars.ODDSAPI_IO_BOOKMAKERS }}
         run: python bots/odds_fetch.py --out public/data/current
 
       - name: Lock designations at first pitch

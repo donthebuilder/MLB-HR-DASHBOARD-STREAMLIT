@@ -69,15 +69,43 @@ SPORT = "baseball_mlb"
 # request per game, and this is one request for the whole slate.
 PAPI = "https://api.oddspapi.io/v4"
 
+# ── odds-api.io ──────────────────────────────────────────────────────────────
+#
+# Donovan, 2026-08-15: "i think i want to use them more they hq." So this leads
+# the order by default — and the order is an env var, so changing your mind
+# later is a repo-variable edit rather than a code change.
+#
+# The shape, from their OpenAPI spec:
+#   GET /v3/events?apiKey=&sport=baseball&status=pending&from=&to=
+#   GET /v3/odds/multi?apiKey=&eventIds=<UP TO 10>&bookmakers=<REQUIRED, max 30>
+#
+# Ten events per call means a ~15-game MLB slate is 1 events call + 2 odds
+# calls = 3 requests a run. At 13 runs a day that's ~39/day against a free tier
+# of 100/hour and 500/day — comfortable, which is why this can lead.
+#
+# `bookmakers` is REQUIRED, and the free tier only carries two. Rather than
+# guess which two, send a wide list and keep whatever comes back: asking for a
+# book you don't have costs nothing, missing the one you do have costs the
+# whole file.
+OAIO = "https://api.odds-api.io/v3"
+OAIO_BOOKS = ("draftkings,fanduel,bet365,betmgm,caesars,pointsbet,betrivers,"
+              "unibet,williamhill,pinnacle,1xbet,bovada")
+
+# Their markets are selected by EXACT NAME (case-insensitive) via `markets`.
+# Player props arrive under the generic "Player Props" name with the specific
+# prop in each outcome's `label`, which is why PROP_HINTS below does the real
+# work of deciding what a quote actually is.
+OAIO_MARKETS = "Player Props"
+
 # What a market has to be CALLED to count as one of ours. Substring match,
 # case-folded, because no id is knowable from here without calling the API.
 #
-# ORDERED MOST-SPECIFIC-FIRST, AND THAT ORDER IS LOad-BEARING. "hit" is a
+# ORDERED MOST-SPECIFIC-FIRST, AND THAT ORDER IS LOAD-BEARING. "hit" is a
 # substring of "Hits + Runs + RBIs", so a dict-order scan filed the compound
 # market as plain hits and the HRR board would have carried the wrong price
 # with nothing to show it was wrong. A list, first match wins, compound
 # markets ahead of the single they contain.
-PAPI_MARKET_HINTS = [
+PROP_HINTS = [
     ("batter_hits_runs_rbis", ("hits+runs", "hits + runs", "hits runs rbis",
                                "h+r+rbi", "hits runs and rbis")),
     ("batter_total_bases", ("total base",)),
@@ -325,6 +353,108 @@ def consensus(rows: list[dict]) -> dict:
     return out
 
 
+# ── odds-api.io (the primary) ────────────────────────────────────────────────
+
+def oaio(path: str, key: str, **params) -> object:
+    q = {k: v for k, v in params.items() if v not in (None, "")}
+    q["apiKey"] = key
+    url = f"{OAIO}{path}?" + urllib.parse.urlencode(q)
+    with urllib.request.urlopen(urllib.request.Request(url), timeout=45) as r:
+        return json.loads(r.read().decode())
+
+
+def _prop_key(label: str) -> str | None:
+    """Which of our markets a prop LABEL describes, most-specific-first."""
+    nm = str(label or "").lower()
+    for ours, hints in PROP_HINTS:
+        if any(h in nm for h in hints):
+            return ours
+    return None
+
+
+def _dec_to_american(v) -> int | None:
+    """They quote decimal odds; everything downstream speaks American."""
+    try:
+        d = float(v)
+    except (TypeError, ValueError):
+        return None
+    if d <= 1.0:
+        return None
+    return int(round((d - 1) * 100)) if d >= 2.0 else int(round(-100 / (d - 1)))
+
+
+def fetch_oddsapiio(key: str, books: str) -> list[dict]:
+    now = dt.datetime.now(dt.timezone.utc)
+    try:
+        evs = _listish(oaio("/events", key, sport="baseball", status="pending",
+                            **{"from": now.isoformat(),
+                               "to": (now + dt.timedelta(days=2)).isoformat()},
+                            limit=200), "events")
+    except Exception as e:
+        print(f"  odds-api.io: events failed ({type(e).__name__}: {e})")
+        return []
+
+    # Baseball is not only MLB. Keep the ones whose league says so, and if no
+    # league field exists at all, keep everything rather than filter to nothing.
+    mlb = [e for e in evs if isinstance(e, dict)
+           and ("mlb" in str(e.get("league", "")).lower()
+                or "major league" in str(e.get("league", "")).lower())]
+    if not mlb and evs:
+        mlb = [e for e in evs if isinstance(e, dict)]
+        print("  odds-api.io: no league field matched MLB — using all baseball events")
+    ids = [str(e.get("id") or e.get("eventId")) for e in mlb]
+    ids = [i for i in ids if i and i != "None"]
+    print(f"  odds-api.io: {len(ids)} event(s)")
+    if not ids:
+        return []
+
+    rows: list[dict] = []
+    # TEN PER CALL is their documented cap. Chunking is what keeps a 15-game
+    # slate at three requests instead of fifteen.
+    for i in range(0, len(ids), 10):
+        chunk = ids[i:i + 10]
+        try:
+            payload = oaio("/odds/multi", key, eventIds=",".join(chunk),
+                           bookmakers=books, markets=OAIO_MARKETS)
+        except Exception as e:
+            print(f"  odds-api.io: odds chunk {i // 10 + 1} failed "
+                  f"({type(e).__name__}: {e})")
+            continue
+        for ev in _listish(payload, "events", "odds"):
+            if not isinstance(ev, dict):
+                continue
+            home, away = ev.get("home"), ev.get("away")
+            # bookmakers is a MAP of book -> [market objects], not a list.
+            for book, mkts in (ev.get("bookmakers") or {}).items():
+                for mk in mkts or []:
+                    if not isinstance(mk, dict):
+                        continue
+                    for o in mk.get("odds") or []:
+                        if not isinstance(o, dict):
+                            continue
+                        label = o.get("label") or o.get("player") or mk.get("name")
+                        ours = _prop_key(label)
+                        if not ours:
+                            continue
+                        who = o.get("player") or o.get("participant") or o.get("name")
+                        if not who:
+                            continue
+                        line = o.get("line", o.get("handicap", o.get("total")))
+                        for side, raw in (("over", o.get("over", o.get("home"))),
+                                          ("under", o.get("under", o.get("away")))):
+                            price = _dec_to_american(raw)
+                            if price is None:
+                                continue
+                            rows.append({
+                                "name": str(who), "norm": norm_name(who),
+                                "market": ours, "side": side, "book": str(book),
+                                "point": line, "price": price,
+                                "home": home, "away": away, "commence": ev.get("date"),
+                            })
+    print(f"  odds-api.io: {len(rows)} prop quote(s)")
+    return rows
+
+
 # ── the backup provider ──────────────────────────────────────────────────────
 
 def papi(path: str, key: str, **params) -> object:
@@ -388,7 +518,7 @@ def papi_discover(key: str) -> tuple[str, dict[str, str]]:
     try:
         for m in _listish(papi("/markets", key, sport="baseball"), "markets"):
             nm = _named(m).lower()
-            for ours, hints in PAPI_MARKET_HINTS:
+            for ours, hints in PROP_HINTS:
                 if any(h in nm for h in hints):
                     mid = _ident(m, "marketId")
                     if mid:
@@ -480,10 +610,11 @@ def main() -> int:
 
     key = os.environ.get("ODDS_API_KEY", "").strip()
     backup = os.environ.get("ODDSPAPI_KEY", "").strip()
-    if not key and not backup:
+    if not key and not backup and not os.environ.get("ODDSAPI_IO_KEY", "").strip():
         # Not an error: no key configured means the site simply has no odds
         # file and every surface that reads it degrades to the score alone.
-        print("no odds key set (ODDS_API_KEY / ODDSPAPI_KEY) — skipping (not a failure)")
+        print("no odds key set (ODDSAPI_IO_KEY / ODDS_API_KEY / ODDSPAPI_KEY) "
+              "— skipping (not a failure)")
         return 0
 
     if a.probe:
@@ -493,9 +624,22 @@ def main() -> int:
     # request for the entire slate. The backup's free tier is 250 requests a
     # MONTH against a workflow that fires 13 times a day, so it must only ever
     # run when the primary came back empty — never alongside it.
+    oaio_key = os.environ.get("ODDSAPI_IO_KEY", "").strip()
+    books = os.environ.get("ODDSAPI_IO_BOOKMAKERS", "").strip() or OAIO_BOOKS
+
+    available = {
+        "oddsapiio": (oaio_key, lambda: fetch_oddsapiio(oaio_key, books)),
+        "theoddsapi": (key, lambda: fetch_theoddsapi(key, a.regions)),
+        "oddspapi": (backup, lambda: fetch_oddspapi(backup)),
+    }
+    # Order is an env var so changing which provider leads is a repo-variable
+    # edit, not a code change and a redeploy.
+    order = [n.strip() for n in
+             (os.environ.get("ODDS_PROVIDER_ORDER", "").strip()
+              or "oddsapiio,theoddsapi,oddspapi").split(",") if n.strip()]
+
     rows, source = [], ""
-    for name, k, fn in (("theoddsapi", key, lambda: fetch_theoddsapi(key, a.regions)),
-                        ("oddspapi", backup, lambda: fetch_oddspapi(backup))):
+    for name, k, fn in ((n, *available[n]) for n in order if n in available):
         if not k:
             print(f"{name}: no key configured — skipping")
             continue
