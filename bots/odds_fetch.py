@@ -37,6 +37,7 @@ import argparse
 import datetime as dt
 import json
 import os
+import re
 import sys
 import unicodedata
 import urllib.error
@@ -518,15 +519,24 @@ def oaio(path: str, key: str, **params) -> object:
 # without this guard a TEAM's hit total would have been published as a
 # player's 1+ hit price — a wrong number wearing a real player's name, which
 # is worse than no number at all. Team and inning markets are excluded first.
-_NOT_PROP = ("team total", "team_total", "1st 3 innings", "1st 5 innings",
-             "1st 7 innings", "innings", " ht", "half", "spread", "moneyline",
-             "totals", "ml")
+#
+# WORD BOUNDARIES, NOT SUBSTRINGS. The first cut of this guard matched "ml"
+# anywhere — which would have killed a bucket named "MLB Player Props", since
+# "mlb" contains "ml". The exact trap this guard exists to prevent, in reverse.
+# A TEAM'S market or a PARTIAL-GAME market, whatever else it says. Note what
+# is deliberately NOT here: the bare word "total". "Total Bases" is a batter
+# prop and "Team Total (Hits)" is not, and the difference is the word "team"
+# and the period markers — not the word they share.
+_NOT_PROP_RE = re.compile(r"\b(team|innings?|half|ht|1h|2h|f5|1st\s*\d)\b", re.I)
+# The game lines, by name. Exact-ish so a batter market can never collide.
+_GAME_LINE = {"ml", "totals", "total", "spread", "moneyline", "run line",
+              "runline", "over/under"}
 
 
 def _prop_key(label: str) -> str | None:
     """Which of our markets a prop LABEL describes, most-specific-first."""
     nm = str(label or "").lower().strip()
-    if any(bad in nm for bad in _NOT_PROP) or nm in ("ml", "totals", "spread"):
+    if nm in _GAME_LINE or _NOT_PROP_RE.search(nm):
         return None
     for ours, hints in PROP_HINTS:
         if any(h in nm for h in hints):
@@ -580,11 +590,26 @@ def _split_prop(o: dict) -> tuple[str, str | None]:
 
 
 def _dec_to_american(v) -> int | None:
-    """They quote decimal odds; everything downstream speaks American."""
+    """Their prices, in the American odds everything downstream speaks.
+
+    THE FORMAT IS NOT GUARANTEED. Their docs show decimal strings ("5.50"),
+    but a bookmaker feed that hands back American ("+450"/"-650") on some
+    plans is a real possibility, and silently reading -650 as a decimal would
+    publish garbage that LOOKS like a price — the worst failure available
+    here. The ranges don't overlap in practice, so read the number for what
+    it can only be:
+        < 0            American (no decimal odd is negative)
+        1.01 – 30.0    decimal
+        >= 100         American (+100 is even money; decimals that high are
+                       1000-1 longshots no book posts on a batter prop)
+    Anything in between is treated as decimal, which is what their docs say.
+    """
     try:
         d = float(v)
     except (TypeError, ValueError):
         return None
+    if d < 0 or d >= 100:
+        return int(round(d))          # already American
     if d <= 1.0:
         return None
     return int(round((d - 1) * 100)) if d >= 2.0 else int(round(-100 / (d - 1)))
@@ -1197,11 +1222,22 @@ def main() -> int:
         if age < min_gap:
             nxt = (last + dt.timedelta(minutes=min_gap)).isoformat() if last else None
             print(f"lock: last fetch was {age:.0f} min ago (< {min_gap}) — skipping, 0 requests")
+            # A SKIP MUST NOT ERASE THE DIAGNOSIS (2026-08-15). Donovan sent an
+            # Actions log to find out why the board was empty; the run he
+            # caught was a skip, and the skip's status had already overwritten
+            # the real attempt's — so the file said "a snapshot 18 minutes ago
+            # is still fresh" and nothing whatsoever about why that snapshot
+            # was empty. The evidence from the last REAL attempt is exactly
+            # what someone opening this file wants, so it rides along.
             write_status(out, state="skipped",
-                         reason=f"A snapshot from {age:.0f} minutes ago is still fresh "
-                                f"(the lock allows one fetch every {min_gap} minutes).",
+                         reason=(f"A snapshot from {age:.0f} minutes ago is still fresh "
+                                 f"(the lock allows one fetch every {min_gap} minutes)."
+                                 + (f" That snapshot was EMPTY — {prev.get('reason') or 'no reason recorded'}"
+                                    if prev.get("empty") else "")),
                          last_fetch=stamp, next_eligible_at=nxt,
-                         fetches_this_slate=prev_count, players=len(prev.get("by_player_id") or {}))
+                         fetches_this_slate=prev_count,
+                         players=len(prev.get("by_player_id") or {}),
+                         last_attempt_forensics=prev.get("forensics") or [])
             return 0
         if prev_count >= max_slate:
             print(f"lock: {prev_count} fetches already this slate (cap {max_slate}) — skipping")
@@ -1260,10 +1296,16 @@ def main() -> int:
                      forensics=FORENSICS)
         write_empty_board(
             out,
-            "every configured provider was tried and none returned a quote",
+            (" · ".join(dict.fromkeys(verdicts)) if verdicts else
+             "every configured provider was tried and none returned a quote"),
             state="empty",
             providers_tried=[n for n in order if n in available],
-            keys_present=[n for n in order if n in available and available[n][0]])
+            keys_present=[n for n in order if n in available and available[n][0]],
+            # THE DURABLE COPY. odds_status.json is overwritten by the next
+            # skip; this board file survives until the next real fetch, so the
+            # evidence lives here too and the site (and the skip status above)
+            # can always find it.
+            forensics=FORENSICS)
         return 0
     print(f"using {source} · {len(rows)} quote(s)")
 
