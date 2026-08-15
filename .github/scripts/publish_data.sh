@@ -69,6 +69,13 @@ PUBLISH_FILES=(
   # reads it degrades to the score alone.
   odds_latest.json
   odds_history.json
+  odds_status.json
+  # THE TRACK RECORD TABLE. build_pick_matrix.py has written this every night
+  # since it shipped and it was never in this list, so it died with the runner
+  # every time and the site served its frozen static fallback ending 06-22.
+  # Exactly the pick_lock.json failure, second instance: a green step, a real
+  # file, and no line here to carry it.
+  pick_matrix.json
   # NFL (2026-08-14). The football bot writes into public/data/current/ with an
   # nfl_ prefix specifically so it can ride this script rather than fork it --
   # the orphan-branch force-push and the concurrent-publisher merge below are

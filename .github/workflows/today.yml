@@ -182,6 +182,15 @@ jobs:
           ODDSPAPI_KEY: ${{ secrets.ODDSPAPI_KEY }}
           ODDS_PROVIDER_ORDER: ${{ vars.ODDS_PROVIDER_ORDER }}
           ODDSAPI_IO_BOOKMAKERS: ${{ vars.ODDSAPI_IO_BOOKMAKERS }}
+          # THE REQUEST LOCK. This workflow fires thirteen times a day and
+          # every run used to be a full fetch. Prices barely move inside an
+          # hour, so twelve of those thirteen bought nothing and spent the
+          # quota the one that matters -- the last snapshot before first pitch
+          # -- depends on. Defaults (90 min apart, 5 per slate) land around
+          # five fetches a day; both are repo variables so they can be tuned
+          # without a code change.
+          ODDS_MIN_INTERVAL_MIN: ${{ vars.ODDS_MIN_INTERVAL_MIN }}
+          ODDS_MAX_PER_SLATE: ${{ vars.ODDS_MAX_PER_SLATE }}
         run: python bots/odds_fetch.py --out public/data/current
 
       - name: Lock designations at first pitch

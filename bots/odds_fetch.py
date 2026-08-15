@@ -635,6 +635,58 @@ def fetch_theoddsapi(key: str, regions: str) -> list[dict]:
     return rows
 
 
+# ── THE REQUEST LOCK ─────────────────────────────────────────────────────────
+#
+# Donovan, 2026-08-15: "i dont want the odds to us a lot of request so some sort
+# of lock is okay. just stop that from over using."
+#
+# today.yml fires THIRTEEN times a day and every run was a full fetch. Prices
+# barely move between two runs an hour apart, so twelve of those thirteen buy
+# nothing and spend quota that the one that matters — the last snapshot before
+# first pitch — depends on.
+#
+# So: skip when the published snapshot is younger than ODDS_MIN_INTERVAL_MIN,
+# and stop entirely after ODDS_MAX_PER_SLATE fetches for the same slate. Both
+# are env vars, both have defaults that land around five fetches a day.
+#
+# The state lives in the PUBLISHED file, read over plain HTTP from the data
+# branch — a static file fetch, not an API request, so checking costs nothing.
+# The runner's working copy is empty at the start of every run, so there is
+# nowhere else it could live.
+DATA_RAW = ("https://raw.githubusercontent.com/donthebuilder/"
+            "MLB-HR-DASHBOARD-STREAMLIT/data/public/data/current")
+
+
+def published(name: str):
+    """The current published copy of a data-branch file, or None."""
+    try:
+        req = urllib.request.Request(f"{DATA_RAW}/{name}",
+                                     headers={"User-Agent": "moonshot-odds"})
+        with urllib.request.urlopen(req, timeout=20) as r:
+            return json.loads(r.read().decode("utf-8"))
+    except Exception:
+        return None
+
+
+def write_status(out: Path, **kw) -> None:
+    """Say what happened, every single time, including nothing.
+
+    A step that is `continue-on-error: true` and prints to a log nobody opens
+    is a feature that can be dead for a week without anyone noticing — which is
+    what happened here: odds_latest.json 404s on the branch and the only way to
+    know why was to open an Actions run. This file is the answer, and it
+    publishes on the skip and the failure paths too, because those are exactly
+    the times someone is asking.
+    """
+    now = dt.datetime.now(dt.timezone.utc)
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "odds_status.json").write_text(json.dumps(
+        {"checked_at": now.isoformat(),
+         "checked_at_human": now.strftime("%b %-d, %-I:%M %p UTC"), **kw},
+        separators=(",", ":")))
+    print(f"status: {kw.get('state')} — {kw.get('reason', '')}")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--probe", action="store_true",
@@ -643,7 +695,10 @@ def main() -> int:
                     help="slate to join names against; default tries both known locations")
     ap.add_argument("--out", type=str, default="public/data/current")
     ap.add_argument("--regions", type=str, default="us")
+    ap.add_argument("--force", action="store_true",
+                    help="ignore the request lock — fetch even if a fresh snapshot exists")
     a = ap.parse_args()
+    out = Path(a.out)
 
     key = os.environ.get("ODDS_API_KEY", "").strip()
     backup = os.environ.get("ODDSPAPI_KEY", "").strip()
@@ -652,6 +707,9 @@ def main() -> int:
         # file and every surface that reads it degrades to the score alone.
         print("no odds key set (ODDSAPI_IO_KEY / ODDS_API_KEY / ODDSPAPI_KEY) "
               "— skipping (not a failure)")
+        write_status(out, state="no_key",
+                     reason="No ODDSAPI_IO_KEY / ODDS_API_KEY / ODDSPAPI_KEY is set "
+                            "in the repo secrets, so nothing was fetched.")
         return 0
 
     if a.probe:
@@ -661,6 +719,44 @@ def main() -> int:
     # request for the entire slate. The backup's free tier is 250 requests a
     # MONTH against a workflow that fires 13 times a day, so it must only ever
     # run when the primary came back empty — never alongside it.
+    # ── the lock ───────────────────────────────────────────────────────────
+    try:
+        min_gap = int(os.environ.get("ODDS_MIN_INTERVAL_MIN", "") or 90)
+    except ValueError:
+        min_gap = 90
+    try:
+        max_slate = int(os.environ.get("ODDS_MAX_PER_SLATE", "") or 5)
+    except ValueError:
+        max_slate = 5
+
+    prev = published("odds_latest.json") if not a.force else None
+    prev_count = 0
+    if isinstance(prev, dict):
+        stamp = prev.get("fetched_at")
+        prev_count = int(prev.get("fetches_this_slate") or 0)
+        try:
+            last = dt.datetime.fromisoformat(str(stamp).replace("Z", "+00:00"))
+            age = (dt.datetime.now(dt.timezone.utc) - last).total_seconds() / 60
+        except Exception:
+            age, last = 1e9, None
+        if age < min_gap:
+            nxt = (last + dt.timedelta(minutes=min_gap)).isoformat() if last else None
+            print(f"lock: last fetch was {age:.0f} min ago (< {min_gap}) — skipping, 0 requests")
+            write_status(out, state="skipped",
+                         reason=f"A snapshot from {age:.0f} minutes ago is still fresh "
+                                f"(the lock allows one fetch every {min_gap} minutes).",
+                         last_fetch=stamp, next_eligible_at=nxt,
+                         fetches_this_slate=prev_count, players=len(prev.get("by_player_id") or {}))
+            return 0
+        if prev_count >= max_slate:
+            print(f"lock: {prev_count} fetches already this slate (cap {max_slate}) — skipping")
+            write_status(out, state="capped",
+                         reason=f"{prev_count} fetches already made for this slate; the cap "
+                                f"is {max_slate}. Resets when the slate date changes.",
+                         last_fetch=stamp, fetches_this_slate=prev_count,
+                         players=len(prev.get("by_player_id") or {}))
+            return 0
+
     oaio_key = os.environ.get("ODDSAPI_IO_KEY", "").strip()
     books = os.environ.get("ODDSAPI_IO_BOOKMAKERS", "").strip() or OAIO_BOOKS
 
@@ -690,6 +786,13 @@ def main() -> int:
     if not rows:
         print("no odds from any provider — publishing nothing, "
               "the site falls back to scores alone")
+        write_status(out, state="empty",
+                     reason="Every configured provider was tried and none returned a "
+                            "quote. Usually a spent quota, a wrong bookmaker key, or "
+                            "no props posted for this slate yet.",
+                     providers_tried=[n for n in order if n in available],
+                     keys_present=[n for n in order
+                                   if n in available and available[n][0]])
         return 0
     print(f"using {source} · {len(rows)} quote(s)")
 
@@ -735,6 +838,55 @@ def main() -> int:
         print(f"  no slate at {slate_path} — publishing by name only")
 
     now = dt.datetime.now(dt.timezone.utc)
+
+    # WHICH SLATE IS THIS? Not "what is today in UTC" -- today.yml fires at
+    # 00:00, 01:00, 02:00 and 03:00 UTC, which is still the PREVIOUS day's card
+    # on the west coast. Filing those under the UTC date puts the truest
+    # closing snapshot of the night (03:00 UTC, minutes before a Pacific first
+    # pitch) on the wrong day, where odds_history would settle it against the
+    # wrong box scores.
+    #
+    # The first attempt read `slate.get("slate_date")` behind an
+    # `isinstance(s, dict)` guard. public/data/today.json is a BARE LIST --
+    # mlb_dashboard writes `[asdict(r) for r in rows]` -- so that branch never
+    # ran once and every snapshot silently took the UTC fallback. The rows
+    # themselves carry the answer, so take it from them.
+    slate_date = None
+    try:
+        if slate_path.exists():
+            s = json.loads(slate_path.read_text())
+            if isinstance(s, dict):
+                slate_date = s.get("slate_date") or s.get("date")
+                if not slate_date:
+                    s = s.get("players") or []
+            if isinstance(s, list) and s:
+                # Every row carries the slate's own date; game_time is the
+                # fallback, and it is a UTC timestamp for a game that belongs
+                # to the LOCAL day, so it is converted to US Eastern the same
+                # way the site's StaleBanner pins its own idea of "tonight".
+                for r in s[:200]:
+                    if not isinstance(r, dict):
+                        continue
+                    d = r.get("slate_date") or r.get("date") or r.get("game_date")
+                    if d:
+                        slate_date = str(d)[:10]
+                        break
+                if not slate_date:
+                    t = next((r.get("game_time") for r in s
+                              if isinstance(r, dict) and r.get("game_time")), None)
+                    if t:
+                        ts = dt.datetime.fromisoformat(str(t).replace("Z", "+00:00"))
+                        if ts.tzinfo is None:
+                            ts = ts.replace(tzinfo=dt.timezone.utc)
+                        slate_date = (ts - dt.timedelta(hours=4)).date().isoformat()
+    except Exception as e:
+        print(f"  slate date not readable ({type(e).__name__}: {e})")
+    if not slate_date:
+        # Last resort, and it is US Eastern rather than UTC for the same reason.
+        slate_date = (now - dt.timedelta(hours=4)).date().isoformat()
+        print(f"  WARNING: no slate date found; filing under {slate_date} (US/Eastern of now)")
+    slate_date = str(slate_date)[:10]
+
     payload = {
         "source": source,
         "sport": SPORT,
@@ -749,12 +901,17 @@ def main() -> int:
         "by_name": board,
         "match_rate": round(100 * len(matched) / max(1, len(board)), 1),
         "unmatched": sorted(unmatched),
+        # Counts toward ODDS_MAX_PER_SLATE. Resets when the slate date rolls,
+        # so a long night can't spend tomorrow's budget.
+        "fetches_this_slate": (prev_count + 1
+                               if isinstance(prev, dict) and prev.get("slate_date") == slate_date
+                               else 1),
+        "slate_date": slate_date,
         "note": ("Consensus line is the one the most books post; over/under are the "
                  "median price at that line; best_over is the best available price "
                  "for taking the over. `implied` is the break-even percentage — "
                  "compare it to a hit rate, not to a score."),
     }
-    out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     dest = out / "odds_latest.json"
     dest.write_text(json.dumps(payload, separators=(",", ":")))
@@ -777,15 +934,6 @@ def main() -> int:
     # LAST WRITE WINS, and that is the behaviour we want: the workflow fires
     # through the evening, so the final snapshot before the branch publish is
     # the closest thing to a closing line this pipeline can get.
-    slate_date = None
-    try:
-        if slate_path.exists():
-            s = json.loads(slate_path.read_text())
-            if isinstance(s, dict):
-                slate_date = s.get("slate_date") or s.get("date")
-    except Exception:
-        pass
-    slate_date = str(slate_date or now.date().isoformat())[:10]
 
     slim: dict[str, dict] = {}
     for pid, mkts in matched.items():
@@ -810,6 +958,15 @@ def main() -> int:
     if not slim:
         print("  WARNING: nothing joined to the slate, so the history gets no "
               "row for tonight. Check the slate join above.")
+
+    write_status(out, state="ok",
+                 reason=f"Fetched from {source}; {len(matched)} of {len(board)} priced "
+                        f"players joined to the slate.",
+                 provider=source, slate_date=slate_date,
+                 players=len(matched), priced=len(board),
+                 match_rate=payload["match_rate"],
+                 fetches_this_slate=payload["fetches_this_slate"],
+                 snapshot_players=len(slim))
 
     try:
         u = api("/me/usage", key)

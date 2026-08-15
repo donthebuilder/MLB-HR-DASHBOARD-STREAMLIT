@@ -46,8 +46,16 @@ import re
 import sys
 from pathlib import Path
 
-ODDS_RE = re.compile(r"odds_(\d{4}-\d{2}-\d{2})\.json$")
-GRADED_RE = re.compile(r"graded_results_(\d{4}-\d{2}-\d{2})\.json$")
+# ANCHORED AT THE START OF THE NAME, WHICH IS LOAD-BEARING. These are matched
+# with .search() against a bare filename, and live_results_tracker.py writes
+# BOTH graded_results_<date>.json (final) and live_graded_results_<date>.json
+# (mid-game) into the same directory. An unanchored pattern matches the live
+# one too, sorted() puts it second, and later matches win -- so the settling
+# below would grade a West-coast hitter's 0-for-2 in the 6th as a miss while
+# his final line sat in the file next to it. ^ makes the final file the only
+# one that can match.
+ODDS_RE = re.compile(r"^odds_(\d{4}-\d{2}-\d{2})\.json$")
+GRADED_RE = re.compile(r"^graded_results_(\d{4}-\d{2}-\d{2})\.json$")
 
 # How the box score settles each market. The line is always the book's number
 # and the over needs to BEAT it, which is why this is `>` and not `>=`: at a

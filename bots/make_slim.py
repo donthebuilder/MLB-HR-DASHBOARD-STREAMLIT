@@ -286,6 +286,25 @@ def collect_bot_outputs() -> int:
     if not src_dir.exists():
         return 0
     CURRENT_DIR.mkdir(parents=True, exist_ok=True)
+
+    # 📌 DO NOT UNDO THE LOCK. pick_lock.py runs before this step, reads
+    # current/pair_builder_latest.json, restores any pool roster that changed
+    # after its game's first pitch, and writes the corrected file back. This
+    # function then copied the PRE-LOCK file from bots/outputs straight over
+    # the top of it, and publish_data.sh prefers current/ -- so the whole
+    # 2026-08-14 pool-lock fix ("someone just called and asked about it") was
+    # a no-op in the published payload: the ledger said held, the site showed
+    # the change.
+    #
+    # A collected file is only ever a copy of what the scoring bot already
+    # wrote, so skipping it costs nothing; letting it win costs the lock.
+    locked_slate = None
+    try:
+        lk = json.loads((CURRENT_DIR / "pick_lock.json").read_text())
+        if isinstance(lk, dict) and (lk.get("tickets") or lk.get("rejected")):
+            locked_slate = lk.get("date")
+    except Exception:
+        pass
     # pair_history_cache.json is deliberately excluded: it's ~42 MB of raw
     # pair history the app never reads. Only the summary is needed, and
     # shipping the cache would put the data branch straight back into the
@@ -295,6 +314,10 @@ def collect_bot_outputs() -> int:
     copied = 0
     for name in wanted:
         src = src_dir / name
+        if locked_slate and name == "pair_builder_latest.json":
+            print(f"collected: SKIPPED {name} — pick_lock holds {locked_slate}; "
+                  f"the locked rosters in current/ are authoritative", file=sys.stderr)
+            continue
         if src.exists() and src.stat().st_size > 0:
             (CURRENT_DIR / name).write_bytes(src.read_bytes())
             print(f"collected: {name} ({src.stat().st_size / 1024:.0f} KB)", file=sys.stderr)
