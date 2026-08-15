@@ -125,6 +125,26 @@ jobs:
           python export_report.py --seasons 2024 2025 \
             --out "$GITHUB_WORKSPACE/public/data/current" --prefix nfl_
 
+      # GRADE. Separate step, and it runs on every firing rather than only on
+      # the post-game crons: a Sunday-night run should grade the 1pm wave even
+      # though the night game is still going, and grading is idempotent — it
+      # rewrites the same file from whatever is final so far.
+      #
+      # It reads the card this run just wrote, so the picks being graded are
+      # always the picks that were published, never a re-derivation.
+      - name: Grade the card
+        continue-on-error: true
+        working-directory: bots/nfl
+        run: |
+          set -euo pipefail
+          ARGS="--mode ${{ steps.mode.outputs.mode }} --season 2026"
+          if [ -n "${{ github.event.inputs.week }}" ]; then
+            ARGS="$ARGS --week ${{ github.event.inputs.week }}"
+          fi
+          python nfl_results.py $ARGS \
+            --card "$GITHUB_WORKSPACE/public/data/current/nfl_picks.json" \
+            --out "$GITHUB_WORKSPACE/public/data/current" --prefix nfl_
+
       # A failed build must not publish an empty slate over a good one. The
       # site's fetch validates `players.length > 0` before accepting a payload,
       # but the cheaper place to stop it is here, before it ever ships.

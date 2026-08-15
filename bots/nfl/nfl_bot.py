@@ -36,6 +36,7 @@ import nfl_gamelog
 import nfl_coverage
 import nfl_explosive
 import nfl_field
+import nfl_picks
 from nfl_features import build, season_baseline, PLAYER_FORM, USAGE_FORM
 from nfl_scoring import MODELS, OUTCOME, score, derive, _pctile
 
@@ -512,6 +513,33 @@ def main() -> int:
     (out / f"{a.prefix}logs.json").write_text(json.dumps({
         "bars": nfl_gamelog.MARKET_VALUE, "logs": logs}, separators=(",", ":")))
 
+    # ── the pick card ─────────────────────────────────────────────────────────
+    # Built from the FINISHED payload rows, not re-scored. The MLB side learned
+    # that two surfaces deriving "the pick" separately eventually name different
+    # players and nobody can tell which is lying.
+    #
+    # Edges come off the report card if one has been published. That file is a
+    # full two-season backtest and only rebuilds when the WEIGHTS change, so a
+    # live Sunday wave reads the last one rather than spending minutes
+    # recomputing a number that hasn't moved.
+    edges = {}
+    rc = out / f"{a.prefix}report_card.json"
+    if rc.exists():
+        try:
+            edges = (json.loads(rc.read_text()) or {}).get("card_edges", {}) or {}
+        except Exception as exc:
+            print(f"report card unreadable ({type(exc).__name__}) — card ships without edges")
+    card = nfl_picks.build(payload["players"], edges=edges, depth=nfl_picks.DEPTH)
+    (out / f"{a.prefix}picks.json").write_text(json.dumps({
+        "season": season, "week": week, "mode": mode,
+        "built_at": payload["built_at"],
+        "built_at_human": payload["built_at_human"],
+        "depth": nfl_picks.DEPTH,
+        "label": payload["label"],
+        "card": card,
+    }, separators=(",", ":")))
+    print(nfl_picks.summary(card))
+
     (out / f"{a.prefix}week.json").write_text(json.dumps(payload, separators=(",", ":")))
     (out / f"{a.prefix}meta.json").write_text(json.dumps({
         "built_at": payload["built_at"],
@@ -519,7 +547,7 @@ def main() -> int:
         "mode": payload["mode"], "label": payload["label"],
         "counts": payload["counts"],
     }, indent=2))
-    for f in ("week", "matchup", "logs", "meta"):
+    for f in ("week", "matchup", "logs", "meta", "picks"):
         fp = out / f"{a.prefix}{f}.json"
         if fp.exists():
             print(f"  {fp.name:22} {fp.stat().st_size/1024:7.0f} KB")

@@ -62,6 +62,8 @@ PUBLISH_FILES=(
   # 300 KB payload the Games tab never opens is 300 KB it waits for.
   nfl_matchup.json
   nfl_logs.json
+  nfl_picks.json
+  nfl_results.json
 )
 
 # Nightly graded files, kept so the backtest has more than one day to look at.

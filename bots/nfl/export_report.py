@@ -47,10 +47,69 @@ def season_block(season: int, topk: int) -> dict:
         }
     return out
 
+# How much a market's model beat a form-only baseline by, out of sample, AT THE
+# DEPTH THE PICK CARD ACTUALLY USES.
+#
+# The report card measures the top 15 a week because that's a board. The pick
+# card is five deep, and the edge at 5 is not the edge at 15 — the sharp end of
+# a ranking behaves differently from its middle. Stamping a card with a number
+# measured on a different slice is the kind of quietly-wrong figure that gets
+# believed for a season.
+#
+# Out-of-sample only. The tuned season's edge is the number the weights were
+# fitted to produce and means nothing about next Sunday.
+def card_edges(seasons: list[int], depth: int) -> dict:
+    oos = [s for s in seasons if s != TUNED_ON]
+    if not oos:
+        return {}
+    blocks = {s: season_block(s, depth) for s in oos}
+    out = {}
+    for key in MODELS:
+        present = [s for s in oos if key in blocks[s]]
+        if not present:
+            continue
+        n = sum(blocks[s][key]["picks"] for s in present)
+        pm = sum(blocks[s][key]["model"] * blocks[s][key]["picks"] for s in present) / max(1, n) / 100
+        pf = sum(blocks[s][key]["form"] * blocks[s][key]["picks"] for s in present) / max(1, n) / 100
+        edge = round(100 * (pm - pf), 1)
+
+        # AN ERROR BAR, NOT JUST A POINT ESTIMATE. Five picks a week for one
+        # out-of-sample season is ~90 picks, where a three-percentage-point
+        # difference is literally three extra hits. Publishing "+3.3, holds up"
+        # off that would be inventing a finding, and this project has already
+        # watched two MLB weight candidates get WEAKER as their sample grew.
+        #
+        # Independent-proportions SE. The two selections overlap (same weeks,
+        # often some of the same players), so the true SE is a little smaller
+        # and this errs toward calling things noise. That is the right way to
+        # be wrong here.
+        se = 100 * ((pm * (1 - pm) / max(1, n) + pf * (1 - pf) / max(1, n)) ** 0.5)
+        z = edge / se if se > 0 else 0.0
+        out[key] = {
+            "edge": edge,
+            "depth": depth,
+            "picks": n,
+            "se": round(se, 1),
+            "z": round(z, 2),
+            "seasons": {str(s): blocks[s][key]["vs_form"] for s in present},
+            "hit": round(100 * pm, 1),
+            "form_hit": round(100 * pf, 1),
+            # ONE definition of trust, here, rather than a threshold re-guessed
+            # in every surface that renders a market. Gated on the error bar,
+            # not the point estimate: at this sample size almost everything is
+            # honestly "thin", and saying so is the whole point.
+            "trust": ("holds" if z >= 2 else "fails" if z <= -2
+                      else "leans" if z >= 1 else "sinks" if z <= -1 else "thin"),
+        }
+    return out
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--seasons", type=int, nargs="+", default=[2024, 2025])
     ap.add_argument("--topk", type=int, default=15)
+    ap.add_argument("--card-depth", type=int, default=5,
+                    help="depth of the published pick card; edges are also measured here")
     ap.add_argument("--out", type=str, default="../public/data/nfl")
     ap.add_argument("--prefix", type=str, default="")
     a = ap.parse_args()
@@ -61,6 +120,7 @@ def main() -> int:
                  "Out-of-sample seasons are the honest ones." % TUNED_ON),
         "seasons": {str(s): season_block(s, a.topk) for s in a.seasons},
         "markets": [{"key": k, "label": v["label"], "bar": v["bar"]} for k, v in MODELS.items()],
+        "card_edges": card_edges(a.seasons, a.card_depth),
     }
     p = Path(a.out); p.mkdir(parents=True, exist_ok=True)
     (p / f"{a.prefix}report_card.json").write_text(json.dumps(payload, separators=(",", ":")))
@@ -68,6 +128,11 @@ def main() -> int:
     for s, blk in payload["seasons"].items():
         tag = "tuned" if int(s) == TUNED_ON else "OUT-OF-SAMPLE"
         print(f"  {s} ({tag}):", {k: v["vs_form"] for k, v in blk.items()})
+    if payload["card_edges"]:
+        print(f"\n  card edges (top {a.card_depth}/wk, out of sample):")
+        for k, v in sorted(payload["card_edges"].items(), key=lambda x: -x[1]["edge"]):
+            print(f"    {k:<9} {v['edge']:>+5.1f} ±{v['se']:.1f}  z={v['z']:>+5.2f}  "
+                  f"{v['trust']:<6} n={v['picks']:<4} hit {v['hit']:.1f}% vs form {v['form_hit']:.1f}%")
     return 0
 
 if __name__ == "__main__":

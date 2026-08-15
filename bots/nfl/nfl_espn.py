@@ -101,6 +101,88 @@ def scoring_plays(game_id: str) -> list[dict[str, Any]]:
     return out
 
 
+# ── box scores, so preseason can be graded at all ────────────────────────────
+#
+# The stat lines come back as parallel `labels` and `stats` arrays per athlete,
+# grouped by category. PARSED BY LABEL, NEVER BY INDEX: ESPN reorders and adds
+# columns without notice, and a fixed offset would silently start reading
+# rushing average as rushing yards rather than failing loudly.
+#
+# The keys emitted here are nflverse's, not ESPN's, so the same OUTCOME
+# expressions the backtest grades on apply unchanged to a preseason line.
+_WANT = {
+    "passing":   {"YDS": "passing_yards"},
+    "rushing":   {"CAR": "carries", "YDS": "rushing_yards", "TD": "rushing_tds"},
+    "receiving": {"REC": "receptions", "YDS": "receiving_yards", "TD": "receiving_tds"},
+    "kicking":   {"XP": "_xp", "FG": "_fg"},
+}
+_STATS = ("passing_yards", "carries", "rushing_yards", "rushing_tds",
+          "receptions", "receiving_yards", "receiving_tds", "fg_made", "pat_made")
+
+
+def _num(v: Any) -> float:
+    try:
+        return float(str(v).strip())
+    except Exception:
+        return 0.0
+
+
+def _made(v: Any) -> float:
+    """ESPN publishes kicking as MADE/ATT ("2/3"). Only made counts."""
+    s = str(v or "")
+    return _num(s.split("/")[0]) if "/" in s else _num(s)
+
+
+def box_score(game_id: str) -> list[dict[str, Any]]:
+    """Per-player stat lines for one game, in nflverse column names.
+
+    Returns [] on any failure — the grader treats an unreachable game as
+    ungraded, never as a slate of zeros.
+    """
+    url = ("https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary"
+           f"?event={game_id}")
+    try:
+        r = requests.get(url, timeout=TIMEOUT)
+        if not r.ok:
+            return []
+        data = r.json()
+    except Exception:
+        return []
+
+    rows: dict[str, dict[str, Any]] = {}
+    for team_blk in ((data.get("boxscore") or {}).get("players") or []):
+        team = _abbr(((team_blk.get("team") or {}).get("abbreviation")) or "")
+        for cat in (team_blk.get("statistics") or []):
+            want = _WANT.get(str(cat.get("name") or "").lower())
+            if not want:
+                continue
+            labels = [str(x).upper() for x in (cat.get("labels") or [])]
+            idx = {lab: i for i, lab in enumerate(labels)}
+            for a in (cat.get("athletes") or []):
+                ath = a.get("athlete") or {}
+                eid = str(ath.get("id") or "")
+                if not eid:
+                    continue
+                row = rows.setdefault(eid, {
+                    "espn_id": eid,
+                    "name": ath.get("displayName") or "",
+                    "team": team,
+                    **{k: 0.0 for k in _STATS},
+                })
+                stats = a.get("stats") or []
+                for lab, col in want.items():
+                    i = idx.get(lab)
+                    if i is None or i >= len(stats):
+                        continue
+                    if col == "_xp":
+                        row["pat_made"] = _made(stats[i])
+                    elif col == "_fg":
+                        row["fg_made"] = _made(stats[i])
+                    else:
+                        row[col] = _num(stats[i])
+    return list(rows.values())
+
+
 def slate_for(date: dt.date, year: int | None = None) -> list[dict[str, Any]]:
     """Every game on a given calendar date, preseason or regular."""
     year = year or date.year
