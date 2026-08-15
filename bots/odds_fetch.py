@@ -141,6 +141,67 @@ def probe(key: str) -> int:
     return 0
 
 
+def unwrap(payload) -> list:
+    """The response as a list of events, whatever it arrived wrapped in.
+
+    I could not call this endpoint to see the real shape — the sandbox proxy
+    blocks the host — so rather than bet the integration on one guess, this
+    accepts the documented bare list and the three common wrappers. Whichever
+    it finds is printed, so the first Actions run tells us which is true.
+    """
+    if isinstance(payload, list):
+        return payload
+    if isinstance(payload, dict):
+        for k in ("data", "events", "odds", "results", "games"):
+            v = payload.get(k)
+            if isinstance(v, list):
+                print(f"  response wrapped in '{k}'")
+                return v
+        # A single event, unwrapped.
+        if payload.get("bookmakers") or payload.get("home_team"):
+            return [payload]
+    return []
+
+
+def flat_rows(items: list) -> list[dict]:
+    """Fallback for a FLAT prop shape — one object per player/market/book.
+
+    Some prop endpoints publish this instead of the nested bookmakers tree.
+    Detected by the absence of `bookmakers` and the presence of something that
+    looks like a player and a price.
+    """
+    rows = []
+    for it in items or []:
+        if not isinstance(it, dict) or it.get("bookmakers"):
+            continue
+        who = (it.get("player") or it.get("player_name") or it.get("description")
+               or it.get("participant") or it.get("name"))
+        mkey = str(it.get("market") or it.get("market_key") or it.get("key") or "")
+        if not who or mkey not in MARKETS:
+            continue
+        book = it.get("bookmaker") or it.get("book") or it.get("sportsbook") or "?"
+        point = it.get("point", it.get("line", it.get("handicap")))
+        # over/under may be two fields on one row rather than two rows
+        pairs = []
+        if it.get("over_price") is not None or it.get("under_price") is not None:
+            pairs = [("over", it.get("over_price")), ("under", it.get("under_price"))]
+        else:
+            side = str(it.get("side") or it.get("name") or "").strip().lower()
+            side = {"yes": "over", "no": "under"}.get(side, side)
+            pairs = [(side, it.get("price", it.get("odds")))]
+        for side, price in pairs:
+            if side not in ("over", "under") or price is None:
+                continue
+            rows.append({
+                "name": str(who), "norm": norm_name(who), "market": mkey,
+                "side": side, "book": str(book), "point": point,
+                "price": american(price),
+                "home": it.get("home_team"), "away": it.get("away_team"),
+                "commence": it.get("commence_time"),
+            })
+    return rows
+
+
 def walk_outcomes(events: list) -> list[dict]:
     """Flatten the standard odds shape into one row per (player, market, book).
 
@@ -256,10 +317,21 @@ def main() -> int:
         print(f"odds fetch failed — {type(e).__name__}: {e}")
         return 0
 
-    rows = walk_outcomes(events if isinstance(events, list) else [])
-    print(f"{len(events) if isinstance(events, list) else 0} event(s) · {len(rows)} prop quote(s)")
+    items = unwrap(events)
+    rows = walk_outcomes(items)
+    shape = "nested"
     if not rows:
-        print("no player-prop outcomes in the response — run --probe and check the shape")
+        rows = flat_rows(items)
+        shape = "flat"
+    print(f"{len(items)} item(s) · {len(rows)} prop quote(s) · {shape} shape")
+    if not rows:
+        # Say exactly what came back rather than "no odds" — the top-level keys
+        # are the whole diagnosis and they cost nothing to print.
+        if isinstance(events, dict):
+            print(f"  top-level keys: {sorted(events)[:15]}")
+        elif isinstance(events, list) and events and isinstance(events[0], dict):
+            print(f"  first item keys: {sorted(events[0])[:15]}")
+        print("  no player-prop outcomes recognised — paste this log and I'll fix the parser")
         return 0
 
     board = consensus(rows)
