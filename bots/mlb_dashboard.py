@@ -1409,6 +1409,27 @@ class HitterRecord:
     # Games since the hitter's last HR (capped at 60). Drives Due-state detection
     # on the frontend. Computed from MLB game log.
     games_since_last_hr: int = 60
+    # ── The last game he BATTED in, and his own bounce-back record ──────────
+    # From compute_blank_profile(), off the same game log last5/7/10 already
+    # use — no extra request. The site's "After a blank" lens on Boards reads
+    # these; every field defaults so a row locked before this shipped still
+    # reconstructs, and the site treats blank_profile_status != "ok" as
+    # "unknown", never as "he didn't blank."
+    last_game_date: str = ""
+    last_game_ab: int = 0
+    last_game_hits: int = 0
+    last_game_hr: int = 0
+    last_game_tb: int = 0
+    last_game_rbi: int = 0
+    last_game_runs: int = 0
+    last_game_hrr: int = 0
+    blank_streak: int = 0
+    after_blank_n: int = 0
+    after_blank_hit: int = 0
+    after_blank_hrr1: int = 0
+    after_blank_hrr2: int = 0
+    after_blank_tb2: int = 0
+    blank_profile_status: str = "unknown"
     # Per-stat park factors. Set in build_hitter_records from PARK_FACTORS_V2.
     park_hr_factor: float = 1.00
     park_hits_factor: float = 1.00
@@ -2233,6 +2254,113 @@ def games_since_last_hr(gamelog_blob: Dict[str, Any], max_lookback: int = 60) ->
             return count
         count += 1
     return count  # no HR found in window
+
+
+# ── THE BLANK PROFILE (2026-08-15) ──────────────────────────────────────────
+#
+# Donovan asked for a board of "all the players who blanked in their last
+# game", with the book's price beside each man's own hit rate in that spot.
+#
+# The site cannot compute this. It would have to know what every hitter did in
+# his LAST GAME — not his last five, which is what the slate publishes — and
+# the only league-wide source for that is a per-player game log. The bot
+# already pulls exactly that log for every hitter on the slate (see the
+# `client.person_game_log(pid)` call that feeds last5/last7/last10), so the
+# last game is one read off data already in hand and the follow-up rate is one
+# walk over the same list. Doing it here costs zero extra requests; doing it
+# browser-side would cost ~266.
+#
+# DEFINITIONS, because a board like this is only worth having if its claim is
+# exact:
+#
+#   A GAME here means a game he BATTED in — atBats >= 1. A pinch-running or
+#   walk-only appearance is not an 0-fer and must not start or extend a blank
+#   streak; it is skipped entirely rather than counted either way. (This is
+#   the same three-outcome discipline as My Picks: tracked-and-failed, and
+#   never-batted, are different facts.)
+#
+#   A BLANK is such a game with zero hits.
+#
+#   AFTER A BLANK counts every game in the log whose immediately preceding
+#   batted game was a blank, then asks what he did in it. That is his own
+#   measured bounce-back rate, not the league's and not a prior.
+#
+# Everything published here is a count or a raw line. No rate is published as
+# a rate: `after_blank_n` rides with every numerator so the site can dim a
+# 3-of-4 and refuse to print a percentage on nothing. A rate without its
+# sample is the one number this project keeps banning.
+def compute_blank_profile(gamelog_blob: Dict[str, Any], max_lookback: int = 162) -> Dict[str, Any]:
+    stats_list = gamelog_blob.get("stats") or []
+    first = stats_list[0] if stats_list else {}
+    splits = first.get("splits") or []
+
+    out: Dict[str, Any] = {
+        "last_game_date": "", "last_game_ab": 0, "last_game_hits": 0, "last_game_hr": 0,
+        "last_game_tb": 0, "last_game_rbi": 0, "last_game_runs": 0, "last_game_hrr": 0,
+        "blank_streak": 0, "after_blank_n": 0, "after_blank_hit": 0,
+        "after_blank_hrr1": 0, "after_blank_hrr2": 0, "after_blank_tb2": 0,
+        "blank_profile_status": "empty",
+    }
+    if not splits:
+        return out
+
+    # Batted games only, oldest→newest, capped at the lookback.
+    games = []
+    for s in splits[-max_lookback:]:
+        st = s.get("stat", {}) or {}
+        ab = safe_int(st.get("atBats"), 0)
+        if ab < 1:
+            continue
+        hits = safe_int(st.get("hits"), 0)
+        runs = safe_int(st.get("runs"), 0)
+        rbi = safe_int(st.get("rbi"), 0)
+        games.append({
+            "date": str(s.get("date") or "")[:10],
+            "ab": ab,
+            "hits": hits,
+            "hr": safe_int(st.get("homeRuns"), 0),
+            # totalBases is published on the split; fall back to hits (a
+            # single apiece) rather than inventing extra-base credit.
+            "tb": safe_int(st.get("totalBases"), hits),
+            "rbi": rbi,
+            "runs": runs,
+            "hrr": hits + runs + rbi,
+        })
+    if not games:
+        out["blank_profile_status"] = "no_batted_games"
+        return out
+
+    last = games[-1]
+    out.update({
+        "last_game_date": last["date"], "last_game_ab": last["ab"], "last_game_hits": last["hits"],
+        "last_game_hr": last["hr"], "last_game_tb": last["tb"], "last_game_rbi": last["rbi"],
+        "last_game_runs": last["runs"], "last_game_hrr": last["hrr"],
+    })
+
+    streak = 0
+    for g in reversed(games):
+        if g["hits"] == 0:
+            streak += 1
+        else:
+            break
+    out["blank_streak"] = streak
+
+    for i in range(1, len(games)):
+        if games[i - 1]["hits"] != 0:
+            continue
+        g = games[i]
+        out["after_blank_n"] += 1
+        if g["hits"] >= 1:
+            out["after_blank_hit"] += 1
+        if g["hrr"] >= 1:
+            out["after_blank_hrr1"] += 1
+        if g["hrr"] >= 2:
+            out["after_blank_hrr2"] += 1
+        if g["tb"] >= 2:
+            out["after_blank_tb2"] += 1
+
+    out["blank_profile_status"] = "ok"
+    return out
 
 
 def extract_lineup(team_box: Dict[str, Any]) -> List[Tuple[int, int]]:
@@ -8280,6 +8408,7 @@ def build_hitter_records(client: MLBClient, db: CacheDB, game: Dict[str, Any], s
             l7 = compute_window_from_gamelog(glog, 7)
             l10 = compute_window_from_gamelog(glog, 10)
             gs_since_hr = games_since_last_hr(glog, max_lookback=60)
+            blank_prof = compute_blank_profile(glog)
             split = get_player_split_stats(client, db, pid)
             sc = build_batter_statcast_profile(db, pid, statcast_data_end_date(slate_date))
             _xhr_register_batter(pid, sc)
@@ -8495,6 +8624,21 @@ def build_hitter_records(client: MLBClient, db: CacheDB, game: Dict[str, Any], s
                 pitch_type_match_score=safe_float(pmix_fit.get("pitch_type_match_score"), 0.0),
                 pitcher_pitch_arsenal_detail=pitch_mix_data.get("pitch_type_summary", []) or [],
                 games_since_last_hr=gs_since_hr,
+                last_game_date=blank_prof["last_game_date"],
+                last_game_ab=blank_prof["last_game_ab"],
+                last_game_hits=blank_prof["last_game_hits"],
+                last_game_hr=blank_prof["last_game_hr"],
+                last_game_tb=blank_prof["last_game_tb"],
+                last_game_rbi=blank_prof["last_game_rbi"],
+                last_game_runs=blank_prof["last_game_runs"],
+                last_game_hrr=blank_prof["last_game_hrr"],
+                blank_streak=blank_prof["blank_streak"],
+                after_blank_n=blank_prof["after_blank_n"],
+                after_blank_hit=blank_prof["after_blank_hit"],
+                after_blank_hrr1=blank_prof["after_blank_hrr1"],
+                after_blank_hrr2=blank_prof["after_blank_hrr2"],
+                after_blank_tb2=blank_prof["after_blank_tb2"],
+                blank_profile_status=blank_prof["blank_profile_status"],
                 bbe_profile=sc.get("bbe_profile", {}),
                 spray_chart=sc.get("spray_chart", []),
                 contact_log=sc.get("contact_log", sc.get("spray_chart", [])),
