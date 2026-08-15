@@ -170,6 +170,9 @@ def norm_name(s: str) -> str:
 # every write, so the next scheduled run publishes its own diagnosis to the
 # data branch — readable with nothing but a browser, no Actions tab needed.
 FORENSICS: list = []
+# --dump target. When set, every provider payload is kept so one file can
+# settle any question about the response shape without another round trip.
+RAW_DUMP: list = []
 
 # --insecure (PROBE-ONLY DIAGNOSTIC). Donovan's own Mac fails TLS verification
 # against every odds host — "self-signed certificate in certificate chain" —
@@ -663,6 +666,118 @@ def oaio_books(key: str, want: str) -> str:
     return ",".join(names[:30])
 
 
+# ── THE HARVESTER ────────────────────────────────────────────────────────────
+#
+# 2026-08-15, after three rounds of "the shape isn't what we assumed". I cannot
+# call this API from here — the sandbox proxy blocks the host — so every parser
+# written against its documentation has been a guess that costs a day to test.
+# This stops guessing: it walks the ENTIRE response tree and picks up anything
+# that is unmistakably a priced player prop, whatever it's nested inside and
+# whatever the fields are called.
+#
+# A row qualifies only when all three are present, which is what keeps it from
+# inventing quotes out of team totals or scores:
+#   • a prop identity — from the row itself, or the nearest enclosing market
+#     name (this is what handles a generic "Player Props" bucket whose real
+#     market sits on an inner group)
+#   • a human name
+#   • at least one price that converts
+#
+# It runs ONLY when the structured parser found nothing, so the documented
+# path stays the fast path and this is the safety net under it.
+_LINE_KEYS = ("hdp", "line", "handicap", "point", "total", "threshold", "value_line")
+_PRICE_KEYS = ("price", "odds", "decimal", "american", "coefficient")
+
+
+def _numish(v) -> bool:
+    try:
+        float(v)
+        return True
+    except (TypeError, ValueError):
+        return False
+
+
+def _harvest_row(node: dict, ctx: dict, rows: list) -> bool:
+    who, ours = _split_prop(node)
+    if not ours and ctx.get("market"):
+        # the prop identity lives on the enclosing market, the player on the row
+        ours = _prop_key(ctx["market"])
+        who = (node.get("label") or node.get("player") or node.get("participant")
+               or node.get("playerName") or node.get("name") or "")
+        if ours and _prop_key(str(who)):
+            # the row names a market, not a person — that's a group header
+            return False
+    if not ours or not str(who).strip():
+        return False
+
+    line = next((node[k] for k in _LINE_KEYS if _numish(node.get(k))), None)
+    out = []
+    for side in ("over", "under"):
+        p = _dec_to_american(node.get(side))
+        if p is not None:
+            out.append((side, p))
+    if not out:
+        sd = str(node.get("side") or node.get("type") or node.get("outcomeName")
+                 or node.get("selection") or node.get("name") or "").lower()
+        sd = ("over" if "over" in sd or sd == "yes" else
+              "under" if "under" in sd or sd == "no" else "")
+        p = next((_dec_to_american(node[k]) for k in _PRICE_KEYS
+                  if k in node and _dec_to_american(node[k]) is not None), None)
+        if sd and p is not None:
+            out.append((sd, p))
+    if not out:
+        return False
+
+    for side, price in out:
+        rows.append({
+            "name": str(who).strip(), "norm": norm_name(who), "market": ours,
+            "side": side, "book": str(ctx.get("book") or "?"),
+            "point": line, "price": price,
+            "home": ctx.get("home"), "away": ctx.get("away"),
+            "commence": ctx.get("date"),
+        })
+    return True
+
+
+def _harvest(node, ctx: dict, rows: list, depth: int = 0) -> None:
+    if depth > 9:
+        return
+    if isinstance(node, list):
+        for x in node:
+            _harvest(x, ctx, rows, depth + 1)
+        return
+    if not isinstance(node, dict):
+        return
+
+    c = dict(ctx)
+    for k, dest in (("home", "home"), ("away", "away"), ("homeTeam", "home"),
+                    ("awayTeam", "away"), ("date", "date"), ("startTime", "date"),
+                    ("commence_time", "date")):
+        v = node.get(k)
+        if isinstance(v, str) and v:
+            c[dest] = v
+    for k in ("name", "marketName", "market", "title", "group"):
+        v = node.get(k)
+        if isinstance(v, str) and v and (_prop_key(v) or "prop" in v.lower()):
+            c["market"] = v
+            break
+    for k in ("bookmaker", "bookmakerName", "book", "provider"):
+        v = node.get(k)
+        if isinstance(v, str) and v:
+            c["book"] = v
+            break
+
+    if _harvest_row(node, c, rows):
+        return                      # a priced row has no priced children
+
+    for k, v in node.items():
+        if k in ("bookmakers", "books") and isinstance(v, dict):
+            for bk, sub in v.items():
+                _harvest(sub, {**c, "book": str(bk)}, rows, depth + 1)
+        elif isinstance(v, (dict, list)):
+            _harvest(v, c, rows, depth + 1)
+
+
 def fetch_oddsapiio(key: str, books: str, _wide: bool = False) -> list[dict]:
     # Their documented listing is GET /events?sport={slug}&to=&limit=&skip= —
     # the old call sent status/from params the docs don't know. The slug for
@@ -759,6 +874,10 @@ def fetch_oddsapiio(key: str, books: str, _wide: bool = False) -> list[dict]:
         if len(ids) > 30:
             print(f"  odds-api.io: capped at 30 of {len(ids)} events (per-event mode)")
 
+    if RAW_DUMP is not None:
+        RAW_DUMP.append({"provider": "oddsapiio", "mode": mode,
+                         "payloads": payloads[:2]})
+
     def _events_of(payload):
         """/odds/multi returns a list; /odds returns ONE event object.
 
@@ -851,6 +970,26 @@ def fetch_oddsapiio(key: str, books: str, _wide: bool = False) -> list[dict]:
     # once: oaio_books() resolves real book names (and falls back to the 30
     # this key carries when none match), and the ladder above finds the call
     # shape. Nothing is left for a blind second pass to discover.
+    # ── the safety net ─────────────────────────────────────────────────────
+    if not rows:
+        for payload in payloads:
+            _harvest(payload, {}, rows)
+        # A tree walk can see the same quote twice (a row nested under two
+        # groups); collapse on the identity that makes a quote unique.
+        seen_keys, uniq = set(), []
+        for r in rows:
+            k = (r["norm"], r["market"], r["side"], r["book"], str(r["point"]))
+            if k not in seen_keys:
+                seen_keys.add(k)
+                uniq.append(r)
+        rows = uniq
+        if rows:
+            print(f"  odds-api.io: structured parse found nothing, but the "
+                  f"harvester recovered {len(rows)} quote(s) — the payload is "
+                  f"shaped differently than documented")
+            _rec("oddsapiio", "·harvest", note=f"recovered {len(rows)} quotes",
+                 sample=json.dumps(rows[0])[:220])
+
     if not rows:
         got = sorted(market_names)
         print(f"  odds-api.io: {len(got)} market name(s) served, none matched our "
@@ -1146,6 +1285,30 @@ def write_empty_board(out: Path, reason: str, **extra) -> None:
     print(f"wrote an empty odds_latest.json — {reason}")
 
 
+def _write_dump(path: str) -> None:
+    """One file that answers any remaining question about the response shape.
+
+    Written only when --dump is passed. Keys are stripped on the way out —
+    a payload dump is a thing you email, and it must never carry a secret.
+    """
+    if not path or not RAW_DUMP:
+        return
+    try:
+        p = Path(path)
+        if p.parent and not p.parent.exists():
+            p.parent.mkdir(parents=True, exist_ok=True)
+        txt = json.dumps(RAW_DUMP, indent=1)[:4_000_000]
+        for env_key in ("ODDSAPI_IO_KEY", "ODDS_API_KEY", "ODDSPAPI_KEY"):
+            v = os.environ.get(env_key, "").strip()
+            if v:
+                txt = txt.replace(v, "•KEY•")
+        p.write_text(txt)
+        print(f"raw payload written to {path} ({len(txt) // 1024} KB) — "
+              f"keys stripped, safe to send")
+    except Exception as e:
+        print(f"could not write {path}: {type(e).__name__}: {e}")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--probe", action="store_true",
@@ -1159,6 +1322,9 @@ def main() -> int:
     ap.add_argument("--insecure", action="store_true",
                     help="PROBE DIAGNOSTIC ONLY: skip TLS verification, for machines "
                          "whose network intercepts certificates")
+    ap.add_argument("--dump", type=str, default="",
+                    help="write the raw provider payloads to this file — one file "
+                         "that answers any remaining question about the shape")
     a = ap.parse_args()
     out = Path(a.out)
 
@@ -1306,8 +1472,10 @@ def main() -> int:
             # evidence lives here too and the site (and the skip status above)
             # can always find it.
             forensics=FORENSICS)
+        _write_dump(a.dump)
         return 0
     print(f"using {source} · {len(rows)} quote(s)")
+    _write_dump(a.dump)
 
     board = consensus(rows)
 
