@@ -180,5 +180,26 @@ jobs:
           python bots/backtest_report.py --dir public/data --out-dir public/data/current
         continue-on-error: true
 
+      # TRUE PRICE (2026-08-15, Donovan: "find the true price of a player to do
+      # certian things"). Joins the pre-game odds snapshots the today workflow
+      # dropped on the branch to the graded file for the SAME date, and settles
+      # every priced prop against the box score. Rebuilt from scratch each run,
+      # so it is a pure function of the archives -- a grading fix in November
+      # recomputes every night back to the first one.
+      #
+      # graded-dir order matters: later directories win, and public/data holds
+      # THIS run's fresh grading (the restore above used cp -n, so it could not
+      # have clobbered it).
+      - name: Build the true-price history
+        run: |
+          mkdir -p public/data/current
+          python bots/odds_history.py \
+            --odds-dir /tmp/histout/public/data/current \
+            --graded-dir /tmp/histout/public/data/current \
+            --graded-dir bots/outputs \
+            --graded-dir public/data \
+            --out public/data/current/odds_history.json
+        continue-on-error: true
+
       - name: Publish to data branch
         run: bash .github/scripts/publish_data.sh "Graded results"

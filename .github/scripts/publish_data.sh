@@ -68,6 +68,7 @@ PUBLISH_FILES=(
   # never hold a key. Absent when no key is configured; every surface that
   # reads it degrades to the score alone.
   odds_latest.json
+  odds_history.json
   # NFL (2026-08-14). The football bot writes into public/data/current/ with an
   # nfl_ prefix specifically so it can ride this script rather than fork it --
   # the orphan-branch force-push and the concurrent-publisher merge below are
@@ -94,6 +95,16 @@ GRADED_GLOB="graded_results_*.txt"
 GRADED_JSON_GLOB="graded_results_*.json"
 GRADED_KEEP=150
 
+# Pre-game odds snapshots, one per slate date, written by bots/odds_fetch.py.
+# These ACCUMULATE like the graded files and for the same reason: a closing
+# price is not re-fetchable, so the night it isn't kept is a night that can
+# never be in the history. bots/odds_history.py joins these to the graded
+# files above. odds_20* deliberately does NOT match odds_latest.json or
+# odds_history.json -- those two are regenerated every run and live in
+# PUBLISH_FILES. ~50 KB a night, so 120 days is about 6 MB.
+ODDS_GLOB="odds_20*.json"
+ODDS_KEEP=120
+
 git config user.email "bot@mlb-hr-dashboard"
 git config user.name "mlb-hr-bot"
 
@@ -116,7 +127,8 @@ stage_local() {
   done
   # This run's graded file(s). Written to public/data/ by live_results_tracker.
   for g in "$SRC"/data/$GRADED_GLOB "$SRC"/data/current/$GRADED_GLOB \
-           "$SRC"/data/$GRADED_JSON_GLOB "$SRC"/data/current/$GRADED_JSON_GLOB; do
+           "$SRC"/data/$GRADED_JSON_GLOB "$SRC"/data/current/$GRADED_JSON_GLOB \
+           "$SRC"/data/$ODDS_GLOB "$SRC"/data/current/$ODDS_GLOB; do
     [ -f "$g" ] && cp "$g" "$STAGE/public/data/current/"
   done
 
@@ -155,12 +167,13 @@ carry_forward() {
   # broke Today #14 -- on the first run there were no graded files yet, so the
   # glob matched nothing and the script died trying to count zero files.
   # find exits 0 on no matches.
-  for glob in "$GRADED_GLOB" "$GRADED_JSON_GLOB"; do
+  for spec in "$GRADED_GLOB:$GRADED_KEEP" "$GRADED_JSON_GLOB:$GRADED_KEEP" "$ODDS_GLOB:$ODDS_KEEP"; do
+    glob="${spec%:*}"; keep="${spec##*:}"
     n=$(find "$STAGE/public/data/current" -maxdepth 1 -type f -name "$glob" | wc -l)
-    if [ "$n" -gt "$GRADED_KEEP" ]; then
+    if [ "$n" -gt "$keep" ]; then
       find "$STAGE/public/data/current" -maxdepth 1 -type f -name "$glob" \
-        | sort | head -n "$((n - GRADED_KEEP))" | xargs -r rm -f
-      echo "Trimmed $((n - GRADED_KEEP)) old $glob file(s), keeping $GRADED_KEEP."
+        | sort | head -n "$((n - keep))" | xargs -r rm -f
+      echo "Trimmed $((n - keep)) old $glob file(s), keeping $keep."
     fi
   done
 

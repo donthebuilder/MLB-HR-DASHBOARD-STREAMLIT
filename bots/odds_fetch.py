@@ -118,7 +118,10 @@ PROP_HINTS = [
                                "h+r+rbi", "hits runs and rbis")),
     ("batter_total_bases", ("total base",)),
     ("batter_home_runs", ("home run",)),
-    # Last, and only after the compounds have had their turn.
+    ("batter_runs_scored", ("runs scored", "run scored")),
+    ("batter_rbis", ("rbi", "runs batted in")),
+    # Last, and only after every compound has had its turn — "hit" is a
+    # substring of half the names above it.
     ("batter_hits", ("hit",)),
 ]
 
@@ -130,7 +133,17 @@ CATEGORY_MARKET = {
     "HRR": "batter_hits_runs_rbis",
     "CONTACT": "batter_total_bases",
 }
-MARKETS = sorted(set(CATEGORY_MARKET.values()))
+
+# The PROPS GRID has rows the pick categories don't: runs and RBIs. Donovan,
+# 2026-08-15: "on thbe props grid it can have the odds for each prop." Both
+# exist on the API, so fetch them too — the grid is where a price and a hit
+# rate finally sit on the same row, which is the whole argument for carrying
+# odds at all.
+#
+# Its row for 1+ BB and 1+ K have no batter market published; those rows simply
+# carry no price, which is honest and visible.
+GRID_MARKETS = ["batter_runs_scored", "batter_rbis"]
+MARKETS = sorted(set(CATEGORY_MARKET.values()) | set(GRID_MARKETS))
 
 SUFFIXES = {"jr", "sr", "ii", "iii", "iv", "v"}
 
@@ -746,6 +759,57 @@ def main() -> int:
     dest = out / "odds_latest.json"
     dest.write_text(json.dumps(payload, separators=(",", ":")))
     print(f"wrote {dest} ({dest.stat().st_size / 1024:.0f} KB)")
+
+    # ── THE DATED SNAPSHOT — the only irreplaceable thing this script does ───
+    #
+    # odds_latest.json is overwritten thirteen times a day and again tomorrow.
+    # Tonight's closing price, once it's gone, is gone: no free API sells you
+    # back the number a hitter was at last Tuesday. So every run also drops a
+    # dated, slim copy, and bots/odds_history.py joins those to the graded
+    # files to answer the question a single night never can — is the book
+    # right about THIS hitter.
+    #
+    # Slim on purpose: line, over price, break-even. No book names, no game
+    # strings, no by-name board. ~50 KB a night instead of ~450 KB, because
+    # this file is kept for months and the rest of it is reconstructible or
+    # irrelevant after first pitch.
+    #
+    # LAST WRITE WINS, and that is the behaviour we want: the workflow fires
+    # through the evening, so the final snapshot before the branch publish is
+    # the closest thing to a closing line this pipeline can get.
+    slate_date = None
+    try:
+        if slate_path.exists():
+            s = json.loads(slate_path.read_text())
+            if isinstance(s, dict):
+                slate_date = s.get("slate_date") or s.get("date")
+    except Exception:
+        pass
+    slate_date = str(slate_date or now.date().isoformat())[:10]
+
+    slim: dict[str, dict] = {}
+    for pid, mkts in matched.items():
+        row = {m: [q.get("line"), q.get("over"), q.get("implied")]
+               for m, q in mkts.items()
+               if isinstance(q, dict) and q.get("over") is not None and q.get("line") is not None}
+        if row:
+            slim[pid] = row
+    snap = out / f"odds_{slate_date}.json"
+    snap.write_text(json.dumps({
+        "date": slate_date,
+        "fetched_at": now.isoformat(),
+        "source": source,
+        "rows": slim,
+        "note": ("Pre-game snapshot kept for bots/odds_history.py. Each row is "
+                 "{market: [line, over, implied]}. Keyed by MLB player_id only — "
+                 "an unjoined name has no outcome to settle against, so it would "
+                 "never be usable here."),
+    }, separators=(",", ":")))
+    print(f"wrote {snap} — {len(slim)} players priced on {slate_date} "
+          f"({snap.stat().st_size / 1024:.0f} KB)")
+    if not slim:
+        print("  WARNING: nothing joined to the slate, so the history gets no "
+              "row for tonight. Check the slate join above.")
 
     try:
         u = api("/me/usage", key)
