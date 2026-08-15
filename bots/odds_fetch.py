@@ -83,13 +83,21 @@ PAPI = "https://api.oddspapi.io/v4"
 # calls = 3 requests a run. At 13 runs a day that's ~39/day against a free tier
 # of 100/hour and 500/day — comfortable, which is why this can lead.
 #
-# `bookmakers` is REQUIRED, and the free tier only carries two. Rather than
-# guess which two, send a wide list and keep whatever comes back: asking for a
-# book you don't have costs nothing, missing the one you do have costs the
-# whole file.
+# `bookmakers` is REQUIRED. Donovan bets Fanatics and DraftKings (2026-08-15),
+# so those are what gets asked for — and that is a correctness decision, not
+# just a preference. A "consensus" median across twelve books is noise if you
+# can only place a bet at two of them: the number that decides anything is the
+# price at YOUR book. Everything downstream — the median, best_over, the
+# break-even the site renders — is therefore computed over his books only.
+#
+# The wide list is kept as a FALLBACK and only fires if the first request comes
+# back with nothing, which is what a wrong bookmaker key looks like. One extra
+# request, only on failure, and the log names every book actually seen so a
+# mismatch is obvious on the first run instead of looking like "no odds today".
 OAIO = "https://api.odds-api.io/v3"
-OAIO_BOOKS = ("draftkings,fanduel,bet365,betmgm,caesars,pointsbet,betrivers,"
-              "unibet,williamhill,pinnacle,1xbet,bovada")
+OAIO_BOOKS = "fanatics,draftkings"
+OAIO_BOOKS_FALLBACK = ("fanatics,draftkings,fanduel,bet365,betmgm,caesars,"
+                       "pointsbet,betrivers,unibet,williamhill,pinnacle,bovada")
 
 # Their markets are selected by EXACT NAME (case-insensitive) via `markets`.
 # Player props arrive under the generic "Player Props" name with the specific
@@ -347,6 +355,11 @@ def consensus(rows: list[dict]) -> dict:
                 "best_over": best["price"] if best else None,
                 "best_book": best["book"] if best else None,
                 "books": len({r["book"] for r in at_line}),
+                # With two books a disagreement on WHERE the line sits is a
+                # coin flip resolved silently by the tie-break above. Recording
+                # that it happened is nearly free and stops a 0.5-vs-1.5 split
+                # from reading as settled fact.
+                "lines_seen": len(counts),
                 "name": rs[0]["name"],
                 "game": f'{rs[0].get("away") or "?"} @ {rs[0].get("home") or "?"}',
             }
@@ -383,7 +396,7 @@ def _dec_to_american(v) -> int | None:
     return int(round((d - 1) * 100)) if d >= 2.0 else int(round(-100 / (d - 1)))
 
 
-def fetch_oddsapiio(key: str, books: str) -> list[dict]:
+def fetch_oddsapiio(key: str, books: str, _wide: bool = False) -> list[dict]:
     now = dt.datetime.now(dt.timezone.utc)
     try:
         evs = _listish(oaio("/events", key, sport="baseball", status="pending",
@@ -451,7 +464,18 @@ def fetch_oddsapiio(key: str, books: str) -> list[dict]:
                                 "point": line, "price": price,
                                 "home": home, "away": away, "commence": ev.get("date"),
                             })
-    print(f"  odds-api.io: {len(rows)} prop quote(s)")
+    seen = sorted({r["book"] for r in rows})
+    print(f"  odds-api.io: {len(rows)} prop quote(s) from {len(seen)} book(s)"
+          + (f": {', '.join(seen)}" if seen else ""))
+
+    # Nothing back from the named books is what a WRONG BOOKMAKER KEY looks
+    # like, and it is indistinguishable from "no odds today" unless we check.
+    # One retry across the wide list; if that returns quotes, the log names the
+    # books that do work and the variable can be corrected.
+    if not rows and not _wide and books != OAIO_BOOKS_FALLBACK:
+        print("  odds-api.io: nothing from the named books — retrying wide "
+              "to find out what this key actually carries")
+        return fetch_oddsapiio(key, OAIO_BOOKS_FALLBACK, _wide=True)
     return rows
 
 
