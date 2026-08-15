@@ -525,16 +525,68 @@ def _dec_to_american(v) -> int | None:
     return int(round((d - 1) * 100)) if d >= 2.0 else int(round(-100 / (d - 1)))
 
 
+def oaio_books(key: str, want: str) -> str:
+    """The user's books, spelled the way THIS API spells them.
+
+    2026-08-15, from the live run: /events worked and every /odds/multi call
+    came back 400. Their OpenAPI spec settles why — `bookmakers` is a
+    "Comma-separated list of bookmaker NAMES", and every example is a proper
+    display name ("Bet365", "Unibet", "DraftKings"). We were sending
+    "fanatics,draftkings" — lowercase slugs, which is not a name this API
+    knows, and an unknown name is a malformed request, not an empty result.
+    That single casing mismatch is the whole "0 prop quotes" story.
+
+    So ask the API what it calls its books (one cheap request), match the
+    wanted ones case-insensitively and loosely (draftkings ↔ "DraftKings",
+    "Draft Kings"), and send back real names. If discovery fails or matches
+    nothing, fall back to the first 30 books it knows rather than guessing —
+    a wide list still produces a consensus, and the log names what it used.
+    """
+    wanted = [w.strip().lower().replace(" ", "") for w in want.split(",") if w.strip()]
+    try:
+        payload = oaio("/bookmakers", key)
+    except Exception as e:
+        print(f"  odds-api.io: /bookmakers failed ({type(e).__name__}: {e}) — "
+              f"sending the configured names as-is")
+        return want
+
+    names = []
+    for b in _listish(payload, "bookmakers", "data"):
+        nm = b if isinstance(b, str) else (
+            b.get("name") or b.get("bookmaker") or b.get("title") if isinstance(b, dict) else None)
+        if nm:
+            names.append(str(nm))
+    if not names:
+        print("  odds-api.io: /bookmakers returned no names — sending configured as-is")
+        return want
+
+    picked = [nm for nm in names
+              if nm.lower().replace(" ", "") in wanted]
+    if picked:
+        print(f"  odds-api.io: matched {len(picked)}/{len(wanted)} of your books "
+              f"by name: {', '.join(picked)}")
+        return ",".join(picked[:30])
+
+    print(f"  odds-api.io: none of '{want}' exist by that name among "
+          f"{len(names)} books — using the first 30 it does carry: "
+          f"{', '.join(names[:6])}…")
+    return ",".join(names[:30])
+
+
 def fetch_oddsapiio(key: str, books: str, _wide: bool = False) -> list[dict]:
     # Their documented listing is GET /events?sport={slug}&to=&limit=&skip= —
     # the old call sent status/from params the docs don't know. The slug for
     # baseball isn't published anywhere reachable, so try the two candidates
     # in order and keep whichever returns events; the forensics record both.
+    # `status` and `league` ARE documented params (their OpenAPI spec) — the
+    # earlier removal was over-cautious. Pending+live is exactly the window a
+    # pre-game prop board wants, and it stops yesterday's finals eating the
+    # 200-event page before tonight's card is reached.
     now = dt.datetime.now(dt.timezone.utc)
     evs = []
     for slug in ("mlb", "baseball"):
         try:
-            evs = _listish(oaio("/events", key, sport=slug,
+            evs = _listish(oaio("/events", key, sport=slug, status="pending,live",
                                 to=(now + dt.timedelta(days=2)).isoformat(),
                                 limit=200), "events")
         except Exception as e:
@@ -560,6 +612,10 @@ def fetch_oddsapiio(key: str, books: str, _wide: bool = False) -> list[dict]:
     if not ids:
         return []
 
+    # The books, spelled their way — see oaio_books(). This is the fix for the
+    # 400s: one discovery request buys correctness for every odds call after it.
+    books = oaio_books(key, books)
+
     rows: list[dict] = []
     # TEN PER CALL is their documented cap. Chunking is what keeps a 15-game
     # slate at three requests instead of fifteen.
@@ -571,6 +627,23 @@ def fetch_oddsapiio(key: str, books: str, _wide: bool = False) -> list[dict]:
         except Exception as e:
             print(f"  odds-api.io: odds chunk {i // 10 + 1} failed "
                   f"({type(e).__name__}: {e})")
+            # ISOLATE IT ON THE FIRST FAILURE, ONCE. A 400 here has exactly two
+            # plausible causes — the ids or the books — and one single-event
+            # call against the same books tells them apart: if /odds succeeds,
+            # the multi-call's id list is the problem; if it 400s too, the book
+            # names are. Both answers land in the forensics, so the next run
+            # after this one is a fix rather than another guess.
+            if i == 0:
+                try:
+                    single = oaio("/odds", key, eventId=chunk[0], bookmakers=books)
+                    _rec("oddsapiio", "·isolate",
+                         note="single /odds OK — the multi eventIds format is the problem",
+                         keys=sorted(single)[:8] if isinstance(single, dict) else "list")
+                    print("  odds-api.io: single /odds succeeded — eventIds format is at fault")
+                except Exception as e2:
+                    _rec("oddsapiio", "·isolate",
+                         note=f"single /odds also failed ({type(e2).__name__}) — "
+                              f"bookmaker names are the likely fault", books=books[:120])
             continue
         # DOCUMENTED SHAPE (their own player-props guide, read 2026-08-15):
         #   event.bookmakers = { "DraftKings": [ {name, odds:[{label, hdp,
@@ -767,6 +840,21 @@ def fetch_theoddsapi(key: str, regions: str) -> list[dict]:
                       regions=regions, oddsFormat="american")
         except urllib.error.HTTPError as e:
             print(f"  theoddsapi {path}: HTTP {e.code}: {e.read()[:300].decode(errors='replace')}")
+            if path == "/props/" and e.code == 403:
+                # THE ANSWER, NOT AN ERROR (live run, 2026-08-15). Their docs:
+                # 403 = "tier insufficient (e.g. Pro key on Business endpoint)",
+                # and /props/ is the Business endpoint. This key cannot buy
+                # player props at any volume, so trying /odds/ with batter_*
+                # markets next is a guaranteed 400 — /odds/ only carries
+                # h2h/spreads/totals. Stop here and say so plainly; a wrong
+                # plan is a decision for Donovan, not a bug to keep retrying.
+                print("  theoddsapi: player props need their Business tier — "
+                      "this key can't serve them. Skipping /odds/ (game lines only).")
+                _rec("theoddsapi", "·verdict",
+                     note="403 on /props/ — key's plan does not include player props; "
+                          "/odds/ carries no batter markets, so this provider is "
+                          "unusable for props until the plan changes")
+                return []
             continue
         except Exception as e:
             print(f"  theoddsapi {path}: {type(e).__name__}: {e}")
@@ -1009,10 +1097,18 @@ def main() -> int:
     if not rows:
         print("no odds from any provider — publishing nothing, "
               "the site falls back to scores alone")
+        # THE HEADLINE SHOULD BE THE DIAGNOSIS, not the generic sentence. When
+        # a provider reached a verdict (a tier 403, a books-vs-ids isolation),
+        # that IS the reason — say it first so the status file answers "what is
+        # going on" without anyone expanding the forensics.
+        verdicts = [f"{r['provider']}: {r['note']}" for r in FORENSICS
+                    if r.get("path") in ("·verdict", "·isolate") and r.get("note")]
         write_status(out, state="empty",
-                     reason="Every configured provider was tried and none returned a "
-                            "quote. Usually a spent quota, a wrong bookmaker key, or "
-                            "no props posted for this slate yet.",
+                     reason=(" · ".join(dict.fromkeys(verdicts))
+                             if verdicts else
+                             "Every configured provider was tried and none returned a "
+                             "quote. Usually a spent quota, a wrong bookmaker key, or "
+                             "no props posted for this slate yet."),
                      providers_tried=[n for n in order if n in available],
                      keys_present=[n for n in order
                                    if n in available and available[n][0]],
@@ -1201,11 +1297,15 @@ def main() -> int:
                  # while the primary 401s is a finding worth publishing
                  forensics=FORENSICS)
 
-    try:
-        u = api("/me/usage", key)
-        print(f"quota: {json.dumps(u)[:200]}")
-    except Exception:
-        pass
+    # Quota check belongs to theoddsapi only — and only when it's the provider
+    # that actually served this run. It was firing on every run regardless,
+    # spending a request against a key that may not even be configured.
+    if key and source == "theoddsapi":
+        try:
+            u = api("/me/usage", key)
+            print(f"quota: {json.dumps(u)[:200]}")
+        except Exception:
+            pass
     return 0
 
 
