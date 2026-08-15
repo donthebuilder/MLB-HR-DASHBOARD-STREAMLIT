@@ -780,6 +780,16 @@ def main() -> int:
     if isinstance(prev, dict):
         stamp = prev.get("fetched_at")
         prev_count = int(prev.get("fetches_this_slate") or 0)
+        # AN EMPTY BOARD DOESN'T DESERVE THE FULL LOCK (2026-08-15, Donovan:
+        # "i still see no odds on the site" while the status read "skipped —
+        # snapshot from 10 minutes ago is still fresh"). The 90-minute gap
+        # exists to stop re-buying prices we already hold; when the last fetch
+        # returned NOTHING there is nothing being protected, and books post
+        # their MLB props mid-morning — a board that came up empty at 7am
+        # must try again soon, not at 8:30. Empty snapshots retry on a short
+        # leash and don't count against the per-slate cap.
+        if prev.get("empty"):
+            min_gap = min(min_gap, 20)
         try:
             last = dt.datetime.fromisoformat(str(stamp).replace("Z", "+00:00"))
             age = (dt.datetime.now(dt.timezone.utc) - last).total_seconds() / 60
