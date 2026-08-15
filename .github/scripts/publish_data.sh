@@ -76,6 +76,9 @@ PUBLISH_FILES=(
   # Exactly the pick_lock.json failure, second instance: a green step, a real
   # file, and no line here to carry it.
   pick_matrix.json
+  # The run board -- every hitter's last 30 raw lines, written by
+  # player_splits.py on the same fetch it already makes for the splits files.
+  runs_latest.json
   # NFL (2026-08-14). The football bot writes into public/data/current/ with an
   # nfl_ prefix specifically so it can ride this script rather than fork it --
   # the orphan-branch force-push and the concurrent-publisher merge below are

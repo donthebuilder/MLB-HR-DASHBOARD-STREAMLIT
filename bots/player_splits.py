@@ -160,6 +160,65 @@ def build_splits(games: List[Dict[str, Any]]) -> Dict[str, Any]:
     return out
 
 
+# ── THE RUN BOARD ────────────────────────────────────────────────────────────
+#
+# 2026-08-15, Donovan sent a competitor's "Player board" and "Hottest active
+# runs" and asked for them here. Both are the same underlying object: for a
+# chosen bar, every hitter's last thirty games as a strip, the length of his
+# ACTIVE run, and his rate over a few windows.
+#
+# THIS COSTS NO NEW REQUEST. The loop below already pulls every hitter's game
+# log to build his splits file; the same rows carry hits, total bases, runs,
+# RBI, home runs, home/away and day/night. So the run board rides along.
+#
+# NOTHING IS PRE-AGGREGATED PER MARKET, ON PURPOSE. Publishing "his 2+ TB run
+# is 5" would fix the bar at 2 and force a new field for every threshold anyone
+# ever wants. Publishing the last thirty RAW LINES instead lets the site
+# compute a run, a rate and a strip for ANY market at ANY threshold instantly,
+# with no round trip — which is what makes the market and line chips on that
+# board feel immediate rather than like a page load.
+#
+# One row per game, newest first:
+#   [date, opp, H, TB, H+R+RBI, HR, isHome, "D"|"N"]
+RUN_GAMES = 30
+
+
+def run_log(games: List[Dict[str, Any]]) -> List[List[Any]]:
+    """The last RUN_GAMES lines, newest first, in the compact shape above."""
+    rows: List[List[Any]] = []
+    for g in games:
+        stat = g.get("stat") or {}
+        if not stat:
+            continue
+        ab = int(num(stat.get("atBats")))
+        bb = int(num(stat.get("baseOnBalls")))
+        # A game he never came up in is not a miss — it is not a game. Same
+        # rule as lib/gamelogs.js on the site and the void rule everywhere
+        # else in this project; leaving it in would break every run in the
+        # board with a night he was rested.
+        if ab == 0 and bb == 0:
+            continue
+        h = int(num(stat.get("hits")))
+        r = int(num(stat.get("runs")))
+        rbi = int(num(stat.get("rbi")))
+        game = g.get("game") or {}
+        dn = str(game.get("dayNight") or "").lower()
+        rows.append([
+            str(g.get("date") or "")[5:10],
+            str((g.get("opponent") or {}).get("abbreviation")
+                or (g.get("opponent") or {}).get("name") or "")[:3].upper(),
+            h,
+            int(num(stat.get("totalBases"))),
+            h + r + rbi,
+            int(num(stat.get("homeRuns"))),
+            1 if g.get("isHome") else 0,
+            "D" if dn == "day" else "N" if dn == "night" else "",
+        ])
+    # The API returns oldest-first; the board reads newest-first everywhere.
+    rows.reverse()
+    return rows[:RUN_GAMES]
+
+
 def fetch_game_log(session: requests.Session, player_id: Any, season: int,
                    group: str = "hitting") -> List[Dict[str, Any]]:
     try:
@@ -377,10 +436,15 @@ def main() -> int:
         rows = rows.get("players") or rows.get("rows") or []
 
     ids: Dict[Any, str] = {}
+    teams: Dict[Any, str] = {}
+    opps: Dict[Any, str] = {}
     for r in rows:
         pid = r.get("player_id")
         if pid not in (None, "") and pid not in ids:
-            ids[pid] = r.get("name") or str(pid)
+            ids[pid] = r.get("name") or r.get("player_name") or str(pid)
+            teams[pid] = r.get("team") or ""
+            opps[pid] = r.get("opponent") or ""
+    run_rows: List[Dict[str, Any]] = []
 
     out_dir = CURRENT_DIR / "splits" / args.label
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -406,12 +470,49 @@ def main() -> int:
             json.dumps(payload, separators=(",", ":")), encoding="utf-8")
         written += 1
 
+        rows = run_log(games)
+        if rows:
+            run_rows.append({
+                "player_id": pid, "name": name,
+                "team": teams.get(pid, ""), "opp": opps.get(pid, ""),
+                "g": rows,
+            })
+
         if i % 25 == 0:
             print(f"  {i}/{len(ids)} hitters…", file=sys.stderr)
         time.sleep(0.08)  # be polite to the API
 
     print(f"splits: wrote {written} hitter files ({empty} with no game log) -> {out_dir}",
           file=sys.stderr)
+
+    # ── the run board ────────────────────────────────────────────────────────
+    # Written for the TODAY slate only. A run board is a "who is hot right now"
+    # question, and building one for tomorrow's card would just publish the
+    # same rows under a name that implies they're about a different night.
+    if args.label == "today":
+        slate_date = ""
+        for r in rows:
+            slate_date = str(r.get("slate_date") or r.get("date") or "")[:10]
+            if slate_date:
+                break
+        dest = CURRENT_DIR / "runs_latest.json"
+        dest.write_text(json.dumps({
+            "slate": args.label,
+            "slate_date": slate_date,
+            "season": args.season,
+            "generated_at": dt.datetime.now(dt.timezone.utc).isoformat(),
+            "games_per_player": RUN_GAMES,
+            "columns": ["date", "opp", "H", "TB", "HRR", "HR", "isHome", "dayNight"],
+            "players": run_rows,
+            "note": ("Raw lines, newest first, NOT pre-aggregated per market. The "
+                     "site derives the active run, the window rates and the strip "
+                     "for any bar at any threshold from these, so changing the "
+                     "market is instant and adding one costs nothing here. Games "
+                     "with no plate appearance are already dropped — a night he "
+                     "was rested is not a miss and must not break a run."),
+        }, separators=(",", ":")), encoding="utf-8")
+        print(f"runs: {len(run_rows)} hitters x <= {RUN_GAMES} games -> {dest} "
+              f"({dest.stat().st_size / 1024:.0f} KB)", file=sys.stderr)
 
     # ── Starters ────────────────────────────────────────────────────────────
     # ~30 pitchers per slate against ~260 hitters, so this adds well under a
