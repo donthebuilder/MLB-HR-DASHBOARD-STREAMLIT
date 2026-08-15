@@ -187,14 +187,22 @@ def _open_kw() -> dict:
 
 
 def _rec(provider: str, path: str, key: str = "", **kw) -> None:
-    if len(FORENSICS) >= 24:
-        return
     row = {"provider": provider, "path": path, **kw}
     if key:
         for k2, v in list(row.items()):
             if isinstance(v, str) and key in v:
                 row[k2] = v.replace(key, "•KEY•")
-    FORENSICS.append(row)
+    # PRINT THE SERVER'S ACTUAL COMPLAINT (2026-08-15, second live run). The
+    # console was showing "HTTP Error 400: Bad Request" — urllib's generic
+    # string — while the response BODY, which is where every one of these APIs
+    # explains itself, was read into the record and never shown. Three rounds
+    # of guessing at a 400 the server was willing to describe all along.
+    http = row.get("http")
+    if (isinstance(http, int) and http >= 400) or row.get("error"):
+        why = row.get("body") or row.get("error") or ""
+        print(f"    ↳ {provider} {path} → {http or 'error'}: {str(why)[:200]}")
+    if len(FORENSICS) < 40:
+        FORENSICS.append(row)
 
 
 def _snip(e) -> str:
@@ -616,35 +624,80 @@ def fetch_oddsapiio(key: str, books: str, _wide: bool = False) -> list[dict]:
     # 400s: one discovery request buys correctness for every odds call after it.
     books = oaio_books(key, books)
 
-    rows: list[dict] = []
-    # TEN PER CALL is their documented cap. Chunking is what keeps a 15-game
-    # slate at three requests instead of fifteen.
-    for i in range(0, len(ids), 10):
-        chunk = ids[i:i + 10]
+    # ── WHICH CALL SHAPE DOES THIS KEY ACTUALLY ACCEPT? ────────────────────
+    #
+    # Three rounds of one-guess-per-run is three days. This is a LADDER: probe
+    # a single event with progressively simpler calls until one is accepted,
+    # then use that shape for the whole slate. Every rung's failure body is
+    # printed and recorded, so even a total wipeout returns four specific
+    # answers instead of one "Bad Request".
+    ladder = [
+        ("multi+books", lambda c: oaio("/odds/multi", key, eventIds=",".join(c), bookmakers=books)),
+        ("multi", lambda c: oaio("/odds/multi", key, eventIds=",".join(c))),
+        ("single+books", lambda c: oaio("/odds", key, eventId=c[0], bookmakers=books)),
+        ("single", lambda c: oaio("/odds", key, eventId=c[0])),
+    ]
+    mode, first = None, None
+    for nm, fn in ladder:
         try:
-            payload = oaio("/odds/multi", key, eventIds=",".join(chunk),
-                           bookmakers=books)
+            first = fn([ids[0]])
         except Exception as e:
-            print(f"  odds-api.io: odds chunk {i // 10 + 1} failed "
-                  f"({type(e).__name__}: {e})")
-            # ISOLATE IT ON THE FIRST FAILURE, ONCE. A 400 here has exactly two
-            # plausible causes — the ids or the books — and one single-event
-            # call against the same books tells them apart: if /odds succeeds,
-            # the multi-call's id list is the problem; if it 400s too, the book
-            # names are. Both answers land in the forensics, so the next run
-            # after this one is a fix rather than another guess.
-            if i == 0:
-                try:
-                    single = oaio("/odds", key, eventId=chunk[0], bookmakers=books)
-                    _rec("oddsapiio", "·isolate",
-                         note="single /odds OK — the multi eventIds format is the problem",
-                         keys=sorted(single)[:8] if isinstance(single, dict) else "list")
-                    print("  odds-api.io: single /odds succeeded — eventIds format is at fault")
-                except Exception as e2:
-                    _rec("oddsapiio", "·isolate",
-                         note=f"single /odds also failed ({type(e2).__name__}) — "
-                              f"bookmaker names are the likely fault", books=books[:120])
+            _rec("oddsapiio", f"·ladder:{nm}", note=f"rejected ({type(e).__name__})")
             continue
+        mode = nm
+        print(f"  odds-api.io: call shape '{nm}' accepted")
+        _rec("oddsapiio", "·ladder", note=f"'{nm}' accepted")
+        break
+    if not mode:
+        print("  odds-api.io: no call shape was accepted — the bodies above say why")
+        return []
+
+    payloads = [first]
+    if mode.startswith("multi"):
+        # TEN PER CALL is their documented cap. Chunking keeps a 27-game board
+        # at three requests instead of twenty-seven.
+        for i in range(0, len(ids), 10):
+            chunk = ids[i:i + 10]
+            if len(chunk) == 1 and chunk[0] == ids[0]:
+                continue
+            try:
+                payloads.append(oaio("/odds/multi", key, eventIds=",".join(chunk),
+                                     **({"bookmakers": books} if mode.endswith("books") else {})))
+            except Exception as e:
+                print(f"  odds-api.io: odds chunk {i // 10 + 1} failed ({type(e).__name__})")
+    else:
+        # Per-event fallback: more requests, but a working board beats an empty
+        # one. Capped at 30 so a bad day can't drain the daily allowance.
+        for eid in ids[1:30]:
+            try:
+                payloads.append(oaio("/odds", key, eventId=eid,
+                                     **({"bookmakers": books} if mode.endswith("books") else {})))
+            except Exception as e:
+                print(f"  odds-api.io: event {eid} failed ({type(e).__name__})")
+        if len(ids) > 30:
+            print(f"  odds-api.io: capped at 30 of {len(ids)} events (per-event mode)")
+
+    def _events_of(payload):
+        """/odds/multi returns a list; /odds returns ONE event object.
+
+        _listish only finds lists, so a single-event payload would have been
+        silently dropped and the per-event fallback would have produced an
+        empty board that looked like "no props" — the exact failure mode this
+        whole hunt has been about. An object carrying bookmakers is an event.
+        """
+        got = _listish(payload, "events", "odds")
+        if got:
+            return got
+        if isinstance(payload, dict) and (payload.get("bookmakers") or payload.get("home")):
+            return [payload]
+        return []
+
+    rows: list[dict] = []
+    # Every market name this key was served, matched or not — the answer to
+    # "what do they CALL the home run prop", which is the one thing no
+    # documentation publishes and PROP_HINTS is entirely built on.
+    market_names: set[str] = set()
+    for payload in payloads:
         # DOCUMENTED SHAPE (their own player-props guide, read 2026-08-15):
         #   event.bookmakers = { "DraftKings": [ {name, odds:[{label, hdp,
         #   over, under}]} ] } — the MARKET's name is on the market object,
@@ -653,7 +706,7 @@ def fetch_oddsapiio(key: str, books: str, _wide: bool = False) -> list[dict]:
         #   the PLAYER'S NAME (o.label) and then looked for the player under
         #   keys that don't exist — two independent kills, every outcome
         #   dropped, "0 prop quotes" forever. This is that bug's funeral.
-        for ev in _listish(payload, "events", "odds"):
+        for ev in _events_of(payload):
             if not isinstance(ev, dict):
                 continue
             home, away = (ev.get("home") or ev.get("homeTeam"),
@@ -662,6 +715,8 @@ def fetch_oddsapiio(key: str, books: str, _wide: bool = False) -> list[dict]:
                 for mk in mkts or []:
                     if not isinstance(mk, dict):
                         continue
+                    if mk.get("name"):
+                        market_names.add(str(mk["name"]))
                     ours = _prop_key(mk.get("name"))
                     if not ours:
                         continue
@@ -688,14 +743,22 @@ def fetch_oddsapiio(key: str, books: str, _wide: bool = False) -> list[dict]:
     print(f"  odds-api.io: {len(rows)} prop quote(s) from {len(seen)} book(s)"
           + (f": {', '.join(seen)}" if seen else ""))
 
-    # Nothing back from the named books is what a WRONG BOOKMAKER KEY looks
-    # like, and it is indistinguishable from "no odds today" unless we check.
-    # One retry across the wide list; if that returns quotes, the log names the
-    # books that do work and the variable can be corrected.
-    if not rows and not _wide and books != OAIO_BOOKS_FALLBACK:
-        print("  odds-api.io: nothing from the named books — retrying wide "
-              "to find out what this key actually carries")
-        return fetch_oddsapiio(key, OAIO_BOOKS_FALLBACK, _wide=True)
+    # THE WIDE RETRY IS RETIRED (2026-08-15). It re-ran the ENTIRE function —
+    # events call included — doubling every request on exactly the runs that
+    # were already failing, which is how a "0 quotes" night cost twice the
+    # quota of a good one. Both jobs it was doing are now done properly and
+    # once: oaio_books() resolves real book names (and falls back to the 30
+    # this key carries when none match), and the ladder above finds the call
+    # shape. Nothing is left for a blind second pass to discover.
+    if not rows:
+        got = sorted(market_names)
+        print(f"  odds-api.io: {len(got)} market name(s) served, none matched our "
+              f"prop hints" + (f": {', '.join(got[:25])}" if got else
+                               " — these events carry no markets at all"))
+        _rec("oddsapiio", "·result",
+             note=f"call shape '{mode}' accepted; {len(got)} market names served, "
+                  f"none matched PROP_HINTS",
+             market_names=got[:30])
     return rows
 
 
