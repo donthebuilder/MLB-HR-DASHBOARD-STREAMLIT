@@ -115,8 +115,13 @@ OAIO_MARKETS = "Player Props"
 # with nothing to show it was wrong. A list, first match wins, compound
 # markets ahead of the single they contain.
 PROP_HINTS = [
-    ("batter_hits_runs_rbis", ("hits+runs", "hits + runs", "hits runs rbis",
-                               "h+r+rbi", "hits runs and rbis")),
+    # Every way a book writes H+R+RBI. Books punctuate this market a dozen
+    # ways and each spelling that isn't here silently files as plain "hits"
+    # or "rbis" — the compound must win, so it is tried first and listed wide.
+    ("batter_hits_runs_rbis", ("hits+runs", "hits + runs", "hits, runs",
+                               "hits runs", "hits & runs", "hits and runs",
+                               "hits / runs", "hits/runs", "h+r+rbi", "h+r+rbis",
+                               "hits runs rbis", "hits runs and rbis")),
     ("batter_total_bases", ("total base",)),
     ("batter_home_runs", ("home run",)),
     ("batter_runs_scored", ("runs scored", "run scored")),
@@ -575,21 +580,31 @@ def _split_prop(o: dict) -> tuple[str, str | None]:
         return ("", None)
 
     if not who:
-        nm = label
-        # strip the phrase that identified the market, then the bet words
-        for _o, hints in PROP_HINTS:
-            for h in hints:
-                idx = nm.lower().find(h)
-                if idx >= 0:
-                    nm = nm[:idx] + nm[idx + len(h):]
-        # len<2 drops the orphan "s" left behind when "Home Runs" loses its
-        # "home run" — the plural's tail, not part of anybody's name.
-        parts = [w for w in nm.split()
-                 if w.lower().strip(".,()") not in _NOISE
-                 and len(w.strip(".,()")) > 1
-                 and not any(ch.isdigit() for ch in w)]
-        who = " ".join(parts).strip(" -–—|:")
-    return (str(who or "").strip(), ours)
+        # CUT AT THE MARKET, DON'T SUBTRACT IT (2026-08-15, from the live
+        # board). The first version removed EVERY market phrase from the
+        # label, so "Edgar Quero Hits+Runs+RBIs" lost "hits+runs" AND "rbi"
+        # and kept the wreckage: "Edgar Quero +s". That published 274 HRR
+        # players under names like "edgar quero s", which joined to nobody —
+        # the one market Donovan actually bets, priced and then thrown away
+        # by its own name.
+        #
+        # A label is the player on one side of the market phrase and nothing
+        # on the other. So find where the MATCHED market starts and take the
+        # side that has the name on it.
+        low = label.lower()
+        hints = next((h for o, h in PROP_HINTS if o == ours), ())
+        found = [(low.find(h), len(h)) for h in hints if low.find(h) >= 0]
+        if found:
+            pos, hlen = min(found)
+            who = label[:pos] if pos > 0 else label[pos + hlen:]
+        else:
+            who = label
+        who = re.sub(r"[^\w\s'.\-]", " ", who)          # +, commas, parens
+        who = " ".join(w for w in who.split()
+                       if w.lower().strip(".,-") not in _NOISE
+                       and len(w.strip(".,-")) > 1
+                       and not any(ch.isdigit() for ch in w))
+    return (str(who or "").strip(" -–—|:"), ours)
 
 
 def _dec_to_american(v) -> int | None:
