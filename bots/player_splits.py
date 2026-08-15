@@ -470,12 +470,19 @@ def main() -> int:
             json.dumps(payload, separators=(",", ":")), encoding="utf-8")
         written += 1
 
-        rows = run_log(games)
-        if rows:
+        # NOT `rows` — that name is the SLATE list this loop's caller still
+        # needs. The first ship shadowed it here, so by the time the run-board
+        # block below asked the slate for its date, `rows` was one player's
+        # game lines and r.get() blew up on a list — AFTER every splits file
+        # had written, which made the failure read as "splits fine, runs
+        # missing" on the branch. Found by executing main() against a stubbed
+        # API; the compile step can never catch a shadow.
+        glog = run_log(games)
+        if glog:
             run_rows.append({
                 "player_id": pid, "name": name,
                 "team": teams.get(pid, ""), "opp": opps.get(pid, ""),
-                "g": rows,
+                "g": glog,
             })
 
         if i % 25 == 0:
