@@ -214,6 +214,7 @@ def build(odds_dirs: list[Path], graded_dirs: list[Path], log_keep: int) -> dict
         print(f"  priced but not yet graded: {', '.join(missing[-6:])}")
 
     players: dict[str, dict] = {}
+    bets: dict[str, list] = {}
     settled = 0
     for date in dates:
         board = snapshot_rows(load(snaps[date]) or {})
@@ -253,6 +254,7 @@ def build(odds_dirs: list[Path], graded_dirs: list[Path], log_keep: int) -> dict
                 b["sum_implied"] += float(imp)
                 b["log"].append([date, over, got])
                 settled += 1
+                bets.setdefault(market, []).append((float(over), got))
 
     # ── finish: the two numbers the page exists to show ──────────────────────
     out_players = {}
@@ -297,6 +299,17 @@ def build(odds_dirs: list[Path], graded_dirs: list[Path], log_keep: int) -> dict
         "last_day": dates[-1] if dates else None,
         "priced_not_graded": missing[-14:],
         "settled_props": settled,
+        # 💵 THE REALITY CHECK. Every number above this is a percentage; this
+        # is the only one that answers "would it have made money". Flat one
+        # unit a bet, split by market and by price band, each with the error
+        # bar on its own ROI.
+        "roi": cohorts(bets),
+        "roi_note": ("Flat one unit per bet at the consensus price. ROI is "
+                     "(returned - staked) / staked. Bands are the American "
+                     "price: odds_on <= -101, short -100..+150, mid +151..+400, "
+                     "long +401..+900, lottery +901 and up. A cohort under "
+                     f"{MIN_COHORT} bets is flagged thin — its ROI is a story, "
+                     "not a finding."),
         "players": out_players,
         "note": ("Every priced prop settled against that night's box score at the "
                  "exact line the book posted. rate is how often he clears it; "
@@ -305,6 +318,85 @@ def build(odds_dirs: list[Path], graded_dirs: list[Path], log_keep: int) -> dict
                  "probability rather than as odds. edge = rate - avg_implied, in "
                  "percentage points. A game he never batted in is void, not a miss."),
     }
+
+
+# ── THE REALITY CHECK ────────────────────────────────────────────────────────
+#
+# 2026-08-15, Donovan: a "Betting Reality Check" panel with ROI by cohort, and
+# the note "hit rate alone is not the finish line. A +700 HR can miss often and
+# still profit; a -170 prop can hit often and still bleed."
+#
+# That sentence is the most important one in this whole product and everything
+# above it in this file is a percentage. So: settle every priced prop at flat
+# stake and report what a unit would actually have done.
+#
+# ROI = (returned - staked) / staked, at one unit a bet. A win at +450 returns
+# 5.5 units; a win at -180 returns 1.556. That is the whole calculation, and it
+# is the only number here that answers "would this have made money".
+#
+# THE COHORTS ARE THE POINT, not the headline. "All priced reads" is almost
+# always negative — it includes every longshot the board never recommended, and
+# a bettor who took all of them deserves what he got. The question is whether
+# the SUBSETS the model actually points at do better than the whole, and by
+# enough to survive their own sample. So every cohort carries n and a standard
+# error on the ROI, and a cohort under MIN_N reports its numbers with a flag
+# instead of pretending.
+MIN_COHORT = 40
+
+
+def payout(american: float) -> float:
+    """Units returned on a WINNING one-unit bet, stake included."""
+    n = float(american)
+    return 1 + (n / 100 if n > 0 else 100 / -n)
+
+
+def roi_of(bets: list) -> dict | None:
+    """bets = [(american_price, won01)]. Flat one unit each."""
+    if not bets:
+        return None
+    n = len(bets)
+    ret = sum(payout(p) for p, w in bets if w)
+    profit = ret - n
+    # Per-bet return, so the spread of the RETURNS (not of the win rate) sets
+    # the error bar. A book of +900 shots and a book of -200 favourites can
+    # share an ROI and not remotely share how sure of it you should be.
+    rets = [payout(p) if w else 0.0 for p, w in bets]
+    mean = ret / n
+    var = sum((r - mean) ** 2 for r in rets) / max(1, n - 1)
+    se = (var / n) ** 0.5
+    return {
+        "n": n,
+        "wins": sum(1 for _, w in bets if w),
+        "hit_rate": round(1000 * sum(1 for _, w in bets if w) / n) / 10,
+        "roi": round(1000 * profit / n) / 10,
+        "profit_units": round(profit, 2),
+        # In ROI points, so it reads on the same scale as the ROI itself.
+        "roi_se": round(1000 * se) / 10,
+        "thin": n < MIN_COHORT,
+    }
+
+
+def cohorts(bets_by_market: dict) -> dict:
+    """ROI for the reads a bettor would actually have taken.
+
+    Split by MARKET first, because Donovan's own note said it: HR already has
+    this proof and hits, total bases and H+R+RBI do not. Then by PRICE BAND
+    inside each, because that is where the answer changes — a model can be
+    right about who and wrong about at what number, and one blended ROI hides
+    exactly that.
+    """
+    BANDS = [("odds_on", -100000, -101), ("short", -100, 150),
+             ("mid", 151, 400), ("long", 401, 900), ("lottery", 901, 100000)]
+    out = {}
+    for market, bets in sorted(bets_by_market.items()):
+        row = {"all": roi_of(bets)}
+        for name, lo, hi in BANDS:
+            sub = [(p, w) for p, w in bets if lo <= p <= hi]
+            r = roi_of(sub)
+            if r:
+                row[name] = r
+        out[market] = row
+    return out
 
 
 def main() -> int:

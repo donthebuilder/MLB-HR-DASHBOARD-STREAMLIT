@@ -686,6 +686,51 @@ def write_status(out: Path, **kw) -> None:
         separators=(",", ":")))
     print(f"status: {kw.get('state')} — {kw.get('reason', '')}")
 
+    # AND ON THE ACTIONS PAGE ITSELF. This step is continue-on-error, so its
+    # log is a green check nobody opens — which is exactly how odds_latest.json
+    # 404'd for days with the workflow reporting success every run. The job
+    # summary is the one surface you see without clicking into anything.
+    summary = os.environ.get("GITHUB_STEP_SUMMARY")
+    if summary:
+        try:
+            icon = {"ok": "✅", "skipped": "⏸", "capped": "⏸"}.get(kw.get("state"), "⚠️")
+            with open(summary, "a", encoding="utf-8") as fh:
+                fh.write(f"### {icon} Odds — {kw.get('state')}\n\n{kw.get('reason','')}\n\n")
+                for k in ("provider", "players", "match_rate", "fetches_this_slate",
+                          "providers_tried", "keys_present", "next_eligible_at"):
+                    if kw.get(k) not in (None, "", [], {}):
+                        fh.write(f"- **{k}**: `{kw[k]}`\n")
+                fh.write("\n")
+        except Exception:
+            pass
+
+
+def write_empty_board(out: Path, reason: str, **extra) -> None:
+    """Publish an EMPTY but valid odds_latest.json rather than no file at all.
+
+    A 404 is the least informative failure this project can produce: it looks
+    identical to a wrong URL, a branch that never published, and a bot that was
+    never installed. A 200 carrying an empty board and the reason it is empty
+    tells the site — and anyone with a browser — that the pipeline ran and came
+    back with nothing, which is a completely different problem from the
+    pipeline not existing.
+    """
+    now = dt.datetime.now(dt.timezone.utc)
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "odds_latest.json").write_text(json.dumps({
+        "source": "", "sport": SPORT,
+        "fetched_at": now.isoformat(),
+        "fetched_at_human": now.strftime("%b %-d, %-I:%M %p UTC"),
+        "category_market": CATEGORY_MARKET,
+        "by_player_id": {}, "by_name": {},
+        "match_rate": 0, "unmatched": [],
+        "empty": True, "reason": reason, **extra,
+        "note": ("No prices this run. The file exists so the site can say WHY "
+                 "instead of showing a missing-file 404 that looks the same as "
+                 "a broken path."),
+    }, separators=(",", ":")))
+    print(f"wrote an empty odds_latest.json — {reason}")
+
 
 def main() -> int:
     ap = argparse.ArgumentParser()
@@ -710,6 +755,7 @@ def main() -> int:
         write_status(out, state="no_key",
                      reason="No ODDSAPI_IO_KEY / ODDS_API_KEY / ODDSPAPI_KEY is set "
                             "in the repo secrets, so nothing was fetched.")
+        write_empty_board(out, "no odds key is set in the repo secrets", state="no_key")
         return 0
 
     if a.probe:
@@ -793,6 +839,12 @@ def main() -> int:
                      providers_tried=[n for n in order if n in available],
                      keys_present=[n for n in order
                                    if n in available and available[n][0]])
+        write_empty_board(
+            out,
+            "every configured provider was tried and none returned a quote",
+            state="empty",
+            providers_tried=[n for n in order if n in available],
+            keys_present=[n for n in order if n in available and available[n][0]])
         return 0
     print(f"using {source} · {len(rows)} quote(s)")
 
