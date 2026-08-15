@@ -124,6 +124,8 @@ PROP_HINTS = [
                                "hits runs rbis", "hits runs and rbis")),
     ("batter_total_bases", ("total base",)),
     ("batter_home_runs", ("home run",)),
+    ("batter_doubles", ("double",)),
+    ("batter_triples", ("triple",)),
     ("batter_runs_scored", ("runs scored", "run scored")),
     ("batter_rbis", ("rbi", "runs batted in")),
     # Last, and only after every compound has had its turn — "hit" is a
@@ -148,7 +150,9 @@ CATEGORY_MARKET = {
 #
 # Its row for 1+ BB and 1+ K have no batter market published; those rows simply
 # carry no price, which is honest and visible.
-GRID_MARKETS = ["batter_runs_scored", "batter_rbis"]
+GRID_MARKETS = ["batter_runs_scored", "batter_rbis",
+                # 2026-08-15, Donovan: "add doubles and triples."
+                "batter_doubles", "batter_triples"]
 MARKETS = sorted(set(CATEGORY_MARKET.values()) | set(GRID_MARKETS))
 
 SUFFIXES = {"jr", "sr", "ii", "iii", "iv", "v"}
@@ -499,6 +503,10 @@ def consensus(rows: list[dict]) -> dict:
                 "lines_seen": len(counts),
                 "name": rs[0]["name"],
                 "game": f'{rs[0].get("away") or "?"} @ {rs[0].get("home") or "?"}',
+                # FIRST PITCH RIDES WITH THE QUOTE. Without it the freeze
+                # above can't tell a pregame price from a live one — the
+                # whole point of carrying odds honestly (2026-08-15).
+                "commence": rs[0].get("commence"),
             }
     return out
 
@@ -803,6 +811,7 @@ def fetch_oddsapiio(key: str, books: str, _wide: bool = False) -> list[dict]:
     # pre-game prop board wants, and it stops yesterday's finals eating the
     # 200-event page before tonight's card is reached.
     now = dt.datetime.now(dt.timezone.utc)
+
     evs = []
     for slug in ("mlb", "baseball"):
         try:
@@ -1583,6 +1592,56 @@ def main() -> int:
         print(f"  WARNING: no slate date found; filing under {slate_date} (US/Eastern of now)")
     slate_date = str(slate_date)[:10]
 
+    # ── FROZEN AT FIRST PITCH (2026-08-15) ────────────────────────────────
+    #
+    # Donovan: "i want to make sure the odds are stagnant since after the
+    # first pitch for a player so we don't see the live odds."
+    #
+    # He is right and it matters more than it sounds. Once a game starts the
+    # book replaces the pregame market with a LIVE one, and a live price is a
+    # different animal: it already knows he grounded out twice. Publishing it
+    # into a column labelled with a pregame hit rate compares a number that
+    # knows the future against one that doesn't — and every graded record
+    # built on it would be quietly wrong.
+    #
+    # So a player's price is FROZEN at his own first pitch: after that, the
+    # last snapshot taken before his game started is carried forward
+    # unchanged, and the row is stamped `frozen` with the time it was taken.
+    # Freezing is per PLAYER, not per slate — a 10:10 game locks while a 7:05
+    # game keeps updating, because they are different bets on different clocks.
+    prev_board = published("odds_latest.json") or {}
+    prev_by_id = prev_board.get("by_player_id") or {}
+    prev_by_name = prev_board.get("by_name") or {}
+
+    def started(q) -> bool:
+        t = q.get("commence") or q.get("game_time")
+        if not t:
+            return False
+        try:
+            return dt.datetime.fromisoformat(str(t).replace("Z", "+00:00")) <= now
+        except Exception:
+            return False
+
+    def freeze(new_mkts: dict, old_mkts: dict) -> dict:
+        """Keep the pregame quote for any market whose game is already under way."""
+        if not isinstance(old_mkts, dict):
+            old_mkts = {}
+        out = {}
+        for mk, q in (new_mkts or {}).items():
+            old = old_mkts.get(mk)
+            if started(q) and isinstance(old, dict):
+                kept = dict(old)
+                kept["frozen"] = True
+                kept.setdefault("frozen_at", old.get("frozen_at") or prev_board.get("fetched_at"))
+                out[mk] = kept
+            else:
+                out[mk] = q
+        # a market the book pulled once the game started keeps its last price
+        for mk, old in old_mkts.items():
+            if mk not in out and isinstance(old, dict) and old.get("frozen"):
+                out[mk] = old
+        return out
+
     payload = {
         "source": source,
         "sport": SPORT,
@@ -1593,8 +1652,11 @@ def main() -> int:
         # Keyed by MLB player_id where the join worked — that's what the site
         # can actually use — with the by-name board kept beside it so a miss is
         # visible rather than just absent.
-        "by_player_id": matched,
-        "by_name": board,
+        # frozen per player at his own first pitch — see freeze() above
+        "by_player_id": {pid: freeze(mkts, prev_by_id.get(pid) or {})
+                         for pid, mkts in matched.items()},
+        "by_name": {nm: freeze(mkts, prev_by_name.get(nm) or {})
+                    for nm, mkts in board.items()},
         "match_rate": round(100 * len(matched) / max(1, len(board)), 1),
         "unmatched": sorted(unmatched),
         # Counts toward ODDS_MAX_PER_SLATE. Resets when the slate date rolls,
