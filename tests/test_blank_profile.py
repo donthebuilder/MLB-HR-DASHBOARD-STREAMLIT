@@ -15,20 +15,27 @@ from bots.mlb_dashboard import compute_blank_profile  # noqa: E402
 
 
 def log(*games):
-    """games are (ab, hits, runs, rbi, tb, hr) tuples, OLDEST FIRST — the
-    order the StatsAPI game log actually arrives in."""
-    return {"stats": [{"splits": [
-        {"date": f"2026-07-{i + 1:02d}", "stat": {
+    """games are (ab, hits, runs, rbi, tb, hr[, bb]) tuples, OLDEST FIRST — the
+    order the StatsAPI game log actually arrives in. plateAppearances is
+    derived as ab + bb, because PA is the gate (see below)."""
+    out = []
+    for i, g in enumerate(games):
+        bb = g[6] if len(g) > 6 else 0
+        out.append({"date": f"2026-07-{i + 1:02d}", "stat": {
             "atBats": g[0], "hits": g[1], "runs": g[2], "rbi": g[3],
-            "totalBases": g[4], "homeRuns": g[5],
-        }} for i, g in enumerate(games)
-    ]}]}
+            "totalBases": g[4], "homeRuns": g[5], "baseOnBalls": bb,
+            "plateAppearances": g[0] + bb,
+        }})
+    return {"stats": [{"splits": out}]}
 
 
 FAILED = []
+CHECKS = 0
 
 
 def check(name, got, want):
+    global CHECKS
+    CHECKS += 1
     if got != want:
         FAILED.append(f"{name}: got {got!r}, want {want!r}")
 
@@ -39,7 +46,8 @@ check("empty status", p["blank_profile_status"], "empty")
 check("empty streak", p["blank_streak"], 0)
 check("empty n", p["after_blank_n"], 0)
 
-# A log of nothing but pinch-run appearances is not a log of games.
+# A log of nothing but pinch-run appearances (never came to the plate) is not
+# a log of games. PA = 0 on every one of them.
 p = compute_blank_profile(log((0, 0, 1, 0, 0, 0), (0, 0, 0, 0, 0, 0)))
 check("no batted games", p["blank_profile_status"], "no_batted_games")
 check("no batted streak", p["blank_streak"], 0)
@@ -52,13 +60,33 @@ check("last game date", p["last_game_date"], "2026-07-02")
 check("last game hrr", p["last_game_hrr"], 0)
 check("status ok", p["blank_profile_status"], "ok")
 
-# THE 0-AB GAME IS SKIPPED, NOT COUNTED EITHER WAY. He blanked, then pinch ran.
-# His last GAME BATTED is still the 0-fer, and the streak is still 1 — the
-# appearance neither breaks it (he didn't get a hit) nor extends it (he never
-# had the chance to).
+# THE PINCH-RUN (PA = 0) IS SKIPPED. He blanked, then pinch ran without
+# batting. His last game AT THE PLATE is still the 0-fer, and the streak is
+# still 1 — the appearance neither breaks it nor extends it, because he never
+# came to the plate.
 p = compute_blank_profile(log((4, 2, 1, 1, 3, 0), (3, 0, 0, 0, 0, 0), (0, 0, 1, 0, 0, 0)))
-check("0-AB skipped: last is the 0-fer", p["last_game_ab"], 3)
-check("0-AB skipped: streak", p["blank_streak"], 1)
+check("pinch-run skipped: last is the 0-fer", p["last_game_ab"], 3)
+check("pinch-run skipped: streak", p["blank_streak"], 1)
+
+# ── A WALK-ONLY NIGHT IS A BLANK (Donovan, 2026-08-16) ──────────────────────
+# "walk only nights count as a blank too still counts." He came to the plate
+# (PA 2) and got no hit, so it IS a hitless game. The first version gated on
+# atBats and silently dropped this man's 0-fer, which shortened the streaks of
+# exactly the patient hitters most likely to be on this board.
+p = compute_blank_profile(log((0, 0, 0, 0, 0, 0, 2),))
+check("walk-only is a game", p["blank_profile_status"], "ok")
+check("walk-only is a blank", p["blank_streak"], 1)
+check("walk-only last_game_pa", p["last_game_pa"], 2)
+check("walk-only last_game_ab", p["last_game_ab"], 0)
+
+# And it EXTENDS a streak rather than being skipped over.
+p = compute_blank_profile(log((4, 0, 0, 0, 0, 0), (0, 0, 0, 0, 0, 0, 1), (3, 0, 0, 0, 0, 0)))
+check("walk-only extends the streak", p["blank_streak"], 3)
+
+# A walk-only game is also a legitimate FOLLOW-UP to a blank, and a failed one.
+p = compute_blank_profile(log((4, 0, 0, 0, 0, 0), (0, 0, 0, 0, 0, 0, 1)))
+check("walk-only counts as a follow-up", p["after_blank_n"], 1)
+check("walk-only follow-up got no hit", p["after_blank_hit"], 0)
 
 # ── the streak ──────────────────────────────────────────────────────────────
 p = compute_blank_profile(log((4, 1, 0, 0, 1, 0), (4, 0, 0, 0, 0, 0), (3, 0, 1, 0, 0, 0), (4, 0, 0, 1, 0, 0)))
@@ -99,10 +127,11 @@ check("single game is not a follow-up", p["after_blank_n"], 0)
 # start is still a follow-up to the blank, because the blank is still the
 # previous game he BATTED in.
 p = compute_blank_profile(log((4, 0, 0, 0, 0, 0), (0, 0, 0, 0, 0, 0), (4, 2, 0, 0, 2, 0)))
-check("0-AB does not break the chain", p["after_blank_n"], 1)
-check("0-AB chain hit", p["after_blank_hit"], 1)
+check("pinch-run does not break the chain", p["after_blank_n"], 1)
+check("pinch-run chain hit", p["after_blank_hit"], 1)
 
 # totalBases missing falls back to hits, never to invented extra bases.
+# No plateAppearances published at all: the AB+BB fallback keeps both games.
 p = compute_blank_profile({"stats": [{"splits": [
     {"date": "2026-07-01", "stat": {"atBats": 4, "hits": 0}},
     {"date": "2026-07-02", "stat": {"atBats": 4, "hits": 2}},
@@ -113,4 +142,4 @@ check("tb fallback no phantom 2+", p["after_blank_tb2"], 1)   # 2 hits = 2 TB, f
 if FAILED:
     print(f"\n{len(FAILED)} FAILED\n" + "\n".join(f"  · {f}" for f in FAILED))
     sys.exit(1)
-print("ok   compute_blank_profile: 22 assertions, definitions hold")
+print(f"ok   compute_blank_profile: {CHECKS} assertions, definitions hold")

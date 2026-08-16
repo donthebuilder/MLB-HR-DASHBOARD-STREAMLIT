@@ -1417,6 +1417,7 @@ class HitterRecord:
     # "unknown", never as "he didn't blank."
     last_game_date: str = ""
     last_game_ab: int = 0
+    last_game_pa: int = 0
     last_game_hits: int = 0
     last_game_hr: int = 0
     last_game_tb: int = 0
@@ -2273,11 +2274,20 @@ def games_since_last_hr(gamelog_blob: Dict[str, Any], max_lookback: int = 60) ->
 # DEFINITIONS, because a board like this is only worth having if its claim is
 # exact:
 #
-#   A GAME here means a game he BATTED in — atBats >= 1. A pinch-running or
-#   walk-only appearance is not an 0-fer and must not start or extend a blank
-#   streak; it is skipped entirely rather than counted either way. (This is
-#   the same three-outcome discipline as My Picks: tracked-and-failed, and
-#   never-batted, are different facts.)
+#   A GAME here means a game he CAME TO THE PLATE in — plateAppearances >= 1.
+#
+#   THIS WAS atBats >= 1 UNTIL DONOVAN CORRECTED IT (2026-08-16): "walk only
+#   nights count as a blank too, still counts." He is right and the first
+#   version was wrong. A man who walked twice and never got a hit had a
+#   hitless night; skipping him because a walk is not an at-bat let a real
+#   0-for disappear from his streak, and it silently shortened the streaks of
+#   exactly the patient hitters most likely to be on this board. Plate
+#   appearances is the honest unit for "did he bat and fail to hit".
+#
+#   A pinch-RUNNING appearance — on base without ever coming to the plate,
+#   PA = 0 — is still skipped, because he genuinely never batted. That is the
+#   same three-outcome discipline as My Picks: tracked-and-failed and
+#   never-batted are different facts.
 #
 #   A BLANK is such a game with zero hits.
 #
@@ -2295,7 +2305,7 @@ def compute_blank_profile(gamelog_blob: Dict[str, Any], max_lookback: int = 162)
     splits = first.get("splits") or []
 
     out: Dict[str, Any] = {
-        "last_game_date": "", "last_game_ab": 0, "last_game_hits": 0, "last_game_hr": 0,
+        "last_game_date": "", "last_game_ab": 0, "last_game_pa": 0, "last_game_hits": 0, "last_game_hr": 0,
         "last_game_tb": 0, "last_game_rbi": 0, "last_game_runs": 0, "last_game_hrr": 0,
         "blank_streak": 0, "after_blank_n": 0, "after_blank_hit": 0,
         "after_blank_hrr1": 0, "after_blank_hrr2": 0, "after_blank_tb2": 0,
@@ -2304,12 +2314,18 @@ def compute_blank_profile(gamelog_blob: Dict[str, Any], max_lookback: int = 162)
     if not splits:
         return out
 
-    # Batted games only, oldest→newest, capped at the lookback.
+    # Games he came to the plate in, oldest→newest, capped at the lookback.
     games = []
     for s in splits[-max_lookback:]:
         st = s.get("stat", {}) or {}
         ab = safe_int(st.get("atBats"), 0)
-        if ab < 1:
+        # plateAppearances is the gate (see the header). Fall back to AB+BB
+        # when the split omits PA rather than dropping a real game — some
+        # older gameLog rows carry the components but not the total.
+        pa = safe_int(st.get("plateAppearances"), 0)
+        if pa < 1:
+            pa = ab + safe_int(st.get("baseOnBalls"), 0) + safe_int(st.get("hitByPitch"), 0)
+        if pa < 1:
             continue
         hits = safe_int(st.get("hits"), 0)
         runs = safe_int(st.get("runs"), 0)
@@ -2317,6 +2333,7 @@ def compute_blank_profile(gamelog_blob: Dict[str, Any], max_lookback: int = 162)
         games.append({
             "date": str(s.get("date") or "")[:10],
             "ab": ab,
+            "pa": pa,
             "hits": hits,
             "hr": safe_int(st.get("homeRuns"), 0),
             # totalBases is published on the split; fall back to hits (a
@@ -2332,7 +2349,8 @@ def compute_blank_profile(gamelog_blob: Dict[str, Any], max_lookback: int = 162)
 
     last = games[-1]
     out.update({
-        "last_game_date": last["date"], "last_game_ab": last["ab"], "last_game_hits": last["hits"],
+        "last_game_date": last["date"], "last_game_ab": last["ab"], "last_game_pa": last["pa"],
+        "last_game_hits": last["hits"],
         "last_game_hr": last["hr"], "last_game_tb": last["tb"], "last_game_rbi": last["rbi"],
         "last_game_runs": last["runs"], "last_game_hrr": last["hrr"],
     })
@@ -8626,6 +8644,7 @@ def build_hitter_records(client: MLBClient, db: CacheDB, game: Dict[str, Any], s
                 games_since_last_hr=gs_since_hr,
                 last_game_date=blank_prof["last_game_date"],
                 last_game_ab=blank_prof["last_game_ab"],
+                last_game_pa=blank_prof["last_game_pa"],
                 last_game_hits=blank_prof["last_game_hits"],
                 last_game_hr=blank_prof["last_game_hr"],
                 last_game_tb=blank_prof["last_game_tb"],
@@ -12463,6 +12482,38 @@ Use ALT LOOKS as quality variance, not primary plays.
             row['game_pick_role'] = _role_map.get(key, '')
             row['alt_look_tag'] = LAST_ALT_TAGS.get(row.get('player_id'), '')
             row['pitcher_projected'] = safe_int(row.get('pitcher_id'), 0) in PROJECTED_PITCHERS
+
+            # ── ⛔ vs 🥇 — ONE RUN, ONE PIECE OF ADVICE (2026-08-16) ─────────
+            #
+            # Donovan asked this twice: "if the top pick is homerun why give
+            # someone a skip hr if that is the bench mark." TOP and HR are
+            # graded on a HOME RUN, so `best_bet_type = "Avoid for HR"` on a
+            # man this same run just designated TOP is the bot issuing two
+            # opposite instructions about one hitter. build_game_pick_role_map
+            # never consults true_avoid_hr (six other surfaces in this file
+            # do), which is how the two fields drifted apart.
+            #
+            # THE FIX IS THE LABEL, NOT THE SELECTOR, and that is a measured
+            # decision rather than a taste one. Over 52 graded nights, TOP
+            # picks carrying this flag homered 18/55 (32.7%) against 124/631
+            # (19.7%) for the ones without it — two-proportion z = 2.30,
+            # significant at 95%. Across every tracked hitter the flag barely
+            # separates at all (14.0% vs a 15.5% no-tag baseline). It keys on
+            # HR-SHAPE gates, not on power; when an elite power bat trips one,
+            # the tag fires and the power is still there, and the ISO-led TOP
+            # selector is finding exactly those bats. Filtering them out —
+            # the intuitive fix — would have deleted the best-performing TOP
+            # picks in the archive. So nobody is dropped; the contradictory
+            # ADVICE is.
+            #
+            # `true_avoid_hr` and the reason fields are left untouched, so the
+            # gate is still fully auditable downstream and the site can show
+            # it with its record attached. Only the recommendation moves.
+            _roles = {x.strip().upper() for x in str(row.get('game_pick_role') or '').split('/') if x.strip()}
+            if _roles & {'TOP', 'HR'} and str(row.get('best_bet_type') or '').strip().lower().startswith('avoid'):
+                row['best_bet_type_raw'] = row.get('best_bet_type')
+                row['best_bet_type'] = 'HR' if 'HR' in _roles else 'TOP'
+                row['hr_gate_flagged'] = True
 
         # ── DISCORD SLATE BOARD (2026-08-06). Every today-bot run that CHANGES
         # the picks posts tonight's board to the webhook: top names per
