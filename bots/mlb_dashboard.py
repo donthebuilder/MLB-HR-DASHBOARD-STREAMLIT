@@ -1430,6 +1430,20 @@ class HitterRecord:
     after_blank_hrr1: int = 0
     after_blank_hrr2: int = 0
     after_blank_tb2: int = 0
+    # The control cohorts (2026-08-16). overall_* is his normal rate across
+    # every batted game -- context. after_hit_* is the clean complement of
+    # after_blank_* and the only honest input to a two-proportion test. See
+    # compute_blank_profile for why both exist and why they are not the same.
+    overall_n: int = 0
+    overall_hit: int = 0
+    overall_hrr1: int = 0
+    overall_hrr2: int = 0
+    overall_tb2: int = 0
+    after_hit_n: int = 0
+    after_hit_hit: int = 0
+    after_hit_hrr1: int = 0
+    after_hit_hrr2: int = 0
+    after_hit_tb2: int = 0
     blank_profile_status: str = "unknown"
     # Per-stat park factors. Set in build_hitter_records from PARK_FACTORS_V2.
     park_hr_factor: float = 1.00
@@ -2309,6 +2323,39 @@ def compute_blank_profile(gamelog_blob: Dict[str, Any], max_lookback: int = 162)
         "last_game_tb": 0, "last_game_rbi": 0, "last_game_runs": 0, "last_game_hrr": 0,
         "blank_streak": 0, "after_blank_n": 0, "after_blank_hit": 0,
         "after_blank_hrr1": 0, "after_blank_hrr2": 0, "after_blank_tb2": 0,
+        # ── THE CONTROL (2026-08-16, Donovan: "do the board compare side to
+        # the book as well i like that") ────────────────────────────────────
+        #
+        # The board has always compared a hitter's after-a-blank rate to what
+        # the BOOK charges. That answers "is he mispriced". It does NOT answer
+        # the question the board's own name implies — "does blanking predict
+        # anything at all" — because the only thing the after-blank rate was
+        # ever measured against was a sportsbook line. A 68% could be a real
+        # bounce-back or it could just be his rate, and nothing on the page
+        # could tell the two apart.
+        #
+        # TWO baselines, because they answer different questions and mixing
+        # them up is how this gets reported wrong:
+        #
+        #   overall_*   — every batted game in the log. This is "his normal
+        #                 rate", the number a reader wants as context next to
+        #                 the dot. It is NOT a clean control: the after-blank
+        #                 games are a SUBSET of it, so the two groups overlap
+        #                 and any real effect shows up attenuated.
+        #
+        #   after_hit_* — games whose immediately-preceding batted game had a
+        #                 hit. This is the actual complement of after_blank
+        #                 and the only honest input to a two-proportion test.
+        #                 Same exclusion rule as after_blank: the first game of
+        #                 the log belongs to NEITHER group, because nothing
+        #                 precedes it.
+        #
+        # Same bars, same PA-gated denominator as after_blank throughout, or
+        # the comparison means nothing.
+        "overall_n": 0, "overall_hit": 0,
+        "overall_hrr1": 0, "overall_hrr2": 0, "overall_tb2": 0,
+        "after_hit_n": 0, "after_hit_hit": 0,
+        "after_hit_hrr1": 0, "after_hit_hrr2": 0, "after_hit_tb2": 0,
         "blank_profile_status": "empty",
     }
     if not splits:
@@ -2363,19 +2410,32 @@ def compute_blank_profile(gamelog_blob: Dict[str, Any], max_lookback: int = 162)
             break
     out["blank_streak"] = streak
 
-    for i in range(1, len(games)):
-        if games[i - 1]["hits"] != 0:
-            continue
-        g = games[i]
-        out["after_blank_n"] += 1
+    # ONE WALK, THREE TALLIES, IDENTICAL BARS. Written as a helper rather than
+    # three copies of the same four comparisons precisely because the whole
+    # value of the control is that it is measured the same way as the thing it
+    # controls for — three hand-rolled copies is three chances for one bar to
+    # drift and turn a measurement artefact into a "finding".
+    def _tally(prefix: str, g: Dict[str, Any]) -> None:
+        out[f"{prefix}_n"] += 1
         if g["hits"] >= 1:
-            out["after_blank_hit"] += 1
+            out[f"{prefix}_hit"] += 1
         if g["hrr"] >= 1:
-            out["after_blank_hrr1"] += 1
+            out[f"{prefix}_hrr1"] += 1
         if g["hrr"] >= 2:
-            out["after_blank_hrr2"] += 1
+            out[f"{prefix}_hrr2"] += 1
         if g["tb"] >= 2:
-            out["after_blank_tb2"] += 1
+            out[f"{prefix}_tb2"] += 1
+
+    # His normal rate: every batted game, first one included. Context, not a
+    # control — see the field comment above.
+    for g in games:
+        _tally("overall", g)
+
+    # The two follow-up cohorts. i starts at 1, so the first game of the log is
+    # in neither: nothing precedes it, and counting it would credit or blame
+    # him for a game outside the window.
+    for i in range(1, len(games)):
+        _tally("after_blank" if games[i - 1]["hits"] == 0 else "after_hit", games[i])
 
     out["blank_profile_status"] = "ok"
     return out
@@ -8735,6 +8795,16 @@ def build_hitter_records(client: MLBClient, db: CacheDB, game: Dict[str, Any], s
                 after_blank_hrr1=blank_prof["after_blank_hrr1"],
                 after_blank_hrr2=blank_prof["after_blank_hrr2"],
                 after_blank_tb2=blank_prof["after_blank_tb2"],
+                overall_n=blank_prof["overall_n"],
+                overall_hit=blank_prof["overall_hit"],
+                overall_hrr1=blank_prof["overall_hrr1"],
+                overall_hrr2=blank_prof["overall_hrr2"],
+                overall_tb2=blank_prof["overall_tb2"],
+                after_hit_n=blank_prof["after_hit_n"],
+                after_hit_hit=blank_prof["after_hit_hit"],
+                after_hit_hrr1=blank_prof["after_hit_hrr1"],
+                after_hit_hrr2=blank_prof["after_hit_hrr2"],
+                after_hit_tb2=blank_prof["after_hit_tb2"],
                 blank_profile_status=blank_prof["blank_profile_status"],
                 bbe_profile=sc.get("bbe_profile", {}),
                 spray_chart=sc.get("spray_chart", []),

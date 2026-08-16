@@ -139,6 +139,81 @@ p = compute_blank_profile({"stats": [{"splits": [
 check("tb fallback", p["last_game_tb"], 2)
 check("tb fallback no phantom 2+", p["after_blank_tb2"], 1)   # 2 hits = 2 TB, floor
 
+# ── THE CONTROL COHORTS (2026-08-16) ────────────────────────────────────────
+#
+# The board compares a hitter's after-a-blank rate to what the book charges.
+# That answers "is he mispriced". It does not answer "does blanking predict
+# anything", which needs the rate measured against something of HIS OWN.
+#
+# Two baselines ship, and the tests below exist mostly to pin down that they
+# are DIFFERENT things, because reporting one as the other is the whole risk:
+#
+#   overall_*   every batted game, first included. Contains the after_blank
+#               games, so it is context and not a control.
+#   after_hit_* the true complement of after_blank: same follow-up rule, same
+#               bars, same PA gate, opposite condition. THIS is what a
+#               two-proportion test may use.
+#
+# Same five-game log as the follow-up block above:
+#   1: 0-for   2: hit   3: 0-for   4: 0-for(walked, 1 R)   5: hit
+# Previous batted game hitless -> 2, 4, 5 are after_blank.
+# Previous batted game had a hit -> 3 only.
+# Game 1 is in NEITHER: nothing precedes it.
+p = compute_blank_profile(log(
+    (4, 0, 0, 0, 0, 0),
+    (4, 2, 1, 1, 3, 0),
+    (4, 0, 0, 0, 0, 0),
+    (4, 0, 1, 0, 0, 0),
+    (4, 1, 0, 2, 4, 1),
+))
+check("overall_n counts every batted game", p["overall_n"], 5)
+check("overall_hit", p["overall_hit"], 2)
+check("overall_tb2", p["overall_tb2"], 2)
+check("after_hit_n", p["after_hit_n"], 1)                  # game 3 only
+check("after_hit_hit", p["after_hit_hit"], 0)              # game 3 was a 0-for
+check("after_hit_hrr1", p["after_hit_hrr1"], 0)
+check("after_hit_tb2", p["after_hit_tb2"], 0)
+
+# THE TWO COHORTS PARTITION THE FOLLOW-UPS, EXACTLY. If this ever fails, one
+# of the three walks has drifted from the others and every comparison the
+# board draws off them is measuring two different things.
+check("cohorts partition the follow-ups",
+      p["after_blank_n"] + p["after_hit_n"], p["overall_n"] - 1)
+
+# overall_* IS NOT a control -- it contains the after_blank games. Asserted so
+# nobody "simplifies" the two down to one field later.
+check("overall_n exceeds after_blank_n", p["overall_n"] > p["after_blank_n"], True)
+
+# A log with no blank in it at all: every follow-up is after_hit, and the
+# after_blank counters must be a clean zero rather than absent.
+p = compute_blank_profile(log(
+    (4, 1, 0, 0, 1, 0),
+    (4, 2, 0, 1, 2, 0),
+    (4, 1, 1, 2, 4, 1),
+))
+check("no blanks: after_blank_n", p["after_blank_n"], 0)
+check("no blanks: after_hit_n", p["after_hit_n"], 2)
+check("no blanks: overall_n", p["overall_n"], 3)
+check("no blanks: overall_hit", p["overall_hit"], 3)
+
+# A pinch-run is not a game in EITHER cohort, and does not break the chain for
+# either. blank -> pinch-run -> start stays after_blank; the pinch-run itself
+# is never tallied anywhere.
+p = compute_blank_profile(log((4, 0, 0, 0, 0, 0), (0, 0, 0, 0, 0, 0), (4, 2, 0, 0, 2, 0)))
+check("pinch-run not in overall_n", p["overall_n"], 2)
+check("pinch-run not in after_hit_n", p["after_hit_n"], 0)
+
+# A walk-only night IS a game and IS a blank, so the game after it is
+# after_blank, not after_hit -- the same correction Donovan made on 08-15,
+# now pinned on the control side too.
+p = compute_blank_profile({"stats": [{"splits": [
+    {"date": "2026-07-01", "stat": {"atBats": 0, "baseOnBalls": 2, "hits": 0}},
+    {"date": "2026-07-02", "stat": {"atBats": 4, "hits": 2, "totalBases": 2}},
+]}]})
+check("walk-only night is a batted game", p["overall_n"], 2)
+check("game after a walk-only 0-fer is after_blank", p["after_blank_n"], 1)
+check("game after a walk-only 0-fer is NOT after_hit", p["after_hit_n"], 0)
+
 if FAILED:
     print(f"\n{len(FAILED)} FAILED\n" + "\n".join(f"  · {f}" for f in FAILED))
     sys.exit(1)
