@@ -8032,6 +8032,84 @@ def score_hitter(h: HitterRecord) -> HitterRecord:
         (side_match >= 1.0 and ((primary_weak and power_gate) or (secondary_weak and (split_iso >= 0.200 or ideal_hr >= 0.12 or damage375 >= 0.08))))
     )
     h.weak_spot_flag = star_flag
+
+    # ── ⭐ FLAG AND ⭐ REASON ARE NOW WRITTEN IN THE SAME BREATH (2026-08-16) ──
+    #
+    # WHAT WAS WRONG. On a real slate (mock/fix_slate.json, 266 rows) 42 rows
+    # carried weak_spot_flag, 57 carried a non-empty weak_spot_reason, and only
+    # 27 carried both — two fields describing the same star disagreed on 45 rows,
+    # and the site had to render that disagreement honestly, which read as
+    # nonsense. Traced: both are set together at HitterRecord construction in
+    # build_hitter_records (`weak_spot_flag=spot in pitcher.weak_spots`,
+    # `weak_spot_reason=_weak_spot_reason_for(pitcher, spot)`), and at THAT point
+    # they agree perfectly — _weak_spot_reason_for returns "" for exactly the
+    # spots that are not in pitcher.weak_spots. Then score_hitter (this function)
+    # overwrites the flag five lines up with `star_flag`, a completely different
+    # and much better test, and never touches the reason. The reason has been
+    # stale-by-construction ever since star_flag was introduced: it answers a
+    # question (is this PITCHER weak at the #N spot?) that stopped being the
+    # question the flag asks.
+    #
+    # THE TWO REALLY DO MEASURE DIFFERENT THINGS, which is why "just recompute
+    # the reason from pitcher.weak_spots" would not have fixed it:
+    #   · pitcher.weak_spots is pitcher-side only — spots with damage_score >= 58
+    #     and pa >= 4, and if a pitcher has none it FALLS BACK to his three worst
+    #     spots by damage score regardless of quality. That fallback is why 30
+    #     rows carried a reason with no star.
+    #   · star_flag is a hitter x pitcher star: real spot/zone damage AND power,
+    #     OR platoon edge AND a top-of-order slot AND power. That second disjunct
+    #     contains no pitcher-weakness claim at all, which is why 15 rows carried
+    #     a star with no reason — including, on that slate, Gunnar Henderson at a
+    #     spot the pitcher scores 4.9/100 damage allowed at. The local names
+    #     `primary_weak` / `secondary_weak` do not mean the pitcher is weak; they
+    #     mean the HITTER bats 2-3-4 / 1-5. Documented here rather than renamed
+    #     because they feed the weak_spot_bonus ladder directly below.
+    #
+    # WHICH ONE IS AUTHORITATIVE: the flag, without argument. Every consumer in
+    # this file reads the flag (the ⭐ in five report renderers, the HRW gate, the
+    # pair scorer, the stack-alert line, the overall-score interaction) and none
+    # reads the reason — a whole-repo grep found the reason referenced only here,
+    # at its construction site, and in live_results_tracker.SLOT_FIELDS. And the
+    # flag is the measured one: 18.0% HR against a 13.9% baseline in the graded
+    # archive. So the reason derives from the flag, never the other way round.
+    #
+    # THE INVARIANT, asserted in tests/test_hr_gate_label.py:
+    #     bool(weak_spot_flag) == bool(weak_spot_reason.strip())
+    #
+    # NOTHING IS LOST by blanking the reason on the 30 unstarred rows. The
+    # pitcher-side sentence it held was a strict SUBSET of pitcher_spot_damage_reason,
+    # which is populated on 266/266 rows of that same slate and carries more of
+    # the same numbers ("spot #1: 38 PA, 0.500 SLG, 0.219 ISO, HR rate 5.3%, XBH
+    # rate 7.9%, HH 33.3%" against the old "Pitcher has allowed 2 HR to the #1
+    # spot in 38 PA this season (.500 SLG)."). And when the star DOES fire, the
+    # pitcher-side sentence is kept as the lead of the new reason rather than
+    # discarded — the star's own clause is appended after it, so the row now says
+    # both what the pitcher gives up there and what made this hitter the one to
+    # take it. No score, no flag and no pick moves; only the sentence does.
+    _ws_pitcher_note = str(getattr(h, "weak_spot_reason", "") or "").strip()
+    if star_flag:
+        _ws_bits = [_ws_pitcher_note] if _ws_pitcher_note else []
+        if true_spot_hot and power_gate:
+            _ws_bits.append(
+                f"#{h.lineup_spot} spot is getting damaged (spot {h.pitcher_spot_damage_score:.0f}, "
+                f"zone {h.pitcher_zone_damage_score:.0f} of 100) and he has the power to use it."
+            )
+        elif primary_weak and power_gate:
+            _ws_bits.append(
+                f"Bats #{h.lineup_spot} with the platoon edge and a live power profile "
+                f"— the star is the matchup, not a hole in the pitcher "
+                f"(spot damage only {h.pitcher_spot_damage_score:.0f} of 100)."
+            )
+        else:
+            _ws_bits.append(
+                f"Bats #{h.lineup_spot} with the platoon edge and top-end power "
+                f"(ISO {display_avg(split_iso)} vs this hand) — the star is the matchup, "
+                f"not a hole in the pitcher (spot damage {h.pitcher_spot_damage_score:.0f} of 100)."
+            )
+        h.weak_spot_reason = " ".join(_ws_bits)
+    else:
+        h.weak_spot_reason = ""
+
     if true_spot_hot and power_gate:
         h.weak_spot_bonus = 0.034
     elif true_spot_warm and power_gate:
@@ -9774,6 +9852,94 @@ def build_game_pick_role_map(rows: List[HitterRecord]) -> Dict[Tuple[int, int], 
         role_map.setdefault((game_pk, anchor.player_id), []).append("CONTACT")
 
     return {k: "/".join(v) for k, v in role_map.items()}
+
+
+# ── ⛔ vs 🥇 — ONE RUN, ONE PIECE OF ADVICE (2026-08-16) ─────────────────────
+#
+# Donovan asked this twice: "if the top pick is homerun why give someone a skip
+# hr if that is the bench mark." TOP and HR are graded on a HOME RUN, so
+# `best_bet_type = "Avoid for HR"` on a man this same run just designated TOP is
+# the bot issuing two opposite instructions about one hitter.
+#
+# WHY THE TWO FIELDS CAN DISAGREE AT ALL — the ordering, traced 2026-08-16.
+# `best_bet_type` is a PER-HITTER field. It is written inside
+# apply_model_v2_layers() (`_hr2_best_bet_and_label`, and then overwritten by
+# apply_decision_engine_v31() a few hundred lines later in the same function),
+# which runs from score_hitter() while ONE game's rows are being built. The
+# designation is a SLATE-level, one-pick-per-game ranking: build_game_pick_role_map()
+# above cannot run until every game's rows exist, which is a whole pipeline stage
+# later. So best_bet_type is not "wrong early" — at the moment it is computed the
+# information it contradicts does not exist yet. It is physically impossible for
+# the hitter-level label to know it is about to be designated, and the earliest
+# honest place to reconcile the two is right here, the instant the role map lands.
+# That is why this is a function called once at that point and not a fix pushed
+# back into the scorer: pushing it back would require running the slate ranker
+# per hitter, which is the same ranker, run 266 times, for the same answer.
+#
+# THE FIX IS THE LABEL, NOT THE SELECTOR, and that is a measured decision rather
+# than a taste one. Over 52 graded nights, TOP picks carrying this flag homered
+# 18/55 (32.7%) against 124/631 (19.7%) for the ones without it — two-proportion
+# z = 2.30, significant at 95%. Across every tracked hitter the flag barely
+# separates at all (133/951 = 14.0% against a 245/1584 = 15.5% no-tag baseline).
+# It keys on HR-SHAPE gates, not on power; when an elite power bat trips one, the
+# tag fires and the power is still there, and the ISO-led TOP selector is finding
+# exactly those bats. Filtering them out — the intuitive fix — would have deleted
+# the best-performing TOP picks in the archive. So nobody is dropped, no score
+# moves; the contradictory ADVICE is what moves.
+#
+# `true_avoid_hr`, `avoid_hr_reasons`, `final_hr_role` and `beginner_label` are
+# all left untouched, so the gate stays fully auditable downstream and the site
+# can keep showing it with its record attached. Only the recommendation changes.
+def reconcile_best_bet_with_designation(rows_payload: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Stop `best_bet_type` saying "avoid" about a hitter this same run designated
+    TOP or HR. Mutates and returns rows_payload.
+
+    Call this ONCE, immediately after `game_pick_role` has been stamped onto the
+    payload rows (after the pick lock has had its say — the frozen first-pitch map
+    is the designation that counts, so reconciling against the fresh map would
+    label the wrong player once a game is underway).
+
+    Invariant established, and asserted in tests/test_hr_gate_label.py:
+
+        a row whose game_pick_role contains TOP or HR never publishes a
+        best_bet_type beginning with "avoid" — and every row that was changed
+        carries the original verdict in best_bet_type_raw plus hr_gate_flagged.
+
+    Nothing is deleted: best_bet_type_raw is the untouched original string, and
+    `true_avoid_hr` / `avoid_hr_reasons` still carry the gate's full reasoning on
+    the same row. hr_gate_flagged / best_bet_type_raw are written ONLY on rows
+    that actually changed, which is the shape the site's hrGateVerdict() already
+    reads (absent == not flagged); rows that never contradicted are left alone so
+    "no key" keeps meaning "nothing to explain".
+    """
+    for row in rows_payload or []:
+        roles = {x.strip().upper() for x in str(row.get('game_pick_role') or '').split('/') if x.strip()}
+        if not (roles & {'TOP', 'HR'}):
+            continue
+        if not str(row.get('best_bet_type') or '').strip().lower().startswith('avoid'):
+            continue
+        row['best_bet_type_raw'] = row.get('best_bet_type')
+        # "HR" for TOP-only rows too, NOT the role name (fixed 2026-08-16, same
+        # session that shipped the first cut of this repair). The first version
+        # wrote `'HR' if 'HR' in roles else 'TOP'`, which put the string "TOP"
+        # into best_bet_type — and "TOP" is not a best_bet_type. The field's
+        # entire value space is what _hr2_best_bet_and_label() and
+        # apply_decision_engine_v31() can return: HR / HR or HRR / HRR + HR
+        # Sprinkle / HRR / XBH / HRR / Hits / Avoid for HR / Avoid HR. "TOP" is a
+        # game_pick_role value that had leaked one field over. That matters
+        # beyond tidiness: live_results_tracker.SLOT_FIELDS archives
+        # best_bet_type, and the archive is sliced BY that string (HR 153/665 =
+        # 23.0%, no tag 245/1584 = 15.5%, HRR + HR Sprinkle 125/839 = 14.9%,
+        # Avoid for HR 133/951 = 14.0%, HR or HRR 53/399 = 13.3%). Writing a role
+        # name in there invents a phantom category in every future cut of that
+        # table. "HR" is also the honest answer on the merits: TOP and HR are
+        # both graded on a home run — that is the whole premise of this repair —
+        # and these particular bats homered 18/55 = 32.7%, the best rate in the
+        # table above, so "HR" understates them rather than overstating them.
+        row['best_bet_type'] = 'HR'
+        row['hr_gate_flagged'] = True
+    return rows_payload
+
 
 def _pool_eligibility(rows: List[HitterRecord]) -> Tuple[List[HitterRecord], List[HitterRecord], List[HitterRecord]]:
     ranked = sorted(rows, key=lambda r: r.hr_score, reverse=True)
@@ -12483,37 +12649,16 @@ Use ALT LOOKS as quality variance, not primary plays.
             row['alt_look_tag'] = LAST_ALT_TAGS.get(row.get('player_id'), '')
             row['pitcher_projected'] = safe_int(row.get('pitcher_id'), 0) in PROJECTED_PITCHERS
 
-            # ── ⛔ vs 🥇 — ONE RUN, ONE PIECE OF ADVICE (2026-08-16) ─────────
-            #
-            # Donovan asked this twice: "if the top pick is homerun why give
-            # someone a skip hr if that is the bench mark." TOP and HR are
-            # graded on a HOME RUN, so `best_bet_type = "Avoid for HR"` on a
-            # man this same run just designated TOP is the bot issuing two
-            # opposite instructions about one hitter. build_game_pick_role_map
-            # never consults true_avoid_hr (six other surfaces in this file
-            # do), which is how the two fields drifted apart.
-            #
-            # THE FIX IS THE LABEL, NOT THE SELECTOR, and that is a measured
-            # decision rather than a taste one. Over 52 graded nights, TOP
-            # picks carrying this flag homered 18/55 (32.7%) against 124/631
-            # (19.7%) for the ones without it — two-proportion z = 2.30,
-            # significant at 95%. Across every tracked hitter the flag barely
-            # separates at all (14.0% vs a 15.5% no-tag baseline). It keys on
-            # HR-SHAPE gates, not on power; when an elite power bat trips one,
-            # the tag fires and the power is still there, and the ISO-led TOP
-            # selector is finding exactly those bats. Filtering them out —
-            # the intuitive fix — would have deleted the best-performing TOP
-            # picks in the archive. So nobody is dropped; the contradictory
-            # ADVICE is.
-            #
-            # `true_avoid_hr` and the reason fields are left untouched, so the
-            # gate is still fully auditable downstream and the site can show
-            # it with its record attached. Only the recommendation moves.
-            _roles = {x.strip().upper() for x in str(row.get('game_pick_role') or '').split('/') if x.strip()}
-            if _roles & {'TOP', 'HR'} and str(row.get('best_bet_type') or '').strip().lower().startswith('avoid'):
-                row['best_bet_type_raw'] = row.get('best_bet_type')
-                row['best_bet_type'] = 'HR' if 'HR' in _roles else 'TOP'
-                row['hr_gate_flagged'] = True
+        # ⛔ vs 🥇: the designation has just landed (post pick-lock), so this is
+        # the first moment in the whole run at which a hitter-level best_bet_type
+        # can be checked against the slate-level role it contradicts. One call,
+        # one mechanism — see reconcile_best_bet_with_designation() for the
+        # ordering trace and the 18/55 vs 124/631 measurement behind it. This
+        # USED to be an anonymous inline block right here inside the loop above;
+        # it was moved out on 2026-08-16 so the rule has a name, a docstring
+        # stating its invariant, and a test that can call it without standing up
+        # the pipeline (tests/test_hr_gate_label.py).
+        rows_payload = reconcile_best_bet_with_designation(rows_payload)
 
         # ── DISCORD SLATE BOARD (2026-08-06). Every today-bot run that CHANGES
         # the picks posts tonight's board to the webhook: top names per

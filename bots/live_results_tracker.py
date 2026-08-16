@@ -1343,6 +1343,28 @@ SLOT_FIELDS = {
     # trim_row's whole point is keeping the payload small and this adds bytes,
     # not kilobytes.
     "multi_hit_score", "multi_hit_flag", "multi_hit_reason",
+    # ── THE HR GATE, MADE BACKTESTABLE (2026-08-16) ─────────────────────────
+    # Exactly the same shape of gap as multi_hit above, found the same way.
+    #
+    # A hitter the run designates TOP or HR sometimes also carries an "Avoid
+    # for HR" verdict from the decision engine — the two are computed at
+    # different levels (best_bet_type per hitter, designation across the whole
+    # slate) so neither can see the other. That contradiction is not noise: on
+    # the archive those bats homered 18/55 = 32.7% against 124/631 = 19.7% for
+    # designated bats without the tag, z = 2.30. The avoid verdict, on a
+    # designated hitter, is a BUY signal. Which is why the fix was to change
+    # the label and not the selector.
+    #
+    # mlb_dashboard.py now rewrites best_bet_type to "HR" on those rows and
+    # preserves the original in best_bet_type_raw with hr_gate_flagged=True.
+    # Neither of those was in this whitelist, so the archive kept only the
+    # substituted label with no record a gate had fired -- meaning the 18/55
+    # cut above could never have been recomputed from a future extract, and
+    # the finding would have been frozen at the day it was measured.
+    #
+    # Two fields. The flag is a bool and the raw is one of a dozen short
+    # strings.
+    "best_bet_type_raw", "hr_gate_flagged",
     # DATA-GAP INSTRUMENTATION (2026-08-13): recent_ev/pitcher_ev_allowed/
     # pitcher_hardhit_allowed/last5_runs/last5_rbi/pitcher_whip/pitcher_era
     # all quietly stopped populating for a real stretch (~2026-06-22 onward,
