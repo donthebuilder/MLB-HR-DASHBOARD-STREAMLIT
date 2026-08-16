@@ -124,8 +124,8 @@ POOL_SECTIONS = ("recommended_pairs", "recommended_3mans",
 # Restored verbatim onto a locked ticket, because they were computed FOR that
 # roster. Leaving today's score on yesterday's names is how you get a pool
 # labelled "Strongest" that is arithmetically nothing of the sort.
-TICKET_FIELDS = ("label", "type", "lane_key", "pair_key", "pair_score",
-                 "score", "pool_score", "risk", "tags", "reason")
+TICKET_FIELDS = ("name", "label", "type", "lane_key", "pair_key", "pair_score",
+                 "score", "pool_score", "size", "risk", "tags", "reason")
 
 # Enough to render a locked man who has since vanished from the candidate pool.
 STUB_FIELDS = ("player_id", "name", "team", "opponent", "game_pk", "lineup_spot")
@@ -242,10 +242,51 @@ def first_pitch_of(rows: list[dict]) -> dict[str, dt.datetime]:
 
 # ── ticket helpers ───────────────────────────────────────────────────────────
 
-def ticket_key(section: str, idx: int, blob: dict) -> str:
-    """The SLOT's identity, not the roster's — see the POOL_FILES comment."""
-    slot = blob.get("label") or blob.get("lane_key")
-    return f"{section}|{slot or idx}"
+def ticket_slots(section: str, blobs: list) -> list[str]:
+    """Stable slot keys for one section's blobs, in order.
+
+    ── TWO BUGS FOUND BY WRITING THE TEST (2026-08-16) ──────────────────────
+    This used to be `blob.get("label") or blob.get("lane_key")` and it was
+    wrong on BOTH of the shapes the bot actually publishes. Neither failed
+    loudly; both quietly locked the wrong thing.
+
+    1. POOLS DO NOT HAVE `label`. The published field is `name`
+       ("Pool A — Strongest"). The old comment even quoted that exact string
+       as an example of `label`, which is how the mistake survived — the field
+       name was assumed and never checked against pair_builder_latest.json.
+       With `label` missing the key fell through to the ARRAY INDEX, so the
+       lock froze "whatever is sitting in slot 0" rather than Pool A. Pools are
+       ranked, so the day the recompute reorders them the lock restores one
+       ticket's legs onto a different ticket.
+
+    2. `lane_key` IS NOT UNIQUE. On the live file two pairs share lane "TOP30"
+       and two more share lane "A". Same key for two blobs means the second
+       overwrote the first in the ledger dict, and on restore BOTH pairs got
+       the same frozen roster — the lock actively duplicating a ticket, which
+       is worse than not locking at all.
+
+    So: `name` first (pools), then `label`, then `lane_key` — and because a
+    lane legitimately holds several pairs, every key carries its ORDINAL
+    WITHIN ITS OWN SLOT NAME. "the second pair in lane TOP30" is a real,
+    stable slot; "lane TOP30" is not. Index remains the last resort for a blob
+    that identifies itself no other way.
+
+    Keys are computed in ONE place and consumed by both the ledger pass and
+    the restore pass, because the two drifting apart would mean writing a lock
+    under one key and reading it under another — silently never restoring.
+    """
+    seen: dict[str, int] = {}
+    out: list[str] = []
+    for idx, blob in enumerate(blobs):
+        base = ""
+        if isinstance(blob, dict):
+            base = str(blob.get("name") or blob.get("label") or blob.get("lane_key") or "").strip()
+        if not base:
+            base = f"#{idx}"
+        n = seen.get(base, 0)
+        seen[base] = n + 1
+        out.append(f"{section}|{base}|{n}")
+    return out
 
 
 def ticket_pids(blob: dict) -> list[int]:
@@ -431,13 +472,15 @@ def main() -> int:
         # another name and get the same restoration applied.
         _, lead = pool_payloads[0]
         for section in POOL_SECTIONS:
-            for idx, blob in enumerate(lead.get(section) or []):
+            blobs = lead.get(section) or []
+            keys = ticket_slots(section, blobs)
+            for idx, blob in enumerate(blobs):
                 if not isinstance(blob, dict):
                     continue
                 pids = ticket_pids(blob)
                 if not pids:
                     continue
-                key = ticket_key(section, idx, blob)
+                key = keys[idx]
                 tfp = ticket_first_pitch(blob, fp)
                 started = bool(tfp and now >= tfp)
                 slot = tickets.get(key)
@@ -494,10 +537,12 @@ def main() -> int:
             idx_players = index_players(payload)
             touched = False
             for section in POOL_SECTIONS:
-                for i, blob in enumerate(payload.get(section) or []):
+                blobs = payload.get(section) or []
+                keys = ticket_slots(section, blobs)
+                for i, blob in enumerate(blobs):
                     if not isinstance(blob, dict):
                         continue
-                    slot = tickets.get(ticket_key(section, i, blob))
+                    slot = tickets.get(keys[i])
                     if not slot or not slot.get("locked"):
                         continue
                     if ticket_pids(blob) == slot.get("pids"):

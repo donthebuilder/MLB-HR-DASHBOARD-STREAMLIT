@@ -1,0 +1,100 @@
+name: Odds probe
+
+# 🔎 THE ODDS PROBE, RUN WHERE THE KEY ACTUALLY LIVES (2026-08-16).
+#
+# This has been a standing open item for days, phrased as "run
+# `python bots/odds_fetch.py --probe` with a key and paste the output." It kept
+# not happening, and the reason is structural rather than anybody forgetting:
+#
+#   · Claude's sandbox CANNOT REACH ANY ODDS HOST. Confirmed repeatedly — the
+#     CONNECT tunnel is blocked, so the probe cannot be run from there at all.
+#   · The keys exist ONLY as GitHub repo secrets. They are not in any .env, not
+#     in the checkouts on the Mac, and deliberately not committed anywhere (the
+#     site is a public static build; apply.sh has a guard that refuses to push
+#     if a key ever appears in the tree).
+#   · Running it on the Mac means exporting a secret by hand into a shell, and
+#     that machine's network intercepts TLS anyway — every odds host fails with
+#     "self-signed certificate in certificate chain", which is why the script
+#     grew an --insecure flag for local probing in the first place.
+#
+# So the one place the probe can run cleanly, with a real key, over a network
+# that is not intercepting TLS, is a GitHub runner — where the secret is
+# already wired into today.yml and the runners are unaffected by the Mac's
+# TLS interception.
+#
+# This workflow does nothing but that. It is manual-only (workflow_dispatch),
+# it writes nothing, it publishes nothing, it commits nothing, and it does not
+# touch the request lock — --probe is read-only by design. Click "Run
+# workflow" in the Actions tab and read the log.
+#
+# WHAT THE PROBE ANSWERS, and why it is worth a click: it is the only check
+# that hits all three providers with the real credentials and prints the
+# PRIMARY'S ACTUAL MLB MARKET NAMES. Everything the parser knows about the
+# provider's shape was reverse-engineered from one live response plus eight
+# round trips of failure (see claude/moonshot-odds-pipeline.md — lowercase
+# bookmaker slugs 400ing, prop hints matched against a generic bucket, a label
+# splitter that mangled 274 players' names). None of that has been re-verified
+# against an authenticated response since. If the provider changes a market
+# name or a bookmaker label, this is the run that says so, in seconds, instead
+# of a slate quietly publishing an empty board.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dump:
+        description: 'Also dump raw payloads as an artifact (keys are stripped by the script)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install deps
+        run: pip install -r bots/requirements.txt
+
+      - name: Probe every provider
+        env:
+          # Same three secrets and two variables today.yml's fetch step uses,
+          # so a green probe here means the nightly fetch is configured
+          # correctly too — that is most of the value of running it.
+          ODDSAPI_IO_KEY: ${{ secrets.ODDSAPI_IO_KEY }}
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          ODDSPAPI_KEY: ${{ secrets.ODDSPAPI_KEY }}
+          ODDS_PROVIDER_ORDER: ${{ vars.ODDS_PROVIDER_ORDER }}
+          ODDSAPI_IO_BOOKMAKERS: ${{ vars.ODDSAPI_IO_BOOKMAKERS }}
+        run: |
+          echo "── which credentials are present (never their values) ──"
+          for k in ODDSAPI_IO_KEY ODDS_API_KEY ODDSPAPI_KEY; do
+            v="${!k}"
+            if [ -n "$v" ]; then echo "  $k: set (${#v} chars)"; else echo "  $k: NOT SET"; fi
+          done
+          echo "  ODDS_PROVIDER_ORDER: ${ODDS_PROVIDER_ORDER:-<default>}"
+          echo "  ODDSAPI_IO_BOOKMAKERS: ${ODDSAPI_IO_BOOKMAKERS:-<default>}"
+          echo
+          echo "── probe ──"
+          if [ "${{ inputs.dump }}" = "true" ]; then
+            mkdir -p /tmp/odds-dump
+            python bots/odds_fetch.py --probe --dump /tmp/odds-dump
+          else
+            python bots/odds_fetch.py --probe
+          fi
+
+      - name: Upload raw payloads
+        if: ${{ inputs.dump }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: odds-probe-dump
+          path: /tmp/odds-dump
+          if-no-files-found: ignore
+          retention-days: 7
