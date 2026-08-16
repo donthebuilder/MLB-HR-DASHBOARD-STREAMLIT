@@ -1318,6 +1318,31 @@ SLOT_FIELDS = {
     # decorations. These were shown but never kept.
     "pitch_type_match_flag", "pitch_type_match_score", "games_since_last_hr",
     "hidden_hr_value", "high_confidence_hr_flag",
+    # ── MULTI-HIT, FINALLY ARCHIVED (2026-08-15) ────────────────────────────
+    # Donovan: "multi hit players from the bot, the results need to figure out
+    # how that information can help pick."
+    #
+    # It could not be answered. mlb_dashboard.py computes multi_hit_score,
+    # multi_hit_flag and multi_hit_reason on EVERY slate row, and not one of
+    # them has ever reached a graded file — 120 fields land in
+    # graded_results_*.json and none of them is a multi-hit field. So the
+    # bot's own dedicated multi-hit signal has never been backtested and, until
+    # this line, could not be.
+    #
+    # What the archive COULD answer, off scores kept for other reasons, is
+    # worth writing down here because it is the reason this matters. On 4,971
+    # tracked judgeable hitters the 2+ hit base rate is 25.1%, and sorting by
+    # bottom-vs-top quartile: hit_score 19.0% -> 29.8% (+10.8), hrr_score
+    # +7.6, contact_score -0.1, hr_score -3.8, and top_board_score_v2 -6.0 —
+    # INVERTED, so the TOP pick is the worst place on the board to look for a
+    # multi-hit play. The best multi-hit predictor in the archive is currently
+    # a score built for something else entirely.
+    #
+    # These three fields are what let the next sweep ask whether the purpose-
+    # built signal beats hit_score at its own job. Scalars and a short string;
+    # trim_row's whole point is keeping the payload small and this adds bytes,
+    # not kilobytes.
+    "multi_hit_score", "multi_hit_flag", "multi_hit_reason",
     # DATA-GAP INSTRUMENTATION (2026-08-13): recent_ev/pitcher_ev_allowed/
     # pitcher_hardhit_allowed/last5_runs/last5_rbi/pitcher_whip/pitcher_era
     # all quietly stopped populating for a real stretch (~2026-06-22 onward,
