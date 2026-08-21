@@ -39,6 +39,7 @@ from bots.mlb_dashboard import (  # noqa: E402
     write_prediction_log,
     load_locked_rows_by_game,
     sync_model_foundation_outputs_to_website_repo,
+    _current_git_sha,
 )
 from bots.live_results_tracker import (  # noqa: E402
     SLOT_FIELDS,
@@ -138,6 +139,55 @@ checkTrue("run_meta: env.python is present", bool(rm1["env"].get("python")))
 # (4) two separate runs (two separate build_run_meta() calls, i.e. two bot
 # executions) create different run_ids.
 checkTrue("run_meta: two separate executions get different run_ids", rm1["run_id"] != rm2["run_id"])
+
+# (4b) PROVENANCE (2026-08-21): git_sha must name the commit that actually
+# executed this process, not whatever GITHUB_SHA happened to hold at
+# event-trigger time. today.yml's checkout step passes an explicit branch
+# name (`ref: main`), which actions/checkout resolves to that branch's tip
+# AT CHECKOUT TIME -- decoupled from GITHUB_SHA, which is fixed earlier, at
+# schedule/dispatch time. A push landing in that gap (today.yml fires
+# ~13x/day) would make GITHUB_SHA name a stale, already-superseded commit
+# while the working tree -- what actually ran -- is newer. `git rev-parse
+# HEAD` in this process's own working tree has no such race: it can only
+# ever answer "what is checked out here right now." Prove the real repo
+# state wins even when GITHUB_SHA is deliberately spoofed to something else.
+import subprocess as _sp  # local import so this section is self-contained
+_real_head_proc = _sp.run(
+    ["git", "-C", os.path.join(os.path.dirname(__file__), ".."), "rev-parse", "HEAD"],
+    capture_output=True, text=True, timeout=5,
+)
+_real_head = _real_head_proc.stdout.strip() if _real_head_proc.returncode == 0 else None
+
+if _real_head:
+    _prior_github_sha = os.environ.get("GITHUB_SHA")
+    os.environ["GITHUB_SHA"] = "0000000000000000000000000000000000stale"
+    try:
+        check("git_sha: the real checked-out HEAD wins over a stale/spoofed GITHUB_SHA",
+              _current_git_sha(), _real_head)
+    finally:
+        if _prior_github_sha is None:
+            os.environ.pop("GITHUB_SHA", None)
+        else:
+            os.environ["GITHUB_SHA"] = _prior_github_sha
+else:
+    print("git_sha race test: skipped (no git repo available in this sandbox to compare against)")
+
+# And the fallback direction still works: when `git rev-parse HEAD` itself
+# cannot run (not a git checkout, git missing, etc.), GITHUB_SHA is used
+# rather than the whole run losing its provenance field.
+_orig_subprocess_run = MDB.subprocess.run
+MDB.subprocess.run = lambda *a, **kw: (_ for _ in ()).throw(FileNotFoundError("no git in this fake context"))
+_prior_github_sha2 = os.environ.get("GITHUB_SHA")
+os.environ["GITHUB_SHA"] = "deadbeefFALLBACKVALUE"
+try:
+    check("git_sha: falls back to GITHUB_SHA when git rev-parse itself fails",
+          _current_git_sha(), "deadbeefFALLBACKVALUE")
+finally:
+    MDB.subprocess.run = _orig_subprocess_run
+    if _prior_github_sha2 is None:
+        os.environ.pop("GITHUB_SHA", None)
+    else:
+        os.environ["GITHUB_SHA"] = _prior_github_sha2
 
 
 # ═══ 3. Stamping HitterRecord (Task 3) ════════════════════════════════════════

@@ -12464,12 +12464,30 @@ def load_locked_rows_by_game(json_path: Path) -> Dict[int, List[HitterRecord]]:
 # that execution scores carries it (see the stamping loop in main()).
 
 def _current_git_sha() -> str:
-    """Best-effort commit identity for this run. GITHUB_SHA is set by every
-    GitHub Actions job; the local `git rev-parse` fallback covers a Mac run.
-    Never raises -- provenance is nice-to-have, not worth failing a slate."""
-    sha = os.environ.get("GITHUB_SHA", "").strip()
-    if sha:
-        return sha
+    """Commit identity for this run. Must mean exactly one thing: the source
+    commit that executed mlb_dashboard.py and produced this prediction log.
+
+    PROVENANCE FIX (2026-08-21): this used to prefer the GITHUB_SHA env var
+    over `git rev-parse HEAD`, on the assumption that GITHUB_SHA always
+    names the commit actually checked out. It doesn't, reliably. today.yml's
+    checkout step passes an explicit branch name (`ref: main`), and
+    actions/checkout resolves an explicit branch ref by fetching and
+    checking out whatever that branch's CURRENT tip is at the moment the
+    checkout step runs -- not GITHUB_SHA. GITHUB_SHA for a schedule or
+    workflow_dispatch run is fixed at event-trigger time, before the runner
+    has even started. today.yml fires up to ~13x/day, so if a push lands
+    main in the (usually short, but non-zero -- runner queue/provisioning)
+    gap between "run triggered" and "checkout step executes", the two
+    diverge: GITHUB_SHA still names the OLDER pre-push commit while the
+    working tree -- and everything that actually ran -- is the NEWER one.
+    That is a real mismatch in the direction that matters: it would make
+    run_meta.git_sha understate what code produced the row.
+    `git rev-parse HEAD`, run in the working tree that is executing this
+    process right now, cannot have that race -- it can only ever answer
+    "what is actually checked out here," which is what this field must
+    mean. GITHUB_SHA is kept only as a fallback for a context where this
+    isn't a real git checkout at all (e.g. a stripped deployment). Never
+    raises -- provenance is nice-to-have, not worth failing a slate."""
     try:
         out = subprocess.run(
             ["git", "-C", str(Path(__file__).resolve().parent.parent), "rev-parse", "HEAD"],
@@ -12479,6 +12497,9 @@ def _current_git_sha() -> str:
             return out.stdout.strip()
     except Exception:
         pass
+    sha = os.environ.get("GITHUB_SHA", "").strip()
+    if sha:
+        return sha
     return "unknown"
 
 
