@@ -299,27 +299,40 @@ def run_id_by_game(rows: list[dict]) -> dict[str, dict]:
     return out
 
 
-def _run_id_generated_at(run_id: str | None) -> dt.datetime | None:
-    """Best-effort timestamp recovered from a run_id's own
-    "{slate_date}.{HHMMSSZ}.{source}" shape (see build_run_meta() in
-    mlb_dashboard.py) -- not a new field, just reading the one already
-    embedded, so a "was this run actually generated after first pitch"
-    check does not need a second network fetch of that run's run_meta.
-    Never raises; an unparseable/legacy run_id just yields None."""
-    if not run_id:
-        return None
-    parts = run_id.split(".")
-    if len(parts) < 2:
-        return None
-    date_part, time_part = parts[0], parts[1]
-    if len(time_part) != 7 or time_part[-1] != "Z" or not time_part[:6].isdigit():
-        return None
-    try:
-        return dt.datetime.fromisoformat(
-            f"{date_part}T{time_part[0:2]}:{time_part[2:4]}:{time_part[4:6]}+00:00"
-        )
-    except ValueError:
-        return None
+# RUN_ID IS OPAQUE. FIX (2026-08-21, caught by Donovan before this shipped):
+# an earlier version of this file reconstructed a timestamp by parsing
+# run_id's own "{slate_date}.{HHMMSSZ}.{source}" shape. That is wrong, and
+# wrong by exactly 24 hours whenever a run straddles UTC midnight: the
+# leading date segment is the Moonshot SLATE date (a Phoenix-day boundary,
+# see slate_output_label() in mlb_dashboard.py), not the UTC calendar date
+# the HHMMSSZ time-of-day is measured against. Real production example --
+#     run_id:       2026-08-20.054456Z.gha-32451657164
+#     actual generated_at: 2026-08-21T05:44:56.692484+00:00
+# -- parsing the run_id alone gives 2026-08-20T05:44:56Z, a full day early.
+# run_id is an opaque identifier for "which run" and must never be parsed
+# for "when." The one place that already knows "when," correctly, is the
+# run_meta the model-foundation code publishes right alongside the slate it
+# describes -- read that instead of ever re-deriving it.
+def read_current_run_meta(current_dir: Path, public_dir: Path) -> dict | None:
+    """The CURRENT execution's own {"today"}_run_meta.json, written by
+    sync_model_foundation_outputs_to_website_repo() in mlb_dashboard.py in
+    THIS SAME today.yml job, before pick_lock.py runs -- a local file read,
+    same as SLATE_FILES/POOL_FILES below, not a network fetch. Only "today"
+    is read because SLATE_FILES itself only ever names today variants.
+    None on anything not exactly right (missing file, unreadable JSON, not
+    a dict) -- generated_at is a nice-to-have provenance field, not worth
+    failing the lock over."""
+    for base in (current_dir, public_dir):
+        p = base / "today_run_meta.json"
+        if not p.exists():
+            continue
+        try:
+            j = json.loads(p.read_text())
+            if isinstance(j, dict):
+                return j
+        except Exception:
+            pass
+    return None
 
 
 # ── ticket helpers ───────────────────────────────────────────────────────────
@@ -479,6 +492,11 @@ def main() -> int:
     # above and below. Order relative to that lock does not matter -- the
     # two read the same `rows`/`fp`/`now` and write disjoint ledger keys.
     rid_by_game = run_id_by_game(rows)
+    # THE ONE PLACE "WHEN" COMES FROM. Read once per pick_lock.py run (every
+    # game newly locked THIS run was scored by the SAME execution of
+    # mlb_dashboard.py, so they share one generated_at) -- never parsed out
+    # of run_id itself. See the block comment above read_current_run_meta().
+    run_meta_now = read_current_run_meta(CURRENT, PUBLIC)
     por_new = 0
     for gp, fp_time in fp.items():
         if gp in por:
@@ -486,20 +504,31 @@ def main() -> int:
         if now < fp_time:
             continue  # still pregame; no record yet, correctly
         info = rid_by_game.get(gp) or {"run_id": None, "model_version": None}
-        run_generated_at = _run_id_generated_at(info["run_id"])
+        # Only trust run_meta_now's generated_at for THIS game if it is
+        # verifiably the metadata for the exact run stamped on this game's
+        # own rows -- a defensive check, not an assumption, since it is a
+        # different file read independently of the rows themselves.
+        generated_at = None
+        if run_meta_now and info["run_id"] and run_meta_now.get("run_id") == info["run_id"]:
+            generated_at = run_meta_now.get("generated_at")
+        generated_at_dt = parse_ts(generated_at) if generated_at else None
         por[gp] = {
             "run_id": info["run_id"],
             "model_version": info["model_version"],
+            # The canonical value from build_run_meta(), verbatim -- not
+            # reconstructed. None when it could not be verified above (no
+            # run_meta.json this run, unreadable, or a run_id mismatch) --
+            # an honest "unknown," never a guess dressed up as a timestamp.
+            "generated_at": generated_at,
             "first_pitch": fp_time.isoformat(),
             "locked_at": stamp,
-            # Honest, timestamp-derived (not guessed): was the run now on
-            # record for this game actually generated after the game had
-            # already started (a late build, a failed earlier run) rather
-            # than the pregame run the name implies. None when the run_id
-            # itself is missing/unparseable -- an unknown answer, not a
-            # false "no".
-            "locked_late": (bool(run_generated_at and run_generated_at > fp_time)
-                             if run_generated_at is not None else None),
+            # Was the run now on record for this game actually generated
+            # AFTER the game had already started (a late build, a failed
+            # earlier run) rather than the pregame run the name implies.
+            # None -- not False -- when generated_at itself is unknown, so
+            # "unknown" is never silently read as "on time."
+            "locked_late": (bool(generated_at_dt and generated_at_dt > fp_time)
+                             if generated_at_dt is not None else None),
         }
         por_new += 1
 

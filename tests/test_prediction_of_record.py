@@ -17,6 +17,17 @@ graded against."
 `main()` lock each game_pk to whichever run_id is standing the instant its
 first pitch arrives — independent of designations, so it covers every
 player in the game, not just the 5 picked categories.
+
+TIMESTAMP FIX (2026-08-21). The first version of this file computed
+`locked_late` by parsing a timestamp out of run_id's own
+"{slate_date}.{HHMMSSZ}.{source}" shape. Donovan caught this before it
+shipped: the leading segment is the Moonshot SLATE date (a Phoenix-day
+boundary), not the UTC calendar date the HHMMSSZ time-of-day belongs to,
+so a run generated just after UTC midnight parses 24 hours early. run_id
+is opaque now — every test below drives `locked_late` off a real
+`today_run_meta.json` written alongside the slate, exactly like
+production, including the real cross-midnight example from Donovan's
+report (section 9).
 """
 import datetime as dt
 import json
@@ -50,12 +61,16 @@ def iso(offset_min: int) -> str:
             + dt.timedelta(minutes=offset_min)).isoformat().replace("+00:00", "Z")
 
 
-def run_id_at(offset_min: int, source="gha-1") -> str:
-    """A real-shaped run_id whose embedded timestamp is `offset_min` minutes
-    from now, so _run_id_generated_at() has something to parse -- same
-    "{slate_date}.{HHMMSSZ}.{source}" shape build_run_meta() produces."""
-    t = dt.datetime.now(dt.timezone.utc) + dt.timedelta(minutes=offset_min)
-    return f"{t.date().isoformat()}.{t.strftime('%H%M%S')}Z.{source}"
+_RID_SEQ = [0]
+
+
+def opaque_run_id(tag: str = "") -> str:
+    """A run_id shaped like a real one but treated purely as an opaque
+    label in these tests -- nothing here is ever parsed for time. The
+    number only exists so two calls never collide."""
+    _RID_SEQ[0] += 1
+    today = dt.date.today().isoformat()
+    return f"{today}.{_RID_SEQ[0]:06d}Z.test-{tag or _RID_SEQ[0]}"
 
 
 def slate_row(pid, name, gpk, game_time, run_id=None, model_version=None, role=""):
@@ -69,12 +84,18 @@ def slate_row(pid, name, gpk, game_time, run_id=None, model_version=None, role="
     return row
 
 
-def run_lock(tmp: Path, slate_rows, *, apply=True, seed_ledger=None):
+def run_lock(tmp: Path, slate_rows, *, apply=True, seed_ledger=None, run_meta=None):
     """Run pick_lock's main() against a throwaway public/data tree and
     return the resulting ledger. Mirrors tests/test_pick_lock_tickets.py's
     own harness exactly (same re-point-PUBLIC/CURRENT, same local-only
     fetch_lock stub) so this file exercises the real main(), not a
     reimplementation of it.
+
+    run_meta, when given, is written to current/today_run_meta.json --
+    exactly what sync_model_foundation_outputs_to_website_repo() writes in
+    the real job, and the ONLY source read_current_run_meta() trusts for
+    generated_at. Omit it to simulate a run with no run_meta available at
+    all (registry import failure, or a run this old feature predates).
 
     seed_ledger lets a test start from a ledger that already exists (e.g.
     a "legacy" pick_lock.json written before this feature shipped, with
@@ -92,6 +113,10 @@ def run_lock(tmp: Path, slate_rows, *, apply=True, seed_ledger=None):
     (cur / "today.json").write_text(json.dumps({"players": slate_rows}))
     if seed_ledger is not None:
         (cur / "pick_lock.json").write_text(json.dumps(seed_ledger))
+    if run_meta is not None:
+        (cur / "today_run_meta.json").write_text(json.dumps(run_meta))
+    elif (cur / "today_run_meta.json").exists():
+        (cur / "today_run_meta.json").unlink()
 
     def local_lock(date):
         p = cur / "pick_lock.json"
@@ -117,21 +142,26 @@ def run_lock(tmp: Path, slate_rows, *, apply=True, seed_ledger=None):
 with tempfile.TemporaryDirectory() as d:
     tmp = Path(d)
     started = iso(-30)
-    rid1 = run_id_at(-40)
+    rid1 = opaque_run_id("g1a")
+    gen1 = iso(-40)   # generated before first pitch -- a clean pregame run
     rows = [slate_row(1, "Ann", 100, started, run_id=rid1, model_version="mlb_hr_v3")]
-    ledger = run_lock(tmp, rows)
+    ledger = run_lock(tmp, rows, run_meta={"run_id": rid1, "generated_at": gen1})
     por = ledger["prediction_of_record"]["100"]
     check("locks to the run_id standing at first pitch", por["run_id"], rid1)
     check("model_version captured too", por["model_version"], "mlb_hr_v3")
+    check("generated_at is the canonical value from run_meta, verbatim", por["generated_at"], gen1)
+    check("locked_late is False for a genuinely pregame run", por["locked_late"], False)
     checkTrue("locked_at is stamped", bool(por.get("locked_at")))
 
-    # A later recompute (model drift, a reweight, whatever) must NOT move it.
-    rid2 = run_id_at(0)
+    # A later recompute (model drift, a reweight, whatever) must NOT move it,
+    # even with its own, different, valid run_meta sitting right there.
+    rid2 = opaque_run_id("g1b")
     rows2 = [slate_row(1, "Ann", 100, started, run_id=rid2, model_version="mlb_hr_v4")]
-    ledger2 = run_lock(tmp, rows2)
+    ledger2 = run_lock(tmp, rows2, run_meta={"run_id": rid2, "generated_at": iso(0)})
     por2 = ledger2["prediction_of_record"]["100"]
     check("a later run does NOT move the lock", por2["run_id"], rid1)
     check("model_version stays with the locked run too", por2["model_version"], "mlb_hr_v3")
+    check("generated_at stays with the locked run too", por2["generated_at"], gen1)
 
 
 # ── 2. PREGAME: NO RECORD YET ────────────────────────────────────────────────
@@ -139,8 +169,9 @@ with tempfile.TemporaryDirectory() as d:
 with tempfile.TemporaryDirectory() as d:
     tmp = Path(d)
     not_yet = iso(120)
-    rows = [slate_row(1, "Ann", 100, not_yet, run_id=run_id_at(0))]
-    ledger = run_lock(tmp, rows)
+    rid = opaque_run_id("pregame")
+    rows = [slate_row(1, "Ann", 100, not_yet, run_id=rid)]
+    ledger = run_lock(tmp, rows, run_meta={"run_id": rid, "generated_at": iso(0)})
     check("no game_pk entry before first pitch", "100" in ledger["prediction_of_record"], False)
 
 
@@ -150,28 +181,28 @@ with tempfile.TemporaryDirectory() as d:
 with tempfile.TemporaryDirectory() as d:
     tmp = Path(d)
     game1_started, game2_pregame = iso(-20), iso(90)
-    rid_g1 = run_id_at(-25)
+    rid_a = opaque_run_id("dh-a")
     rows = [
-        slate_row(1, "Ann", 301, game1_started, run_id=rid_g1, model_version="mlb_hr_v3"),
-        slate_row(2, "Bob", 302, game2_pregame, run_id=run_id_at(-25), model_version="mlb_hr_v3"),
+        slate_row(1, "Ann", 301, game1_started, run_id=rid_a, model_version="mlb_hr_v3"),
+        slate_row(2, "Bob", 302, game2_pregame, run_id=rid_a, model_version="mlb_hr_v3"),
     ]
-    ledger = run_lock(tmp, rows)
+    ledger = run_lock(tmp, rows, run_meta={"run_id": rid_a, "generated_at": iso(-25)})
     check("doubleheader game 1 (started) is locked", "301" in ledger["prediction_of_record"], True)
     check("doubleheader game 2 (not started) is not locked yet", "302" in ledger["prediction_of_record"], False)
-    check("game 1 locked to its own run_id", ledger["prediction_of_record"]["301"]["run_id"], rid_g1)
+    check("game 1 locked to its own run_id", ledger["prediction_of_record"]["301"]["run_id"], rid_a)
 
-    # Game 2 starts later, on a later run with a different run_id -- must
-    # lock independently, to ITS run, not game 1's.
+    # Game 2 starts later, on a later run (its own run_meta) -- must lock
+    # independently, to ITS run, not game 1's.
     game2_started = iso(-5)
-    rid_g2 = run_id_at(-10)
+    rid_b = opaque_run_id("dh-b")
     rows2 = [
-        slate_row(1, "Ann", 301, game1_started, run_id=run_id_at(0)),   # later run, must not move game 1
-        slate_row(2, "Bob", 302, game2_started, run_id=rid_g2, model_version="mlb_hr_v3"),
+        slate_row(1, "Ann", 301, game1_started, run_id=rid_b),   # later run, must not move game 1
+        slate_row(2, "Bob", 302, game2_started, run_id=rid_b, model_version="mlb_hr_v3"),
     ]
-    ledger2 = run_lock(tmp, rows2)
-    check("game 1 still locked to its original run_id", ledger2["prediction_of_record"]["301"]["run_id"], rid_g1)
+    ledger2 = run_lock(tmp, rows2, run_meta={"run_id": rid_b, "generated_at": iso(-10)})
+    check("game 1 still locked to its original run_id", ledger2["prediction_of_record"]["301"]["run_id"], rid_a)
     check("game 2 now locked to ITS OWN run_id (not game 1's)",
-          ledger2["prediction_of_record"]["302"]["run_id"], rid_g2)
+          ledger2["prediction_of_record"]["302"]["run_id"], rid_b)
 
 
 # ── 4. GAMES LOCKING AT DIFFERENT TIMES WITHIN ONE RUN ──────────────────────
@@ -181,12 +212,12 @@ with tempfile.TemporaryDirectory() as d:
 with tempfile.TemporaryDirectory() as d:
     tmp = Path(d)
     early, late = iso(-15), iso(200)
-    rid = run_id_at(-20)
+    rid = opaque_run_id("mixed")
     rows = [
         slate_row(1, "Ann", 401, early, run_id=rid),
         slate_row(2, "Bob", 402, late, run_id=rid),
     ]
-    ledger = run_lock(tmp, rows)
+    ledger = run_lock(tmp, rows, run_meta={"run_id": rid, "generated_at": iso(-20)})
     check("early game locked", "401" in ledger["prediction_of_record"], True)
     check("late game not locked yet", "402" in ledger["prediction_of_record"], False)
 
@@ -196,18 +227,19 @@ with tempfile.TemporaryDirectory() as d:
 with tempfile.TemporaryDirectory() as d:
     tmp = Path(d)
     started = iso(-30)
-    rid1 = run_id_at(-35)
+    rid1 = opaque_run_id("late-add-1")
     rows = [slate_row(1, "Ann", 500, started, run_id=rid1, model_version="mlb_hr_v3")]
-    ledger = run_lock(tmp, rows)
+    ledger = run_lock(tmp, rows, run_meta={"run_id": rid1, "generated_at": iso(-35)})
     locked_run = ledger["prediction_of_record"]["500"]["run_id"]
 
     # A bench player gets added to the real lineup after the lock, scored by
-    # a brand-new run_id.
+    # a brand-new run.
+    rid2 = opaque_run_id("late-add-2")
     rows_with_addition = [
-        slate_row(1, "Ann", 500, started, run_id=run_id_at(0)),
-        slate_row(9, "Zed", 500, started, run_id=run_id_at(0)),   # the late add
+        slate_row(1, "Ann", 500, started, run_id=rid2),
+        slate_row(9, "Zed", 500, started, run_id=rid2),   # the late add
     ]
-    ledger2 = run_lock(tmp, rows_with_addition)
+    ledger2 = run_lock(tmp, rows_with_addition, run_meta={"run_id": rid2, "generated_at": iso(0)})
     check("the game's lock does not move for a late addition",
           ledger2["prediction_of_record"]["500"]["run_id"], locked_run)
     # pick_lock.py itself has nothing per-player to assert here (prediction_
@@ -223,20 +255,26 @@ with tempfile.TemporaryDirectory() as d:
     started = iso(-10)
     # model_registry import failed this run (or any other reason a row
     # ships with a blank run_id) -- the row still has the KEY, just empty.
+    # No today_run_meta.json this run either -- realistic, since a registry
+    # failure is exactly the condition that also disables run_meta writing.
     rows = [slate_row(1, "Ann", 600, started, run_id="", model_version="")]
     ledger = run_lock(tmp, rows)
     por = ledger["prediction_of_record"]["600"]
     check("locks even with a blank run_id", "600" in ledger["prediction_of_record"], True)
     check("run_id is None, not empty string or fabricated", por["run_id"], None)
     check("model_version is None too", por["model_version"], None)
-    check("locked_late is None (unknown, since there is no timestamp to compare)",
-          por["locked_late"], None)
+    check("generated_at is None -- nothing to attribute it to", por["generated_at"], None)
+    check("locked_late is None (unknown, not a guessed False)", por["locked_late"], None)
 
-    # And it must never move once locked, even once a real run_id shows up.
-    rows2 = [slate_row(1, "Ann", 600, started, run_id=run_id_at(0), model_version="mlb_hr_v3")]
-    ledger2 = run_lock(tmp, rows2)
+    # And it must never move once locked, even once a real run_id AND a
+    # real run_meta show up.
+    rid_real = opaque_run_id("after-blank")
+    rows2 = [slate_row(1, "Ann", 600, started, run_id=rid_real, model_version="mlb_hr_v3")]
+    ledger2 = run_lock(tmp, rows2, run_meta={"run_id": rid_real, "generated_at": iso(0)})
     check("a later real run_id does not retroactively fill in the gap",
           ledger2["prediction_of_record"]["600"]["run_id"], None)
+    check("generated_at stays None too, not backfilled",
+          ledger2["prediction_of_record"]["600"]["generated_at"], None)
 
 
 # ── 7. LEGACY PREDICTIONS: NO run_id KEY AT ALL (PRE-REGISTRY SHAPE) ────────
@@ -254,6 +292,8 @@ with tempfile.TemporaryDirectory() as d:
     check("legacy row (no run_id key at all) still locks", "700" in ledger["prediction_of_record"], True)
     check("run_id is honestly None", por["run_id"], None)
     check("model_version is honestly None", por["model_version"], None)
+    check("generated_at is honestly None", por["generated_at"], None)
+    check("locked_late is honestly None", por["locked_late"], None)
 
 # A SEPARATE legacy scenario: a ledger fetched from the data branch that was
 # already locking designations before this feature existed at all -- games[]
@@ -275,8 +315,10 @@ with tempfile.TemporaryDirectory() as d:
         "tickets": {}, "rejected": [],
         # NOTE: no "prediction_of_record" key at all -- the pre-Task-6 shape.
     }
-    rows = [slate_row(1, "Ann", 800, started, run_id=run_id_at(-15), model_version="mlb_hr_v3", role="TOP")]
-    ledger = run_lock(tmp, rows, seed_ledger=old_shaped_ledger)
+    rid = opaque_run_id("legacy-ledger")
+    rows = [slate_row(1, "Ann", 800, started, run_id=rid, model_version="mlb_hr_v3", role="TOP")]
+    ledger = run_lock(tmp, rows, seed_ledger=old_shaped_ledger,
+                       run_meta={"run_id": rid, "generated_at": iso(-15)})
     checkTrue("does not crash loading an old-shaped ledger with no prediction_of_record key",
               "prediction_of_record" in ledger)
     check("locks the game going forward under the new code",
@@ -292,13 +334,13 @@ with tempfile.TemporaryDirectory() as d:
 with tempfile.TemporaryDirectory() as d:
     tmp = Path(d)
     started = iso(-30)
-    rid1 = run_id_at(-35)
+    rid1 = opaque_run_id("por-1")
     rows = [
         slate_row(1, "Ann", 900, started, run_id=rid1, model_version="mlb_hr_v3", role="TOP"),
         slate_row(2, "Bob", 900, started, run_id=rid1, model_version="mlb_hr_v3"),   # undesignated
         slate_row(3, "Cal", 900, started, run_id=rid1, model_version="mlb_hr_v3"),   # undesignated
     ]
-    ledger = run_lock(tmp, rows)
+    ledger = run_lock(tmp, rows, run_meta={"run_id": rid1, "generated_at": iso(-35)})
     check("exactly one prediction_of_record entry for this game_pk", len(ledger["prediction_of_record"]), 1)
     locked_run = ledger["prediction_of_record"]["900"]["run_id"]
     check("the locked run covers undesignated players too, same run_id",
@@ -307,13 +349,51 @@ with tempfile.TemporaryDirectory() as d:
     # Ten more recomputes, different scores/players, even a thin slate with
     # only one player left -- the ONE record must never drift.
     for i in range(10):
-        drifted = [slate_row(1, "Ann", 900, started, run_id=run_id_at(i))]
-        ledger = run_lock(tmp, drifted)
+        rid_i = opaque_run_id(f"por-drift-{i}")
+        drifted = [slate_row(1, "Ann", 900, started, run_id=rid_i)]
+        ledger = run_lock(tmp, drifted, run_meta={"run_id": rid_i, "generated_at": iso(i)})
         check(f"run {i}: still exactly one record for this game_pk", len(ledger["prediction_of_record"]), 1)
         check(f"run {i}: still the original run_id", ledger["prediction_of_record"]["900"]["run_id"], rid1)
+
+
+# ── 9. THE REAL CROSS-UTC-MIDNIGHT CASE (Donovan's report, 2026-08-21) ──────
+# slate_date=2026-08-20, generated_at=2026-08-21T05:44:56Z, run_id begins
+# "2026-08-20.054456Z". The date segment of run_id is the SLATE date
+# (Phoenix-day boundary); the calendar date the HHMMSSZ time-of-day
+# actually falls on can be a day later in UTC. The OLD (buggy) code parsed
+# run_id alone and would have reconstructed 2026-08-20T05:44:56Z -- a full
+# day before the game even in this scenario's own first_pitch, so it would
+# have called this run "on time" when it was in fact generated hours after
+# first pitch. locked_late must be computed from the real generated_at,
+# and must come out correctly late here.
+with tempfile.TemporaryDirectory() as d:
+    tmp = Path(d)
+    real_run_id = "2026-08-20.054456Z.gha-32451657164"          # exactly Donovan's example
+    real_generated_at = "2026-08-21T05:44:56.692484+00:00"       # exactly Donovan's example
+    # First pitch well before the run was actually generated -- a genuinely
+    # late run by any honest measure.
+    first_pitch = "2026-08-21T02:00:00+00:00"
+    rows = [slate_row(1, "Ann", 999, first_pitch, run_id=real_run_id, model_version="mlb_hr_v3")]
+    ledger = run_lock(tmp, rows, run_meta={"run_id": real_run_id, "generated_at": real_generated_at})
+    por = ledger["prediction_of_record"]["999"]
+    check("run_id is preserved verbatim, opaque, untouched", por["run_id"], real_run_id)
+    check("generated_at is the real canonical value, not reconstructed from run_id",
+          por["generated_at"], real_generated_at)
+    check("locked_late correctly True: the real run was generated ~3h45m AFTER first pitch",
+          por["locked_late"], True)
+    # Prove the fix, not just the outcome: the naive parse of run_id alone
+    # (slate_date + HHMMSSZ) gives 2026-08-20T05:44:56+00:00, which is
+    # BEFORE first_pitch (2026-08-21T02:00:00+00:00) -- the old code would
+    # have said locked_late=False here. That the real answer is True is the
+    # whole point of reading generated_at from run_meta instead.
+    naive_wrong_parse = dt.datetime.fromisoformat("2026-08-20T05:44:56+00:00")
+    fp_dt = dt.datetime.fromisoformat(first_pitch)
+    checkTrue("sanity: the naive run_id-only parse WOULD have been wrong (24h early, reads as on-time)",
+              naive_wrong_parse < fp_dt)
 
 
 if FAILED:
     print(f"\n{len(FAILED)} FAILED\n" + "\n".join(f"  · {f}" for f in FAILED))
     sys.exit(1)
-print(f"ok   prediction_of_record: {CHECKS} assertions, one run per game_pk, locked at first pitch, forever")
+print(f"ok   prediction_of_record: {CHECKS} assertions, one run per game_pk, locked at first pitch, "
+      f"forever, locked_late from real generated_at (never parsed out of run_id)")
