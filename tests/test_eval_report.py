@@ -201,6 +201,21 @@ with tempfile.TemporaryDirectory() as d:
         outcome(gp_latejoin, 1006, True),   # NOT in the log -> missing_score_row
     ])
 
+    # unusable_hr_score -- the locked run HAS a row for this player, but its
+    # scores.hr is null, and he went deep. This is the exact shape of the bug
+    # the adversarial review found: before the guard in classify(), this row
+    # passed as INCLUDED, its HR landed in total_hr, and then tier_for(None)
+    # dropped it from every tier -- so OVERALL read 1 HR richer than the tiers
+    # could account for, and the lift column silently divided every real tier
+    # by an inflated denominator. The assertions below that catch a regression
+    # here are "overall HRs" and the reconciliation block, not just the
+    # excluded_by_reason count.
+    gp_nullscore = "9307"
+    run_nullscore = "2026-08-19.170000Z.test-nullscore"
+    write_por_log(tmp, DATE_A, [por(gp_nullscore, run_nullscore, "mlb_hr_v3", "2026-08-19T10:00:00+00:00", False, DATE_A)])
+    write_pred_log(tmp, run_nullscore, DATE_A, [{"pid": 1008, "name": "NullScore", "gp": gp_nullscore, "score": None}])
+    write_outcome_log(tmp, DATE_A, [outcome(gp_nullscore, 1008, True)])
+
     report = ev.build_report(tmp, model_version=None, as_of=AS_OF)
 
     # ── tier table -- 1005 (score 95, HR) folds into 90+ alongside DATE_A's
@@ -230,8 +245,20 @@ with tempfile.TemporaryDirectory() as d:
 
     ov = report["tier_table"]["overall"]
     check("overall N", ov["n"], total_n)
-    check("overall HRs", ov["hrs"], total_hr)
+    # If the null-score row above ever leaks back into the included set, THIS
+    # is the assertion that fires: its HR would push overall HRs to total_hr+1
+    # while every tier count stayed put.
+    check("overall HRs -- the null-score HR is NOT in here", ov["hrs"], total_hr)
     approx("overall rate", ov["hr_rate"], overall_rate)
+
+    # ── reconciliation: every included row lands in exactly one tier ─────
+    tiered_n = sum(t["n"] for t in tiers.values())
+    tiered_hrs = sum(t["hrs"] for t in tiers.values())
+    check("sum of tier N equals overall N -- no row counted in OVERALL but held by no tier",
+          tiered_n, ov["n"])
+    check("sum of tier HRs equals overall HRs", tiered_hrs, ov["hrs"])
+    check("unbucketed_n is zero", report["tier_table"]["unbucketed_n"], 0)
+    check("unbucketed_hrs is zero", report["tier_table"]["unbucketed_hrs"], 0)
 
     # ── monotonicity: rates are 0.5-ish, 0.2, 0.2, 0, 0, 0 -- non-increasing,
     # so no real inversion, even though every tier here is under the 20-N
@@ -272,6 +299,7 @@ with tempfile.TemporaryDirectory() as d:
         "void": 1,
         "no_outcome_yet": 1,
         "missing_score_row": 1,
+        "unusable_hr_score": 1,
     }
     for reason, n in expected_reasons.items():
         check(f"excluded_by_reason[{reason}]", report["excluded_by_reason"].get(reason), n)
@@ -283,7 +311,7 @@ with tempfile.TemporaryDirectory() as d:
     # gp_noprov (1 candidate), out of 15 total por entries / 41 candidates ──
     n_por_entries = (6            # tier_spec games
                      + 1 + 1      # DATE_B, DATE_OLD
-                     + 1 + 1 + 1 + 1 + 1 + 1 + 1)  # the 7 exclusion-scenario games
+                     + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1)  # the 8 exclusion-scenario games
     check("n_por_entries counted correctly", report["n_por_entries"], n_por_entries)
     check("n_candidates counted correctly", report["n_candidates"], report["n_included"] + report["n_excluded"])
     n_cand = report["n_candidates"]
@@ -298,6 +326,56 @@ with tempfile.TemporaryDirectory() as d:
     checkTrue("everything real gets excluded as model_version_filtered when the filter doesn't match",
               filtered["excluded_by_reason"].get("model_version_filtered", 0) >= total_n)
 
+    # ── cross-version pooling warning ───────────────────────────────────
+    # Every included row in the fixture above is mlb_hr_v3, so an unfiltered
+    # run is NOT actually pooling anything and must stay quiet -- a warning
+    # that fires on every default run is one people learn to skip past.
+    check("only one model version is present among included rows",
+          report["model_versions_present"], ["mlb_hr_v3"])
+    check("single-version data raises no pooling warning even unfiltered",
+          report["warnings"], [])
+    checkTrue("the header names the one version rather than claiming a bare ALL",
+              ev.render_text(report).splitlines()[0].endswith("ALL (only mlb_hr_v3 present)"))
+
+    with tempfile.TemporaryDirectory() as d2:
+        tmp2 = Path(d2)
+        # two versions, one clean included game each
+        for gp, run, mv, pid in (("8001", "2026-08-19.180000Z.v3", "mlb_hr_v3", 2001),
+                                  ("8002", "2026-08-19.190000Z.v4", "mlb_hr_v4", 2002)):
+            write_por_log(tmp2, DATE_A, [por(gp, run, mv, "2026-08-19T10:00:00+00:00", False, DATE_A)])
+            write_pred_log(tmp2, run, DATE_A, [{"pid": pid, "name": f"P{pid}", "gp": gp, "score": 95.0}])
+            write_outcome_log(tmp2, DATE_A, [outcome(gp, pid, True)])
+
+        mixed = ev.build_report(tmp2, model_version=None, as_of=AS_OF)
+        check("both versions are seen among included rows",
+              mixed["model_versions_present"], ["mlb_hr_v3", "mlb_hr_v4"])
+        check("mixed versions with no filter raises exactly one warning",
+              len(mixed["warnings"]), 1)
+        checkTrue("the warning names both pooled versions",
+                  "mlb_hr_v3" in mixed["warnings"][0] and "mlb_hr_v4" in mixed["warnings"][0])
+        mixed_txt = ev.render_text(mixed)
+        checkTrue("the warning renders ABOVE the tier table, not below it",
+                  mixed_txt.index("POOL 2 MODEL VERSIONS") < mixed_txt.index("Score Tier"))
+
+        filtered_mixed = ev.build_report(tmp2, model_version="mlb_hr_v3", as_of=AS_OF)
+        check("an explicit --model-version silences the pooling warning",
+              filtered_mixed["warnings"], [])
+        check("...and actually narrows the eval to that version", filtered_mixed["n_included"], 1)
+
+    # ── _tierable: the precondition that makes the reconciliation hold ──
+    check("None is not tierable", ev._tierable(None), False)
+    check("NaN is not tierable", ev._tierable(float("nan")), False)
+    check("+inf is not tierable", ev._tierable(float("inf")), False)
+    check("-inf is not tierable", ev._tierable(float("-inf")), False)
+    check("a string score is not tierable", ev._tierable("95"), False)
+    check("True is not tierable (isinstance(True, int) is a trap)", ev._tierable(True), False)
+    check("a float score is tierable", ev._tierable(95.0), True)
+    check("an int score is tierable", ev._tierable(95), True)
+    check("a negative score is still tierable", ev._tierable(-5.0), True)
+    checkTrue("anything _tierable() accepts, tier_for() actually places in a tier",
+              all(ev.tier_for(s) is not None
+                  for s in (-1e9, -0.0, 0, 49.999, 50, 59.9, 60, 70, 80, 89.99, 90, 1e9)))
+
     # ── wilson_ci sanity, independent of the fixture above ──────────────
     check("wilson_ci(0, 0) is undefined, not a fabricated (0, 0)", ev.wilson_ci(0, 0), None)
     lo, hi = ev.wilson_ci(50, 100)
@@ -309,5 +387,6 @@ if FAILED:
     print(f"\n{len(FAILED)} FAILED\n" + "\n".join(f"  · {f}" for f in FAILED))
     sys.exit(1)
 print(f"ok   eval_report: {CHECKS} assertions, tier table + monotonicity + rolling windows + "
-      f"every exclusion reason + provenance % + model-version filtering, all off real-shaped "
+      f"every exclusion reason + provenance % + model-version filtering + tier/overall "
+      f"reconciliation + the cross-version pooling warning, all off real-shaped "
       f"por_log/outcome_log/prediction_log fixtures")

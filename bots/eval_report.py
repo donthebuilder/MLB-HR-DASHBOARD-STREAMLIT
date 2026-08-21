@@ -24,6 +24,14 @@ day rolling results, model-version filtering, a count of excluded
 observations (by reason), and the percentage of predictions with valid
 provenance.
 
+Two invariants this report holds itself to, both of them things it used to
+get wrong silently:
+  · Every INCLUDED row lands in exactly one tier, so sum(tier N) == overall
+    N always. tier_table() checks it and reports any residual as
+    unbucketed_n rather than letting the tiers and the headline disagree.
+  · If the numbers pool more than one model_version, the table SAYS SO, at
+    the top, before you read it -- not only in the breakdown at the bottom.
+
 THE ONE-PREDICTION-PER-PLAYER-GAME RULE
 -----------------------------------------
 today.yml scores a game up to ~13 times before first pitch. Grading every
@@ -49,6 +57,7 @@ its por_log line was written (see load_prediction_of_record() below).
 INCLUDE IN OFFICIAL EVAL (all must hold):
     run_id exists
     generated_at exists
+    a usable hr_score (one tier_for() can actually place -- see _tierable())
     locked_late == False
     valid outcome (graded, final, not void)
     not void
@@ -67,6 +76,11 @@ headline tier table, with an honest reason:
                                 this specific player (e.g. added to the slate
                                 after the lock -- see pick_lock.py's own note
                                 on this, "honest, not a bug")
+    unusable_hr_score       -- the locked run DID score this player, but
+                                scores.hr is null / NaN / inf / not a number,
+                                so no tier can hold it. Distinct from
+                                missing_score_row: that is a roster event,
+                                this is an upstream scoring bug
 
 USAGE
 -----
@@ -95,6 +109,7 @@ import datetime as dt
 import json
 import math
 import sys
+import textwrap
 import urllib.request
 from pathlib import Path
 from typing import Any
@@ -332,6 +347,18 @@ def classify(cand: dict, outcomes_by_pgid: dict[str, dict]) -> tuple[str | None,
         if cand.get("player_id") is None:
             return "missing_prediction_log", provenance
         return "missing_score_row", provenance
+    # The locked run DID score this player, but published a score no tier can
+    # hold. Deliberately its OWN reason rather than folded into
+    # missing_score_row: that one means "this player has no row in the locked
+    # run at all" -- a late slate join, an honest and expected gap. This one
+    # means an upstream scoring bug, which is neither.
+    #
+    # Before this guard such a row passed classify() clean, counted toward
+    # total_n/total_hr in tier_table(), and then fell out of every tier when
+    # tier_for() returned None -- so sum(tier N) < overall N, the overall rate
+    # absorbed a HR that no tier could account for, and nothing said a word.
+    if not _tierable(cand.get("hr_score")):
+        return "unusable_hr_score", provenance
     if por.get("locked_late"):
         return "locked_late", provenance
 
@@ -343,6 +370,32 @@ def classify(cand: dict, outcomes_by_pgid: dict[str, dict]) -> tuple[str | None,
         return "void", provenance
 
     return None, provenance
+
+
+def _tierable(score: Any) -> bool:
+    """True iff tier_for() will actually place `score` in a tier -- the
+    precondition classify() enforces so that every INCLUDED row is guaranteed
+    to land in exactly one.
+
+    TIERS spans -inf..+inf, so every finite real number lands somewhere. That
+    makes this precisely the set that does not:
+
+      · None            -- tier_for returns None outright.
+      · a non-numeric   -- tier_for would raise TypeError comparing it to a
+                           float bound; loud, but still a crash mid-report.
+      · NaN             -- compares False against every bound, so it silently
+                           falls through all six tiers.
+      · +/-inf          -- not a real score either way, and +inf additionally
+                           falls through every tier because the top tier's
+                           upper bound is exclusive (`inf < inf` is False).
+
+    bool is rejected too: `isinstance(True, int)` is True in Python, so a JSON
+    `true` in a score field would otherwise quietly tier as "<50" rather than
+    being caught as the corruption it is.
+    """
+    if isinstance(score, bool) or not isinstance(score, (int, float)):
+        return False
+    return math.isfinite(score)
 
 
 def tier_for(score: float) -> str | None:
@@ -395,12 +448,22 @@ def tier_table(included: list[dict]) -> dict[str, dict]:
             "n": n, "hrs": hrs, "hr_rate": rate,
             "ci_95": ci, "lift": lift,
         }
+    # RECONCILIATION BACKSTOP. classify()'s _tierable() guard is what should
+    # make this impossible now, but the bug it closes was invisible for one
+    # specific reason: nothing ever compared these two totals. Now something
+    # does. Any FUTURE route to the same class of failure -- a row counted in
+    # OVERALL that no tier holds, quietly depressing every tier rate while the
+    # headline rate stays right -- announces itself instead of passing.
+    tiered_n = sum(t["n"] for t in table.values())
+    tiered_hr = sum(t["hrs"] for t in table.values())
     return {
         "tiers": table,
         "overall": {
             "n": total_n, "hrs": total_hr, "hr_rate": overall_rate,
             "ci_95": wilson_ci(total_hr, total_n),
         },
+        "unbucketed_n": total_n - tiered_n,
+        "unbucketed_hrs": total_hr - tiered_hr,
     }
 
 
@@ -454,10 +517,27 @@ def fmt_ci(ci: tuple[float, float] | None) -> str:
 
 def render_text(report: dict) -> str:
     lines = []
-    mv = report["model_version_filter"] or "ALL"
-    lines.append(f"MOONSHOT MLB HR MODEL — {mv}")
+    mv = report["model_version_filter"]
+    present = report.get("model_versions_present") or []
+    # "ALL" alone reads as a deliberate scope when it is really just the
+    # default. Name the single version when there is only one, so the header
+    # never implies a comparison the data cannot support.
+    if mv:
+        mv_label = mv
+    elif len(present) == 1:
+        mv_label = f"ALL (only {present[0]} present)"
+    else:
+        mv_label = "ALL"
+    lines.append(f"MOONSHOT MLB HR MODEL — {mv_label}")
     lines.append(f"as of {report['as_of']}  ·  {report['n_por_entries']} game(s) with a prediction_of_record considered")
     lines.append("")
+    # Above the table, not below it -- you cannot read the numbers without
+    # having read why they might not mean what they look like.
+    for w in report.get("warnings") or []:
+        lines.append("!" * 74)
+        lines.extend(textwrap.wrap(w, 74))
+        lines.append("!" * 74)
+        lines.append("")
     lines.append(f"{'Score Tier':<12}{'N':>6}{'HRs':>6}{'HR Rate':>10}{'Lift':>8}   95% CI")
     for label, _, _ in TIERS:
         t = report["tier_table"]["tiers"][label]
@@ -466,6 +546,11 @@ def render_text(report: dict) -> str:
     ov = report["tier_table"]["overall"]
     lines.append("")
     lines.append(f"OVERALL HR RATE: {fmt_pct(ov['hr_rate'])}  (N={ov['n']}, {ov['hrs']} HR)  95% CI {fmt_ci(ov['ci_95'])}")
+    unb = report["tier_table"].get("unbucketed_n") or 0
+    if unb:
+        lines.append(f"  ⚠ {unb} included row(s) ({report['tier_table'].get('unbucketed_hrs') or 0} HR) "
+                      f"landed in NO tier — every tier rate above is understated "
+                      f"against this overall rate. This is a bug, not a data gap.")
     lines.append("")
     mono = report["monotonicity"]
     mono_status = "holds" if mono["monotonic"] else f"{len(mono['violations'])} inversion(s)"
@@ -537,10 +622,35 @@ def build_report(data_dir: Path, model_version: str | None, as_of: dt.date, live
     for s in by_mv.values():
         s["hr_rate"] = (s["hrs"] / s["n"]) if s["n"] else None
 
+    # CROSS-VERSION POOLING WARNING (see docs/MODELS.md). Run without a
+    # filter, every model version lands in ONE tier table, one monotonicity
+    # check and one set of rolling windows -- so a tier's rate is an average
+    # across different weightings, not a measurement of any single version.
+    # That caveat already existed, but only on the BY MODEL VERSION breakdown
+    # at the bottom, which is not the number anyone reads to decide whether a
+    # version is good. It belongs on the headline.
+    #
+    # Fires only when the included data is ACTUALLY mixed. Warning on every
+    # unfiltered run -- including single-version ones, where pooling changes
+    # nothing -- is how a warning gets trained into background noise.
+    versions_present = sorted(by_mv.keys())
+    warnings: list[str] = []
+    if model_version is None and len(versions_present) > 1:
+        warnings.append(
+            f"HEADLINE NUMBERS POOL {len(versions_present)} MODEL VERSIONS "
+            f"({', '.join(versions_present)}). The tier table, monotonicity "
+            f"check and rolling windows below all mix them, so every rate "
+            f"here is an average across different weightings rather than a "
+            f"measurement of any one version. Re-run with --model-version "
+            f"<name> before making a weight decision off these numbers."
+        )
+
     n_por = len(por_entries)
     return {
         "as_of": as_of.isoformat(),
         "model_version_filter": model_version,
+        "model_versions_present": versions_present,
+        "warnings": warnings,
         "n_por_entries": n_por,
         "n_candidates": len(candidates),
         "n_included": len(included),
