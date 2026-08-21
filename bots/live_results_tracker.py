@@ -1028,6 +1028,20 @@ def get_game_status(game_feed: Dict[str, Any]) -> Dict[str, Any]:
     status = game_data.get("status", {}) or {}
     linescore = live_data.get("linescore", {}) or {}
     teams = game_data.get("teams", {}) or {}
+    # ROLLING-WINDOW DATE FIX (2026-08-21, Sol's audit finding #10; see
+    # dash-roadmap-architecture-review.md §C5, "the outcome record carries
+    # game_date_actual; every date-based report groups by the outcome's game
+    # date, not the prediction's"). officialDate is MLB StatsAPI's own field
+    # for which calendar date a game's stats are attributed to -- it is the
+    # authoritative answer to "what date did this game actually happen on,"
+    # distinct from `prediction_date` (the slate/lock date, i.e. when the
+    # PICK was made) which is what build_outcome_candidates() used to be the
+    # only date on an outcome row. The two are the same date for the
+    # overwhelming majority of games and only diverge in exactly the case
+    # this exists for: a game suspended on day D and resumed/completed on
+    # D+2 still officially counts toward day D under MLB's own bookkeeping,
+    # not the resume day -- and NOT the possibly-much-later day a hourly
+    # regrade_stale_dates() recheck happens to notice it finished.
     return {
         "detailed_state": status.get("detailedState", "Unknown"),
         "abstract_state": status.get("abstractGameState", "Unknown"),
@@ -1035,6 +1049,7 @@ def get_game_status(game_feed: Dict[str, Any]) -> Dict[str, Any]:
         "inning_half": linescore.get("inningHalf"),
         "away": ((teams.get("away") or {}).get("abbreviation") or "AWAY"),
         "home": ((teams.get("home") or {}).get("abbreviation") or "HOME"),
+        "official_date": (game_data.get("datetime", {}) or {}).get("officialDate"),
     }
 
 
@@ -1708,9 +1723,22 @@ def build_outcome_candidates(
         elif is_final and ab == 0 and hits == 0 and hr == 0 and bb == 0 and k == 0:
             void, void_reason = True, "did_not_play"
 
+        # ROLLING-WINDOW DATE FIX (2026-08-21, Sol's audit finding #10).
+        # game_date_actual is MLB's own officialDate for this game_pk --
+        # authoritative for "which calendar date this game's stats count
+        # toward," distinct from prediction_date (when the PICK was made).
+        # Falls back to prediction_date when officialDate isn't present on
+        # the feed (e.g. a placeholder status dict) -- the same value this
+        # row would have carried before this field existed, never a
+        # fabricated new one; the two agree for the overwhelming majority
+        # of games and only the postponement/suspension case needs the
+        # real value at all.
+        game_date_actual = status.get("official_date") or prediction_date
+
         out.append({
             "outcome_schema_version": OUTCOME_SCHEMA_VERSION,
             "prediction_date": prediction_date,
+            "game_date_actual": game_date_actual,
             "player_id": pid,
             "game_pk": game_pk,
             "went_yard": bool(hr >= 1),

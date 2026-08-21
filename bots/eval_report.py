@@ -521,9 +521,24 @@ def monotonicity(table: dict[str, dict], min_n: int = 20) -> dict:
 
 
 def rolling_window(included: list[dict], as_of: dt.date, days: int) -> dict:
+    """Buckets by game_date_actual (the outcome's real game date, MLB's own
+    officialDate for that game_pk) -- NOT prediction_date (the slate/lock
+    date, i.e. when the pick was made). Sol's audit finding #10
+    (dash-roadmap-architecture-review.md §C5): "the outcome record carries
+    game_date_actual; every date-based report groups by the outcome's game
+    date, not the prediction's." Before this fix, a prediction from day D
+    graded on day D+5 (a game that sat suspended and only resolved via
+    regrade_stale_dates(), see live_results_tracker.py) was bucketed under
+    D's date regardless -- which happens to be RIGHT when D is the game's
+    real date too (MLB's own officialDate stays D for a suspended-then-
+    resumed game), but was never actually guaranteed by the code; it was
+    prediction_date standing in for game date by coincidence, not by
+    construction. build_report() resolves the real value onto each
+    candidate as game_date_actual (falling back to prediction_date only for
+    outcome rows written before this field existed)."""
     start = (as_of - dt.timedelta(days=days - 1)).isoformat()
     end = as_of.isoformat()
-    window = [c for c in included if c["prediction_date"] and start <= c["prediction_date"] <= end]
+    window = [c for c in included if c["game_date_actual"] and start <= c["game_date_actual"] <= end]
     n = len(window)
     hrs = sum(1 for c in window if c["went_yard"])
     return {
@@ -719,6 +734,16 @@ def build_report(data_dir: Path, model_version: str | None, as_of: dt.date, live
         pgid = f"{cand['game_pk']}|{cand['player_id']}"
         outcome = outcomes[pgid]  # guaranteed present -- classify() would have excluded otherwise
         cand["went_yard"] = bool(outcome.get("went_yard"))
+        # ROLLING-WINDOW DATE FIX (2026-08-21, Sol's audit finding #10; see
+        # dash-roadmap-architecture-review.md §C5). rolling_window() below
+        # buckets by this, NOT by cand["prediction_date"] -- the outcome's
+        # own game_date_actual (MLB's officialDate for this game_pk) is the
+        # date that game's stats actually count toward, which is what a
+        # date-based report needs to group by. Falls back to prediction_date
+        # for outcome rows written before this field existed (a legacy
+        # outcome_log line has no game_date_actual key at all) -- the same
+        # value rolling windows used before this fix, never a fabricated one.
+        cand["game_date_actual"] = outcome.get("game_date_actual") or cand.get("prediction_date")
         included.append(cand)
 
     table = tier_table(included)

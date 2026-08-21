@@ -83,12 +83,20 @@ def write_pred_log(d: Path, run_id: str, date: str, rows: list[dict]) -> None:
             f.write("\n")
 
 
-def outcome(gp, pid, went_yard, is_final=True, void=False, void_reason=None, revision=1):
-    return {
+def outcome(gp, pid, went_yard, is_final=True, void=False, void_reason=None, revision=1,
+            game_date_actual=None):
+    # game_date_actual defaults to None (omitted key behaves identically,
+    # since build_report() reads it with .get()) to simulate a legacy
+    # outcome_log line written before this field existed -- see the
+    # ROLLING-WINDOW DATE section below.
+    row = {
         "player_game_id": f"{gp}|{pid}", "game_pk": gp, "player_id": pid,
         "went_yard": went_yard, "is_final": is_final, "void": void, "void_reason": void_reason,
         "revision": revision,
     }
+    if game_date_actual is not None:
+        row["game_date_actual"] = game_date_actual
+    return row
 
 
 def por(gp, run_id, model_version, generated_at, locked_late, date, config_hash=None):
@@ -479,6 +487,88 @@ with tempfile.TemporaryDirectory() as d2:
 print(f"ok   config_hash provenance: {CHECKS - _EVAL_REPORT_CHECKS_BEFORE} assertions, "
       f"single-hash silence + multi-hash warning (even under --model-version) + explicit "
       f"--config-hash filtering + legacy null-hash honesty")
+
+
+# ── ROLLING-WINDOW DATE (2026-08-21, Sol's audit finding #10) ─────────────
+# rolling_window() must bucket by the outcome's real game_date_actual, not
+# by prediction_date (the slate/lock date) -- see dash-roadmap-architecture-
+# review.md §C5. Isolated in its own directory so these scenarios never
+# perturb the hand-verified counts in the main fixture above, exactly like
+# the config_hash section does.
+_ROLLING_DATE_CHECKS_BEFORE = CHECKS
+with tempfile.TemporaryDirectory() as d3:
+    tmp3 = Path(d3)
+    AS_OF_D = dt.date(2026, 8, 21)  # 7-day window: 2026-08-15 .. 2026-08-21
+
+    # Scenario 1: predicted long before the window, but the game's REAL date
+    # (game_date_actual) falls inside it -- e.g. a game suspended on an old
+    # slate day and only resolved (via regrade_stale_dates()) much later,
+    # attributed by MLB's own officialDate to a date inside the window.
+    # Old (buggy) behavior bucketed by prediction_date and would have MISSED
+    # this entirely.
+    write_por_log(tmp3, "2026-08-01", [por("9500", "2026-08-01.100000Z.test-d1", "mlb_hr_v3",
+                                            "2026-08-01T10:00:00+00:00", False, "2026-08-01")])
+    write_pred_log(tmp3, "2026-08-01.100000Z.test-d1", "2026-08-01",
+                    [{"pid": 3001, "name": "D1", "gp": "9500", "score": 70.0}])
+    write_outcome_log(tmp3, "2026-08-01", [
+        outcome("9500", 3001, True, game_date_actual="2026-08-18"),
+    ])
+
+    # Scenario 2: predicted inside the window, but the game's REAL date is
+    # long before it -- a late-arriving grade for an old, stale prediction.
+    # Old (buggy) behavior bucketed by prediction_date and would have
+    # WRONGLY counted this as "recent."
+    write_por_log(tmp3, "2026-08-19", [por("9501", "2026-08-19.100000Z.test-d2", "mlb_hr_v3",
+                                            "2026-08-19T10:00:00+00:00", False, "2026-08-19")])
+    write_pred_log(tmp3, "2026-08-19.100000Z.test-d2", "2026-08-19",
+                    [{"pid": 3002, "name": "D2", "gp": "9501", "score": 70.0}])
+    write_outcome_log(tmp3, "2026-08-19", [
+        outcome("9501", 3002, False, game_date_actual="2026-07-01"),
+    ])
+
+    # Scenario 3: predicted just outside the 7-day window but inside the
+    # 30-day one, outcome row has NO game_date_actual at all (a legacy
+    # outcome_log line written before this field existed) -- must fall back
+    # to prediction_date, so old archived data doesn't silently vanish from
+    # every window once this ships.
+    write_por_log(tmp3, "2026-08-05", [por("9502", "2026-08-05.100000Z.test-d3", "mlb_hr_v3",
+                                            "2026-08-05T10:00:00+00:00", False, "2026-08-05")])
+    write_pred_log(tmp3, "2026-08-05.100000Z.test-d3", "2026-08-05",
+                    [{"pid": 3003, "name": "D3", "gp": "9502", "score": 70.0}])
+    write_outcome_log(tmp3, "2026-08-05", [
+        outcome("9502", 3003, False),  # game_date_actual omitted -> legacy row
+    ])
+
+    report_d = ev.build_report(tmp3, model_version=None, as_of=AS_OF_D)
+    by_window_d = {w["days"]: w for w in report_d["rolling"]}
+
+    check("scenario 1 (old prediction_date 08-01, recent game_date_actual 08-18): "
+          "IS in the 7-day window (08-15..08-21) -- bucketed by game date, not lock date",
+          by_window_d[7]["n"], 1)
+    check("scenario 1's HR counts in that window", by_window_d[7]["hrs"], 1)
+
+    # Scenario 2 (recent prediction_date 08-19, stale game_date_actual
+    # 07-01) must NOT inflate the 7-day window -- it's still 1, not 2.
+    check("scenario 2 (recent prediction_date, stale game_date_actual): "
+          "does not count toward the 7-day window even though its prediction_date "
+          "(08-19) is inside it -- proves bucketing is NOT falling back to prediction_date",
+          by_window_d[7]["n"], 1)
+
+    # 30-day window (07-23..08-21): wide enough for scenario 1 (08-18) and
+    # scenario 3's fallback (08-05), but NOT scenario 2's real date
+    # (2026-07-01, before 07-23).
+    check("30-day window holds scenario 1 + scenario 3's fallback, "
+          "still excludes scenario 2's long-stale real game date",
+          by_window_d[30]["n"], 2)
+    check("scenario 3 (legacy row, no game_date_actual key) contributes exactly "
+          "the one additional row between the 7-day and 30-day windows -- "
+          "proves the fallback to prediction_date actually fired",
+          by_window_d[30]["n"] - by_window_d[7]["n"], 1)
+
+print(f"ok   rolling-window date fix: {CHECKS - _ROLLING_DATE_CHECKS_BEFORE} assertions, "
+      f"buckets by game_date_actual not prediction_date -- an old prediction with a recently-"
+      f"resolved game counts as recent, a recent prediction with a long-stale real game date "
+      f"does not, and a legacy row with no game_date_actual falls back safely")
 
 if FAILED:
     print(f"\n{len(FAILED)} FAILED\n" + "\n".join(f"  · {f}" for f in FAILED))
