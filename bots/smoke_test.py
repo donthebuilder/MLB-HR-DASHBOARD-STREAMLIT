@@ -82,6 +82,25 @@ def main() -> int:
         assert abs(sum(w.values()) - 1.0) < 1e-9, f"hr_blend sums to {sum(w.values())}"
     step("hr_blend weights sum to 1.00", weights_ok)
 
+    # MODEL FOUNDATION (2026-08-21): the registry must import/validate, and
+    # stamping a row for the prediction log must never touch its score.
+    # Full coverage lives in tests/test_model_foundation.py; this is the
+    # ~1-second version that runs on every commit, matching this file's own
+    # purpose statement above.
+    def model_registry_ok():
+        assert M.MODEL_REGISTRY is not None, "model_registry failed to import"
+        assert M.MODEL_REGISTRY.MODEL_VERSIONS.get("hr"), "no hr version registered"
+    step("model_registry imports and validates", model_registry_ok)
+
+    def stamping_does_not_touch_score():
+        r = make_record(player_id=1, name="Stamp Check", season_iso=0.280)
+        M.apply_model_v2_layers(r)
+        before = r.hr_score
+        r.model_version = M.MODEL_REGISTRY.MODEL_VERSIONS["hr"]
+        r.run_id = "smoke-test-run"
+        assert r.hr_score == before, "stamping model_version/run_id changed hr_score"
+    step("stamping model_version/run_id does not change hr_score", stamping_does_not_touch_score)
+
     # recent_form is the term that was silently reading 0.0 — assert it moves.
     def form_lives():
         hot = make_record(player_id=1, name="Hot", last5_hr=3, last10_hr=5,

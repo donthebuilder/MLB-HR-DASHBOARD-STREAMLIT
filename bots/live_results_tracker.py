@@ -1477,6 +1477,18 @@ SLOT_FIELDS = {
     # that's been telling users these publish as 0 can be checked against
     # actual graded values instead of taken on faith.
     "pitcher_gb_rate", "pitcher_ld_rate", "pitcher_popup_rate",
+    # ── MODEL FOUNDATION (2026-08-21) ───────────────────────────────────────
+    # Which scoring logic (model_version, the HR market's registry version)
+    # and which bot execution (run_id) produced this row. Both fields are
+    # DEFAULTED ("") on HitterRecord, so a row saved before this change
+    # simply carries empty strings here rather than failing to load -- see
+    # the no-default-field gotcha documented above load_locked_rows_by_game
+    # in mlb_dashboard.py. Without these two names in this whitelist, every
+    # future graded row would have its model attribution dropped by
+    # trim_row() the same way multi-hit and the HR gate flag were before
+    # they were added above -- computed on every slate row, archived on
+    # none of them. See bots/model_registry.py, docs/MODELS.md.
+    "model_version", "run_id",
 }
 
 
@@ -1610,6 +1622,227 @@ def build_tracking_slots(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         tracking.append({**trim_row(contact_pick), "pick_type": "CONTACT"})
 
     return tracking
+
+
+# ── MODEL FOUNDATION: append-only outcome log (Task 5) ──────────────────────
+#
+# Separate from graded_slots/the site's Results payload on purpose: this is
+# a model-INDEPENDENT record of what every predicted player-game actually
+# did, one line per player-game, keyed so a future prediction log can join
+# to it. graded_results_*.json continues completely unchanged -- this is a
+# new, additional file, never a replacement.
+OUTCOME_SCHEMA_VERSION = 1
+GRADER_VERSION = "mlb_grader_v1"
+
+
+def outcome_stats_key(row: Dict[str, Any]) -> Tuple:
+    """The part of an outcome row that matters for "did anything actually
+    change" -- excludes graded_at/outcome_id/revision so a re-grade that
+    reproduces the same facts is recognized as a no-op."""
+    return (
+        row.get("went_yard"), row.get("hits"), row.get("runs"), row.get("rbi"),
+        row.get("total_bases"), row.get("at_bats"), row.get("void"), row.get("void_reason"),
+        row.get("game_status"),
+    )
+
+
+def build_outcome_candidates(
+    prediction_date: str,
+    rows: List[Dict[str, Any]],
+    actual_by_pid: Dict[int, Dict[str, int]],
+    game_status_by_pk: Dict[int, Dict[str, Any]],
+    graded_at: str,
+) -> List[Dict[str, Any]]:
+    """One candidate outcome row per player-game predicted this slate.
+
+    void handling, decided plainly rather than left ambiguous:
+      - a game whose status contains "postponed" is void, void_reason
+        "postponed" -- it will never go final under this game_pk, so
+        without this it would simply never appear in the outcome log.
+      - a FINAL game where the player recorded zero of everything
+        (AB/H/HR/BB/K) is void, void_reason "did_not_play" -- the
+        published prediction row existed, but MLB's boxscore shows no
+        plate appearance, i.e. a scratch. This is a proxy (the box score
+        alone doesn't say the player was healthy-scratched vs. a defensive
+        substitute who never batted); it is stated here rather than left
+        implicit.
+      - anything else (game in progress / not yet started) is NOT void --
+        it is simply not yet a final outcome. It still gets written with
+        its current game_status so a partial/live join is possible and
+        honest, and a later run with a final box score naturally produces
+        a new revision once the game concludes.
+    """
+    out: List[Dict[str, Any]] = []
+    seen_player_games = set()
+    for row in rows:
+        pid = safe_int(row.get("player_id"), 0)
+        game_pk = safe_int(row.get("game_pk"), 0)
+        if not pid or not game_pk:
+            continue
+        key = (game_pk, pid)
+        if key in seen_player_games:
+            continue
+        seen_player_games.add(key)
+
+        status = game_status_by_pk.get(game_pk) or {}
+        detailed_state = str(status.get("detailed_state") or "Unknown")
+        low = detailed_state.lower()
+        is_final = "final" in low
+        is_postponed = "postponed" in low or "cancel" in low
+        is_suspended = "suspended" in low
+
+        actual = actual_by_pid.get(pid) or {}
+        hits = safe_int(actual.get("hits"), 0)
+        hr = safe_int(actual.get("hr"), 0)
+        runs = safe_int(actual.get("runs"), 0)
+        rbi = safe_int(actual.get("rbi"), 0)
+        tb = safe_int(actual.get("tb"), 0)
+        ab = safe_int(actual.get("ab"), 0)
+        bb = safe_int(actual.get("bb"), 0)
+        k = safe_int(actual.get("k"), 0)
+
+        void = False
+        void_reason = None
+        if is_postponed:
+            void, void_reason = True, "postponed"
+        elif is_final and ab == 0 and hits == 0 and hr == 0 and bb == 0 and k == 0:
+            void, void_reason = True, "did_not_play"
+
+        out.append({
+            "outcome_schema_version": OUTCOME_SCHEMA_VERSION,
+            "prediction_date": prediction_date,
+            "player_id": pid,
+            "game_pk": game_pk,
+            "went_yard": bool(hr >= 1),
+            "hits": hits,
+            "home_runs": hr,
+            "runs": runs,
+            "rbi": rbi,
+            "hrr_total": hits + runs + rbi,
+            "total_bases": tb,
+            "at_bats": ab,
+            "void": void,
+            "void_reason": void_reason,
+            "game_status": detailed_state,
+            "is_final": is_final,
+            "is_suspended": is_suspended,
+            "graded_at": graded_at,
+            "grader_version": GRADER_VERSION,
+        })
+    return out
+
+
+def load_latest_outcome_revisions(path: Optional[Path]) -> Dict[str, Dict[str, Any]]:
+    """{player_game_id: highest-revision row} from a previously-published
+    outcome log, so repeated grader runs can tell "nothing changed" from
+    "this needs a new revision." Missing/unreadable file -> empty (treated
+    as "no prior history," never as an error worth blocking grading)."""
+    latest: Dict[str, Dict[str, Any]] = {}
+    if not path or not path.exists():
+        return latest
+    try:
+        for line in path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                obj = json.loads(line)
+            except Exception:
+                continue
+            pgid = obj.get("player_game_id")
+            if not pgid:
+                continue
+            rev = safe_int(obj.get("revision"), 0)
+            prior = latest.get(pgid)
+            if prior is None or rev >= safe_int(prior.get("revision"), 0):
+                latest[pgid] = obj
+    except Exception:
+        pass
+    return latest
+
+
+def append_outcome_log(
+    candidates: List[Dict[str, Any]],
+    existing_path: Optional[Path],
+) -> Tuple[List[str], int]:
+    """Append-safe, auditable revision policy for repeated grader runs:
+
+      - Every existing line in the prior published file is kept verbatim
+        (append-only -- a re-grade NEVER rewrites a historical outcome
+        record, only adds a new one).
+      - A candidate whose stats/void state are IDENTICAL to that
+        player-game's latest existing revision (under the same
+        grader_version) is skipped -- results.yml runs this grader hourly,
+        much of the day is spent re-confirming games that already finished,
+        and writing an identical line every hour would make the log grow
+        without bound for no informational gain.
+      - A candidate that differs (a game just went final, a stat
+        correction landed, void status changed) becomes a NEW revision:
+        outcome_id = "{game_pk}|{player_id}|r{revision}", with `supersedes`
+        pointing at the outcome_id it replaces. The previous revision is
+        never edited or removed.
+
+    Returns (all_lines_to_write, appended_count).
+    """
+    existing_lines: List[str] = []
+    if existing_path and existing_path.exists():
+        try:
+            existing_lines = [
+                ln for ln in existing_path.read_text(encoding="utf-8").splitlines() if ln.strip()
+            ]
+        except Exception:
+            existing_lines = []
+
+    latest_by_pgid = load_latest_outcome_revisions(existing_path)
+
+    new_lines: List[str] = []
+    appended = 0
+    for cand in candidates:
+        pgid = f"{cand['game_pk']}|{cand['player_id']}"
+        prior = latest_by_pgid.get(pgid)
+        if prior is not None and outcome_stats_key(prior) == outcome_stats_key(cand) \
+                and prior.get("grader_version") == cand.get("grader_version"):
+            continue  # no real difference -- append-safe no-op
+        revision = safe_int((prior or {}).get("revision"), 0) + 1
+        row = dict(cand)
+        row["player_game_id"] = pgid
+        row["revision"] = revision
+        row["outcome_id"] = f"{pgid}|r{revision}"
+        row["supersedes"] = (prior or {}).get("outcome_id")
+        new_lines.append(json.dumps(row, default=str))
+        appended += 1
+        latest_by_pgid[pgid] = row  # so a later candidate this same run compares against it
+
+    return existing_lines + new_lines, appended
+
+
+def write_outcome_log(
+    prediction_date: str,
+    rows: List[Dict[str, Any]],
+    actual_by_pid: Dict[int, Dict[str, int]],
+    game_status_by_pk: Dict[int, Dict[str, Any]],
+    graded_at: str,
+    fetch_dir: Path,
+    publish_dir: Path,
+) -> Optional[Path]:
+    """Build this run's outcome candidates, merge them append-safe against
+    whatever was already published for this date, and write the result.
+    Best-effort: an outcome-log failure must never block or corrupt the
+    graded results the rest of main() already produced."""
+    try:
+        candidates = build_outcome_candidates(prediction_date, rows, actual_by_pid, game_status_by_pk, graded_at)
+        if not candidates:
+            return None
+        existing_path = fetch_dir / f"outcome_log_{prediction_date}.jsonl"
+        all_lines, appended = append_outcome_log(candidates, existing_path)
+        publish_dir.mkdir(parents=True, exist_ok=True)
+        dest = publish_dir / f"outcome_log_{prediction_date}.jsonl"
+        dest.write_text("\n".join(all_lines) + ("\n" if all_lines else ""), encoding="utf-8")
+        print(f"outcome log: {appended} new revision(s), {len(all_lines)} total line(s) -> {dest}")
+        return dest
+    except Exception as exc:
+        print(f"outcome log write failed: {exc}")
+        return None
 
 
 def grade_slot(slot: Dict[str, Any], actual: Dict[str, Any]) -> Dict[str, Any]:
@@ -2350,6 +2583,29 @@ def main() -> int:
             game_status_by_pk[game_pk] = get_game_status(game_cache[game_pk])
         if pid not in actual_by_pid:
             actual_by_pid[pid] = get_player_batting_line(game_cache[game_pk], pid)
+
+    # MODEL FOUNDATION (Task 5): append-only outcome log, one line per
+    # player-game, model-independent (built off actual_by_pid/rows the same
+    # way the block above already covers every predicted player, not just
+    # today's tracking slots). Runs every grading invocation (live and
+    # final-only alike); per-row void/game_status reflects whether that
+    # PLAYER's game was actually final at this moment, so a live run and a
+    # final-only run both produce honest, append-safe output rather than
+    # this being gated on --final-only. Best-effort: never blocks grading.
+    try:
+        _graded_at = dt.datetime.now(dt.timezone.utc).isoformat()
+        _outcome_publish_dir = (DASHBOARD_REPO / "public" / "data" / "current") if _is_dashboard_repo(DASHBOARD_REPO) else (OUT_DIR)
+        write_outcome_log(
+            prediction_date=date_str,
+            rows=rows,
+            actual_by_pid=actual_by_pid,
+            game_status_by_pk=game_status_by_pk,
+            graded_at=_graded_at,
+            fetch_dir=OUT_DIR,
+            publish_dir=_outcome_publish_dir,
+        )
+    except Exception as _ol_exc:
+        print(f"outcome log skipped: {_ol_exc}")
 
     # 🧤 DEFENSE STAMP (2026-08-08): opp BABIP-against percentile onto every
     # graded slot, so ~2 weeks from now the archive can answer "do picks vs

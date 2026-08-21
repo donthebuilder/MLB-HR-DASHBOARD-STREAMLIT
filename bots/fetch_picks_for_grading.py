@@ -217,6 +217,34 @@ def main() -> int:
               f"— grader will invent its own pools and the Results tab will "
               f"disagree with the Pairs tab.", file=sys.stderr)
 
+    # MODEL FOUNDATION (2026-08-21): best-effort fetch of this date's
+    # already-published outcome log, so the grader's append-only revision
+    # logic (bots/live_results_tracker.py write_outcome_log) can tell
+    # "nothing changed since the last run" from "this game just went
+    # final" instead of treating every hourly CI run as a blank slate and
+    # re-appending every player-game from scratch. Same pattern as
+    # pair_builder_latest.json just above: best-effort, never blocks
+    # grading, and a missing/404 file just means "no prior revisions yet"
+    # (the first grading run of a new date, or the log wasn't published
+    # for some other benign reason).
+    outcome_dest = OUT_DIR / f"outcome_log_{date.isoformat()}.jsonl"
+    try:
+        ol = get_with_retry(f"{RAW_BASE}/public/data/current/outcome_log_{date.isoformat()}.jsonl",
+                            label="outcome_log")
+        if ol is not None and ol.status_code == 200 and ol.text.strip():
+            outcome_dest.write_text(ol.text, encoding="utf-8")
+            print(f"Fetched outcome_log_{date.isoformat()}.jsonl -> {outcome_dest}")
+        elif ol is not None:
+            print(f"outcome_log_{date.isoformat()}.jsonl: {describe_status(ol.status_code)}; "
+                  f"grader will start this date's outcome log fresh.")
+        else:
+            print("::warning::outcome_log fetch unreachable after retries; "
+                  "grader will start this date's outcome log fresh (may duplicate "
+                  "revisions already published if this run's stats are unchanged).")
+    except Exception as exc:
+        print(f"::warning::outcome_log fetch FAILED ({type(exc).__name__}: {exc}) — "
+              f"grader will start this date's outcome log fresh.")
+
     if slate_cached:
         return 0
 

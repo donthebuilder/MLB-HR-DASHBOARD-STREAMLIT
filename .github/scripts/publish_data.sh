@@ -94,6 +94,18 @@ PUBLISH_FILES=(
   nfl_logs.json
   nfl_picks.json
   nfl_results.json
+  # MODEL FOUNDATION (2026-08-21, Task 2). One run identity per bot
+  # execution -- see docs/MODELS.md and bots/model_registry.py. Small,
+  # regenerated every run, so it belongs with the rest of PUBLISH_FILES
+  # rather than the accumulating globs below. Written by
+  # sync_model_foundation_outputs_to_website_repo() in mlb_dashboard.py.
+  # NOT an envelope key on today.json/today_slim.json -- that payload is a
+  # bare list, not a dict, so embedding metadata there would have required
+  # reshaping it and risked every consumer that assumes a list (make_slim,
+  # load_locked_rows_by_game, the Streamlit app). A companion file is the
+  # additive-safe equivalent; see the docstring on that sync function.
+  today_run_meta.json
+  tomorrow_run_meta.json
 )
 
 # Nightly graded files, kept so the backtest has more than one day to look at.
@@ -114,6 +126,25 @@ GRADED_KEEP=150
 # PUBLISH_FILES. ~50 KB a night, so 120 days is about 6 MB.
 ODDS_GLOB="odds_20*.json"
 ODDS_KEEP=120
+
+# MODEL FOUNDATION (2026-08-21, Tasks 4 & 5). Two append-only logs, same
+# accumulate-and-cap treatment as GRADED/ODDS above -- carry_forward()'s
+# trim loop already generalizes over a list of (glob, keep) pairs, so this
+# is additive there too (see below).
+#
+# prediction_log_*.jsonl: ONE FILE PER RUN (~13/day; the filename embeds
+# the run_id, so two concurrent workflows can never write the same file --
+# this is why per-run filenames matter, per the roadmap). 300 keeps roughly
+# three weeks at that cadence.
+PRED_LOG_GLOB="prediction_log_*.jsonl"
+PRED_LOG_KEEP=300
+
+# outcome_log_*.jsonl: ONE FILE PER DATE (not per run) -- each grading run
+# appends new revisions into that date's file in place (see
+# bots/live_results_tracker.py append_outcome_log), so this glob's "keep"
+# caps how many distinct DATES survive, same shape as GRADED_JSON_GLOB.
+OUTCOME_LOG_GLOB="outcome_log_*.jsonl"
+OUTCOME_LOG_KEEP=150
 
 git config user.email "bot@mlb-hr-dashboard"
 git config user.name "mlb-hr-bot"
@@ -138,7 +169,9 @@ stage_local() {
   # This run's graded file(s). Written to public/data/ by live_results_tracker.
   for g in "$SRC"/data/$GRADED_GLOB "$SRC"/data/current/$GRADED_GLOB \
            "$SRC"/data/$GRADED_JSON_GLOB "$SRC"/data/current/$GRADED_JSON_GLOB \
-           "$SRC"/data/$ODDS_GLOB "$SRC"/data/current/$ODDS_GLOB; do
+           "$SRC"/data/$ODDS_GLOB "$SRC"/data/current/$ODDS_GLOB \
+           "$SRC"/data/$PRED_LOG_GLOB "$SRC"/data/current/$PRED_LOG_GLOB \
+           "$SRC"/data/$OUTCOME_LOG_GLOB "$SRC"/data/current/$OUTCOME_LOG_GLOB; do
     [ -f "$g" ] && cp "$g" "$STAGE/public/data/current/"
   done
 
@@ -177,7 +210,8 @@ carry_forward() {
   # broke Today #14 -- on the first run there were no graded files yet, so the
   # glob matched nothing and the script died trying to count zero files.
   # find exits 0 on no matches.
-  for spec in "$GRADED_GLOB:$GRADED_KEEP" "$GRADED_JSON_GLOB:$GRADED_KEEP" "$ODDS_GLOB:$ODDS_KEEP"; do
+  for spec in "$GRADED_GLOB:$GRADED_KEEP" "$GRADED_JSON_GLOB:$GRADED_KEEP" "$ODDS_GLOB:$ODDS_KEEP" \
+              "$PRED_LOG_GLOB:$PRED_LOG_KEEP" "$OUTCOME_LOG_GLOB:$OUTCOME_LOG_KEEP"; do
     glob="${spec%:*}"; keep="${spec##*:}"
     n=$(find "$STAGE/public/data/current" -maxdepth 1 -type f -name "$glob" | wc -l)
     if [ "$n" -gt "$keep" ]; then

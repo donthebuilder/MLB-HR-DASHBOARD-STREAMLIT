@@ -32,11 +32,13 @@ import dataclasses
 import datetime as dt
 import json
 import os
+import platform
 import shutil
 import sqlite3
 import subprocess
 import sys
 import time
+import uuid
 try:
     from zoneinfo import ZoneInfo
 except Exception:
@@ -66,6 +68,19 @@ except Exception:
             return {"season_pa": int(pa), "season_hr": int(hr), "hr_per_pa": round(hrpa, 4), "pa_per_hr": round(paphr, 1) if paphr else None, "hr_pa_tier": tier}
 
 import requests
+
+# MODEL FOUNDATION (2026-08-21): the version registry (bots/model_registry.py,
+# Task 1). Defensive import, matching the pair_history_helper pattern above --
+# a broken/missing registry module must never take down the scoring bot. On
+# failure, model_version/run_id stamping and the prediction log are skipped
+# for the run (loudly, to stderr) rather than the whole job dying.
+try:
+    import model_registry as MODEL_REGISTRY
+except Exception as _model_registry_exc:
+    MODEL_REGISTRY = None
+    print(f"model_registry import failed ({_model_registry_exc}); "
+          f"model_version/run_id stamping and the prediction log are "
+          f"disabled for this run.", file=sys.stderr)
 
 try:
     import pandas as pd
@@ -1484,6 +1499,21 @@ class HitterRecord:
     pitcher_xhr_allowed: float = 0.0
     pitcher_hr_luck: float = 0.0
     pitcher_xhr_bbe: int = 0
+    # MODEL FOUNDATION (2026-08-21): which scoring logic produced this row,
+    # and which bot execution produced it. Both DEFAULTED on purpose -- see
+    # load_locked_rows_by_game() above: a no-default field on HitterRecord
+    # silently drops any in-flight locked/saved row that predates the field,
+    # because that loader builds each row from a saved JSON dict inside a
+    # bare try/except and only back-fills fields that have a dataclass
+    # default. An empty string here means "written before this registry
+    # existed" -- read as `pre_registry` at analysis time, never silently
+    # relabeled as any specific version. model_version is the HR market's
+    # version (bots/model_registry.py MODEL_VERSIONS["hr"]) since HR is the
+    # flagship score every graded slot is compared against; the full
+    # per-market version map for a run lives in that run's prediction-log
+    # run_meta line, not repeated on every row. See docs/MODELS.md.
+    model_version: str = ""
+    run_id: str = ""
 
 
 class CacheDB:
@@ -12426,6 +12456,251 @@ def load_locked_rows_by_game(json_path: Path) -> Dict[int, List[HitterRecord]]:
     return by_game
 
 
+# ── MODEL FOUNDATION: run metadata (Task 2) ──────────────────────────────────
+#
+# One run_id per bot EXECUTION, generated once here at the top of main() --
+# not per hitter, not per game. Thirteen scheduled executions a day (see
+# .github/workflows/today.yml) each get exactly one run_id, and every row
+# that execution scores carries it (see the stamping loop in main()).
+
+def _current_git_sha() -> str:
+    """Best-effort commit identity for this run. GITHUB_SHA is set by every
+    GitHub Actions job; the local `git rev-parse` fallback covers a Mac run.
+    Never raises -- provenance is nice-to-have, not worth failing a slate."""
+    sha = os.environ.get("GITHUB_SHA", "").strip()
+    if sha:
+        return sha
+    try:
+        out = subprocess.run(
+            ["git", "-C", str(Path(__file__).resolve().parent.parent), "rev-parse", "HEAD"],
+            capture_output=True, text=True, timeout=5,
+        )
+        if out.returncode == 0 and out.stdout.strip():
+            return out.stdout.strip()
+    except Exception:
+        pass
+    return "unknown"
+
+
+def _run_env_metadata() -> Dict[str, str]:
+    """Environment fingerprint for this run -- closes the "which pybaseball
+    version scored tonight" blind spot named in the roadmap review. Nothing
+    here is required for the bot to run; a missing package version reads as
+    "unknown" rather than raising."""
+    env: Dict[str, str] = {"python": platform.python_version()}
+    try:
+        import importlib.metadata as _ilm
+        env["pybaseball"] = _ilm.version("pybaseball")
+    except Exception:
+        env["pybaseball"] = "unknown"
+    return env
+
+
+def build_run_meta(slate_date: dt.date, slate_label: str, args: "argparse.Namespace") -> Dict[str, Any]:
+    """One run identity per bot execution. See docs/MODELS.md for the
+    model_version/schema_version policy this embeds.
+
+    run_id shape: "{slate_date}.{HHMMSSZ}.{source}" -- seconds granularity
+    (not minutes) because a manual re-run and a scheduled run landing in the
+    same minute would otherwise collide; GitHub's own run id is included as
+    the source so a run_id is traceable back to the exact Actions run (or
+    "local-<8 hex>" off the runner for a Mac execution).
+    """
+    now = dt.datetime.now(dt.timezone.utc)
+    gha_run_id = os.environ.get("GITHUB_RUN_ID", "").strip()
+    source = f"gha-{gha_run_id}" if gha_run_id else f"local-{uuid.uuid4().hex[:8]}"
+    run_id = f"{slate_date.isoformat()}.{now.strftime('%H%M%S')}Z.{source}"
+
+    if MODEL_REGISTRY is not None:
+        model_family = MODEL_REGISTRY.MODEL_FAMILY
+        model_versions = MODEL_REGISTRY.model_versions_snapshot()
+        schema_version = MODEL_REGISTRY.SCHEMA_VERSION
+    else:
+        # Registry failed to import (see the try/except at module import
+        # above). Keep the run_meta shape intact with honest placeholders
+        # rather than crashing the run over a metadata-only failure.
+        model_family = "unknown"
+        model_versions = {}
+        schema_version = 0
+
+    return {
+        "run_id": run_id,
+        "generated_at": now.isoformat(),
+        "slate_date": slate_date.isoformat(),
+        # Not GITHUB_WORKFLOW's filename (Actions doesn't expose that) --
+        # the workflow's display NAME, which is the closest honest signal
+        # available; "local" off a Mac run, matching the roadmap's
+        # today.yml | manual | local intent without overclaiming precision.
+        "trigger": os.environ.get("GITHUB_WORKFLOW", "").strip() or "local",
+        "git_sha": _current_git_sha(),
+        "model_family": model_family,
+        "model_versions": model_versions,
+        "schema_version": schema_version,
+        "env": _run_env_metadata(),
+    }
+
+
+# ── MODEL FOUNDATION: prediction log (Task 4) ────────────────────────────────
+#
+# One JSONL file per bot execution: first line is this run's run_meta, then
+# one compact record per scored hitter. Intentional schema (five blocks),
+# not a dump of the 300+-field HitterRecord -- see docs/MODELS.md and
+# DASH_ROADMAP.md §4 for the field roster this mirrors.
+#
+# Built from `rows_payload` (the fully-enriched dict form used to write
+# today.json/tomorrow.json), not from the raw HitterRecord dataclasses,
+# because several of the fields below (game_pick_role, hr_gate_flagged,
+# best_bet_type) are only set as post-construction dict mutations later in
+# main() -- they do not exist on the dataclass itself. Calling this after
+# every rows_payload enrichment step has run is what makes those available.
+
+def sync_model_foundation_outputs_to_website_repo(slate_label: str, run_meta: Dict[str, Any], prediction_log_path: Optional[Path]) -> None:
+    """Publish this run's metadata alongside the slate.
+
+    DEVIATION FROM DASH_ROADMAP.md §3 (documented, not silent): the roadmap
+    describes embedding run_meta "in the today_slim.json envelope." That
+    envelope does not exist -- inspection of this file shows today.json /
+    today_slim.json are a bare JSON *list* of hitter rows (see
+    write_json_and_aliases() and make_slim.py's slim_rows()/_rows_of(),
+    both of which branch on `isinstance(payload, list)` as the primary
+    case), not a dict with metadata keys alongside a rows array. Adding a
+    top-level "run_meta" key would turn that list into a dict and break
+    every consumer that assumes a list: make_slim.py's slate_is_real() /
+    slim_file(), load_locked_rows_by_game() here, and the Streamlit app.
+    That is exactly the kind of site/consumer risk this task is scoped to
+    avoid.
+
+    The additive-safe equivalent: write run_meta to its own small companion
+    file, current/{today,tomorrow}_run_meta.json, next to the slate it
+    describes -- new file, zero existing keys touched, zero risk to any
+    current reader. (Every row in the slate itself also carries run_id +
+    model_version directly, per Task 3, so a consumer that already has a
+    row never needs this file to know what produced it; this file is for
+    "what run made the CURRENT slate" at a glance.)
+    """
+    try:
+        data_dir = DASHBOARD_REPO / "public" / "data"
+        if not data_dir.parent.exists():
+            print(f"⚠️ Model-foundation sync skipped; website repo not found at {DASHBOARD_REPO}", file=sys.stderr)
+            return
+        current_dir = data_dir / "current"
+        current_dir.mkdir(parents=True, exist_ok=True)
+
+        run_meta_path = current_dir / f"{slate_label}_run_meta.json"
+        run_meta_path.write_text(json.dumps(run_meta, indent=2), encoding="utf-8")
+        print(f"📁 Run meta: {run_meta_path.name} (run_id={run_meta.get('run_id')})", file=sys.stderr)
+
+        if prediction_log_path is not None and prediction_log_path.exists():
+            dest = current_dir / prediction_log_path.name
+            shutil.copy2(prediction_log_path, dest)
+            print(f"📁 Prediction log: {prediction_log_path.name} → {dest}", file=sys.stderr)
+    except Exception as exc:
+        print(f"⚠️ Model-foundation sync failed: {exc}", file=sys.stderr)
+
+
+def build_prediction_log_lines(run_meta: Dict[str, Any], rows_payload: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    lines: List[Dict[str, Any]] = [run_meta]
+    prediction_date = run_meta.get("slate_date", "")
+    for row in rows_payload:
+        if not isinstance(row, dict):
+            continue
+        lines.append({
+            # identity / join keys
+            "prediction_date": prediction_date,
+            "player_id": row.get("player_id"),
+            "player": row.get("name"),
+            "game_pk": row.get("game_pk"),
+            "team": row.get("team"),
+            "opp": row.get("opponent"),
+            "opp_pitcher_id": row.get("pitcher_id"),
+            "prediction_type": "slate_row",
+            "game_pick_role": row.get("game_pick_role", ""),
+            # run / version metadata
+            "run_id": run_meta.get("run_id"),
+            "generated_at": run_meta.get("generated_at"),
+            "model_versions": run_meta.get("model_versions"),
+            # main scores
+            "scores": {
+                "hr": row.get("hr_score"),
+                "hit": row.get("hit_score"),
+                "hrr": row.get("hrr_score"),
+                "contact": row.get("contact_score"),
+                "overall": row.get("overall_score"),
+                "top_board": row.get("top_board_score_v2"),
+                "hrw": row.get("hrw_score"),
+                "multi_hit": row.get("multi_hit_score"),
+            },
+            # candidate / shadow -- not production signals, kept so a future
+            # shadow-vs-production comparison has same-night, same-hitter
+            # data to compare rather than needing to start from zero.
+            "candidate": {
+                "hr_score_shadow": row.get("hr_score_shadow"),
+                "best_blend_score": row.get("best_blend_score"),
+                "alt_hr_score": row.get("alt_hr_score"),
+            },
+            # important components -- values that today die uncaptured past
+            # the live slate (see DASH_MODEL_INVENTORY.md §3). Field names
+            # below map to the canonical HitterRecord field that already
+            # computes each one; nothing here is a new calculation.
+            "components": {
+                "pmix": row.get("pitch_mix_score"),
+                "pitch_type_match": row.get("pitch_type_match_score"),
+                "ihr": row.get("recent_ideal_hr_contact"),
+                "zone_damage": row.get("pitcher_zone_damage_score"),
+                "spot_damage": row.get("pitcher_spot_damage_score"),
+                "pull_rate": row.get("recent_pull_rate"),
+                "fb_rate": row.get("recent_fb_rate"),
+                "barrel_rate": row.get("recent_barrel_rate"),
+                "damage_conversion": row.get("damage_conversion_score"),
+                # "weak side" component is a numeric composite score, not
+                # the string label -- pitcher_weak_side (the label, e.g.
+                # "RHB") is available in the full slate row already.
+                "weak_side": row.get("pitcher_weak_side_score"),
+                "pitcher_hr9": row.get("pitcher_hr9"),
+                # No dedicated gate-signal COUNT field exists in the current
+                # pipeline -- mapped to the existing hr_gate_flagged boolean
+                # (best_bet_type gets rewritten to "HR" when this fires; see
+                # reconcile_best_bet_with_designation) rather than inventing
+                # a new calculation, per the "map the existing canonical
+                # value" instruction.
+                "hr_gate_signals": row.get("hr_gate_flagged", False),
+            },
+            # Moonshot scores are 0-100 indices, not probabilities. Never a
+            # bare number here -- only a real calibrated probability would
+            # ever populate this field, and none exists yet.
+            "probability": None,
+        })
+    return lines
+
+
+def write_prediction_log(run_meta: Dict[str, Any], rows_payload: List[Dict[str, Any]]) -> Optional[Path]:
+    """Write bots/outputs/prediction_log_<slate_date>.<runstamp>.jsonl for
+    this run. Returns the path written, or None if the registry import
+    failed (see MODEL_REGISTRY at module scope) -- a metadata/logging
+    failure must never block the slate the rest of this function already
+    produced."""
+    if MODEL_REGISTRY is None:
+        print("prediction log skipped: model_registry did not import", file=sys.stderr)
+        return None
+    try:
+        run_id = run_meta["run_id"]
+        slate_date_str = run_meta["slate_date"]
+        # run_id is "{slate_date}.{HHMMSSZ}.{source}" -- the runstamp is
+        # everything after the leading slate_date segment, so the filename
+        # reconstructs the exact run_id it belongs to.
+        runstamp = run_id.split(".", 1)[1] if "." in run_id else run_id
+        path = OUT_DIR / f"prediction_log_{slate_date_str}.{runstamp}.jsonl"
+        lines = build_prediction_log_lines(run_meta, rows_payload)
+        with path.open("w", encoding="utf-8") as f:
+            for obj in lines:
+                f.write(json.dumps(obj, default=str))
+                f.write("\n")
+        return path
+    except Exception as exc:
+        print(f"prediction log write failed: {exc}", file=sys.stderr)
+        return None
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="MLB Daily Breakdown Bot — Today Pitch Mix Version v1 MAY")
     parser.add_argument("--date", default="today", help="Slate date YYYY-MM-DD, today, or tomorrow. Default is today.")
@@ -12476,6 +12751,11 @@ def main() -> int:
         txt_alias_paths = []
         json_alias_paths = []
 
+        # MODEL FOUNDATION (Task 2): one run identity for this entire bot
+        # execution, generated once here -- never per hitter, never per game.
+        run_meta = build_run_meta(slate_date, slate_label, args)
+        print(f"RUN_ID: {run_meta['run_id']}", file=sys.stderr)
+
         locked_rows_by_game = {} if args.force_refresh else load_locked_rows_by_game(json_path)
 
         raw_rows: List[HitterRecord] = []
@@ -12495,6 +12775,19 @@ def main() -> int:
                 print(f"[{idx}/{len(games)}] Building {away} @ {home}...", file=sys.stderr, flush=True)
                 rows = build_hitter_records(client, db, game, slate_date)
                 filtered_rows = apply_global_pa_filter(rows)
+                # MODEL FOUNDATION (Task 3): stamp freshly-scored rows with
+                # the HR market's current version + this run's run_id.
+                # Deliberately NOT applied to the LOCKED branch above: a
+                # locked game reuses a row that was actually scored by an
+                # earlier run, and overwriting its run_id here would
+                # misattribute it to a run that never touched it. A locked
+                # row keeps whatever stamp it was saved with (defaulted to
+                # "" for any row saved before this change existed).
+                if MODEL_REGISTRY is not None:
+                    _hr_version = MODEL_REGISTRY.MODEL_VERSIONS.get("hr", "")
+                    for _r in rows:
+                        _r.model_version = _hr_version
+                        _r.run_id = run_meta["run_id"]
 
             raw_rows.extend(rows)
             game_rows.append((game, filtered_rows))
@@ -12992,6 +13285,18 @@ Use ALT LOOKS as quality variance, not primary plays.
 
         write_text_and_aliases(txt_path, report_text, txt_alias_paths)
         write_json_and_aliases(json_path, rows_payload, json_alias_paths)
+
+        # MODEL FOUNDATION (Tasks 2 & 4): this run's metadata + the
+        # append-only prediction log, written from the fully-enriched
+        # rows_payload (game_pick_role, hr_gate_flagged, etc. are only
+        # present here, not on the raw HitterRecord objects). Both are
+        # best-effort -- a failure here must never cost the slate that was
+        # already written above.
+        try:
+            _pred_log_path = write_prediction_log(run_meta, rows_payload)
+            sync_model_foundation_outputs_to_website_repo(slate_label, run_meta, _pred_log_path)
+        except Exception as _mf_exc:
+            print(f"⚠️ Model-foundation logging failed: {_mf_exc}", file=sys.stderr)
 
         # Pair Builder output: now powered by System 2's actual selection
         # logic (build_structured_pairs/build_structured_pool -- the same
