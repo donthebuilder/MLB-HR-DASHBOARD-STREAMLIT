@@ -92,6 +92,30 @@ jobs:
       - name: Fetch published picks
         run: python bots/fetch_picks_for_grading.py --date today
 
+      # SUSPENDED-GAME FIX (2026-08-21, Sol's audit finding #4). See
+      # regrade_stale_dates()'s docstring in live_results_tracker.py: a game
+      # suspended on day D and resumed on D+2 used to sit un-regraded forever,
+      # because nothing ever revisited a date once tomorrow's slate existed.
+      # That recheck can only see outcome logs THIS runner has locally, and a
+      # fresh checkout starts empty -- so restore the recent ones from the
+      # data branch first. outcome_log_*.jsonl already accumulates there
+      # (OUTCOME_LOG_KEEP=150 dates, publish_data.sh), so this is the same
+      # git-archive-and-copy the "Restore graded history" step below already
+      # does for the backtest report's different files, just earlier and
+      # narrower. Deliberately does NOT restore breakdown files -- the recheck
+      # reconstructs its minimal rows straight from the outcome log itself
+      # (player_id + game_pk), which the breakdown file was never needed for.
+      - name: Restore recent outcome logs for the stale-game recheck
+        run: |
+          git fetch origin data --depth 1 2>/dev/null || true
+          if git rev-parse --verify origin/data >/dev/null 2>&1; then
+            rm -rf /tmp/outcome-restore && mkdir -p /tmp/outcome-restore
+            git archive origin/data public/data 2>/dev/null | tar -x -C /tmp/outcome-restore || true
+            cp /tmp/outcome-restore/public/data/current/outcome_log_*.jsonl bots/outputs/ 2>/dev/null || true
+            echo "Restored $(ls bots/outputs/outcome_log_*.jsonl 2>/dev/null | wc -l) outcome log file(s)."
+          fi
+        continue-on-error: true
+
       # FIXED: this step used to call `python bots/grade_results.py`, a file
       # that does not exist in this repo -- the grader is
       # bots/live_results_tracker.py. Every scheduled run had been failing on

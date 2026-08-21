@@ -1845,6 +1845,96 @@ def write_outcome_log(
         return None
 
 
+# SUSPENDED-GAME FIX (2026-08-21, Sol's audit finding #4). resolve_grade_date()
+# picks exactly ONE date per run -- today, or (only if today has no breakdown
+# published yet) the most recent day that does. Once tomorrow's slate exists,
+# that fallback never fires for today again, so a game suspended on day D and
+# resumed on D+2 sat in outcome_log_D.jsonl with is_final=False forever --
+# nothing in the pipeline ever went back to look at it. This revisits every
+# recent date whose latest-logged outcome for some player-game is still
+# neither final nor void, and re-fetches its CURRENT live status. A game
+# that's still suspended produces no new revision (append_outcome_log's
+# existing no-op-if-unchanged check already handles that) -- only a game that
+# has genuinely resolved since the last check produces one, so this is safe
+# to run every single hourly invocation.
+def find_unresolved_outcome_dates(
+    fetch_dir: Path, today: dt.date, lookback_days: int = 14,
+) -> Dict[str, List[Dict[str, Any]]]:
+    """{date_str: [{'player_id':.., 'game_pk':..}, ...]} for every date in the
+    last `lookback_days` (today excluded -- that date's own grading run
+    already covers it) whose PUBLISHED outcome log's latest revision per
+    player-game still shows is_final=False and void=False.
+
+    Deliberately reads only outcome_log_<date>.jsonl, never the original
+    slate's breakdown file -- the breakdown file isn't retained anywhere past
+    its own day in this pipeline (bots/outputs/ is a fresh, empty directory
+    on every CI run), but the outcome log already carries both keys a
+    candidate needs (player_id, game_pk), so reconstructing the minimal row
+    from it avoids a dependency this fix would otherwise have no way to
+    satisfy. A date whose outcome_log isn't present locally is skipped, not
+    guessed at -- restoring recent outcome logs before calling this is the
+    workflow's job (results.yml), the same way it already restores
+    graded_results_*.* for the backtest report.
+    """
+    out: Dict[str, List[Dict[str, Any]]] = {}
+    for back in range(1, lookback_days + 1):
+        date_str = (today - dt.timedelta(days=back)).strftime("%Y-%m-%d")
+        path = fetch_dir / f"outcome_log_{date_str}.jsonl"
+        if not path.exists():
+            continue
+        latest = load_latest_outcome_revisions(path)
+        unresolved = [
+            {"player_id": row.get("player_id"), "game_pk": row.get("game_pk")}
+            for row in latest.values()
+            if not row.get("is_final") and not row.get("void")
+        ]
+        if unresolved:
+            out[date_str] = unresolved
+    return out
+
+
+def regrade_stale_dates(
+    fetch_dir: Path, publish_dir: Path, today: dt.date, graded_at: str,
+    lookback_days: int = 14,
+) -> None:
+    """Re-check every date find_unresolved_outcome_dates() flags, using a
+    fresh live fetch per still-open game_pk, and append any resulting
+    revision through the exact same write_outcome_log() path today's own
+    grading uses -- so a suspended game that has since finished shows up as
+    final the next time this runs, with no separate code path to trust."""
+    stale = find_unresolved_outcome_dates(fetch_dir, today, lookback_days)
+    if not stale:
+        print("regrade-stale: no unresolved outcomes in the lookback window.")
+        return
+    for date_str, pending in sorted(stale.items()):
+        print(f"regrade-stale: {date_str} has {len(pending)} still-open player-game(s) -- rechecking live status.")
+        game_cache: Dict[int, Dict[str, Any]] = {}
+        game_status_by_pk: Dict[int, Dict[str, Any]] = {}
+        actual_by_pid: Dict[int, Dict[str, int]] = {}
+        rows: List[Dict[str, Any]] = []
+        for item in pending:
+            pid = safe_int(item.get("player_id"), 0)
+            game_pk = safe_int(item.get("game_pk"), 0)
+            if not pid or not game_pk:
+                continue
+            rows.append({"player_id": pid, "game_pk": game_pk})
+            if game_pk not in game_cache:
+                game_cache[game_pk] = fetch_game_feed(game_pk)
+                game_status_by_pk[game_pk] = get_game_status(game_cache[game_pk])
+            actual_by_pid[pid] = get_player_batting_line(game_cache[game_pk], pid)
+        if not rows:
+            continue
+        write_outcome_log(
+            prediction_date=date_str,
+            rows=rows,
+            actual_by_pid=actual_by_pid,
+            game_status_by_pk=game_status_by_pk,
+            graded_at=graded_at,
+            fetch_dir=fetch_dir,
+            publish_dir=publish_dir,
+        )
+
+
 def grade_slot(slot: Dict[str, Any], actual: Dict[str, Any]) -> Dict[str, Any]:
     hrr_total = actual["hits"] + actual["runs"] + actual["rbi"]
     graded = {
@@ -2543,6 +2633,12 @@ def main() -> int:
     parser.add_argument("--date", default="auto", help="auto/today/live, yesterday, or YYYY-MM-DD")
     parser.add_argument("--live", action="store_true", help="Run live/in-progress grading for the selected slate")
     parser.add_argument("--final-only", action="store_true", help="Only grade games that are final; skips live games")
+    parser.add_argument("--no-regrade-stale", action="store_true",
+                         help="Skip the suspended/resumed-game recheck of recent dates (see regrade_stale_dates()). "
+                              "On by default; only useful for a --date yesterday/YYYY-MM-DD one-off where "
+                              "rechecking other dates isn't wanted.")
+    parser.add_argument("--regrade-lookback-days", type=int, default=14,
+                         help="How many days back the suspended-game recheck looks for a still-open outcome. Default 14.")
     args = parser.parse_args()
     date_str = resolve_grade_date(args.date)
     live_mode = bool(args.live or args.date.lower() in {"auto", "today", "live"})
@@ -2592,9 +2688,12 @@ def main() -> int:
     # PLAYER's game was actually final at this moment, so a live run and a
     # final-only run both produce honest, append-safe output rather than
     # this being gated on --final-only. Best-effort: never blocks grading.
+    # Computed outside the try so both names are always bound -- the
+    # regrade_stale_dates() call below reuses them regardless of whether
+    # today's own write_outcome_log() call succeeds.
+    _graded_at = dt.datetime.now(dt.timezone.utc).isoformat()
+    _outcome_publish_dir = (DASHBOARD_REPO / "public" / "data" / "current") if _is_dashboard_repo(DASHBOARD_REPO) else (OUT_DIR)
     try:
-        _graded_at = dt.datetime.now(dt.timezone.utc).isoformat()
-        _outcome_publish_dir = (DASHBOARD_REPO / "public" / "data" / "current") if _is_dashboard_repo(DASHBOARD_REPO) else (OUT_DIR)
         write_outcome_log(
             prediction_date=date_str,
             rows=rows,
@@ -2606,6 +2705,21 @@ def main() -> int:
         )
     except Exception as _ol_exc:
         print(f"outcome log skipped: {_ol_exc}")
+
+    # SUSPENDED-GAME FIX (2026-08-21): see regrade_stale_dates()'s own
+    # docstring. Runs after today's own outcome log write, same best-effort
+    # guard -- a failure here must never take down the rest of grading.
+    if not args.no_regrade_stale:
+        try:
+            regrade_stale_dates(
+                fetch_dir=OUT_DIR,
+                publish_dir=_outcome_publish_dir,
+                today=_phoenix_today(),
+                graded_at=_graded_at,
+                lookback_days=args.regrade_lookback_days,
+            )
+        except Exception as _rs_exc:
+            print(f"regrade-stale skipped: {_rs_exc}")
 
     # 🧤 DEFENSE STAMP (2026-08-08): opp BABIP-against percentile onto every
     # graded slot, so ~2 weeks from now the archive can answer "do picks vs
