@@ -60,6 +60,11 @@ For each (game, category):
 State lives on the data branch and is fetched over HTTPS, because the runner
 checks out `main` and the previous run's output is only on `data`.
 
+ALSO LOCKS (2026-08-21): `prediction_of_record` — the same first-pitch
+instant, but for WHICH RUN'S NUMBERS are official, per game_pk, for every
+player in the game rather than just the 5 designated picks. See
+`run_id_by_game()` and the block comment above it.
+
 Usage (in today.yml, AFTER mlb_dashboard and BEFORE publish):
     python bots/pick_lock.py --apply
     python bots/pick_lock.py --apply --dry-run      # report, change nothing
@@ -240,6 +245,83 @@ def first_pitch_of(rows: list[dict]) -> dict[str, dt.datetime]:
     return out
 
 
+# ── PREDICTION OF RECORD (2026-08-21) ────────────────────────────────────────
+#
+# Everything above this decides WHO holds a designation. This decides WHICH
+# RUN'S NUMBERS are official for a game -- a different question. today.yml
+# scores a game up to ~13 times before its first pitch; every row on every
+# one of those runs already carries `run_id`/`model_version` (model
+# foundation, Tasks 2-3). Grading has always graded whatever the LATEST
+# recompute said, which means a model-drift run at 6pm can silently
+# retroactively change what "the prediction" for an 11am designation was.
+# That is the same bug this whole file exists to stop, one level up: not
+# "who got picked" but "what number did the pick get graded against."
+#
+# THE RULE: the run standing at a game's first pitch is the record for
+# EVERY player in that game -- not just the 5 designated picks. Locked
+# forever at that instant, exactly like a designation. A player who joins
+# the slate after that lock (a late lineup add) has no row in the locked
+# run's prediction_log and therefore no prediction_of_record -- that is the
+# honest answer, not a bug to paper over by borrowing a later run's number
+# for him alone, which would mean two players in the same locked game are
+# graded against two different runs.
+#
+# DELIBERATELY A SEPARATE TOP-LEVEL LEDGER SECTION, not a new key nested
+# inside `games[gp]`. `games` only ever gains an entry for a game_pk that
+# has at least one CURRENT designation (see `current_designations()`), so a
+# thin game with no TOP/HR/HIT/HRR/CONTACT pick at all never appears there
+# -- but it still has players who need one official evaluation row apiece.
+# Keying prediction_of_record on `first_pitch_of(rows)` instead (every
+# game_pk with a known game_time, designated or not) covers the whole
+# slate without touching the existing, already-tested designation-lock
+# code path at all.
+def run_id_by_game(rows: list[dict]) -> dict[str, dict]:
+    """(game_pk -> {run_id, model_version}) from whichever row for that game
+    has them. One bot execution stamps every row it produces with the same
+    run_id, so any row for a game_pk carries that game's answer; a blank
+    string (registry import failed, or a restored/legacy row that was never
+    restamped) is kept as None rather than papered over -- see "missing run
+    IDs" in the test list this function exists to satisfy."""
+    out: dict[str, dict] = {}
+    for r in rows:
+        gp = str(r.get("game_pk") or "")
+        if not gp or gp in out:
+            continue
+        rid = str(r.get("run_id") or "").strip()
+        mv = str(r.get("model_version") or "").strip()
+        # Every game_pk with at least one row gets an entry, even when this
+        # particular row carries neither field -- a game whose rows never
+        # got stamped (registry import failed for this run, or a legacy
+        # row) must still be lockable, honestly, with run_id=None. Losing
+        # the entry entirely here would silently skip locking that game at
+        # all rather than recording the honest gap.
+        out[gp] = {"run_id": rid or None, "model_version": mv or None}
+    return out
+
+
+def _run_id_generated_at(run_id: str | None) -> dt.datetime | None:
+    """Best-effort timestamp recovered from a run_id's own
+    "{slate_date}.{HHMMSSZ}.{source}" shape (see build_run_meta() in
+    mlb_dashboard.py) -- not a new field, just reading the one already
+    embedded, so a "was this run actually generated after first pitch"
+    check does not need a second network fetch of that run's run_meta.
+    Never raises; an unparseable/legacy run_id just yields None."""
+    if not run_id:
+        return None
+    parts = run_id.split(".")
+    if len(parts) < 2:
+        return None
+    date_part, time_part = parts[0], parts[1]
+    if len(time_part) != 7 or time_part[-1] != "Z" or not time_part[:6].isdigit():
+        return None
+    try:
+        return dt.datetime.fromisoformat(
+            f"{date_part}T{time_part[0:2]}:{time_part[2:4]}:{time_part[4:6]}+00:00"
+        )
+    except ValueError:
+        return None
+
+
 # ── ticket helpers ───────────────────────────────────────────────────────────
 
 def ticket_slots(section: str, blobs: list) -> list[str]:
@@ -383,11 +465,43 @@ def main() -> int:
     lock = fetch_lock(date)
     games: dict[str, dict] = lock.get("games") or {}
     rejected: list[dict] = lock.get("rejected") or []
+    por: dict[str, dict] = lock.get("prediction_of_record") or {}
 
     now = now_utc()
     fp = first_pitch_of(rows)
     cur = current_designations(rows)
     stamp = now.isoformat(timespec="seconds")
+
+    # ── prediction_of_record ─────────────────────────────────────────────
+    # Every game_pk with a known first pitch, locked once and only once, the
+    # instant `now` first crosses it. See the block comment above
+    # run_id_by_game() for why this is independent of the designation lock
+    # above and below. Order relative to that lock does not matter -- the
+    # two read the same `rows`/`fp`/`now` and write disjoint ledger keys.
+    rid_by_game = run_id_by_game(rows)
+    por_new = 0
+    for gp, fp_time in fp.items():
+        if gp in por:
+            continue  # already locked by an earlier run -- immutable from here
+        if now < fp_time:
+            continue  # still pregame; no record yet, correctly
+        info = rid_by_game.get(gp) or {"run_id": None, "model_version": None}
+        run_generated_at = _run_id_generated_at(info["run_id"])
+        por[gp] = {
+            "run_id": info["run_id"],
+            "model_version": info["model_version"],
+            "first_pitch": fp_time.isoformat(),
+            "locked_at": stamp,
+            # Honest, timestamp-derived (not guessed): was the run now on
+            # record for this game actually generated after the game had
+            # already started (a late build, a failed earlier run) rather
+            # than the pregame run the name implies. None when the run_id
+            # itself is missing/unparseable -- an unknown answer, not a
+            # false "no".
+            "locked_late": (bool(run_generated_at and run_generated_at > fp_time)
+                             if run_generated_at is not None else None),
+        }
+        por_new += 1
 
     changed_before, froze_now, rejects = 0, 0, []
 
@@ -632,13 +746,24 @@ def main() -> int:
         # to tickets instead of designations — added 2026-08-15 after a user
         # rang Donovan about pools changing during the day.
         "tickets": tickets,
+        # PREDICTION OF RECORD (2026-08-21): game_pk -> the run_id standing
+        # at that game's first pitch, locked once, forever, independent of
+        # designations -- so grading/eval_report.py has one official run
+        # per game_pk to join every player-game's row against, rather than
+        # whatever the latest recompute happens to say. See run_id_by_game()
+        # and the block comment above it for the full rationale.
+        "prediction_of_record": por,
         "rule": ("Before a game's first pitch a designation may change and every change is kept in "
                  "history[]. At first pitch it freezes: the published sheet is rewritten to match the "
                  "lock and any later change is recorded in rejected[] instead of being applied. "
                  "locked_late marks games first seen after they had already started. "
                  "Pools and pairs follow the same rule keyed on their slot (label / lane_key), "
                  "freezing when their EARLIEST leg starts; a locked ticket is never re-rostered "
-                 "when a leg scratches — that leg voids, which is what a real ticket does."),
+                 "when a leg scratches — that leg voids, which is what a real ticket does. "
+                 "prediction_of_record locks, per game_pk, the run_id standing at that game's first "
+                 "pitch -- the one official run for every player in that game, not just the picks; "
+                 "a player who joins the slate after that lock has no row in it, which is honest, "
+                 "not a bug."),
     }
 
     if not a.dry_run:
@@ -650,6 +775,10 @@ def main() -> int:
     print(f"pick lock — {date}, run #{ledger['runs']}")
     print(f"  {len(games)} games · {n_locked} designations locked ({n_late} locked late)")
     print(f"  pre-game re-picks recorded: {changed_before} · froze this run: {froze_now}")
+    n_por_late = sum(1 for p in por.values() if p.get("locked_late"))
+    n_por_no_run = sum(1 for p in por.values() if not p.get("run_id"))
+    print(f"  prediction_of_record: {len(por)} game(s) locked to a run_id "
+          f"({por_new} newly this run, {n_por_late} late, {n_por_no_run} missing a run_id)")
     n_tlock = sum(1 for t in tickets.values() if t.get("locked"))
     print(f"  {len(tickets)} tickets · {n_tlock} locked · "
           f"pre-lock re-rosters: {t_changed} · froze this run: {t_froze}")
