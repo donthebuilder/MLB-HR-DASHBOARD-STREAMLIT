@@ -12580,7 +12580,20 @@ def sync_model_foundation_outputs_to_website_repo(slate_label: str, run_meta: Di
     """
     try:
         data_dir = DASHBOARD_REPO / "public" / "data"
-        if not data_dir.parent.exists():
+        # BUG FIX (2026-08-21, found via a live production run that published
+        # today_slim.json/today.txt -- proving the row-level stamping and
+        # sync_breakdown_to_website_repo_v2() both worked -- but never
+        # produced today_run_meta.json or a prediction_log file). The
+        # original guard checked `data_dir.parent.exists()` i.e. whether
+        # public/ already exists. In CI, public/data/current/ is created by
+        # sync_breakdown_to_website_repo_v2() at the very end of main() --
+        # AFTER this function runs -- so public/ never exists yet at this
+        # point in a fresh checkout, and this guard silently returned early
+        # on every single CI run without ever raising. Matching the sibling
+        # sync_breakdown_to_website_repo_v2()'s guard instead: check for the
+        # repo marker (_is_dashboard_repo), not for a directory this same
+        # process tree is responsible for creating.
+        if not _is_dashboard_repo(DASHBOARD_REPO):
             print(f"⚠️ Model-foundation sync skipped; website repo not found at {DASHBOARD_REPO}", file=sys.stderr)
             return
         current_dir = data_dir / "current"

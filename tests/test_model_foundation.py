@@ -29,6 +29,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 # means to exercise.
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "bots"))
 from bots import model_registry as R  # noqa: E402
+from bots import mlb_dashboard as MDB  # noqa: E402 -- module itself, so DASHBOARD_REPO can be patched
 from bots.mlb_dashboard import (  # noqa: E402
     HitterRecord,
     MODEL_WEIGHTS,
@@ -37,6 +38,7 @@ from bots.mlb_dashboard import (  # noqa: E402
     build_prediction_log_lines,
     write_prediction_log,
     load_locked_rows_by_game,
+    sync_model_foundation_outputs_to_website_repo,
 )
 from bots.live_results_tracker import (  # noqa: E402
     SLOT_FIELDS,
@@ -362,6 +364,64 @@ before.model_version = "mlb_hr_v3"
 before.run_id = "SOME_RUN"
 check("scoring untouched: stamping model_version/run_id does not change hr_score",
       before.hr_score, score_before_stamp)
+
+
+# ═══ 8. sync_model_foundation_outputs_to_website_repo (Tasks 2 & 4 publish path) ═══
+# REGRESSION (2026-08-21): a real production run published today_slim.json
+# and today.txt fine (stamped with model_version/run_id, proving the row
+# stamping and the pre-existing sync_breakdown_to_website_repo_v2() both
+# worked) but never produced today_run_meta.json or a prediction_log
+# file. Root cause: this function's original guard checked
+# `data_dir.parent.exists()` (i.e. whether public/ already exists), but in
+# CI public/data/current/ is only created by sync_breakdown_to_website_
+# repo_v2() at the very end of main() -- AFTER this function runs -- so the
+# guard always saw public/ missing and silently returned, on every run,
+# with no exception and no visible failure. Nothing in this file caught it
+# because nothing here had exercised this function at all -- section 5
+# above tests write_prediction_log() and build_prediction_log_lines()
+# directly, never the function that actually publishes into
+# public/data/current/. This section closes that gap: it simulates the
+# real CI ordering (repo root exists and is recognizably the dashboard
+# repo, but public/ does NOT exist yet) and asserts the files land anyway.
+_sync_tmp = tempfile.mkdtemp(prefix="sync_repo_test_")
+_orig_dashboard_repo = MDB.DASHBOARD_REPO
+try:
+    _sync_root = Path(_sync_tmp)
+    (_sync_root / "streamlit_app.py").write_text("# marker\n", encoding="utf-8")
+    checkTrue("sync test setup: public/ does NOT pre-exist (matches a fresh CI checkout)",
+              not (_sync_root / "public").exists())
+    MDB.DASHBOARD_REPO = _sync_root
+
+    _fake_pred_log = _sync_root / "prediction_log_2026-08-21.999999Z.local-test.jsonl"
+    _fake_pred_log.write_text('{"run_id": "fake"}\n', encoding="utf-8")
+
+    sync_model_foundation_outputs_to_website_repo("today", rm1, _fake_pred_log)
+
+    _expected_run_meta = _sync_root / "public" / "data" / "current" / "today_run_meta.json"
+    checkTrue("sync: today_run_meta.json is written even when public/ did not exist yet",
+              _expected_run_meta.exists())
+    if _expected_run_meta.exists():
+        check("sync: today_run_meta.json content round-trips as this run's run_meta",
+              json.loads(_expected_run_meta.read_text(encoding="utf-8")), rm1)
+
+    _expected_pred_copy = _sync_root / "public" / "data" / "current" / _fake_pred_log.name
+    checkTrue("sync: the prediction log is copied into public/data/current/ too",
+              _expected_pred_copy.exists())
+
+    # And the "not actually a dashboard repo" case must still no-op quietly
+    # (no exception), same as before the fix -- this function must never be
+    # the reason a slate run fails.
+    _not_a_repo = Path(tempfile.mkdtemp(prefix="not_dashboard_repo_"))
+    MDB.DASHBOARD_REPO = _not_a_repo
+    try:
+        sync_model_foundation_outputs_to_website_repo("today", rm1, None)
+        checkTrue("sync: a non-dashboard-repo path is skipped without raising", True)
+    except Exception as _sync_exc:
+        FAILED.append(f"sync: unexpected exception on a non-dashboard-repo path: {_sync_exc}")
+    checkTrue("sync: nothing is written when DASHBOARD_REPO isn't recognizable",
+              not (_not_a_repo / "public").exists())
+finally:
+    MDB.DASHBOARD_REPO = _orig_dashboard_repo
 
 
 if FAILED:
