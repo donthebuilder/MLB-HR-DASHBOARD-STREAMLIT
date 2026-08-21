@@ -73,7 +73,7 @@ def opaque_run_id(tag: str = "") -> str:
     return f"{today}.{_RID_SEQ[0]:06d}Z.test-{tag or _RID_SEQ[0]}"
 
 
-def slate_row(pid, name, gpk, game_time, run_id=None, model_version=None, role=""):
+def slate_row(pid, name, gpk, game_time, run_id=None, model_version=None, role="", config_hash=None):
     row = {"player_id": pid, "name": name, "game_pk": gpk,
            "game_time": game_time, "game_pick_role": role,
            "hr_score": 50.0, "team": "AAA", "opponent": "BBB"}
@@ -81,6 +81,12 @@ def slate_row(pid, name, gpk, game_time, run_id=None, model_version=None, role="
         row["run_id"] = run_id
     if model_version is not None:
         row["model_version"] = model_version
+    # PROVENANCE (2026-08-21): omitted by default so every pre-existing
+    # scenario in this file (written before config_hash existed) keeps
+    # exercising the "field absent entirely" shape -- exactly the real
+    # legacy-row case, not a synthetic stand-in for it.
+    if config_hash is not None:
+        row["config_hash"] = config_hash
     return row
 
 
@@ -154,23 +160,30 @@ with tempfile.TemporaryDirectory() as d:
     started = iso(-30)
     rid1 = opaque_run_id("g1a")
     gen1 = iso(-40)   # generated before first pitch -- a clean pregame run
-    rows = [slate_row(1, "Ann", 100, started, run_id=rid1, model_version="mlb_hr_v3")]
+    hash1 = "sha256:" + "a" * 64
+    rows = [slate_row(1, "Ann", 100, started, run_id=rid1, model_version="mlb_hr_v3", config_hash=hash1)]
     ledger = run_lock(tmp, rows, run_meta={"run_id": rid1, "generated_at": gen1})
     por = ledger["prediction_of_record"]["100"]
     check("locks to the run_id standing at first pitch", por["run_id"], rid1)
     check("model_version captured too", por["model_version"], "mlb_hr_v3")
+    check("config_hash captured too (item 9)", por["config_hash"], hash1)
     check("generated_at is the canonical value from run_meta, verbatim", por["generated_at"], gen1)
     check("locked_late is False for a genuinely pregame run", por["locked_late"], False)
     checkTrue("locked_at is stamped", bool(por.get("locked_at")))
 
     # A later recompute (model drift, a reweight, whatever) must NOT move it,
-    # even with its own, different, valid run_meta sitting right there.
+    # even with its own, different, valid run_meta AND a different config_hash
+    # sitting right there -- item 10: later runs cannot change a locked
+    # game's hash, the exact same immutability run_id already gets.
     rid2 = opaque_run_id("g1b")
-    rows2 = [slate_row(1, "Ann", 100, started, run_id=rid2, model_version="mlb_hr_v4")]
+    hash2 = "sha256:" + "b" * 64
+    rows2 = [slate_row(1, "Ann", 100, started, run_id=rid2, model_version="mlb_hr_v4", config_hash=hash2)]
     ledger2 = run_lock(tmp, rows2, run_meta={"run_id": rid2, "generated_at": iso(0)})
     por2 = ledger2["prediction_of_record"]["100"]
     check("a later run does NOT move the lock", por2["run_id"], rid1)
     check("model_version stays with the locked run too", por2["model_version"], "mlb_hr_v3")
+    check("config_hash stays with the locked run too, NOT overwritten by the later run's hash (item 10)",
+          por2["config_hash"], hash1)
     check("generated_at stays with the locked run too", por2["generated_at"], gen1)
 
 
@@ -267,22 +280,26 @@ with tempfile.TemporaryDirectory() as d:
     # ships with a blank run_id) -- the row still has the KEY, just empty.
     # No today_run_meta.json this run either -- realistic, since a registry
     # failure is exactly the condition that also disables run_meta writing.
-    rows = [slate_row(1, "Ann", 600, started, run_id="", model_version="")]
+    rows = [slate_row(1, "Ann", 600, started, run_id="", model_version="", config_hash="")]
     ledger = run_lock(tmp, rows)
     por = ledger["prediction_of_record"]["600"]
     check("locks even with a blank run_id", "600" in ledger["prediction_of_record"], True)
     check("run_id is None, not empty string or fabricated", por["run_id"], None)
     check("model_version is None too", por["model_version"], None)
+    check("config_hash is None too, not empty string (item 11)", por["config_hash"], None)
     check("generated_at is None -- nothing to attribute it to", por["generated_at"], None)
     check("locked_late is None (unknown, not a guessed False)", por["locked_late"], None)
 
     # And it must never move once locked, even once a real run_id AND a
     # real run_meta show up.
     rid_real = opaque_run_id("after-blank")
-    rows2 = [slate_row(1, "Ann", 600, started, run_id=rid_real, model_version="mlb_hr_v3")]
+    hash_real = "sha256:" + "c" * 64
+    rows2 = [slate_row(1, "Ann", 600, started, run_id=rid_real, model_version="mlb_hr_v3", config_hash=hash_real)]
     ledger2 = run_lock(tmp, rows2, run_meta={"run_id": rid_real, "generated_at": iso(0)})
     check("a later real run_id does not retroactively fill in the gap",
           ledger2["prediction_of_record"]["600"]["run_id"], None)
+    check("a later real config_hash does not retroactively fill in the gap either (item 11: never backfilled)",
+          ledger2["prediction_of_record"]["600"]["config_hash"], None)
     check("generated_at stays None too, not backfilled",
           ledger2["prediction_of_record"]["600"]["generated_at"], None)
 
@@ -302,6 +319,7 @@ with tempfile.TemporaryDirectory() as d:
     check("legacy row (no run_id key at all) still locks", "700" in ledger["prediction_of_record"], True)
     check("run_id is honestly None", por["run_id"], None)
     check("model_version is honestly None", por["model_version"], None)
+    check("config_hash is honestly None (pre-provenance shape, item 11)", por["config_hash"], None)
     check("generated_at is honestly None", por["generated_at"], None)
     check("locked_late is honestly None", por["locked_late"], None)
 
@@ -418,7 +436,8 @@ with tempfile.TemporaryDirectory() as d:
     rid_a = opaque_run_id("g10a")
     gen_a = iso(-40)
     fp_a = iso(-30)
-    rows = [slate_row(1, "Ann", 501, fp_a, run_id=rid_a, model_version="mlb_hr_v3")]
+    hash_a = "sha256:" + "d" * 64
+    rows = [slate_row(1, "Ann", 501, fp_a, run_id=rid_a, model_version="mlb_hr_v3", config_hash=hash_a)]
     run_lock(tmp, rows, run_meta={"run_id": rid_a, "generated_at": gen_a})
 
     checkTrue("por_log file is created the moment a game locks", por_log_path.exists())
@@ -426,6 +445,8 @@ with tempfile.TemporaryDirectory() as d:
     check("exactly one line for the one game that locked", len(lines), 1)
     check("archived line carries the game_pk", lines[0]["game_pk"], "501")
     check("archived line carries the same run_id pick_lock.json locked to", lines[0]["run_id"], rid_a)
+    check("archived line carries config_hash too, past the daily reset (item 9, durable copy)",
+          lines[0]["config_hash"], hash_a)
     check("archived line carries generated_at too", lines[0]["generated_at"], gen_a)
     check("archived line is tagged with the slate's prediction_date", lines[0]["prediction_date"], today_str)
 

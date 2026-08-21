@@ -82,6 +82,18 @@ except Exception as _model_registry_exc:
           f"model_version/run_id stamping and the prediction log are "
           f"disabled for this run.", file=sys.stderr)
 
+# PROVENANCE (2026-08-21): deterministic scoring-configuration fingerprint
+# (bots/config_fingerprint.py). Same defensive-import pattern as
+# MODEL_REGISTRY just above -- a broken/missing module must never take down
+# the scoring bot. On failure, config_hash is skipped for the run (loudly,
+# to stderr); model_version/run_id stamping is unaffected either way.
+try:
+    import config_fingerprint as CONFIG_FINGERPRINT
+except Exception as _config_fingerprint_exc:
+    CONFIG_FINGERPRINT = None
+    print(f"config_fingerprint import failed ({_config_fingerprint_exc}); "
+          f"config_hash stamping is disabled for this run.", file=sys.stderr)
+
 try:
     import pandas as pd
 except ImportError as exc:
@@ -1514,6 +1526,18 @@ class HitterRecord:
     # run_meta line, not repeated on every row. See docs/MODELS.md.
     model_version: str = ""
     run_id: str = ""
+    # PROVENANCE (2026-08-21): deterministic fingerprint of the exact HR
+    # scoring configuration in effect when this row was scored -- see
+    # bots/config_fingerprint.py and docs/MODELS.md. Same defaulted-field
+    # safety reasoning as model_version/run_id directly above: a no-default
+    # field silently drops any in-flight locked/saved row that predates it
+    # (see load_locked_rows_by_game()). Empty string means "written before
+    # this field existed, or the fingerprint module failed to import" --
+    # read as unknown provenance at analysis time, never backfilled with
+    # today's live hash. model_version answers "what did we DECLARE we were
+    # running"; config_hash answers "what was ACTUALLY in effect" -- the
+    # machine-verifiable backstop for an unbumped version.
+    config_hash: str = ""
 
 
 class CacheDB:
@@ -12503,6 +12527,48 @@ def _current_git_sha() -> str:
     return "unknown"
 
 
+# The exact set of functions whose AST structure determines the HR
+# fingerprint's "formula_structure_sha256" layer -- see config_fingerprint.py
+# for why this can't be MODEL_WEIGHTS alone. apply_model_v2_layers is where
+# hr_raw/hr_score_new/the corrected/live hr_score are actually computed
+# (including every inline trap multiplier, gate bonus/penalty, and the
+# 2026-07-31 shadow re-anchor); minmax_norm/_hr2_clip/_spot_damage_for_batter
+# are the shared scaling/clip/pitcher-damage helpers it calls whose own
+# internals could change hr_score without changing apply_model_v2_layers's
+# own text at all. Literal list, fixed order -- not derived/discovered, so a
+# future function added to the HR path must be added here by hand (same
+# "declared, not derived" honesty tradeoff model_registry.py already makes
+# about MODEL_VERSIONS; see that module's own docstring).
+_HR_CONFIG_FORMULA_FUNCS = (
+    apply_model_v2_layers,
+    minmax_norm,
+    _hr2_clip,
+    _spot_damage_for_batter,
+)
+# The centralized HR tuning surface from MODEL_WEIGHTS (see that dict's own
+# header comment). Order fixed for readability only -- canonical_json sorts
+# keys before hashing, so dict declaration order here is not load-bearing.
+_HR_CONFIG_WEIGHT_KEYS = ("hr_blend", "hr_gate_thresholds", "recency_multiplier")
+
+
+def hr_config_hash() -> Optional[str]:
+    """Deterministic fingerprint of the exact scoring configuration
+    currently producing mlb_hr_v3's HR Score -- see config_fingerprint.py
+    and docs/MODELS.md. None if the fingerprint module failed to import, or
+    if hashing itself raises for any reason (e.g. a function in
+    _HR_CONFIG_FORMULA_FUNCS can't be source-located) -- a provenance
+    fingerprint failing must never block a scoring run; an honest missing
+    hash is far better than a run crash or a fabricated one."""
+    if CONFIG_FINGERPRINT is None:
+        return None
+    try:
+        weights_subset = {k: MODEL_WEIGHTS[k] for k in _HR_CONFIG_WEIGHT_KEYS}
+        return CONFIG_FINGERPRINT.hr_config_hash(weights_subset, _HR_CONFIG_FORMULA_FUNCS)
+    except Exception as exc:
+        print(f"⚠️ hr_config_hash() failed ({exc}); config_hash will be empty this run.", file=sys.stderr)
+        return None
+
+
 def _run_env_metadata() -> Dict[str, str]:
     """Environment fingerprint for this run -- closes the "which pybaseball
     version scored tonight" blind spot named in the roadmap review. Nothing
@@ -12544,6 +12610,18 @@ def build_run_meta(slate_date: dt.date, slate_label: str, args: "argparse.Namesp
         model_versions = {}
         schema_version = 0
 
+    # PROVENANCE (2026-08-21): config_hashes answers "what scoring
+    # configuration was ACTUALLY in effect," independent of and in addition
+    # to model_versions' declared "what we meant to run" -- see
+    # config_fingerprint.py's module docstring. Only "hr" is computed for
+    # now (Task 6+ scope note, not a design limit: extending to sibling
+    # markets is straightforward repetition of the same pattern once
+    # someone wants it costed against those markets' own inline-constant
+    # surfaces). Explicit `{"hr": None}` rather than an absent key when
+    # hashing fails, so "we tried and it failed" is distinguishable from
+    # "this run predates config_hash existing" at analysis time.
+    config_hashes = {"hr": hr_config_hash()}
+
     return {
         "run_id": run_id,
         "generated_at": now.isoformat(),
@@ -12556,6 +12634,7 @@ def build_run_meta(slate_date: dt.date, slate_label: str, args: "argparse.Namesp
         "git_sha": _current_git_sha(),
         "model_family": model_family,
         "model_versions": model_versions,
+        "config_hashes": config_hashes,
         "schema_version": schema_version,
         "env": _run_env_metadata(),
     }
@@ -12653,6 +12732,10 @@ def build_prediction_log_lines(run_meta: Dict[str, Any], rows_payload: List[Dict
             "run_id": run_meta.get("run_id"),
             "generated_at": run_meta.get("generated_at"),
             "model_versions": run_meta.get("model_versions"),
+            # PROVENANCE: mirrors run_id/generated_at's own "copy the run's
+            # value onto every row" pattern -- a hash/reference, not the
+            # config blob itself. See config_fingerprint.py, docs/MODELS.md.
+            "config_hash": (run_meta.get("config_hashes") or {}).get("hr"),
             # main scores
             "scores": {
                 "hr": row.get("hr_score"),
@@ -12819,9 +12902,15 @@ def main() -> int:
                 # "" for any row saved before this change existed).
                 if MODEL_REGISTRY is not None:
                     _hr_version = MODEL_REGISTRY.MODEL_VERSIONS.get("hr", "")
+                    # PROVENANCE: same run_meta this run already built its
+                    # run_id from, read once per game loop rather than
+                    # recomputed per row -- config_hashes["hr"] is fixed for
+                    # the whole run (see hr_config_hash()/build_run_meta()).
+                    _hr_hash = (run_meta.get("config_hashes") or {}).get("hr") or ""
                     for _r in rows:
                         _r.model_version = _hr_version
                         _r.run_id = run_meta["run_id"]
+                        _r.config_hash = _hr_hash
 
             raw_rows.extend(rows)
             game_rows.append((game, filtered_rows))

@@ -91,9 +91,15 @@ def outcome(gp, pid, went_yard, is_final=True, void=False, void_reason=None, rev
     }
 
 
-def por(gp, run_id, model_version, generated_at, locked_late, date):
+def por(gp, run_id, model_version, generated_at, locked_late, date, config_hash=None):
+    # config_hash defaults to None and is ALWAYS present as a key (never
+    # omitted), mirroring exactly what pick_lock.py's real por[gp] dict
+    # shape does -- info.get("config_hash") is None both for a genuinely
+    # legacy game_pk (locked before the field existed) and for a real gap
+    # (fingerprint hashing failed that run). See PROVENANCE section below.
     return {
         "game_pk": gp, "run_id": run_id, "model_version": model_version,
+        "config_hash": config_hash,
         "generated_at": generated_at, "first_pitch": f"{date}T20:00:00+00:00",
         "locked_at": f"{date}T20:00:01+00:00", "locked_late": locked_late,
     }
@@ -382,6 +388,97 @@ with tempfile.TemporaryDirectory() as d:
     checkTrue("wilson_ci(50, 100) straddles 0.5", lo < 0.5 < hi)
     checkTrue("wilson_ci narrows as N grows", (ev.wilson_ci(500, 1000)[1] - ev.wilson_ci(500, 1000)[0])
               < (hi - lo))
+
+
+# ── CONFIG-HASH PROVENANCE (2026-08-21) ───────────────────────────────────
+# model_version alone cannot see a weight/threshold edit that landed without
+# a version bump -- config_hash is the machine-verifiable backstop (see
+# bots/config_fingerprint.py). Isolated in its own directory/report calls so
+# these scenarios never perturb the hand-verified tier-table counts above.
+_EVAL_REPORT_CHECKS_BEFORE = CHECKS
+with tempfile.TemporaryDirectory() as d2:
+    tmp2 = Path(d2)
+    HASH_A = "sha256:" + "1" * 64
+    HASH_B = "sha256:" + "2" * 64
+    DATE_C = "2026-08-20"
+    AS_OF_C = dt.date(2026, 8, 20)
+
+    # Scenario A (item 12): one model_version, one real config_hash across
+    # two separately-locked games -- must be silent (no warning).
+    write_por_log(tmp2, DATE_C, [por("9400", "2026-08-20.100000Z.test-c1", "mlb_hr_v3",
+                                      "2026-08-20T10:00:00+00:00", False, DATE_C, config_hash=HASH_A)])
+    write_pred_log(tmp2, "2026-08-20.100000Z.test-c1", DATE_C,
+                    [{"pid": 2001, "name": "C1", "gp": "9400", "score": 80.0}])
+    write_outcome_log(tmp2, DATE_C, [outcome("9400", 2001, True)])
+
+    write_por_log(tmp2, DATE_C, [por("9401", "2026-08-20.110000Z.test-c2", "mlb_hr_v3",
+                                      "2026-08-20T10:30:00+00:00", False, DATE_C, config_hash=HASH_A)])
+    write_pred_log(tmp2, "2026-08-20.110000Z.test-c2", DATE_C,
+                    [{"pid": 2002, "name": "C2", "gp": "9401", "score": 60.0}])
+    write_outcome_log(tmp2, DATE_C, [outcome("9401", 2002, False)])
+
+    report_clean = ev.build_report(tmp2, model_version=None, as_of=AS_OF_C)
+    check("clean single-hash scenario: no config_hash_warnings (item 12)",
+          report_clean["config_hash_warnings"], [])
+    v3_clean = report_clean["config_hashes_by_model_version"]["mlb_hr_v3"]
+    check("mlb_hr_v3 shows exactly one distinct real hash", list(v3_clean["hashes"].keys()), [HASH_A])
+    check("both rows attributed to it", v3_clean["hashes"][HASH_A], 2)
+
+    # Scenario B (items 13, 15): same model_version, a THIRD game locked
+    # under a DIFFERENT config_hash -- a weight edit that forgot to bump
+    # model_version. Must be impossible to hide: a loud warning, and STILL
+    # a loud warning when filtered down to exactly the contaminated version.
+    write_por_log(tmp2, DATE_C, [por("9402", "2026-08-20.120000Z.test-c3", "mlb_hr_v3",
+                                      "2026-08-20T11:00:00+00:00", False, DATE_C, config_hash=HASH_B)])
+    write_pred_log(tmp2, "2026-08-20.120000Z.test-c3", DATE_C,
+                    [{"pid": 2003, "name": "C3", "gp": "9402", "score": 90.0}])
+    write_outcome_log(tmp2, DATE_C, [outcome("9402", 2003, True)])
+
+    report_dirty = ev.build_report(tmp2, model_version=None, as_of=AS_OF_C)
+    check("mixed-hash scenario: exactly one warning fires (item 13)",
+          len(report_dirty["config_hash_warnings"]), 1)
+    w = report_dirty["config_hash_warnings"][0]
+    check("the warning names mlb_hr_v3", w["model_version"], "mlb_hr_v3")
+    check("the warning lists both real hashes, sorted", w["hashes"], sorted([HASH_A, HASH_B]))
+
+    report_dirty_filtered = ev.build_report(tmp2, model_version="mlb_hr_v3", as_of=AS_OF_C)
+    check("--model-version mlb_hr_v3 alone does NOT hide the drift (item 15)",
+          len(report_dirty_filtered["config_hash_warnings"]), 1)
+    check("the filtered report's warning is still the same one",
+          report_dirty_filtered["config_hash_warnings"][0]["model_version"], "mlb_hr_v3")
+
+    # explicit --config-hash filtering (item 14): narrows to exactly one
+    # config's rows, excludes the rest with their own honest reason.
+    report_hash_a_only = ev.build_report(tmp2, model_version=None, as_of=AS_OF_C, config_hash=HASH_A)
+    check("filtering to HASH_A includes only its 2 rows", report_hash_a_only["n_included"], 2)
+    check("the HASH_B row is excluded as config_hash_filtered",
+          report_hash_a_only["excluded_by_reason"].get("config_hash_filtered"), 1)
+    check("a report filtered to exactly one hash shows no drift warning (only one hash left)",
+          report_hash_a_only["config_hash_warnings"], [])
+
+    # Legacy row (item 11, eval side): locked before config_hash existed --
+    # None on the por entry -- must land in "unknown provenance," separate
+    # from both the single- and multi-hash buckets, never backfilled with a
+    # real hash.
+    write_por_log(tmp2, DATE_C, [por("9403", "2026-08-20.130000Z.test-legacy", "mlb_hr_v3",
+                                      "2026-08-20T12:00:00+00:00", False, DATE_C)])  # config_hash omitted -> None
+    write_pred_log(tmp2, "2026-08-20.130000Z.test-legacy", DATE_C,
+                    [{"pid": 2004, "name": "Legacy", "gp": "9403", "score": 55.0}])
+    write_outcome_log(tmp2, DATE_C, [outcome("9403", 2004, False)])
+
+    report_with_legacy = ev.build_report(tmp2, model_version=None, as_of=AS_OF_C)
+    v3_with_legacy = report_with_legacy["config_hashes_by_model_version"]["mlb_hr_v3"]
+    check("the legacy row counts as n_unknown, never folded into a hash bucket",
+          v3_with_legacy["n_unknown"], 1)
+    check("n_unknown does not grow when re-checked against the earlier clean/dirty reports "
+          "(HASH_A/HASH_B rows never drift into 'unknown')",
+          report_with_legacy["config_hashes_by_model_version"]["mlb_hr_v3"]["hashes"][HASH_A]
+          + report_with_legacy["config_hashes_by_model_version"]["mlb_hr_v3"]["hashes"][HASH_B],
+          3)
+
+print(f"ok   config_hash provenance: {CHECKS - _EVAL_REPORT_CHECKS_BEFORE} assertions, "
+      f"single-hash silence + multi-hash warning (even under --model-version) + explicit "
+      f"--config-hash filtering + legacy null-hash honesty")
 
 if FAILED:
     print(f"\n{len(FAILED)} FAILED\n" + "\n".join(f"  · {f}" for f in FAILED))

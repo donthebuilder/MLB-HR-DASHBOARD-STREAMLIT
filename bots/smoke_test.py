@@ -92,14 +92,28 @@ def main() -> int:
         assert M.MODEL_REGISTRY.MODEL_VERSIONS.get("hr"), "no hr version registered"
     step("model_registry imports and validates", model_registry_ok)
 
+    # PROVENANCE (2026-08-21): config_fingerprint must import and produce a
+    # well-formed, deterministic hash -- full coverage (weight/threshold
+    # sensitivity, run_id/git_sha independence, canonicalization) lives in
+    # tests/test_config_fingerprint.py; this is the ~1-second version.
+    def config_fingerprint_ok():
+        assert M.CONFIG_FINGERPRINT is not None, "config_fingerprint failed to import"
+        h1 = M.hr_config_hash()
+        h2 = M.hr_config_hash()
+        assert h1, "hr_config_hash() returned falsy"
+        assert h1 == h2, "hr_config_hash() is not deterministic within one process"
+        assert h1.startswith("sha256:") and len(h1) == len("sha256:") + 64, f"malformed hash: {h1!r}"
+    step("config_fingerprint imports and hashes deterministically", config_fingerprint_ok)
+
     def stamping_does_not_touch_score():
         r = make_record(player_id=1, name="Stamp Check", season_iso=0.280)
         M.apply_model_v2_layers(r)
         before = r.hr_score
         r.model_version = M.MODEL_REGISTRY.MODEL_VERSIONS["hr"]
         r.run_id = "smoke-test-run"
-        assert r.hr_score == before, "stamping model_version/run_id changed hr_score"
-    step("stamping model_version/run_id does not change hr_score", stamping_does_not_touch_score)
+        r.config_hash = M.hr_config_hash() or ""
+        assert r.hr_score == before, "stamping model_version/run_id/config_hash changed hr_score"
+    step("stamping model_version/run_id/config_hash does not change hr_score", stamping_does_not_touch_score)
 
     # recent_form is the term that was silently reading 0.0 — assert it moves.
     def form_lives():

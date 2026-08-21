@@ -81,11 +81,33 @@ headline tier table, with an honest reason:
                                 so no tier can hold it. Distinct from
                                 missing_score_row: that is a roster event,
                                 this is an upstream scoring bug
+    config_hash_filtered    -- only with --config-hash: this row's config_hash
+                                does not match the one requested
+
+CONFIG-HASH PROVENANCE (2026-08-21, see bots/config_fingerprint.py)
+---------------------------------------------------------------------
+model_version is a DECLARED label -- a human bumps it when they remember to.
+config_hash is a DERIVED fact -- a deterministic fingerprint of the exact
+scoring configuration (MODEL_WEIGHTS' HR surface + the AST structure of the
+functions that turn it into hr_score) in effect when a row was scored, with
+no human step to forget. The two answer different questions and neither
+replaces the other. This report NEVER pools rows across distinct config_hash
+values into one silently-clean number under a shared model_version -- if a
+model_version's included rows carry more than one distinct known config_hash,
+that is printed as a loud warning at the very top of the report, before any
+tier/rate number, and again in a dedicated CONFIG PROVENANCE section --
+regardless of whether --model-version is used to filter down to exactly that
+version (filtering to the contaminated version does not suppress its own
+warning; see config_hash_drift()). Legacy rows locked before config_hash
+existed carry config_hash: null forever -- never backfilled with today's live
+hash -- and are counted separately as "unknown provenance," never silently
+folded into either "one config" or "many configs."
 
 USAGE
 -----
     python bots/eval_report.py --dir public/data/current
     python bots/eval_report.py --dir /tmp/data-checkout/public/data/current --model-version mlb_hr_v3
+    python bots/eval_report.py --dir public/data/current --config-hash sha256:abc123...
     python bots/eval_report.py --live                    # best-effort remote fetch, TODAY ONLY (see fetch_live())
 
 Requires a real directory listing (por_log_*.jsonl / outcome_log_*.jsonl /
@@ -293,6 +315,7 @@ def build_candidates(por_entries: list[dict], pred_cache: PredictionLogCache,
                 "game_pk": gp, "player_id": None, "player": None,
                 "prediction_date": prediction_date, "por": por,
                 "hr_score": None, "model_version": por.get("model_version"),
+                "config_hash": por.get("config_hash"),
                 "row": None,
             })
             continue
@@ -309,6 +332,11 @@ def build_candidates(por_entries: list[dict], pred_cache: PredictionLogCache,
                 "por": por,
                 "hr_score": (row.get("scores") or {}).get("hr"),
                 "model_version": por.get("model_version"),
+                # PROVENANCE: from prediction_of_record, NOT from the score
+                # row itself -- config_hash describes "what configuration
+                # produced the locked run," a per-game_pk fact, same
+                # granularity as model_version/run_id, not a per-row one.
+                "config_hash": por.get("config_hash"),
                 "row": row,
             })
 
@@ -319,6 +347,7 @@ def build_candidates(por_entries: list[dict], pred_cache: PredictionLogCache,
                 "game_pk": gp, "player_id": pid, "player": None,
                 "prediction_date": prediction_date, "por": por,
                 "hr_score": None, "model_version": por.get("model_version"),
+                "config_hash": por.get("config_hash"),
                 "row": None,
             })
     return out
@@ -530,6 +559,20 @@ def render_text(report: dict) -> str:
         mv_label = "ALL"
     lines.append(f"MOONSHOT MLB HR MODEL — {mv_label}")
     lines.append(f"as of {report['as_of']}  ·  {report['n_por_entries']} game(s) with a prediction_of_record considered")
+    # PROVENANCE (2026-08-21): printed FIRST, before a single number, and
+    # never gated by --model-version -- this is exactly the drift a
+    # model_version filter cannot see or suppress (config_hash_drift() is
+    # computed on whatever `included` this report already filtered to; see
+    # its own docstring). "impossible to hide" per the brief this satisfies.
+    if report["config_hash_warnings"]:
+        lines.append("")
+        for w in report["config_hash_warnings"]:
+            lines.append(f"⚠ CONFIG DRIFT: {w['model_version']} contains {len(w['hashes'])} "
+                          f"distinct scoring configurations:")
+            for h in w["hashes"]:
+                lines.append(f"    {h}   ({w['n_by_hash'][h]} row(s))")
+        lines.append("⚠ Do not treat this model_version as one comparable population until this is resolved "
+                      "— see docs/MODELS.md.")
     lines.append("")
     # Above the table, not below it -- you cannot read the numbers without
     # having read why they might not mean what they look like.
@@ -575,6 +618,15 @@ def render_text(report: dict) -> str:
     lines.append(f"PROVENANCE: {fmt_pct(report['provenance_valid_pct'])} of {report['n_candidates']} "
                   f"candidate player-games have a verified run_id + generated_at "
                   f"(across {report['n_por_entries']} locked game(s))")
+    if report["config_hashes_by_model_version"]:
+        lines.append("")
+        lines.append("CONFIG PROVENANCE (config_hash — see docs/MODELS.md; distinct from model_version above)")
+        for mv2, entry in sorted(report["config_hashes_by_model_version"].items()):
+            n_hashes = len(entry["hashes"])
+            flag = "  ⚠ MULTIPLE CONFIGS" if n_hashes >= 2 else ""
+            lines.append(f"  {mv2:<20} {n_hashes} distinct hash(es), {entry['n_unknown']} row(s) unknown provenance{flag}")
+            for h, n in sorted(entry["hashes"].items()):
+                lines.append(f"      {h}  N={n}")
     lines.append("")
     lines.append(f"EXCLUDED FROM HEADLINE EVAL: {report['n_excluded']} of {report['n_candidates']} candidate player-games "
                   f"({fmt_pct(report['n_excluded'] / report['n_candidates'] if report['n_candidates'] else None)})")
@@ -583,7 +635,60 @@ def render_text(report: dict) -> str:
     return "\n".join(lines)
 
 
-def build_report(data_dir: Path, model_version: str | None, as_of: dt.date, live: bool = False) -> dict:
+def config_hash_drift(included: list[dict]) -> tuple[dict[str, dict], list[dict]]:
+    """PROVENANCE (2026-08-21). For every model_version present among
+    INCLUDED rows, which config_hash value(s) actually produced them --
+    and, separately, a loud warning wherever more than one *known* hash
+    shows up under the same model_version. That is the exact contamination
+    `model_version` alone cannot see: a weight/threshold edit that landed
+    without a version bump (see bots/config_fingerprint.py).
+
+    Returns (config_hashes_by_model_version, warnings):
+      config_hashes_by_model_version: {mv: {"n": total rows, "hashes":
+        {hash: row_count}, "n_unknown": rows with no config_hash at all}}.
+        "unknown" rows (config_hash is None -- pre-provenance history, or a
+        run where hashing itself failed) are counted but never folded into
+        "hashes", so an unknown-provenance gap and a real multi-hash
+        contamination are never confused with each other.
+      warnings: one dict per model_version with 2+ DISTINCT KNOWN hashes --
+        {"model_version": mv, "hashes": [sorted hash list], "n_by_hash":
+        {hash: count}}. Never suppressed by a --model-version filter --
+        build_report() computes this AFTER filtering, on whatever `included`
+        it was given, so filtering to exactly the contaminated version does
+        not hide its own contamination (the opposite of hiding it, in fact:
+        it's the one view where the warning is guaranteed to still fire).
+
+    Deliberately never used to EXCLUDE anything -- mixed hashes are reported,
+    not filtered out from under the caller. Silently dropping the
+    contaminated rows would hide the exact problem this function exists to
+    surface; the loud warning is the whole point, per the brief this
+    satisfies ("Do NOT automatically exclude mixed hashes without
+    reporting them.").
+    """
+    by_mv: dict[str, dict] = {}
+    for c in included:
+        mv = c.get("model_version") or "unknown"
+        entry = by_mv.setdefault(mv, {"n": 0, "hashes": {}, "n_unknown": 0})
+        entry["n"] += 1
+        ch = c.get("config_hash")
+        if ch:
+            entry["hashes"][ch] = entry["hashes"].get(ch, 0) + 1
+        else:
+            entry["n_unknown"] += 1
+
+    warnings: list[dict] = []
+    for mv, entry in sorted(by_mv.items()):
+        if len(entry["hashes"]) >= 2:
+            warnings.append({
+                "model_version": mv,
+                "hashes": sorted(entry["hashes"]),
+                "n_by_hash": dict(sorted(entry["hashes"].items())),
+            })
+    return by_mv, warnings
+
+
+def build_report(data_dir: Path, model_version: str | None, as_of: dt.date, live: bool = False,
+                  config_hash: str | None = None) -> dict:
     por_entries = load_prediction_of_record(data_dir)
     dates = {p.get("prediction_date") for p in por_entries if p.get("prediction_date")}
     outcomes = load_outcomes(data_dir, dates)
@@ -601,6 +706,13 @@ def build_report(data_dir: Path, model_version: str | None, as_of: dt.date, live
             n_provenance_valid += 1
         if model_version and cand.get("model_version") != model_version:
             reason = reason or "model_version_filtered"
+        # PROVENANCE: an explicit --config-hash filter is a stricter version
+        # of --model-version, not a replacement for it -- both can be given
+        # together (e.g. "mlb_hr_v3 rows scored under exactly this
+        # fingerprint"). Checked independently so either filter alone still
+        # excludes correctly with its own honest reason.
+        if config_hash and cand.get("config_hash") != config_hash:
+            reason = reason or "config_hash_filtered"
         if reason:
             excluded_by_reason[reason] = excluded_by_reason.get(reason, 0) + 1
             continue
@@ -645,12 +757,21 @@ def build_report(data_dir: Path, model_version: str | None, as_of: dt.date, live
             f"<name> before making a weight decision off these numbers."
         )
 
+    # CONFIG-HASH DRIFT (see bots/config_fingerprint.py). Computed from
+    # `included` -- i.e. AFTER model_version/config_hash filtering has
+    # already been applied above -- specifically so that filtering down to
+    # one model_version can never suppress this warning: a contaminated
+    # version stays contaminated whether or not --model-version narrows the
+    # report to exactly it.
+    config_hashes_by_mv, config_warnings = config_hash_drift(included)
+
     n_por = len(por_entries)
     return {
         "as_of": as_of.isoformat(),
         "model_version_filter": model_version,
         "model_versions_present": versions_present,
         "warnings": warnings,
+        "config_hash_filter": config_hash,
         "n_por_entries": n_por,
         "n_candidates": len(candidates),
         "n_included": len(included),
@@ -664,6 +785,8 @@ def build_report(data_dir: Path, model_version: str | None, as_of: dt.date, live
         "monotonicity": mono,
         "rolling": rolling,
         "by_model_version": by_mv,
+        "config_hashes_by_model_version": config_hashes_by_mv,
+        "config_hash_warnings": config_warnings,
     }
 
 
@@ -705,6 +828,12 @@ def main() -> int:
                                                           "(see module docstring). Ignored if --dir is given.")
     ap.add_argument("--model-version", default=None, help="Restrict the headline eval to one model_version "
                                                             "(e.g. mlb_hr_v3). Default: all versions together.")
+    ap.add_argument("--config-hash", default=None, help="Restrict the headline eval to one config_hash "
+                                                          "(e.g. sha256:abc123...) -- see CONFIG PROVENANCE in the "
+                                                          "report / docs/MODELS.md. Composes with --model-version "
+                                                          "(both may be given together). Default: all configs together, "
+                                                          "with any multi-config drift under one model_version reported "
+                                                          "as a loud warning rather than silently pooled.")
     ap.add_argument("--as-of", default=None, help="Date (YYYY-MM-DD) the rolling windows end on. Default: today (UTC).")
     ap.add_argument("--out", default=None, help="Where to write the JSON summary. Default: eval_report.json "
                                                   "next to this script.")
@@ -725,7 +854,7 @@ def main() -> int:
         print(f"no such directory: {data_dir}", file=sys.stderr)
         return 1
 
-    report = build_report(data_dir, a.model_version, as_of, live=a.live)
+    report = build_report(data_dir, a.model_version, as_of, live=a.live, config_hash=a.config_hash)
 
     print(render_text(report))
 

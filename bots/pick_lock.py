@@ -281,12 +281,19 @@ def first_pitch_of(rows: list[dict]) -> dict[str, dt.datetime]:
 # slate without touching the existing, already-tested designation-lock
 # code path at all.
 def run_id_by_game(rows: list[dict]) -> dict[str, dict]:
-    """(game_pk -> {run_id, model_version}) from whichever row for that game
-    has them. One bot execution stamps every row it produces with the same
-    run_id, so any row for a game_pk carries that game's answer; a blank
-    string (registry import failed, or a restored/legacy row that was never
-    restamped) is kept as None rather than papered over -- see "missing run
-    IDs" in the test list this function exists to satisfy."""
+    """(game_pk -> {run_id, model_version, config_hash}) from whichever row
+    for that game has them. One bot execution stamps every row it produces
+    with the same run_id (and the same config_hash -- see
+    bots/config_fingerprint.py, computed once per run and copied onto every
+    row exactly like run_id), so any row for a game_pk carries that game's
+    answer; a blank string (registry/fingerprint import failed, or a
+    restored/legacy row that was never restamped) is kept as None rather
+    than papered over -- see "missing run IDs" in the test list this
+    function exists to satisfy. config_hash is PROVENANCE ONLY here: it
+    rides along with run_id/model_version but is never read by any
+    selection/locking decision in this file -- see the block comment above
+    the prediction_of_record section for why that selector must depend on
+    timestamps alone."""
     out: dict[str, dict] = {}
     for r in rows:
         gp = str(r.get("game_pk") or "")
@@ -294,13 +301,14 @@ def run_id_by_game(rows: list[dict]) -> dict[str, dict]:
             continue
         rid = str(r.get("run_id") or "").strip()
         mv = str(r.get("model_version") or "").strip()
+        ch = str(r.get("config_hash") or "").strip()
         # Every game_pk with at least one row gets an entry, even when this
         # particular row carries neither field -- a game whose rows never
         # got stamped (registry import failed for this run, or a legacy
         # row) must still be lockable, honestly, with run_id=None. Losing
         # the entry entirely here would silently skip locking that game at
         # all rather than recording the honest gap.
-        out[gp] = {"run_id": rid or None, "model_version": mv or None}
+        out[gp] = {"run_id": rid or None, "model_version": mv or None, "config_hash": ch or None}
     return out
 
 
@@ -561,7 +569,7 @@ def main() -> int:
             continue  # already locked by an earlier run -- immutable from here
         if now < fp_time:
             continue  # still pregame; no record yet, correctly
-        info = rid_by_game.get(gp) or {"run_id": None, "model_version": None}
+        info = rid_by_game.get(gp) or {"run_id": None, "model_version": None, "config_hash": None}
         # Only trust run_meta_now's generated_at for THIS game if it is
         # verifiably the metadata for the exact run stamped on this game's
         # own rows -- a defensive check, not an assumption, since it is a
@@ -573,6 +581,16 @@ def main() -> int:
         por[gp] = {
             "run_id": info["run_id"],
             "model_version": info["model_version"],
+            # PROVENANCE (2026-08-21): the config fingerprint standing on
+            # this game_pk's rows at the instant it locks, preserved
+            # forever alongside run_id/model_version -- immutable the same
+            # way (this whole dict is written once, on the `if gp in por:
+            # continue` guard above; a later run can never touch it). Never
+            # backfilled for a game_pk that locked before this field
+            # existed -- an old por_log_<date>.jsonl line simply doesn't
+            # have the key, and `.get("config_hash")` on it returns None,
+            # exactly as intended (see docs/MODELS.md).
+            "config_hash": info.get("config_hash"),
             # The canonical value from build_run_meta(), verbatim -- not
             # reconstructed. None when it could not be verified above (no
             # run_meta.json this run, unreadable, or a run_id mismatch) --
