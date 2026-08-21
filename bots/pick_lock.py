@@ -63,7 +63,12 @@ checks out `main` and the previous run's output is only on `data`.
 ALSO LOCKS (2026-08-21): `prediction_of_record` — the same first-pitch
 instant, but for WHICH RUN'S NUMBERS are official, per game_pk, for every
 player in the game rather than just the 5 designated picks. See
-`run_id_by_game()` and the block comment above it.
+`run_id_by_game()` and the block comment above it. Because pick_lock.json
+itself resets to a fresh ledger every time the slate date changes (see
+`fetch_lock()`), every newly-locked prediction_of_record entry is ALSO
+appended, immediately, to a durable `por_log_<date>.jsonl` file that
+survives that reset — see `append_por_log()` — so eval_report.py has more
+than just today to look at.
 
 Usage (in today.yml, AFTER mlb_dashboard and BEFORE publish):
     python bots/pick_lock.py --apply
@@ -337,6 +342,58 @@ def read_current_run_meta(current_dir: Path, public_dir: Path) -> dict | None:
 
 # ── ticket helpers ───────────────────────────────────────────────────────────
 
+def append_por_log(date: str, newly_locked: list[tuple[str, dict]], current_dir: Path) -> int:
+    """Durable, append-only history of prediction_of_record entries.
+
+    pick_lock.json itself is NOT durable across slate days -- fetch_lock()
+    above starts a brand-new ledger the instant the slate date changes (a
+    ledger fetched for a different date is discarded: "date": "2026-08-20"
+    is not this slate's lock). That is the correct behavior for games[]/
+    tickets[], which only ever matter for the slate they belong to. But
+    prediction_of_record is exactly the data eval_report.py needs to
+    survive PAST its own slate day, for 7/14/30-day rolling evaluation --
+    without this, every night's locked predictions would vanish the moment
+    the next slate's first pick_lock.py run overwrote pick_lock.json, and
+    eval_report.py would silently only ever be able to see "today."
+    Each game_pk locked to a run_id gets ONE line written here, the moment
+    it locks, forever -- same accumulate-and-cap shape as outcome_log_*.jsonl
+    (see live_results_tracker.append_outcome_log and publish_data.sh).
+
+    Append-only and dedup-safe against being called twice for the same
+    game_pk (e.g. a retry): a game_pk already present in this date's file
+    is never written twice, matching prediction_of_record's own
+    immutable-once-locked rule one level up.
+    """
+    if not newly_locked:
+        return 0
+    path = current_dir / f"por_log_{date}.jsonl"
+    seen: set[str] = set()
+    if path.exists():
+        try:
+            for line in path.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    gp = json.loads(line).get("game_pk")
+                except Exception:
+                    continue
+                if gp:
+                    seen.add(str(gp))
+        except Exception:
+            pass
+    written = 0
+    with path.open("a", encoding="utf-8") as f:
+        for gp, rec in newly_locked:
+            if str(gp) in seen:
+                continue
+            row = {"prediction_date": date, "game_pk": gp, **rec}
+            f.write(json.dumps(row, default=str))
+            f.write("\n")
+            written += 1
+    return written
+
+
 def ticket_slots(section: str, blobs: list) -> list[str]:
     """Stable slot keys for one section's blobs, in order.
 
@@ -498,6 +555,7 @@ def main() -> int:
     # of run_id itself. See the block comment above read_current_run_meta().
     run_meta_now = read_current_run_meta(CURRENT, PUBLIC)
     por_new = 0
+    por_newly_locked: list[tuple[str, dict]] = []
     for gp, fp_time in fp.items():
         if gp in por:
             continue  # already locked by an earlier run -- immutable from here
@@ -530,6 +588,7 @@ def main() -> int:
             "locked_late": (bool(generated_at_dt and generated_at_dt > fp_time)
                              if generated_at_dt is not None else None),
         }
+        por_newly_locked.append((gp, por[gp]))
         por_new += 1
 
     changed_before, froze_now, rejects = 0, 0, []
@@ -795,9 +854,14 @@ def main() -> int:
                  "not a bug."),
     }
 
+    n_por_logged = 0
     if not a.dry_run:
         CURRENT.mkdir(parents=True, exist_ok=True)
         (CURRENT / "pick_lock.json").write_text(json.dumps(ledger, indent=1))
+        # Durable copy, written right after the ledger itself so a crash
+        # between the two leaves at worst an un-logged entry to retry next
+        # run (append_por_log is dedup-safe), never a duplicate.
+        n_por_logged = append_por_log(date, por_newly_locked, CURRENT)
 
     n_locked = sum(1 for g in games.values() for s in g["cats"].values() if s.get("locked"))
     n_late = sum(1 for g in games.values() for s in g["cats"].values() if s.get("locked_late"))
@@ -807,7 +871,8 @@ def main() -> int:
     n_por_late = sum(1 for p in por.values() if p.get("locked_late"))
     n_por_no_run = sum(1 for p in por.values() if not p.get("run_id"))
     print(f"  prediction_of_record: {len(por)} game(s) locked to a run_id "
-          f"({por_new} newly this run, {n_por_late} late, {n_por_no_run} missing a run_id)")
+          f"({por_new} newly this run, {n_por_late} late, {n_por_no_run} missing a run_id, "
+          f"{n_por_logged} appended to por_log_{date}.jsonl)")
     n_tlock = sum(1 for t in tickets.values() if t.get("locked"))
     print(f"  {len(tickets)} tickets · {n_tlock} locked · "
           f"pre-lock re-rosters: {t_changed} · froze this run: {t_froze}")

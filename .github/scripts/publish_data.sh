@@ -146,6 +146,17 @@ PRED_LOG_KEEP=300
 OUTCOME_LOG_GLOB="outcome_log_*.jsonl"
 OUTCOME_LOG_KEEP=150
 
+# por_log_*.jsonl: ONE FILE PER DATE, written by bots/pick_lock.py's
+# append_por_log() the instant each game_pk's prediction_of_record locks.
+# Exists because pick_lock.json's own "prediction_of_record" key resets to
+# {} every time the slate date changes (fetch_lock() discards a ledger
+# fetched for a different date) -- without this file, eval_report.py could
+# only ever see the current slate day. Same accumulate-and-cap shape as
+# OUTCOME_LOG_GLOB above, for the same reason (a lock, once taken, is not
+# re-derivable later).
+POR_LOG_GLOB="por_log_*.jsonl"
+POR_LOG_KEEP=150
+
 git config user.email "bot@mlb-hr-dashboard"
 git config user.name "mlb-hr-bot"
 
@@ -171,7 +182,8 @@ stage_local() {
            "$SRC"/data/$GRADED_JSON_GLOB "$SRC"/data/current/$GRADED_JSON_GLOB \
            "$SRC"/data/$ODDS_GLOB "$SRC"/data/current/$ODDS_GLOB \
            "$SRC"/data/$PRED_LOG_GLOB "$SRC"/data/current/$PRED_LOG_GLOB \
-           "$SRC"/data/$OUTCOME_LOG_GLOB "$SRC"/data/current/$OUTCOME_LOG_GLOB; do
+           "$SRC"/data/$OUTCOME_LOG_GLOB "$SRC"/data/current/$OUTCOME_LOG_GLOB \
+           "$SRC"/data/$POR_LOG_GLOB "$SRC"/data/current/$POR_LOG_GLOB; do
     [ -f "$g" ] && cp "$g" "$STAGE/public/data/current/"
   done
 
@@ -211,7 +223,8 @@ carry_forward() {
   # glob matched nothing and the script died trying to count zero files.
   # find exits 0 on no matches.
   for spec in "$GRADED_GLOB:$GRADED_KEEP" "$GRADED_JSON_GLOB:$GRADED_KEEP" "$ODDS_GLOB:$ODDS_KEEP" \
-              "$PRED_LOG_GLOB:$PRED_LOG_KEEP" "$OUTCOME_LOG_GLOB:$OUTCOME_LOG_KEEP"; do
+              "$PRED_LOG_GLOB:$PRED_LOG_KEEP" "$OUTCOME_LOG_GLOB:$OUTCOME_LOG_KEEP" \
+              "$POR_LOG_GLOB:$POR_LOG_KEEP"; do
     glob="${spec%:*}"; keep="${spec##*:}"
     n=$(find "$STAGE/public/data/current" -maxdepth 1 -type f -name "$glob" | wc -l)
     if [ "$n" -gt "$keep" ]; then

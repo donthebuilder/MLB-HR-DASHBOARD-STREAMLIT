@@ -84,7 +84,7 @@ def slate_row(pid, name, gpk, game_time, run_id=None, model_version=None, role="
     return row
 
 
-def run_lock(tmp: Path, slate_rows, *, apply=True, seed_ledger=None, run_meta=None):
+def run_lock(tmp: Path, slate_rows, *, apply=True, seed_ledger=None, run_meta=None, date=None):
     """Run pick_lock's main() against a throwaway public/data tree and
     return the resulting ledger. Mirrors tests/test_pick_lock_tickets.py's
     own harness exactly (same re-point-PUBLIC/CURRENT, same local-only
@@ -100,6 +100,13 @@ def run_lock(tmp: Path, slate_rows, *, apply=True, seed_ledger=None, run_meta=No
     seed_ledger lets a test start from a ledger that already exists (e.g.
     a "legacy" pick_lock.json written before this feature shipped, with
     games/cats locked but no prediction_of_record key at all).
+
+    date, when given, is written as the payload's own "date" key so a test
+    can force which slate date main() derives, instead of always falling
+    back to the earliest first_pitch among slate_rows -- needed to simulate
+    a slate-date rollover without needing a first_pitch that is both "in
+    the past" (so the game actually locks) and "on a different calendar
+    date" (so the rollover is exercised) at once.
     """
     import importlib
     import bots.pick_lock as pl
@@ -110,7 +117,10 @@ def run_lock(tmp: Path, slate_rows, *, apply=True, seed_ledger=None, run_meta=No
     pl.PUBLIC = tmp
     pl.CURRENT = cur
 
-    (cur / "today.json").write_text(json.dumps({"players": slate_rows}))
+    payload = {"players": slate_rows}
+    if date is not None:
+        payload["date"] = date
+    (cur / "today.json").write_text(json.dumps(payload))
     if seed_ledger is not None:
         (cur / "pick_lock.json").write_text(json.dumps(seed_ledger))
     if run_meta is not None:
@@ -392,8 +402,80 @@ with tempfile.TemporaryDirectory() as d:
               naive_wrong_parse < fp_dt)
 
 
+# ── 10. por_log_<date>.jsonl — the durable copy that survives the reset ────
+# pick_lock.json's own "date" gate (fetch_lock()) throws away the whole
+# ledger, prediction_of_record included, the moment the slate date changes.
+# append_por_log() is what makes a lock durable past that: every game_pk
+# newly locked this run is also written to por_log_<date>.jsonl, once,
+# forever, and eval_report.py is meant to read THAT file for history rather
+# than the here-today-gone-tomorrow pick_lock.json.
+with tempfile.TemporaryDirectory() as d:
+    tmp = Path(d)
+    cur = tmp / "current"
+    today_str = dt.datetime.now(dt.timezone.utc).date().isoformat()
+    por_log_path = cur / f"por_log_{today_str}.jsonl"
+
+    rid_a = opaque_run_id("g10a")
+    gen_a = iso(-40)
+    fp_a = iso(-30)
+    rows = [slate_row(1, "Ann", 501, fp_a, run_id=rid_a, model_version="mlb_hr_v3")]
+    run_lock(tmp, rows, run_meta={"run_id": rid_a, "generated_at": gen_a})
+
+    checkTrue("por_log file is created the moment a game locks", por_log_path.exists())
+    lines = [json.loads(l) for l in por_log_path.read_text().splitlines() if l.strip()]
+    check("exactly one line for the one game that locked", len(lines), 1)
+    check("archived line carries the game_pk", lines[0]["game_pk"], "501")
+    check("archived line carries the same run_id pick_lock.json locked to", lines[0]["run_id"], rid_a)
+    check("archived line carries generated_at too", lines[0]["generated_at"], gen_a)
+    check("archived line is tagged with the slate's prediction_date", lines[0]["prediction_date"], today_str)
+
+    # Re-running the SAME slate (game 501 already locked, nothing new to
+    # lock) must not duplicate or rewrite that line.
+    run_lock(tmp, rows, run_meta={"run_id": rid_a, "generated_at": gen_a})
+    lines_again = [json.loads(l) for l in por_log_path.read_text().splitlines() if l.strip()]
+    check("re-running the same slate does not duplicate the archived line", len(lines_again), 1)
+
+    # A second game locking on a LATER run must ADD a line, not replace it --
+    # this is the accumulate-across-runs behavior eval_report.py depends on.
+    rid_b = opaque_run_id("g10b")
+    gen_b = iso(-5)
+    fp_b = iso(-1)
+    rows2 = [
+        slate_row(1, "Ann", 501, fp_a, run_id=rid_a, model_version="mlb_hr_v3"),
+        slate_row(2, "Bo", 502, fp_b, run_id=rid_b, model_version="mlb_hr_v3"),
+    ]
+    run_lock(tmp, rows2, run_meta={"run_id": rid_b, "generated_at": gen_b})
+    lines_two = [json.loads(l) for l in por_log_path.read_text().splitlines() if l.strip()]
+    check("a second game locking on a later run APPENDS a second line", len(lines_two), 2)
+    gps = sorted(l["game_pk"] for l in lines_two)
+    check("both game_pks are present", gps, ["501", "502"])
+
+    # THE ACTUAL BUG THIS EXISTS TO FIX: simulate the slate date rolling
+    # over. fetch_lock() would hand main() a brand-new, empty ledger for the
+    # new date -- prove that por_log_<today_str>.jsonl (yesterday's file, in
+    # this scenario) is completely untouched by that, because archival never
+    # goes through fetch_lock()/pick_lock.json at all.
+    tomorrow_str = (dt.datetime.now(dt.timezone.utc).date() + dt.timedelta(days=1)).isoformat()
+    # First pitch a genuine 10 minutes in the past (so the game actually
+    # locks this run) while the payload's own "date" is explicitly
+    # tomorrow_str -- forcing main() to key this run as tomorrow's slate,
+    # exactly what a real Phoenix-day rollover looks like from
+    # fetch_lock()'s point of view, without needing to wait for real
+    # wall-clock midnight in a test.
+    fp_c = iso(-10)
+    rid_c = opaque_run_id("g10c")
+    rows3 = [slate_row(3, "Cy", 503, fp_c, run_id=rid_c, model_version="mlb_hr_v3")]
+    run_lock(tmp, rows3, run_meta={"run_id": rid_c, "generated_at": iso(-9)}, date=tomorrow_str)
+    # today's own file, from the earlier calls, must still be exactly as it was
+    lines_after_rollover = [json.loads(l) for l in por_log_path.read_text().splitlines() if l.strip()]
+    check("the OLD date's por_log survives a slate-date rollover untouched", len(lines_after_rollover), 2)
+    new_log_path = cur / f"por_log_{tomorrow_str}.jsonl"
+    checkTrue("the NEW date gets its own, separate por_log file", new_log_path.exists())
+
+
 if FAILED:
     print(f"\n{len(FAILED)} FAILED\n" + "\n".join(f"  · {f}" for f in FAILED))
     sys.exit(1)
 print(f"ok   prediction_of_record: {CHECKS} assertions, one run per game_pk, locked at first pitch, "
-      f"forever, locked_late from real generated_at (never parsed out of run_id)")
+      f"forever, locked_late from real generated_at (never parsed out of run_id), "
+      f"and durably archived to por_log_<date>.jsonl past pick_lock.json's own daily reset")
