@@ -12663,7 +12663,7 @@ def build_prediction_log_lines(run_meta: Dict[str, Any], rows_payload: List[Dict
                 # reconcile_best_bet_with_designation) rather than inventing
                 # a new calculation, per the "map the existing canonical
                 # value" instruction.
-                "hr_gate_signals": row.get("hr_gate_flagged", False),
+                "hr_gate_flagged": row.get("hr_gate_flagged", False),
             },
             # Moonshot scores are 0-100 indices, not probabilities. Never a
             # bare number here -- only a real calibrated probability would

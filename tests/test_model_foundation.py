@@ -248,7 +248,7 @@ sparse_line = build_prediction_log_lines(rm1, [sparse_row])[1]
 check("prediction log: truly-absent score is null, not 0", sparse_line["scores"]["hr"], None)
 check("prediction log: truly-absent component is null, not 0", sparse_line["components"]["pitcher_hr9"], None)
 check("prediction log: absent hr_gate flag defaults False (documented boolean mapping), not null",
-      sparse_line["components"]["hr_gate_signals"], False)
+      sparse_line["components"]["hr_gate_flagged"], False)
 
 # write_prediction_log actually writes a readable file with the right name
 pred_path = write_prediction_log(rm1, rows_payload)
