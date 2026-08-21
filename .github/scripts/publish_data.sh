@@ -157,6 +157,12 @@ OUTCOME_LOG_KEEP=150
 POR_LOG_GLOB="por_log_*.jsonl"
 POR_LOG_KEEP=150
 
+# social/history/social_history_<date>.jsonl (2026-08-21, DASH social
+# pipeline). Same accumulate-and-cap shape as the logs above; kept via its
+# own trim block in carry_forward() rather than the generic loop, since it
+# lives one directory deeper than the rest of PUBLISH_FILES.
+SOCIAL_HISTORY_KEEP=180
+
 git config user.email "bot@mlb-hr-dashboard"
 git config user.name "mlb-hr-bot"
 
@@ -198,6 +204,9 @@ stage_local() {
   [ -d "$SRC/data/current/splits" ] && cp -r "$SRC/data/current/splits" "$STAGE/public/data/current/" || true
   # Zone profiles from spray_cache.py.
   [ -d "$SRC/data/current/zones" ] && cp -r "$SRC/data/current/zones" "$STAGE/public/data/current/" || true
+  # DASH social pipeline (2026-08-21): queue.json, fingerprints.json,
+  # history/*.jsonl and assets/<date>/*.png, all under current/social/.
+  [ -d "$SRC/data/current/social" ] && cp -r "$SRC/data/current/social" "$STAGE/public/data/current/" || true
   return 0
 }
 
@@ -245,16 +254,37 @@ carry_forward() {
   # skipped and detail/today was dropped from the branch entirely. Every
   # night after the tomorrow run, today's spray charts, pitch profiles and
   # splits silently vanished until the next today run rebuilt them.
-  for sub in detail splits zones; do
+  for sub in detail splits zones social; do
     [ -d "$PREV/public/data/current/$sub" ] || continue
     mkdir -p "$STAGE/public/data/current/$sub"
     for slate_dir in "$PREV/public/data/current/$sub"/*; do
-      [ -d "$slate_dir" ] || continue
+      [ -e "$slate_dir" ] || continue
       base="$(basename "$slate_dir")"
-      [ -d "$STAGE/public/data/current/$sub/$base" ] \
-        || cp -r "$slate_dir" "$STAGE/public/data/current/$sub/"
+      if [ -d "$slate_dir" ]; then
+        [ -d "$STAGE/public/data/current/$sub/$base" ] \
+          || cp -r "$slate_dir" "$STAGE/public/data/current/$sub/"
+      else
+        # social/ also carries two flat files (queue.json, fingerprints.json)
+        # alongside its history/ and assets/ subdirectories -- those two are
+        # ALWAYS this run's freshest copy when a social bot ran, so only
+        # carry them forward when this run didn't touch social/ at all.
+        [ -f "$STAGE/public/data/current/$sub/$base" ] \
+          || cp "$slate_dir" "$STAGE/public/data/current/$sub/"
+      fi
     done
   done
+
+  # social/history/*.jsonl is a per-date append-only log, same shape as
+  # OUTCOME_LOG_GLOB above -- carry forward every date this run didn't
+  # touch, then trim the oldest once the whole set is assembled.
+  if [ -d "$STAGE/public/data/current/social/history" ]; then
+    n=$(find "$STAGE/public/data/current/social/history" -maxdepth 1 -type f -name '*.jsonl' | wc -l)
+    if [ "$n" -gt "$SOCIAL_HISTORY_KEEP" ]; then
+      find "$STAGE/public/data/current/social/history" -maxdepth 1 -type f -name '*.jsonl' \
+        | sort | head -n "$((n - SOCIAL_HISTORY_KEEP))" | xargs -r rm -f
+      echo "Trimmed $((n - SOCIAL_HISTORY_KEEP)) old social history file(s), keeping $SOCIAL_HISTORY_KEEP."
+    fi
+  fi
   return 0
 }
 

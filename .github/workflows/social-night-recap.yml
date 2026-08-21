@@ -1,0 +1,72 @@
+# 🌙 DASH Social — Night Recap (2026-08-21).
+#
+# Phase 1 of the DASH social pipeline (docs/SOCIAL.md): once a slate is
+# fully graded, build ONE Moonshot night-recap draft — captions, three
+# graphics, deduped by fingerprint — and drop it into the approval queue as
+# pending_review. Nothing here ever publishes anything; that only happens
+# from the Social Queue page (pages/1_Social_Queue.py) after a human
+# approves it, or from a future workflow that only ever reads an already-
+# approved post.
+#
+# Scheduled 5 minutes after accountability.yml's nightly memory run, which
+# itself runs 5:20am ET / 09:20 UTC -- "after the nightly grading run has
+# settled" per that workflow's own comment. This job is a light HTTPS-only
+# read of already-published files (graded_results_<date>.json,
+# odds_history.json) plus one Claude call and some Pillow rendering, so it
+# does not need the heavy pybaseball install path or the SQLite cache the
+# slate workflows use.
+name: Social — Night Recap
+
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Slate date YYYY-MM-DD (defaults to today, UTC)'
+        required: false
+        default: ''
+  schedule:
+    - cron: '25 9 * * *'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: social-night-recap
+  cancel-in-progress: false
+
+jobs:
+  night-recap:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+      # Deliberately NOT wiring X_/META_ credentials here yet -- this job
+      # only ever queues a draft as pending_review, it never calls a
+      # publisher (see bots/social_night_recap.py's own docstring).
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install deps
+        run: pip install -r bots/requirements.txt
+
+      - name: Build night recap draft
+        run: |
+          if [ -n "${{ github.event.inputs.date }}" ]; then
+            python bots/social_night_recap.py --date "${{ github.event.inputs.date }}"
+          else
+            python bots/social_night_recap.py
+          fi
+
+      - name: Publish to data branch
+        run: bash .github/scripts/publish_data.sh "Social night recap"
