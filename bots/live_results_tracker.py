@@ -98,6 +98,215 @@ def load_rows(date_str: str) -> List[Dict[str, Any]]:
     )
 
 
+# ── ROADMAP STEP 9B TASK 1 (2026-08-22): grade against the LOCKED run's
+# features, not the currently-published slate ────────────────────────────
+#
+# The defect, confirmed at the code level in
+# claude/moonshot-sol-verdict-graded-archive-leak.md: load_rows() above
+# reads the CURRENTLY PUBLISHED slate (fetched by fetch_picks_for_grading.py
+# from {label}_slim.json), and today.yml keeps rebuilding that slate into
+# the evening. A rebuild after first pitch calls the live MLB StatsAPI
+# gamelog/season-stats endpoints fresh -- with no as-of-date parameter -- so
+# fields like last5_hr and games_since_last_hr come back reflecting that
+# night's already-played games, not the pre-game state a predictive feature
+# needs to be.
+#
+# pick_lock.py already locks one run_id per game_pk into
+# prediction_of_record (por_log_<date>.jsonl, fetched best-effort by
+# fetch_picks_for_grading.py) the moment that game's first pitch passes --
+# almost always an earlier run than whatever is published by the time
+# grading runs. That run's own feature values are in
+# prediction_log_<run_id>.jsonl (also fetched best-effort, one file per
+# distinct locked run_id). apply_locked_features() joins the two and
+# overlays what the locked run captured onto each row, stamping
+# feature_snapshot so nothing downstream mistakes an unjoined row for a
+# trustworthy one.
+#
+# SCOPE, stated plainly rather than implied: prediction_log's schema
+# (bots/mlb_dashboard.py build_prediction_log_lines) is deliberately
+# slimmer than the full graded-row shape trim_row() keeps -- it carries
+# `scores` and `components` (task 3's additions, now including
+# games_since_last_hr from this task), not every SLOT_FIELDS key. This fix
+# overlays every field prediction_log currently captures -- which covers
+# the two headline leaking fields Claim A's evidence named,
+# recent_form_last5_hr and games_since_last_hr, plus hr_score/config_hash
+# provenance and the rest of task 3's additions. A SLOT_FIELDS key with no
+# entry in _LOCKED_SCORE_MAP/_LOCKED_COMPONENT_MAP below is not yet
+# captured at lock time and keeps whatever the currently-published slate
+# has -- still exposed to the leak -- until it's added to
+# build_prediction_log_lines's components dict, the same additive,
+# no-score-changing pattern task 3 and this task both use. Worth doing as a
+# fast follow, not bundled here to keep this change reviewable.
+
+# flat SLOT_FIELDS key -> key inside a locked prediction_log row's `scores`
+# dict (bots/mlb_dashboard.py build_prediction_log_lines's "Moonshot scores"
+# block).
+_LOCKED_SCORE_MAP: Dict[str, str] = {
+    "hr_score": "hr",
+    "overall_score": "overall",
+    "hit_score": "hit",
+    "hrr_score": "hrr",
+    "contact_score": "contact",
+    "hrw_score": "hrw",
+    "multi_hit_score": "multi_hit",
+}
+
+# flat SLOT_FIELDS key -> key inside a locked prediction_log row's
+# `components` dict. Only fields with a genuine 1:1 match are listed --
+# e.g. components' recent_form_last10_hr/l20pa_hr/l20pa_xbh have no
+# SLOT_FIELDS counterpart at all (SLOT_FIELDS only ever kept last5_hr/
+# last5_xbh/last10_xbh), so they are not (and should not be) mapped here.
+_LOCKED_COMPONENT_MAP: Dict[str, str] = {
+    "last5_hr": "recent_form_last5_hr",
+    "last5_xbh": "recent_form_last5_xbh",
+    "games_since_last_hr": "games_since_last_hr",
+}
+
+
+def load_locked_run_ids(date_str: str, fetch_dir: Path) -> Dict[int, str]:
+    """{game_pk: run_id} from a locally-fetched por_log_<date_str>.jsonl
+    (see fetch_picks_for_grading.py). Missing/unreadable file -> {} -- every
+    row then grades as feature_snapshot="unavailable", never as an error."""
+    out: Dict[int, str] = {}
+    path = fetch_dir / f"por_log_{date_str}.jsonl"
+    if not path.exists():
+        return out
+    try:
+        for line in path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                obj = json.loads(line)
+            except Exception:
+                continue
+            gp, rid = obj.get("game_pk"), obj.get("run_id")
+            if gp is None or not rid:
+                continue
+            try:
+                out[int(gp)] = str(rid)
+            except (TypeError, ValueError):
+                continue
+    except Exception:
+        pass
+    return out
+
+
+def load_locked_prediction_rows(run_ids: Iterable[str], fetch_dir: Path) -> Dict[Tuple[int, int], Dict[str, Any]]:
+    """{(game_pk, player_id): prediction_log row} for every distinct locked
+    run_id whose prediction_log_<run_id>.jsonl was fetched locally. A
+    run_id with no local file (aged out of prediction_log's retention
+    window, or the fetch failed) simply contributes no matches for its
+    games -- those rows grade as feature_snapshot="unavailable" downstream,
+    never silently treated as locked."""
+    out: Dict[Tuple[int, int], Dict[str, Any]] = {}
+    for rid in run_ids:
+        path = fetch_dir / f"prediction_log_{rid}.jsonl"
+        if not path.exists():
+            continue
+        try:
+            lines = path.read_text(encoding="utf-8").splitlines()
+        except Exception:
+            continue
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                obj = json.loads(line)
+            except Exception:
+                continue
+            # The header line (run_id/generated_at/git_sha/config_hashes/
+            # model_versions/schema_version/env) has no player_id -- it is
+            # skipped the same way any other malformed/irrelevant line
+            # would be, no special-casing needed.
+            pid, gp = obj.get("player_id"), obj.get("game_pk")
+            if pid is None or gp is None:
+                continue
+            try:
+                out[(int(gp), int(pid))] = obj
+            except (TypeError, ValueError):
+                continue
+    return out
+
+
+def apply_locked_features(
+    rows: List[Dict[str, Any]], date_str: str, fetch_dir: Path,
+) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    """Overlay each row's leak-prone fields with the LOCKED run's values.
+
+    Returns (rows, dropped_locked_rows):
+      - rows: same length/order/membership as the input -- the currently-
+        published slate, unchanged in shape, each row stamped
+        feature_snapshot="locked" (fields overlaid from the join) or
+        "unavailable" (no locked match found; existing values, which may
+        still be post-game, are left as-is -- never silently upgraded to
+        "locked" without an actual match).
+      - dropped_locked_rows: minimal synthetic rows for (game_pk,
+        player_id) pairs present in the locked join but ABSENT from `rows`
+        entirely -- a player later dropped from a rebuilt slate. This is
+        the SECOND defect roadmap step 9b/23 name in
+        build_hr_capture_report (rows = load_rows(date) undercounts
+        hr_capture_pct for exactly this reason). Deliberately NOT merged
+        into the returned `rows` list itself: these synthetic rows carry
+        only what the locked run captured, not the full slate-row shape
+        build_tracking_slots' pick-selection logic expects, so they are
+        handed back separately for callers that only need slate
+        MEMBERSHIP (hr_capture_report) rather than a pickable row.
+    """
+    run_id_by_game = load_locked_run_ids(date_str, fetch_dir)
+    locked_by_key = load_locked_prediction_rows(set(run_id_by_game.values()), fetch_dir)
+
+    def _overlay(dst: Dict[str, Any], locked: Dict[str, Any], gp: int) -> None:
+        scores = locked.get("scores") or {}
+        for flat_key, score_key in _LOCKED_SCORE_MAP.items():
+            if score_key in scores:
+                dst[flat_key] = scores[score_key]
+        components = locked.get("components") or {}
+        for flat_key, comp_key in _LOCKED_COMPONENT_MAP.items():
+            if comp_key in components:
+                dst[flat_key] = components[comp_key]
+        if locked.get("config_hash"):
+            dst["config_hash"] = locked["config_hash"]
+        dst["feature_snapshot"] = "locked"
+        dst["locked_run_id"] = locked.get("run_id") or run_id_by_game.get(gp)
+
+    seen_keys: set = set()
+    out: List[Dict[str, Any]] = []
+    for row in rows:
+        try:
+            gp = int(row.get("game_pk"))
+            pid = int(row.get("player_id"))
+        except (TypeError, ValueError):
+            out.append(row)
+            continue
+        seen_keys.add((gp, pid))
+        locked = locked_by_key.get((gp, pid))
+        if locked is None:
+            row = dict(row)
+            row["feature_snapshot"] = "unavailable"
+            out.append(row)
+            continue
+        row = dict(row)
+        _overlay(row, locked, gp)
+        out.append(row)
+
+    dropped: List[Dict[str, Any]] = []
+    for (gp, pid), locked in locked_by_key.items():
+        if (gp, pid) in seen_keys:
+            continue
+        drop_row: Dict[str, Any] = {
+            "player_id": pid,
+            "game_pk": gp,
+            "name": locked.get("player"),
+            "team": locked.get("team"),
+        }
+        _overlay(drop_row, locked, gp)
+        dropped.append(drop_row)
+
+    return out, dropped
+
+
 def write_json_and_aliases(main_path: Path, payload: Any, alias_paths: Iterable[Path]) -> None:
     """Write canonical tracker JSON plus compatibility aliases."""
     text = json.dumps(payload, indent=2)
@@ -1538,6 +1747,17 @@ SLOT_FIELDS = {
     # they were added above -- computed on every slate row, archived on
     # none of them. See bots/model_registry.py, docs/MODELS.md.
     "model_version", "run_id",
+    # ── ROADMAP STEP 9B TASK 1 (2026-08-22) ─────────────────────────────────
+    # config_hash: provenance already carried on every row (Sol audit #2
+    # finding #2's config_hash coverage work) but never whitelisted through
+    # to the archive -- same gap model_version/run_id closed above.
+    # feature_snapshot / locked_run_id: apply_locked_features()'s own
+    # provenance stamp ("locked" | "unavailable") and, when locked, which
+    # run_id its overlay came from. Without these two in this whitelist the
+    # whole point of task 1 would be silently stripped by trim_row() before
+    # it ever reached graded_results_*.json -- exactly the failure mode the
+    # comment above model_version/run_id already describes for those two.
+    "config_hash", "feature_snapshot", "locked_run_id",
 }
 
 
@@ -2876,6 +3096,17 @@ def main() -> int:
     print(f"GRADING DATE: {date_str}" + (" | LIVE MODE" if live_mode else ""))
 
     rows = load_rows(date_str)
+
+    # ROADMAP STEP 9B TASK 1 (2026-08-22): overlay locked-run features
+    # before anything downstream reads hr_score/config_hash/etc off `rows`.
+    # See apply_locked_features()'s own docstring above load_rows() for the
+    # full mechanism. dropped_locked_rows are players the locked join knows
+    # about that the currently-published slate no longer contains -- passed
+    # only to build_hr_capture_report() below (slate-membership counting),
+    # never merged into `rows`/tracking_slots (pick-selection needs the
+    # full slate-row shape these synthetic rows don't have).
+    rows, dropped_locked_rows = apply_locked_features(rows, date_str, OUT_DIR)
+
     tracking_slots = build_tracking_slots(rows)
 
     game_cache: Dict[int, Dict[str, Any]] = {}
@@ -3026,7 +3257,16 @@ def main() -> int:
     pair_pool_sections = load_pair_builder_sections(date_str) or build_pair_pool_sections(rows)
     pair_pool_results = grade_pairs_pools(pair_pool_sections, actual_by_pid)
     merged_homers = merge_homer_entries(graded_slots)
-    hr_capture_report = build_hr_capture_report(rows, game_cache, actual_by_pid)
+    # ROADMAP STEP 9B/23 (2026-08-22): hr_capture_pct undercounted for the
+    # same root cause task 1 fixes elsewhere -- a player in the LOCKED
+    # slate who was dropped by a later rebuild reads as "the model never
+    # saw him" even though he was rated at lock time. dropped_locked_rows
+    # (from apply_locked_features() above) restores slate MEMBERSHIP for
+    # exactly those players without touching tracking_slots/pick selection,
+    # which only ever wants the currently-published slate's own rows. See
+    # claude/moonshot-full-slate-validation.md §5 for the measured impact
+    # (4 of 5 "missed" HRs on 2026-08-21 were this, not a real coverage gap).
+    hr_capture_report = build_hr_capture_report(rows + dropped_locked_rows, game_cache, actual_by_pid)
     merge_homer_distances(merged_homers, hr_capture_report)
     unique_player_report = build_unique_player_hr_report(graded_slots)
 

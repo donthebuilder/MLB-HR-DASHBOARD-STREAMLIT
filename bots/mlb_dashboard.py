@@ -12897,6 +12897,16 @@ def build_prediction_log_lines(run_meta: Dict[str, Any], rows_payload: List[Dict
                 "recent_form_l20pa_hr": row.get("l20pa_hr"),
                 "recent_form_last5_xbh": row.get("last5_xbh"),
                 "recent_form_l20pa_xbh": row.get("l20pa_xbh"),
+
+                # ── ADDED 2026-08-22, roadmap step 9b task 1 ──────────────
+                # games_since_last_hr is the OTHER field Claim A's evidence
+                # named (Sol brief / Opus findings doc): 0 for 95.7% of
+                # players who homered and 1.1% of those who didn't, on the
+                # leaked archive. recent_form_last5_hr above covers last5_hr;
+                # this was the one still missing. Same pattern as everything
+                # above -- an existing computed value, not a new calculation,
+                # not inside _HR_CONFIG_FORMULA_FUNCS.
+                "games_since_last_hr": row.get("games_since_last_hr"),
             },
             # Moonshot scores are 0-100 indices, not probabilities. Never a
             # bare number here -- only a real calibrated probability would

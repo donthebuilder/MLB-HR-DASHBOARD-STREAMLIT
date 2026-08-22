@@ -245,6 +245,86 @@ def main() -> int:
         print(f"::warning::outcome_log fetch FAILED ({type(exc).__name__}: {exc}) — "
               f"grader will start this date's outcome log fresh.")
 
+    # ── ROADMAP STEP 9B TASK 1 (2026-08-22): the locked-run feature join ────
+    #
+    # Grading has been reading the CURRENTLY PUBLISHED slate (the
+    # {label}_slim.json fetch below), which today.yml keeps rebuilding into
+    # the evening. A late rebuild's live MLB StatsAPI calls already see that
+    # night's completed games, so features like last5_hr/games_since_last_hr
+    # come back post-game, not pre-game -- see
+    # claude/moonshot-sol-verdict-graded-archive-leak.md for the full,
+    # code-level confirmation (both trace to one client.person_game_log()
+    # call with no as-of-date parameter).
+    #
+    # The fix: fetch por_log_<date>.jsonl too, which is pick_lock.py's
+    # durable, append-only record of which run_id got LOCKED for each
+    # game_pk (typically an early run, well before that game's first pitch
+    # concludes). Then fetch prediction_log_<run_id>.jsonl for every
+    # distinct run_id it names -- those are the feature values AS OF the
+    # locked run, not the last rebuild of the night. live_results_tracker.py
+    # joins on (game_pk, player_id) and overlays what prediction_log
+    # carries (scores, config_hash, and the components dict) onto the
+    # graded row, stamping feature_snapshot="locked" when a match is found.
+    #
+    # Best-effort, same pattern as pair_builder_latest.json and outcome_log
+    # above: a missing or unreachable file just means fewer/no matches here,
+    # never a blocked grading run. A row with no locked match is stamped
+    # feature_snapshot="unavailable" downstream, honestly, rather than
+    # silently trusted -- see live_results_tracker.apply_locked_features().
+    por_dest = OUT_DIR / f"por_log_{date.isoformat()}.jsonl"
+    locked_run_ids: set[str] = set()
+    try:
+        pl = get_with_retry(f"{RAW_BASE}/public/data/current/por_log_{date.isoformat()}.jsonl",
+                            label="por_log")
+        if pl is not None and pl.status_code == 200 and pl.text.strip():
+            por_dest.write_text(pl.text, encoding="utf-8")
+            print(f"Fetched por_log_{date.isoformat()}.jsonl -> {por_dest}")
+            for line in pl.text.splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    obj = json.loads(line)
+                except Exception:
+                    continue
+                rid = obj.get("run_id")
+                if rid:
+                    locked_run_ids.add(str(rid))
+        elif pl is not None:
+            print(f"por_log_{date.isoformat()}.jsonl: {describe_status(pl.status_code)}; "
+                  f"no locked runs found -- every row will grade as feature_snapshot=unavailable.")
+        else:
+            print("::warning::por_log fetch unreachable after retries; "
+                  "every row will grade as feature_snapshot=unavailable this run.")
+    except Exception as exc:
+        print(f"::warning::por_log fetch FAILED ({type(exc).__name__}: {exc}) -- "
+              f"every row will grade as feature_snapshot=unavailable this run.")
+
+    # One fetch per distinct locked run_id. A slate typically locks onto a
+    # handful of distinct runs (games start at different times), not one per
+    # game_pk, so this is a small number of requests, not one per player.
+    for rid in sorted(locked_run_ids):
+        pred_dest = OUT_DIR / f"prediction_log_{rid}.jsonl"
+        if pred_dest.exists() and pred_dest.stat().st_size > 0:
+            continue
+        try:
+            pr = get_with_retry(f"{RAW_BASE}/public/data/current/prediction_log_{rid}.jsonl",
+                                label=f"prediction_log_{rid}")
+            if pr is not None and pr.status_code == 200 and pr.text.strip():
+                pred_dest.write_text(pr.text, encoding="utf-8")
+                print(f"Fetched prediction_log_{rid}.jsonl -> {pred_dest}")
+            elif pr is not None:
+                print(f"prediction_log_{rid}.jsonl: {describe_status(pr.status_code)}; "
+                      f"locked rows for this run_id will grade as feature_snapshot=unavailable "
+                      f"(the run has likely aged out of prediction_log's retention window).")
+            else:
+                print(f"::warning::prediction_log_{rid}.jsonl fetch unreachable after retries; "
+                      f"locked rows for this run_id will grade as feature_snapshot=unavailable.")
+        except Exception as exc:
+            print(f"::warning::prediction_log_{rid}.jsonl fetch FAILED "
+                  f"({type(exc).__name__}: {exc}) -- locked rows for this run_id will grade "
+                  f"as feature_snapshot=unavailable.")
+
     if slate_cached:
         return 0
 
