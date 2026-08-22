@@ -799,6 +799,37 @@ def get_player_batting_line(game_feed: Dict[str, Any], player_id: int) -> Dict[s
         pdata = players.get(f"ID{player_id}")
         if pdata:
             batting = pdata.get("stats", {}).get("batting", {}) or {}
+            # ── WAS HE PULLED, OR DID HE COME IN LATE? (2026-08-22) ────────
+            # Both cases mean the pick never got a fair test, and both are
+            # derivable from the boxscore this function already has -- no
+            # extra request.
+            #
+            # MLB's battingOrder is a 3-digit string: "400" is the starter in
+            # the 4 slot, "401" the first man to replace him there, "402" the
+            # second. So a trailing "00" means he STARTED, and any teammate
+            # sharing his first two digits with a non-"00" suffix means
+            # somebody took his slot -- pinch-hit for, pinch-run for, or
+            # pulled. A non-"00" suffix on his own order means HE was the
+            # substitute.
+            #
+            # What this deliberately does NOT claim: that it can see an
+            # INJURY. The boxscore does not say why a man left the game. A
+            # player removed for a pinch-hitter and one removed with a
+            # hamstring look identical here, so both are reported as
+            # "replaced" rather than one being guessed at as "hurt".
+            _order = str(pdata.get("battingOrder") or "")
+            _gs = pdata.get("gameStatus") or {}
+            was_substitute = bool(_gs.get("isSubstitute")) or (
+                len(_order) == 3 and not _order.endswith("00"))
+            was_replaced = False
+            if len(_order) == 3 and _order.endswith("00"):
+                for other in players.values():
+                    if not isinstance(other, dict) or other is pdata:
+                        continue
+                    o = str(other.get("battingOrder") or "")
+                    if len(o) == 3 and o[:-2] == _order[:-2] and not o.endswith("00"):
+                        was_replaced = True
+                        break
             # Extract homer events for this player (2026-08-11: JOB 1)
             hr_events = []
             plays = ((game_feed.get("liveData") or {}).get("plays") or {}).get("allPlays") or []
@@ -843,10 +874,13 @@ def get_player_batting_line(game_feed: Dict[str, Any], player_id: int) -> Dict[s
                 "doubles": safe_int(batting.get("doubles"), 0),
                 "triples": safe_int(batting.get("triples"), 0),
                 "hr_events": hr_events,  # JOB 1: per-homer batted-ball capture
+                "was_substitute": was_substitute,
+                "was_replaced": was_replaced,
             }
     return {
         "hits": 0, "hr": 0, "runs": 0, "rbi": 0, "tb": 0, "ab": 0, "k": 0, "bb": 0,
         "doubles": 0, "triples": 0, "hr_events": [],
+        "was_substitute": False, "was_replaced": False,
     }
 
 
@@ -1646,8 +1680,20 @@ def build_tracking_slots(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 # did, one line per player-game, keyed so a future prediction log can join
 # to it. graded_results_*.json continues completely unchanged -- this is a
 # new, additional file, never a replacement.
-OUTCOME_SCHEMA_VERSION = 1
-GRADER_VERSION = "mlb_grader_v1"
+# ── VERSIONS BUMPED 2026-08-22 ──────────────────────────────────────────────
+# schema 1 -> 2: two new fields, was_substitute and was_replaced.
+# grader v1 -> v2: the void RULE changed. A final-game row with fewer than
+# MIN_AB_FOR_A_FAIR_TEST at-bats is now void, where v1 graded it as a result.
+# That changes what "went_yard: false" means, so a consumer joining old and
+# new revisions must be able to tell them apart -- which is the whole reason
+# grader_version is stamped on every outcome line.
+#
+# Old revisions are NOT rewritten. The outcome log is append-only and
+# revision-based by design, so history keeps grader v1's answer and every new
+# revision carries v2's. Rows graded under v1 simply have no was_substitute /
+# was_replaced field, which reads as "unknown", never as False.
+OUTCOME_SCHEMA_VERSION = 2
+GRADER_VERSION = "mlb_grader_v2"
 
 
 def outcome_stats_key(row: Dict[str, Any]) -> Tuple:
@@ -1659,6 +1705,12 @@ def outcome_stats_key(row: Dict[str, Any]) -> Tuple:
         row.get("total_bases"), row.get("at_bats"), row.get("void"), row.get("void_reason"),
         row.get("game_status"),
     )
+
+
+# Fewer than this many at-bats and the pick never got a fair test -- see the
+# void block inside build_outcome_candidates for the reasoning and the
+# measured cost of the biased alternative.
+MIN_AB_FOR_A_FAIR_TEST = 2
 
 
 def build_outcome_candidates(
@@ -1718,12 +1770,43 @@ def build_outcome_candidates(
         bb = safe_int(actual.get("bb"), 0)
         k = safe_int(actual.get("k"), 0)
 
+        # ── SHORT APPEARANCES ARE VOID, NOT MISSES (2026-08-22) ───────────
+        # Donovan: "if the player is pinched count the results as void — less
+        # 2 abs or pulled or hurt."
+        #
+        # He is right, and the archive says so: rows with fewer than 2 at-bats
+        # run a 3.3% HR rate against 18.6% for everyone else, and 39% for a
+        # base hit against 68%. A pick on a man who was pinch-hit for in the
+        # 5th never got a fair test, and grading it as a loss is scoring the
+        # manager's decision, not the model's.
+        #
+        # ONE DELIBERATE CHOICE, because the obvious version of this rule is
+        # biased. Voiding only the short-appearance LOSSES while keeping the
+        # short-appearance WINS raises the measured rate for free -- +1.20pp
+        # on the hit market against +0.83pp for voiding both, i.e. about a
+        # third of a point of pure inflation. So a short appearance is void
+        # in BOTH directions. The wins it costs are counted and reported
+        # (short_appearance_wins_voided) rather than quietly dropped.
+        #
+        # AB rather than PA is the threshold on purpose: three walks and a
+        # pinch-runner is still a man who never got to swing, and every
+        # market being graded here (HR, hits, total bases) needs a swing.
         void = False
         void_reason = None
         if is_postponed:
             void, void_reason = True, "postponed"
         elif is_final and ab == 0 and hits == 0 and hr == 0 and bb == 0 and k == 0:
             void, void_reason = True, "did_not_play"
+        elif is_final and ab < MIN_AB_FOR_A_FAIR_TEST:
+            # Name the mechanism when the boxscore shows one; fall back to the
+            # neutral "short_appearance" rather than guessing at an injury the
+            # feed never reports.
+            if actual.get("was_replaced"):
+                void, void_reason = True, "replaced"
+            elif actual.get("was_substitute"):
+                void, void_reason = True, "entered_as_substitute"
+            else:
+                void, void_reason = True, "short_appearance"
 
         # ROLLING-WINDOW DATE FIX (2026-08-21, Sol's audit finding #10).
         # game_date_actual is MLB's own officialDate for this game_pk --
@@ -1753,6 +1836,8 @@ def build_outcome_candidates(
             "at_bats": ab,
             "void": void,
             "void_reason": void_reason,
+            "was_substitute": bool(actual.get("was_substitute")),
+            "was_replaced": bool(actual.get("was_replaced")),
             "game_status": detailed_state,
             "is_final": is_final,
             "is_suspended": is_suspended,
@@ -2051,6 +2136,26 @@ def grade_slot(slot: Dict[str, Any], actual: Dict[str, Any]) -> Dict[str, Any]:
         "hrr_2_plus": 1 if hrr_total >= 2 else 0,
         "hrr_3_plus": 1 if hrr_total >= 3 else 0,
     }
+    # ── THE SAME VOID RULE, ON THE SITE/BACKTEST PATH (2026-08-22) ─────────
+    # build_outcome_candidates already voids short appearances on the outcome
+    # log. Marking it here too keeps graded_results_*.json -- which is what
+    # backtest_report.py, missed_signals.py and the Results tab read -- from
+    # disagreeing with the outcome log about whether a pick was ever fairly
+    # tested.
+    #
+    # The row is MARKED, never dropped. Deleting it would make a void look
+    # like a pick that was never made, and the count of voids is itself worth
+    # seeing: a night with six of them is a night the bot's card got
+    # dismantled by substitutions.
+    _ab = safe_int(actual.get("ab"), 0)
+    if _ab < MIN_AB_FOR_A_FAIR_TEST:
+        graded["result_void"] = 1
+        graded["void_reason"] = ("replaced" if actual.get("was_replaced")
+                                 else "entered_as_substitute" if actual.get("was_substitute")
+                                 else "short_appearance")
+    else:
+        graded["result_void"] = 0
+        graded["void_reason"] = None
     # JOB 1: per-homer batted-ball capture (2026-08-11)
     # Include homer events if present in actual
     if actual.get("hr_events"):

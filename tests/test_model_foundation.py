@@ -45,6 +45,7 @@ from bots.live_results_tracker import (  # noqa: E402
     SLOT_FIELDS,
     trim_row,
     build_outcome_candidates,
+    grade_slot,
     append_outcome_log,
     load_latest_outcome_revisions,
 )
@@ -400,7 +401,11 @@ check("outcome: one row per player-game", len(candidates), 2)
 check("outcome: went_yard true for the HR", candidates[0]["went_yard"], True)
 check("outcome: DNP (final, all-zero) is voided", candidates[1]["void"], True)
 check("outcome: DNP void_reason is honest, not a guess", candidates[1]["void_reason"], "did_not_play")
-check("outcome: grader_version is stamped", candidates[0]["grader_version"], "mlb_grader_v1")
+# grader_version bumped v1 -> v2 on 2026-08-22 when the void RULE changed
+# (a final-game row with <2 at-bats is now void rather than a miss). This
+# assertion firing on the bump is the point of stamping it: a consumer joining
+# old and new revisions has to be able to tell which rule produced a row.
+check("outcome: grader_version is stamped", candidates[0]["grader_version"], "mlb_grader_v2")
 checkTrue("outcome: graded_at is stamped", bool(candidates[0]["graded_at"]))
 
 # (12) outcome records can join prediction records using stable keys --
@@ -540,6 +545,58 @@ try:
               not (_not_a_repo / "public").exists())
 finally:
     MDB.DASHBOARD_REPO = _orig_dashboard_repo
+
+
+# ── SHORT APPEARANCES ARE VOID, IN BOTH DIRECTIONS (2026-08-22) ───────────
+# "if the player is pinched count the results as void — less 2 abs or pulled
+# or hurt." Measured on 2026-07-27..08-21, rows with fewer than 2 at-bats run
+# a 3.3% HR rate against 18.6% for everyone else: the pick never got a fair
+# test, so grading it as a loss scores the manager's decision, not the model.
+_VOID_STATUS = {901: {"detailed_state": "Final", "official_date": "2026-08-22"}}
+_void_rows = [
+    {"player_id": 11, "game_pk": 901},   # pulled after one AB, no hit
+    {"player_id": 12, "game_pk": 901},   # pulled after one AB, but homered
+    {"player_id": 13, "game_pk": 901},   # full game, no hit
+    {"player_id": 14, "game_pk": 901},   # entered as a substitute
+]
+_void_actual = {
+    (901, 11): {"hits": 0, "hr": 0, "runs": 0, "rbi": 0, "tb": 0, "ab": 1,
+                "bb": 0, "k": 1, "was_replaced": True, "was_substitute": False},
+    (901, 12): {"hits": 1, "hr": 1, "runs": 1, "rbi": 1, "tb": 4, "ab": 1,
+                "bb": 0, "k": 0, "was_replaced": True, "was_substitute": False},
+    (901, 13): {"hits": 0, "hr": 0, "runs": 0, "rbi": 0, "tb": 0, "ab": 4,
+                "bb": 0, "k": 2, "was_replaced": False, "was_substitute": False},
+    (901, 14): {"hits": 0, "hr": 0, "runs": 0, "rbi": 0, "tb": 0, "ab": 1,
+                "bb": 0, "k": 0, "was_replaced": False, "was_substitute": True},
+}
+_vc = {c["player_id"]: c for c in build_outcome_candidates(
+    "2026-08-22", _void_rows, _void_actual, _VOID_STATUS, "2026-08-22T06:00:00Z")}
+check("void: a man pulled after one AB is void, not a miss", _vc[11]["void"], True)
+check("void: and the reason names the mechanism", _vc[11]["void_reason"], "replaced")
+# The one that matters most. Voiding only the LOSSES while keeping the WINS
+# raises the measured rate for free (+1.20pp vs +0.83pp on the hit market).
+check("void: a HOME RUN in one AB is ALSO void — the rule is symmetric",
+      _vc[12]["void"], True)
+check("void: a full four-AB miss is a real result, not void", _vc[13]["void"], False)
+check("void: a late substitute is void, named as such",
+      _vc[14]["void_reason"], "entered_as_substitute")
+checkTrue("void: substitution evidence is carried onto the outcome row",
+          _vc[11]["was_replaced"] is True and _vc[14]["was_substitute"] is True)
+check("void: the grader version is bumped, so a consumer can tell v1 rows apart",
+      _vc[13]["grader_version"], "mlb_grader_v2")
+check("void: the outcome schema version is bumped for the two new fields",
+      _vc[13]["outcome_schema_version"], 2)
+
+# The same rule on the site/backtest path, so the two records cannot disagree.
+_g_pulled = grade_slot({"player_id": 11}, _void_actual[(901, 11)])
+_g_full = grade_slot({"player_id": 13}, _void_actual[(901, 13)])
+_g_hr = grade_slot({"player_id": 12}, _void_actual[(901, 12)])
+check("void: graded_slots marks the pulled man void", _g_pulled["result_void"], 1)
+check("void: graded_slots marks the one-AB homer void too", _g_hr["result_void"], 1)
+check("void: graded_slots leaves a full appearance alone", _g_full["result_void"], 0)
+# Marked, never deleted -- a dropped row looks like a pick that was never made.
+checkTrue("void: the voided row keeps its outcome fields rather than being dropped",
+          _g_hr["actual_hr"] == 1 and _g_hr["got_hr"] == 1)
 
 
 if FAILED:

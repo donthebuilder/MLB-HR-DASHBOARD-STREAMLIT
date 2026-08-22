@@ -281,6 +281,16 @@ def load(dirs: list[Path]) -> list[dict]:
                 seen.add(rk)
                 if (num(r.get("actual_ab")) or 0) <= 0:
                     continue                       # never batted: not asked
+                # ── SHORT APPEARANCES ARE VOID (2026-08-22) ───────────────
+                # live_results_tracker marks a final-game row with fewer than
+                # 2 at-bats as void -- pinch-hit for, pulled, or entered late.
+                # The pick never got a fair test, so it is neither a win nor a
+                # loss, and including it as either would put the manager's
+                # decision into the model's residual. Voided in BOTH
+                # directions on purpose; voiding only the losses inflates the
+                # measured rate by about a third of a point on the hit market.
+                if r.get("result_void"):
+                    continue
                 if num(r.get("hr_score")) is None:
                     continue                       # no model opinion to hold fixed
                 keep.append(r)
