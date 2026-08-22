@@ -12077,7 +12077,17 @@ def enrich_weather_payload_for_website(rows: List[Dict[str, Any]]) -> List[Dict[
             "FO", "KN", "EP", "CS", "SC", "SV", "FA"
         }
 
+        # x100 BUG FIX (2026-08-22). This decided fraction-vs-percentage ONE
+        # VALUE AT A TIME: `if 0 < val <= 1: val *= 100`. A pitch thrown 1% or
+        # less of the time is also <= 1, so it was multiplied by a hundred and
+        # became the biggest number in the arsenal. 14 of 59 published starters
+        # were wrong and 7 summed past 150%: Tanner Gordon's SI 1.0% read as
+        # 100.0 while his own primary_mix string listed no SI at all, and the
+        # site's Arsenal panel showed it. A usage dict is fractions or
+        # percentages AS A WHOLE - decide once from the total. Percentages sum
+        # to ~100, fractions to ~1, three orders of magnitude apart.
         pitcher_usage = {}
+        _cand = {}
         if isinstance(raw_usage, dict):
             for k, v in raw_usage.items():
                 code = str(k).upper().strip()
@@ -12085,12 +12095,17 @@ def enrich_weather_payload_for_website(rows: List[Dict[str, Any]]) -> List[Dict[
                     continue
                 try:
                     val = float(v)
-                    if 0 < val <= 1:
-                        val = val * 100
-                    if 0 < val <= 100:
-                        pitcher_usage[code] = round(val, 1)
                 except Exception:
                     continue
+                if val > 0:
+                    _cand[code] = val
+
+            _total = sum(_cand.values())
+            _scale = 100.0 if 0 < _total <= 1.5 else 1.0
+            for code, val in _cand.items():
+                out_val = val * _scale
+                if 0 < out_val <= 100:
+                    pitcher_usage[code] = round(out_val, 1)
 
         pitcher_usage = dict(sorted(pitcher_usage.items(), key=lambda x: x[1], reverse=True))
 
