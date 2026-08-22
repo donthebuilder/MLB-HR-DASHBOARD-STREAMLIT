@@ -289,7 +289,7 @@ def load(dirs: list[Path]) -> list[dict]:
                 # decision into the model's residual. Voided in BOTH
                 # directions on purpose; voiding only the losses inflates the
                 # measured rate by about a third of a point on the hit market.
-                if r.get("result_void"):
+                if r.get("fair_test_void"):
                     continue
                 if num(r.get("hr_score")) is None:
                     continue                       # no model opinion to hold fixed

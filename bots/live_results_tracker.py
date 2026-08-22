@@ -1102,6 +1102,13 @@ def get_player_batting_line(game_feed: Dict[str, Any], player_id: int) -> Dict[s
                 # for walking twice.
                 "k": safe_int(batting.get("strikeOuts"), 0),
                 "bb": safe_int(batting.get("baseOnBalls"), 0),
+                # Plate appearances, not at-bats. Every book that states a
+                # batter-prop threshold states it in PA (FanDuel: "one plate
+                # appearance"), and a walk is a plate appearance. Falls back to
+                # AB+BB when the boxscore omits the field, rather than a zero
+                # that would read as "never came up".
+                "pa": safe_int(batting.get("plateAppearances"),
+                               safe_int(batting.get("atBats"), 0) + safe_int(batting.get("baseOnBalls"), 0)),
                 "doubles": safe_int(batting.get("doubles"), 0),
                 "triples": safe_int(batting.get("triples"), 0),
                 "hr_events": hr_events,  # JOB 1: per-homer batted-ball capture
@@ -1110,7 +1117,7 @@ def get_player_batting_line(game_feed: Dict[str, Any], player_id: int) -> Dict[s
             }
     return {
         "hits": 0, "hr": 0, "runs": 0, "rbi": 0, "tb": 0, "ab": 0, "k": 0, "bb": 0,
-        "doubles": 0, "triples": 0, "hr_events": [],
+        "pa": 0, "doubles": 0, "triples": 0, "hr_events": [],
         "was_substitute": False, "was_replaced": False,
     }
 
@@ -1923,7 +1930,8 @@ def build_tracking_slots(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 # to it. graded_results_*.json continues completely unchanged -- this is a
 # new, additional file, never a replacement.
 # ── VERSIONS BUMPED 2026-08-22 ──────────────────────────────────────────────
-# schema 1 -> 2: two new fields, was_substitute and was_replaced.
+# schema 1 -> 2: was_substitute, was_replaced, plate_appearances, book_action,
+# fair_play_eligible, fair_test_void, fair_test_void_reason.
 # grader v1 -> v2: the void RULE changed. A final-game row with fewer than
 # MIN_AB_FOR_A_FAIR_TEST at-bats is now void, where v1 graded it as a result.
 # That changes what "went_yard: false" means, so a consumer joining old and
@@ -2011,44 +2019,64 @@ def build_outcome_candidates(
         ab = safe_int(actual.get("ab"), 0)
         bb = safe_int(actual.get("bb"), 0)
         k = safe_int(actual.get("k"), 0)
+        pa = safe_int(actual.get("pa"), ab + bb)
 
-        # ── SHORT APPEARANCES ARE VOID, NOT MISSES (2026-08-22) ───────────
-        # Donovan: "if the player is pinched count the results as void — less
-        # 2 abs or pulled or hurt."
+        # ── SETTLEMENT AND MEASUREMENT ARE DIFFERENT QUESTIONS (2026-08-22) ──
+        # An earlier version of this block voided any final-game row with
+        # fewer than 2 at-bats, on the stated grounds that "that's how the
+        # books do it". Checking the actual rules showed it matched none of
+        # them, so this is the correction.
         #
-        # He is right, and the archive says so: rows with fewer than 2 at-bats
-        # run a 3.3% HR rate against 18.6% for everyone else, and 39% for a
-        # base hit against 68%. A pick on a man who was pinch-hit for in the
-        # 5th never got a fair test, and grading it as a loss is scoring the
-        # manager's decision, not the model's.
+        #   STANDARD BOOK SETTLEMENT. A batter prop has action if the player
+        #   is in the starting lineup (DraftKings, BetMGM, Caesars) or gets at
+        #   least one plate appearance (FanDuel). A man who starts, bats once
+        #   and is pinch-hit for in the 5th HAS ACTION and settles as a LOSS.
+        #   Books void for NO plate appearance, not for a short one.
         #
-        # ONE DELIBERATE CHOICE, because the obvious version of this rule is
-        # biased. Voiding only the short-appearance LOSSES while keeping the
-        # short-appearance WINS raises the measured rate for free -- +1.20pp
-        # on the hit market against +0.83pp for voiding both, i.e. about a
-        # third of a point of pure inflation. So a short appearance is void
-        # in BOTH directions. The wins it costs are counted and reported
-        # (short_appearance_wins_voided) rather than quietly dropped.
+        #   FANATICS FAIR PLAY. A protection layer on top, INJURY-triggered
+        #   rather than substitution-triggered: a batter with >=1 PA who
+        #   leaves hurt and does not return is refunded -- except that if the
+        #   stat line already hit before he left, it pays as a WIN.
         #
-        # AB rather than PA is the threshold on purpose: three walks and a
-        # pinch-runner is still a man who never got to swing, and every
-        # market being graded here (HR, hits, total bases) needs a swing.
+        #   MEASURING THE MODEL. Neither. A short appearance must be excluded
+        #   in BOTH directions, because keeping the lucky one-AB winners while
+        #   dropping the unlucky one-AB losers inflates the measured rate for
+        #   free: +1.20pp against +0.83pp on the hit market, measured on
+        #   2026-07-27..08-21.
+        #
+        # So the row carries EVIDENCE and each consumer applies its own rule.
+        # Fair Play in particular is per-market -- refund or win depends on
+        # whether that market already hit -- so the grader records the
+        # precondition and leaves the market call to whoever knows the market.
+        #
+        # NOT CLAIMED: injury. The boxscore never says why a man left, so a
+        # pinch-hitter and a hamstring are indistinguishable.
+        # fair_play_eligible is a named PROXY for Fair Play's trigger and it
+        # will over-report. No field here ever says "hurt".
+        #
+        # Worth doing at all because the archive is lopsided: rows with fewer
+        # than 2 at-bats run a 3.3% HR rate against 18.6% for everyone else,
+        # and 39% for a base hit against 68%. Grading those as misses was
+        # scoring the manager's decision, not the model's.
         void = False
         void_reason = None
         if is_postponed:
             void, void_reason = True, "postponed"
         elif is_final and ab == 0 and hits == 0 and hr == 0 and bb == 0 and k == 0:
+            # No plate appearance at all -- the one case every book agrees is
+            # void, so it stays the canonical `void`.
             void, void_reason = True, "did_not_play"
-        elif is_final and ab < MIN_AB_FOR_A_FAIR_TEST:
-            # Name the mechanism when the boxscore shows one; fall back to the
-            # neutral "short_appearance" rather than guessing at an injury the
-            # feed never reports.
-            if actual.get("was_replaced"):
-                void, void_reason = True, "replaced"
-            elif actual.get("was_substitute"):
-                void, void_reason = True, "entered_as_substitute"
-            else:
-                void, void_reason = True, "short_appearance"
+
+        book_action = bool(is_final and pa >= 1)
+        fair_play_eligible = bool(
+            is_final and pa >= 1 and (actual.get("was_replaced") or actual.get("was_substitute")))
+        fair_test_void = bool(is_final and ab < MIN_AB_FOR_A_FAIR_TEST and not void)
+        if fair_test_void:
+            fair_test_reason = ("replaced" if actual.get("was_replaced")
+                                else "entered_as_substitute" if actual.get("was_substitute")
+                                else "short_appearance")
+        else:
+            fair_test_reason = None
 
         # ROLLING-WINDOW DATE FIX (2026-08-21, Sol's audit finding #10).
         # game_date_actual is MLB's own officialDate for this game_pk --
@@ -2076,8 +2104,13 @@ def build_outcome_candidates(
             "hrr_total": hits + runs + rbi,
             "total_bases": tb,
             "at_bats": ab,
+            "plate_appearances": pa,
             "void": void,
             "void_reason": void_reason,
+            "book_action": book_action,
+            "fair_play_eligible": fair_play_eligible,
+            "fair_test_void": fair_test_void,
+            "fair_test_void_reason": fair_test_reason,
             "was_substitute": bool(actual.get("was_substitute")),
             "was_replaced": bool(actual.get("was_replaced")),
             "game_status": detailed_state,
@@ -2378,26 +2411,36 @@ def grade_slot(slot: Dict[str, Any], actual: Dict[str, Any]) -> Dict[str, Any]:
         "hrr_2_plus": 1 if hrr_total >= 2 else 0,
         "hrr_3_plus": 1 if hrr_total >= 3 else 0,
     }
-    # ── THE SAME VOID RULE, ON THE SITE/BACKTEST PATH (2026-08-22) ─────────
-    # build_outcome_candidates already voids short appearances on the outcome
-    # log. Marking it here too keeps graded_results_*.json -- which is what
-    # backtest_report.py, missed_signals.py and the Results tab read -- from
-    # disagreeing with the outcome log about whether a pick was ever fairly
-    # tested.
+    # ── THE SAME THREE FLAGS, ON THE SITE/BACKTEST PATH (2026-08-22) ──────
+    # build_outcome_candidates carries book_action / fair_play_eligible /
+    # fair_test_void on the outcome log. Mirroring them here keeps
+    # graded_results_*.json -- what backtest_report.py, missed_signals.py and
+    # the Results tab read -- from disagreeing with it.
     #
-    # The row is MARKED, never dropped. Deleting it would make a void look
-    # like a pick that was never made, and the count of voids is itself worth
-    # seeing: a night with six of them is a night the bot's card got
-    # dismantled by substitutions.
+    # fair_test_void is the RESEARCH flag and is symmetric: a one-AB home run
+    # is excluded too, because keeping the lucky winners while dropping the
+    # unlucky losers inflates the measured rate. That is NOT how a book
+    # settles, which is exactly why it is a separate field from book_action.
+    #
+    # Rows are MARKED, never dropped. A deleted row looks like a pick that was
+    # never made, and the count is worth seeing: six on a night means the card
+    # got dismantled by substitutions.
     _ab = safe_int(actual.get("ab"), 0)
+    _pa = safe_int(actual.get("pa"), _ab + safe_int(actual.get("bb"), 0))
+    graded["plate_appearances"] = _pa
+    graded["was_replaced"] = bool(actual.get("was_replaced"))
+    graded["was_substitute"] = bool(actual.get("was_substitute"))
+    graded["book_action"] = 1 if _pa >= 1 else 0
+    graded["fair_play_eligible"] = 1 if (_pa >= 1 and (actual.get("was_replaced")
+                                                       or actual.get("was_substitute"))) else 0
     if _ab < MIN_AB_FOR_A_FAIR_TEST:
-        graded["result_void"] = 1
-        graded["void_reason"] = ("replaced" if actual.get("was_replaced")
-                                 else "entered_as_substitute" if actual.get("was_substitute")
-                                 else "short_appearance")
+        graded["fair_test_void"] = 1
+        graded["fair_test_void_reason"] = ("replaced" if actual.get("was_replaced")
+                                           else "entered_as_substitute" if actual.get("was_substitute")
+                                           else "short_appearance")
     else:
-        graded["result_void"] = 0
-        graded["void_reason"] = None
+        graded["fair_test_void"] = 0
+        graded["fair_test_void_reason"] = None
     # JOB 1: per-homer batted-ball capture (2026-08-11)
     # Include homer events if present in actual
     if actual.get("hr_events"):

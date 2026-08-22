@@ -155,11 +155,11 @@ def parse_json_file(filepath):
     # WINS while dropping the voided losses would raise the reported rate for
     # free (+1.20pp on the hit market against +0.83pp for dropping both).
     #
-    # Rows graded before this rule existed carry no result_void key at all,
+    # Rows graded before this rule existed carry no fair_test_void key at all,
     # which reads as "not void" and leaves their numbers exactly as they were.
-    _voided = sum(1 for r in rows if r.get("result_void"))
+    _voided = sum(1 for r in rows if r.get("fair_test_void"))
     if _voided:
-        rows = [r for r in rows if not r.get("result_void")]
+        rows = [r for r in rows if not r.get("fair_test_void")]
         # Say it out loud. A night with six voids is a night the card got
         # dismantled by substitutions, and that is worth seeing rather than
         # silently shrinking the denominator.

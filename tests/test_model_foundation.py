@@ -547,55 +547,76 @@ finally:
     MDB.DASHBOARD_REPO = _orig_dashboard_repo
 
 
-# ── SHORT APPEARANCES ARE VOID, IN BOTH DIRECTIONS (2026-08-22) ───────────
-# "if the player is pinched count the results as void — less 2 abs or pulled
-# or hurt." Measured on 2026-07-27..08-21, rows with fewer than 2 at-bats run
-# a 3.3% HR rate against 18.6% for everyone else: the pick never got a fair
-# test, so grading it as a loss scores the manager's decision, not the model.
+# ── SETTLEMENT vs MEASUREMENT: THREE FLAGS, NOT ONE (2026-08-22, corrected) ──
+# An earlier version voided any final-game row with <2 AB, on the grounds that
+# "that's how the books do it". It matched none of them. Standard settlement
+# gives ACTION on >=1 plate appearance (a one-AB miss is a LOSS; books void for
+# NO plate appearance); Fanatics Fair Play is injury-triggered and pays a full
+# WIN if the stat already hit; and measuring the model needs a symmetric
+# exclusion, because keeping the lucky one-AB winners while dropping the
+# unlucky losers inflates the rate (+1.20pp vs +0.83pp on the hit market).
 _VOID_STATUS = {901: {"detailed_state": "Final", "official_date": "2026-08-22"}}
-_void_rows = [
-    {"player_id": 11, "game_pk": 901},   # pulled after one AB, no hit
-    {"player_id": 12, "game_pk": 901},   # pulled after one AB, but homered
-    {"player_id": 13, "game_pk": 901},   # full game, no hit
-    {"player_id": 14, "game_pk": 901},   # entered as a substitute
-]
+_void_rows = [{"player_id": i, "game_pk": 901} for i in (11, 12, 13, 14, 15)]
 _void_actual = {
-    (901, 11): {"hits": 0, "hr": 0, "runs": 0, "rbi": 0, "tb": 0, "ab": 1,
+    # pulled after one AB, no hit
+    (901, 11): {"hits": 0, "hr": 0, "runs": 0, "rbi": 0, "tb": 0, "ab": 1, "pa": 1,
                 "bb": 0, "k": 1, "was_replaced": True, "was_substitute": False},
-    (901, 12): {"hits": 1, "hr": 1, "runs": 1, "rbi": 1, "tb": 4, "ab": 1,
+    # pulled after one AB, but homered
+    (901, 12): {"hits": 1, "hr": 1, "runs": 1, "rbi": 1, "tb": 4, "ab": 1, "pa": 1,
                 "bb": 0, "k": 0, "was_replaced": True, "was_substitute": False},
-    (901, 13): {"hits": 0, "hr": 0, "runs": 0, "rbi": 0, "tb": 0, "ab": 4,
+    # played the whole game, no hit
+    (901, 13): {"hits": 0, "hr": 0, "runs": 0, "rbi": 0, "tb": 0, "ab": 4, "pa": 4,
                 "bb": 0, "k": 2, "was_replaced": False, "was_substitute": False},
-    (901, 14): {"hits": 0, "hr": 0, "runs": 0, "rbi": 0, "tb": 0, "ab": 1,
+    # entered as a substitute
+    (901, 14): {"hits": 0, "hr": 0, "runs": 0, "rbi": 0, "tb": 0, "ab": 1, "pa": 1,
                 "bb": 0, "k": 0, "was_replaced": False, "was_substitute": True},
+    # never came up at all
+    (901, 15): {"hits": 0, "hr": 0, "runs": 0, "rbi": 0, "tb": 0, "ab": 0, "pa": 0,
+                "bb": 0, "k": 0, "was_replaced": False, "was_substitute": False},
 }
 _vc = {c["player_id"]: c for c in build_outcome_candidates(
     "2026-08-22", _void_rows, _void_actual, _VOID_STATUS, "2026-08-22T06:00:00Z")}
-check("void: a man pulled after one AB is void, not a miss", _vc[11]["void"], True)
-check("void: and the reason names the mechanism", _vc[11]["void_reason"], "replaced")
-# The one that matters most. Voiding only the LOSSES while keeping the WINS
-# raises the measured rate for free (+1.20pp vs +0.83pp on the hit market).
-check("void: a HOME RUN in one AB is ALSO void — the rule is symmetric",
-      _vc[12]["void"], True)
-check("void: a full four-AB miss is a real result, not void", _vc[13]["void"], False)
-check("void: a late substitute is void, named as such",
-      _vc[14]["void_reason"], "entered_as_substitute")
-checkTrue("void: substitution evidence is carried onto the outcome row",
-          _vc[11]["was_replaced"] is True and _vc[14]["was_substitute"] is True)
-check("void: the grader version is bumped, so a consumer can tell v1 rows apart",
-      _vc[13]["grader_version"], "mlb_grader_v2")
-check("void: the outcome schema version is bumped for the two new fields",
-      _vc[13]["outcome_schema_version"], 2)
 
-# The same rule on the site/backtest path, so the two records cannot disagree.
+# BOOK SETTLEMENT -- the assertion that stops the research rule being mistaken
+# for a book's.
+check("book: a one-AB miss HAS ACTION (books do not void a short appearance)",
+      _vc[11]["book_action"], True)
+check("book: only a player who never came up is void", _vc[15]["void"], True)
+check("book: and that stays the canonical void_reason", _vc[15]["void_reason"], "did_not_play")
+check("book: a man who never came up has no action", _vc[15]["book_action"], False)
+check("book: a full appearance has action", _vc[13]["book_action"], True)
+
+# FAIR PLAY -- precondition only; refund vs win is per-market.
+check("fair play: replaced after >=1 PA is eligible", _vc[11]["fair_play_eligible"], True)
+check("fair play: the one-AB HOMER is eligible too -- the market decides refund "
+      "vs win, not the grader", _vc[12]["fair_play_eligible"], True)
+check("fair play: a late substitute is eligible", _vc[14]["fair_play_eligible"], True)
+check("fair play: a man who played the whole game is not", _vc[13]["fair_play_eligible"], False)
+
+# MEASUREMENT -- symmetric, explicitly not a settlement rule.
+check("fair test: a man pulled after one AB is excluded", _vc[11]["fair_test_void"], True)
+check("fair test: the reason names the mechanism, never guessing 'injured'",
+      _vc[11]["fair_test_void_reason"], "replaced")
+check("fair test: a HOME RUN in one AB is ALSO excluded -- symmetric, unlike a book",
+      _vc[12]["fair_test_void"], True)
+check("fair test: a full four-AB miss is a real result", _vc[13]["fair_test_void"], False)
+check("fair test: a late substitute is excluded, named as such",
+      _vc[14]["fair_test_void_reason"], "entered_as_substitute")
+checkTrue("evidence: substitution carried onto the row both ways",
+          _vc[11]["was_replaced"] is True and _vc[14]["was_substitute"] is True)
+check("evidence: plate appearances recorded, not inferred from AB",
+      _vc[13]["plate_appearances"], 4)
+
+# Same flags on the site/backtest path, so the two records cannot disagree.
 _g_pulled = grade_slot({"player_id": 11}, _void_actual[(901, 11)])
 _g_full = grade_slot({"player_id": 13}, _void_actual[(901, 13)])
 _g_hr = grade_slot({"player_id": 12}, _void_actual[(901, 12)])
-check("void: graded_slots marks the pulled man void", _g_pulled["result_void"], 1)
-check("void: graded_slots marks the one-AB homer void too", _g_hr["result_void"], 1)
-check("void: graded_slots leaves a full appearance alone", _g_full["result_void"], 0)
-# Marked, never deleted -- a dropped row looks like a pick that was never made.
-checkTrue("void: the voided row keeps its outcome fields rather than being dropped",
+check("graded_slots: pulled man excluded from research", _g_pulled["fair_test_void"], 1)
+check("graded_slots: one-AB homer excluded too", _g_hr["fair_test_void"], 1)
+check("graded_slots: full appearance untouched", _g_full["fair_test_void"], 0)
+check("graded_slots: the one-AB rows still HAD ACTION for settlement",
+      _g_pulled["book_action"], 1)
+checkTrue("graded_slots: an excluded row keeps its outcome fields",
           _g_hr["actual_hr"] == 1 and _g_hr["got_hr"] == 1)
 
 

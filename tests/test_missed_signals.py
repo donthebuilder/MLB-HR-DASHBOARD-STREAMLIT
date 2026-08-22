@@ -173,28 +173,28 @@ checkTrue("blocklist: the model's own composite outputs stay excluded by default
 
 # ── 5. VOIDED PICKS ARE EXCLUDED FROM RESEARCH (2026-08-22) ────────────────
 # A pick on a man who was pinch-hit for in the 5th never got a fair test.
-# live_results_tracker marks those rows result_void; the research tool must
+# live_results_tracker marks those rows fair_test_void; the research tool must
 # not count them as misses -- and must not count the voided WINS either,
 # since keeping those while dropping the losses inflates the rate for free.
 tmp5 = Path(tempfile.mkdtemp(prefix="missed_signals_test5_"))
 voided = (
     [row(400 + i, 940) for i in range(12)]
-    + [row(500, 940, hr=0, ab=1, result_void=1, void_reason="replaced")]
-    + [row(501, 940, hr=1, ab=1, result_void=1, void_reason="replaced")]
+    + [row(500, 940, hr=0, ab=1, fair_test_void=1, void_reason="replaced")]
+    + [row(501, 940, hr=1, ab=1, fair_test_void=1, void_reason="replaced")]
 )
 write_graded(tmp5, "2026-08-20", voided)
 kept = MS.load([tmp5])
 kept_ids = {r["player_id"] for r in kept}
-checkTrue("void: a voided LOSS is excluded from research rows", 500 not in kept_ids)
-checkTrue("void: a voided WIN is excluded too — dropping only the losses "
+checkTrue("fair test: a voided LOSS is excluded from research rows", 500 not in kept_ids)
+checkTrue("fair test: a voided WIN is excluded too — dropping only the losses "
           "would inflate the measured rate", 501 not in kept_ids)
-check("void: the unaffected rows all survive", len(kept), 12)
+check("fair test: the unaffected rows all survive", len(kept), 12)
 
-# Rows graded before the rule existed carry no result_void key at all, and
+# Rows graded before the rule existed carry no fair_test_void key at all, and
 # must read as "not void" rather than being silently dropped.
 tmp6 = Path(tempfile.mkdtemp(prefix="missed_signals_test6_"))
 write_graded(tmp6, "2026-08-21", [row(600 + i, 950, ab=1) for i in range(12)])
-check("void: legacy rows with no result_void key are still analysed",
+check("fair test: legacy rows with no fair_test_void key are still analysed",
       len(MS.load([tmp6])), 12)
 
 
