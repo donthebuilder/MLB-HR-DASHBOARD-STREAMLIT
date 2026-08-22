@@ -302,6 +302,71 @@ check("prediction log: truly-absent component is null, not 0", sparse_line["comp
 check("prediction log: absent hr_gate flag defaults False (documented boolean mapping), not null",
       sparse_line["components"]["hr_gate_flagged"], False)
 
+# ── (11b) THE STEP-9b TASK-3 ADDITIONS (2026-08-22) ────────────────────────
+# Step 9 could not answer its own question partly because ten of the twelve
+# signals the roadmap names had been dropped from the archived rows. These
+# fifteen keys put them back. Every one maps to a value the pipeline already
+# computes; none is a new calculation.
+_ADDED_COMPONENT_KEYS = (
+    "batted_shape", "shape_max_ev", "shape_raw_pull_rate", "season_power",
+    "pitcher_side_ops", "pitcher_side_slug", "weak_spot_bonus",
+    "pa_per_hr", "hr_per_pa",
+    "recent_form_last5_hr", "recent_form_last10_hr", "recent_form_l20pa_hr",
+    "recent_form_last5_xbh", "recent_form_l20pa_xbh",
+)
+for key in _ADDED_COMPONENT_KEYS:
+    checkTrue(f"prediction log: components.{key} present", key in row0["components"])
+    # Same honesty rule as (11): absent must be null, never a misleading 0.
+    check(f"prediction log: absent {key} is null, not 0",
+          sparse_line["components"][key], None)
+
+# The four values that live inside hr_shape_components rather than as flat
+# fields must be read OUT of that dict, not invented.
+r_shape = make_hitter(player_id=201, name="Shape Test", game_pk=703)
+r_shape.hr_shape_components = {
+    "batted_ball_damage": 88.8, "max_ev": 109.4,
+    "raw_pull_rate": 0.512, "season_power_baseline": 41.9,
+}
+r_shape.pitcher_side_ops = 0.844
+r_shape.pitcher_side_slug = 0.501
+r_shape.weak_spot_bonus = 0.028
+r_shape.last5_hr = 2
+r_shape.l20pa_xbh = 5
+d_shape = dataclasses.asdict(r_shape)
+d_shape["game_pick_role"] = ""
+c_shape = build_prediction_log_lines(rm1, [d_shape])[1]["components"]
+check("prediction log: batted_shape read from hr_shape_components", c_shape["batted_shape"], 88.8)
+check("prediction log: shape_max_ev read from hr_shape_components", c_shape["shape_max_ev"], 109.4)
+check("prediction log: shape_raw_pull_rate read from hr_shape_components", c_shape["shape_raw_pull_rate"], 0.512)
+check("prediction log: season_power read from hr_shape_components", c_shape["season_power"], 41.9)
+check("prediction log: pitcher_side_ops captured", c_shape["pitcher_side_ops"], 0.844)
+check("prediction log: pitcher_side_slug captured", c_shape["pitcher_side_slug"], 0.501)
+check("prediction log: weak_spot_bonus captured", c_shape["weak_spot_bonus"], 0.028)
+check("prediction log: recent_form raw input last5_hr captured", c_shape["recent_form_last5_hr"], 2)
+check("prediction log: recent_form raw input l20pa_xbh captured", c_shape["recent_form_l20pa_xbh"], 5)
+
+# A malformed hr_shape_components must degrade to null, never raise -- a
+# logging payload can never be the reason a slate run dies.
+r_bad = make_hitter(player_id=202, name="Bad Shape", game_pk=704)
+r_bad.hr_shape_components = "not a dict"
+d_bad = dataclasses.asdict(r_bad)
+d_bad["game_pick_role"] = ""
+try:
+    c_bad = build_prediction_log_lines(rm1, [d_bad])[1]["components"]
+    check("prediction log: a non-dict hr_shape_components yields null, not a crash",
+          c_bad["batted_shape"], None)
+except Exception as _bad_exc:
+    FAILED.append(f"prediction log: non-dict hr_shape_components raised: {_bad_exc}")
+
+# ── THE HASH MUST NOT MOVE ────────────────────────────────────────────────
+# These additions live in the log builder, deliberately NOT inside any
+# function in _HR_CONFIG_FORMULA_FUNCS. docs/MODELS.md's rule is that
+# config_hash changes if and only if the scoring surface changes, so a
+# logging-only change that moved it would make the hash lie.
+checkTrue("config_hash: log-only additions are outside _HR_CONFIG_FORMULA_FUNCS",
+          all(getattr(f, "__name__", "") != "build_prediction_log_lines"
+              for f in MDB._HR_CONFIG_FORMULA_FUNCS))
+
 # write_prediction_log actually writes a readable file with the right name
 pred_path = write_prediction_log(rm1, rows_payload)
 checkTrue("prediction log: write_prediction_log returned a path", pred_path is not None)

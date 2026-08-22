@@ -12757,6 +12757,13 @@ def build_prediction_log_lines(run_meta: Dict[str, Any], rows_payload: List[Dict
     for row in rows_payload:
         if not isinstance(row, dict):
             continue
+        # hr_shape_components is the dict apply_model_v2_layers already writes
+        # onto the record (see its assignment in that function). Four of the
+        # nine additions below live in there rather than as flat fields, so it
+        # is read once here instead of four times inline.
+        _shape = row.get("hr_shape_components") or {}
+        if not isinstance(_shape, dict):
+            _shape = {}
         lines.append({
             # identity / join keys
             "prediction_date": prediction_date,
@@ -12821,6 +12828,75 @@ def build_prediction_log_lines(run_meta: Dict[str, Any], rows_payload: List[Dict
                 # a new calculation, per the "map the existing canonical
                 # value" instruction.
                 "hr_gate_flagged": row.get("hr_gate_flagged", False),
+
+                # ── ADDED 2026-08-22, roadmap step 9b task 3 ──────────────
+                # The values step 9's component research needed and could not
+                # get. Ten of the twelve signals the roadmap names were
+                # dropped from the archived rows between June and August (329
+                # fields per row down to 120), so the two open questions the
+                # handoff posed -- is batted_shape weaker than its own raw
+                # inputs, and should pitcher_side_ops/_slug be wired in --
+                # were unanswerable on current data. Full findings:
+                # claude/moonshot-opus-component-research-findings.md.
+                #
+                # Every key below maps to a value the pipeline ALREADY
+                # computes. Nothing here is a new calculation, and nothing
+                # here sits inside a function in _HR_CONFIG_FORMULA_FUNCS, so
+                # this moves no score and no config_hash.
+
+                # batted_shape and its two raw sub-inputs. Measured on clean
+                # pre-July data: the composite -3.1 (q=0.211) while max_ev
+                # alone is +4.8 (q=0.036), and double-stratified the composite
+                # is -5.3 once max_ev is held fixed. That is the strongest
+                # structural finding step 9 produced, and it was only findable
+                # because the June rows still carried the parts.
+                "batted_shape": _shape.get("batted_ball_damage"),
+                "shape_max_ev": _shape.get("max_ev"),
+                "shape_raw_pull_rate": _shape.get("raw_pull_rate"),
+
+                # season_power's actual blend input. Largest weight in the
+                # table (0.24) and, until now, unlogged -- which is why the
+                # 2026-08-09 raise from 0.12 could not be checked against
+                # anything.
+                "season_power": _shape.get("season_power_baseline"),
+
+                # "computed, stored on the record, and then used by nothing"
+                # (hr_blend's own comment). Still unresolved: they reproduce
+                # +5-7pp on leaked data but collapse to n=187, p=0.31 when
+                # measured cleanly. They cannot be resolved until they are
+                # logged again.
+                "pitcher_side_ops": row.get("pitcher_side_ops"),
+                "pitcher_side_slug": row.get("pitcher_side_slug"),
+
+                # The post-blend additive (up to +3.4 points). Needed to
+                # measure the weak-spot double-count: weak_spot_flag and
+                # weak_spot_bonus are built from the same five ingredients
+                # and both reach hr_score.
+                "weak_spot_bonus": row.get("weak_spot_bonus"),
+
+                # The pa_per_hr blend term reads h.hr_pa_score, so that is
+                # what gets logged under that name -- with the raw season
+                # rate beside it, since the term's own comment asks to
+                # "revisit sizing after another month of data" and the raw
+                # rate is what that revisit needs.
+                "pa_per_hr": row.get("hr_pa_score"),
+                "hr_per_pa": row.get("hr_per_pa"),
+
+                # recent_form is a LOCAL inside apply_model_v2_layers, not a
+                # record field. Stashing it on the record would edit a
+                # config_hash'd function and move the hash without moving a
+                # single score, so its five raw inputs are logged instead.
+                # That is strictly better for research anyway -- the
+                # batted_shape finding above came from having the parts, not
+                # the composite, and recent_form is the term whose weight was
+                # justified on a leaked measurement (-9.2, q=0.001 when
+                # measured cleanly, across four separate pathways into the
+                # score).
+                "recent_form_last5_hr": row.get("last5_hr"),
+                "recent_form_last10_hr": row.get("last10_hr"),
+                "recent_form_l20pa_hr": row.get("l20pa_hr"),
+                "recent_form_last5_xbh": row.get("last5_xbh"),
+                "recent_form_l20pa_xbh": row.get("l20pa_xbh"),
             },
             # Moonshot scores are 0-100 indices, not probabilities. Never a
             # bare number here -- only a real calibrated probability would

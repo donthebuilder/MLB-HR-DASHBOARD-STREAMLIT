@@ -144,6 +144,43 @@ FAMILIES = {
 }
 FAMILY_OF = {f: name for name, fields in FAMILIES.items() for f in fields}
 
+# ── WHICH FIELDS THE MODEL ACTUALLY CONSUMES ────────────────────────────────
+# Needed to tell "candidate to add" from "already in the blend, re-weight it".
+# These are the raw inputs behind hr_blend's terms and the HR gate, named as
+# they appear on a graded row. Keep in sync with MODEL_WEIGHTS in
+# bots/mlb_dashboard.py -- a field missing here is reported as an ADD
+# candidate when it should be a RE-WEIGHT one, which is the more dangerous
+# direction to be wrong in.
+_MODEL_INPUT_FIELDS = {
+    # season power (hr_blend "season_power", 0.24) and its views
+    "season_iso", "season_slg", "season_ops", "season_hr", "iso_vs_rhp", "iso_vs_lhp",
+    # recent form (0.05) + recency_multiplier + two gate signals + power_gate
+    "last5_hr", "last10_hr", "l20pa_hr", "last5_xbh", "l20pa_xbh", "last10_xbh",
+    # pa_per_hr (0.03) / hr_per_pa
+    "hr_per_pa", "pa_per_hr",
+    # k_rate (0.04)
+    "season_k_rate",
+    # pitcher_damage (0.06) -- largest input pitcher_hr9 -- and the gate
+    "pitcher_hr9", "pitcher_hr_allowed", "pitcher_hr9_vs_lhb", "pitcher_hr9_vs_rhb",
+    # pitch_fit (0.06) and pitch_match_term (0.05)
+    "pitch_mix_score", "pitch_type_match_score", "pitch_type_match_flag",
+    # weak_spot_interaction (0.06) and score_hitter's weak_spot_bonus
+    "pitcher_weak_side_score", "pitcher_weak_side_gap", "weak_spot_flag", "weak_spot_bonus",
+    # pull_launch (0.06)
+    "recent_pull_rate", "l5_pull_rate", "l10_pull_rate", "l20pa_pull_rate", "recent_fb_rate",
+    # park_weather (0.05)
+    "park_factor", "park_hr_factor",
+    # batted_shape (0.03) and its sub-inputs
+    "batted_shape", "shape_max_ev", "shape_raw_pull_rate", "recent_ev",
+    # the 5-of-N HR gate's own signals
+    "recent_ideal_hr_contact", "l20pa_ideal_hr_contact", "recent_barrel_rate",
+    "l5_barrel_rate", "l10_barrel_rate", "hrw_score",
+    # lineup_opportunity (0.01) / times_through (0.02)
+    "lineup_spot",
+    # bvp_signal (0.02)
+    "bvp_ab", "bvp_hr", "bvp_ops", "bvp_avg", "bvp_hits", "bvp_xbh", "bvp_pa",
+}
+
 
 def num(v: Any) -> float | None:
     if isinstance(v, bool):
@@ -177,6 +214,40 @@ def rows_of(payload: Any) -> list[dict]:
     return []
 
 
+# ── FEATURE PROVENANCE (2026-08-22) ────────────────────────────────────────
+# The graded archive's FEATURE columns are a post-game snapshot: results.yml
+# grades against the currently-published slate, and today.yml keeps rebuilding
+# that slate into the evening. Measured: games_since_last_hr is 0 for 95.7% of
+# players who homered and 1.1% of those who didn't; last5_hr is 0 for 2.2% of
+# homerers against 32.9% of non-homerers. So the outcome is inside the
+# features, and every within-band number this tool produced on that data is
+# measuring the outcome against itself.
+#
+# Roadmap step 9b task 1 stamps each graded row with feature_snapshot =
+# "locked" | "post_game" | "unavailable". Once that lands, rows that are not
+# "locked" are skipped here by default.
+#
+# Until then rows carry NO stamp, and refusing unstamped rows would make this
+# tool refuse everything. So: explicitly-stamped non-locked rows are dropped,
+# unstamped rows are kept and COUNTED, and the count is printed loudly enough
+# that nobody mistakes a provisional number for a finding.
+_SNAPSHOT_KEY = "feature_snapshot"
+
+
+def snapshot_split(rows: list[dict]) -> tuple[int, int, int]:
+    """(locked, explicitly post-game/unavailable, unstamped)."""
+    locked = stamped_bad = unstamped = 0
+    for r in rows:
+        v = r.get(_SNAPSHOT_KEY)
+        if v is None:
+            unstamped += 1
+        elif v == "locked":
+            locked += 1
+        else:
+            stamped_bad += 1
+    return locked, stamped_bad, unstamped
+
+
 def load(dirs: list[Path]) -> list[dict]:
     seen_dates: set[str] = set()
     out: list[dict] = []
@@ -191,12 +262,23 @@ def load(dirs: list[Path]) -> list[dict]:
                 rows = rows_of(json.loads(p.read_text()))
             except Exception:
                 continue
+            # ── KEY BY (game_pk, player_id), NOT player_id (2026-08-22) ──
+            # Same defect Sol audit #2's finding #1 fixed in
+            # live_results_tracker.py: a player who bats in both legs of a
+            # split doubleheader has two independent, correctly-graded lines,
+            # and keying on player_id alone silently threw one away. Measured
+            # cost on the 2026-07-27..08-21 archive: 10 rows over 26 dates.
+            # Small, but a research tool must not disagree with the grader
+            # about what a row IS.
             seen, keep = set(), []
             for r in rows:
                 pid = r.get("player_id")
-                if pid is None or pid in seen:
+                if pid is None:
                     continue
-                seen.add(pid)
+                rk = (r.get("game_pk"), pid)
+                if rk in seen:
+                    continue
+                seen.add(rk)
                 if (num(r.get("actual_ab")) or 0) <= 0:
                     continue                       # never batted: not asked
                 if num(r.get("hr_score")) is None:
@@ -279,7 +361,8 @@ def band_of(v: float, edges: list[float]) -> int:
     return i
 
 
-def stratified_lift(pairs_by_band: dict[int, list[tuple[float, int]]]) -> tuple[float, int, int, int, int]:
+def stratified_lift(pairs_by_band: dict[int, list[tuple[float, int]]],
+                    rng: random.Random | None = None) -> tuple[float, int, int, int, int]:
     """
     Within each band, split at the band's own median and compare HR rates.
 
@@ -291,7 +374,21 @@ def stratified_lift(pairs_by_band: dict[int, list[tuple[float, int]]]) -> tuple[
     for _b, pairs in pairs_by_band.items():
         if len(pairs) < 20:
             continue
-        pairs = sorted(pairs, key=lambda x: x[0])
+        # ── BREAK TIES AT RANDOM (2026-08-22) ────────────────────────────
+        # Sorting by value alone is correct, but Python's sort is STABLE, so
+        # ties then fall in original row order — and rows arrive in score
+        # order. On a heavily-tied field (last5_hr, any flag, any count) that
+        # makes the median split depend on input ordering rather than on the
+        # field. A random tiebreak costs two lines and makes the estimator
+        # unbiased.
+        #
+        # Worth knowing how bad this class of bug gets: a first-pass research
+        # scan sorted (value, outcome) TUPLES, so ties broke by the OUTCOME
+        # itself. On bvp_hr (2,268 zeros, 43 ones) that manufactured a +31.5
+        # point lift out of nothing, and 61 of 139 fields cleared q<=0.05.
+        # See claude/moonshot-sol-brief-graded-archive-leak.md.
+        _r = rng if rng is not None else random
+        pairs = sorted(pairs, key=lambda x: (x[0], _r.random()))
         # a field with one repeated value inside a band cannot split it
         if pairs[0][0] == pairs[-1][0]:
             continue
@@ -320,7 +417,7 @@ def permutation_p(pairs_by_band, observed: float, iters: int, rng: random.Random
             yy = ys[b][:]
             rng.shuffle(yy)
             fake[b] = list(zip(vals, yy))
-        if abs(stratified_lift(fake)[0]) >= abs(observed):
+        if abs(stratified_lift(fake, rng)[0]) >= abs(observed):
             hits += 1
     return (hits + 1) / (iters + 1)
 
@@ -341,11 +438,29 @@ def main() -> int:
     ap.add_argument("--no-family", action="store_true",
                     help="report every correlated field separately instead of "
                          "one per family.")
+    ap.add_argument("--allow-post-game", action="store_true",
+                    help="also analyse rows explicitly stamped as post-game "
+                         "feature snapshots. Off by default: those rows carry "
+                         "the outcome inside the features. For archaeology only.")
     a = ap.parse_args()
     rng = random.Random(a.seed)
 
     dirs = [Path(os.path.expanduser(d)) for d in (a.dir or [])] + DEFAULT_DIRS
     rows = load(dirs)
+
+    locked, stamped_bad, unstamped = snapshot_split(rows)
+    if stamped_bad and not a.allow_post_game:
+        rows = [r for r in rows if r.get(_SNAPSHOT_KEY) in (None, "locked")]
+        print(f"\n   skipped {stamped_bad} rows stamped as post-game feature "
+              f"snapshots (--allow-post-game to include them)")
+    if unstamped:
+        print(f"\n   ⚠️  {unstamped} of {unstamped + locked} rows carry NO "
+              f"feature_snapshot stamp.")
+        print("   Those rows predate roadmap step 9b, which means their feature columns are")
+        print("   a POST-GAME snapshot — the outcome is inside them. Every number below that")
+        print("   rests on them is provisional, not a finding. See")
+        print("   claude/moonshot-opus-component-research-findings.md.")
+
     if len(rows) < 500:
         print(f"only {len(rows)} graded picks found — need ~500. Checked: "
               + ", ".join(str(d) for d in dirs))
@@ -401,7 +516,7 @@ def main() -> int:
             continue
         if len({v for pairs in banded.values() for v, _ in pairs}) < 3:
             continue
-        lift, hok, hn, lok, ln = stratified_lift(banded)
+        lift, hok, hn, lok, ln = stratified_lift(banded, rng)
         if not hn or not ln:
             continue
         results.append({"field": k, "n": n, "lift": lift,
@@ -485,10 +600,30 @@ def main() -> int:
         print("   band, so their lift is partly the model rediscovering its own opinion —")
         print("   a small q-value does not rescue a leaky control.")
         if clean:
+            # ── TWO DIFFERENT RECOMMENDATIONS, NOT ONE (2026-08-22) ────────
+            # This block used to print "LOWER is better — check the sign" for
+            # every negative lift, which reads as "add this field, inverted".
+            # That is the opposite of what a negative residual means on a
+            # field the model ALREADY uses: it means the model is
+            # OVER-weighting it. The distinction is not academic — on
+            # de-leaked data 9 of 12 surviving findings were negative, and
+            # every one of them was a field already in the blend. Acting on
+            # the old wording would have raised weights that the measurement
+            # said to cut.
             print("\n   CLEAN:")
             for fam, r, _rest in clean:
-                d = "higher is better" if r["lift"] > 0 else "LOWER is better — check the sign"
+                used = r["field"] in _MODEL_INPUT_FIELDS
+                if used:
+                    d = ("the model already uses this — RE-WEIGHT it "
+                         + ("UP" if r["lift"] > 0 else "DOWN"))
+                else:
+                    d = ("candidate to ADD — higher is better" if r["lift"] > 0
+                         else "candidate to ADD, inverted — lower is better")
                 print(f"     · {fam} ({r['field']})  {r['lift']:+.1f} pts, leak {r['leak']:+.2f}  ({d})")
+            print("\n   A NEGATIVE RESIDUAL ON A FIELD THE MODEL USES IS NOT A SIGNAL TO ADD.")
+            print("   It means that inside a fixed score band, the hitters who got there on")
+            print("   that field did WORSE — i.e. the term is carrying more weight than it")
+            print("   earns. Cut it; do not invert it.")
         print("\n   READ THE FAMILY, NOT THE FIELD. A family that survives means the model")
         print("   is under-weighting that IDEA, not that one column is magic. The strongest")
         print("   member is shown because it is the cleanest measurement of it, not because")
