@@ -1,0 +1,28 @@
+{
+  "run_id": "2026-08-22.201717Z.gha-32596205622",
+  "generated_at": "2026-08-22T20:17:17.811689+00:00",
+  "slate_date": "2026-08-22",
+  "trigger": "MLB HR Bot \u2014 Today (data branch only)",
+  "git_sha": "11cec10b96d3db966386d17751992f3164f895e1",
+  "model_family": "moonshot-mlb",
+  "model_versions": {
+    "hr": "mlb_hr_v3",
+    "hr_shadow": "mlb_hr_v1_recency",
+    "hit": "mlb_hit_v2",
+    "hrr": "mlb_hrr_v2",
+    "contact": "mlb_contact_v2",
+    "overall": "mlb_overall_v2",
+    "top_board": "mlb_top_v2",
+    "hrw": "mlb_hrw_v1",
+    "multi_hit": "mlb_multihit_v1",
+    "picks": "mlb_pickmap_v3"
+  },
+  "config_hashes": {
+    "hr": "sha256:e557ff45d13d6b9af70262a3ad45e870166f8a40a1e2ca62d7a85a319a4fc28e"
+  },
+  "schema_version": 1,
+  "env": {
+    "python": "3.11.16",
+    "pybaseball": "2.2.7"
+  }
+}

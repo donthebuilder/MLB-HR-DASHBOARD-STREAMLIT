@@ -1,0 +1,39 @@
+{
+  "pair_builder": [
+    {
+      "date": "2026-08-22",
+      "path": "/data/mlb_pair_builder_2026-08-22.json",
+      "latest": "/data/pair_builder_latest.json"
+    }
+  ],
+  "pair_builder_latest": "/data/pair_builder_latest.json",
+  "schema": "mlb_breakdown_data_index_v29",
+  "current": {
+    "today": {
+      "date": "2026-08-22",
+      "label": "Today",
+      "path": "/data/today.json",
+      "txt": "/data/today.txt",
+      "history_path": "/data/history/2026-08-22-today.json"
+    }
+  },
+  "files": [
+    "today.json",
+    "tomorrow.json",
+    "results_live.json",
+    "pitch_usage_debug.json",
+    "history/2026-08-22-today.json"
+  ],
+  "history": [
+    {
+      "date": "2026-08-22",
+      "role": "today",
+      "label": "Today Slate \u00b7 2026-08-22",
+      "path": "/data/history/2026-08-22-today.json",
+      "txt": "/data/history/2026-08-22-today.txt"
+    }
+  ],
+  "results": [],
+  "clean_output": true,
+  "latest_update": "2026-08-22T20:18:42.136434+00:00"
+}
