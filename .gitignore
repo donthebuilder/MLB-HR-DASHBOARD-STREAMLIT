@@ -51,3 +51,9 @@ build
 .vercel
 .pnp
 .pnp.js
+
+# Local scratch in the push folder - never belongs in the repo (2026-08-22)
+_stale_git_locks/
+_to_delete/
+*.bundle
+*.patch
