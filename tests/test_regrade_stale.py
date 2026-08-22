@@ -26,10 +26,12 @@ too, not silently pass it):
 Run: python tests/test_regrade_stale.py
 """
 import datetime as dt
+import io
 import json
 import os
 import sys
 import tempfile
+from contextlib import redirect_stdout
 from pathlib import Path
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
@@ -406,6 +408,54 @@ with tempfile.TemporaryDirectory() as td:
     print(f"isolation round 2 (quick review of finding #6's fix): {CHECKS - _iso2_checks_before} assertions, "
           f"a batting-line lookup failure for one game_pk on a date doesn't block another game_pk's "
           f"item on that same date from resolving")
+
+    # ── CLEANUP: lookback-window edge observability (2026-08-21, quick
+    # review's lower-severity list) ──
+    #
+    # A suspended game unresolved past --regrade-lookback-days used to just
+    # silently stop being rechecked forever, with zero observability if it
+    # actually happened. find_unresolved_outcome_dates() now prints a loud
+    # warning specifically when an unresolved date sits at the OLDEST edge of
+    # the lookback window -- the last run that will ever look at it again.
+
+    _edge_checks_before = CHECKS
+    tmp4 = tempfile.TemporaryDirectory()
+    tmp4p = Path(tmp4.name)
+
+    EDGE_LOOKBACK = 5
+    edge_date = (TODAY - dt.timedelta(days=EDGE_LOOKBACK)).strftime("%Y-%m-%d")
+    mid_date = (TODAY - dt.timedelta(days=2)).strftime("%Y-%m-%d")
+    seed_outcome_log(tmp4p, edge_date, [
+        {"player_id": 991, "game_pk": 900301, "detailed_state": "Suspended: Rain"},
+    ])
+    seed_outcome_log(tmp4p, mid_date, [
+        {"player_id": 992, "game_pk": 900302, "detailed_state": "Suspended: Rain"},
+    ])
+
+    buf = io.StringIO()
+    with redirect_stdout(buf):
+        lrt.find_unresolved_outcome_dates(tmp4p, TODAY, lookback_days=EDGE_LOOKBACK)
+    edge_output = buf.getvalue()
+    checkTrue(f"a warning fires for {edge_date}, the OLDEST date still inside a "
+              f"{EDGE_LOOKBACK}-day lookback window", f"EDGE of the {EDGE_LOOKBACK}-day" in edge_output
+              and edge_date in edge_output)
+    checkTrue(f"900301 (the game stuck at the edge) is named in the warning", "900301" in edge_output)
+    checkFalse(f"no edge warning for {mid_date} -- it's still safely inside the window, not at "
+               f"the boundary this run", f"{mid_date} has" in edge_output and "EDGE" in edge_output)
+
+    # One day further back (EDGE_LOOKBACK + 1): find_unresolved_outcome_dates()
+    # doesn't even look at that date anymore, so no warning -- and this proves
+    # the earlier one really was about to fall out, not a false alarm.
+    buf2 = io.StringIO()
+    with redirect_stdout(buf2):
+        found_narrower = lrt.find_unresolved_outcome_dates(tmp4p, TODAY, lookback_days=EDGE_LOOKBACK - 1)
+    checkFalse(f"with lookback_days={EDGE_LOOKBACK - 1}, {edge_date} is outside the window "
+               f"entirely and isn't even returned", edge_date in found_narrower)
+
+    tmp4.cleanup()
+    print(f"cleanup (lookback-window edge observability): {CHECKS - _edge_checks_before} assertions, "
+          f"a game stuck at the oldest edge of the lookback window now prints a loud warning on "
+          f"its last chance to be rechecked, instead of silently aging out with no trace")
 
 
 if FAILED:

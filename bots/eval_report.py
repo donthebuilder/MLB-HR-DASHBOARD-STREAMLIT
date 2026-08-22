@@ -681,7 +681,7 @@ def render_text(report: dict) -> str:
         for mv2, stats in sorted(report["by_model_version"].items()):
             lines.append(f"  {mv2:<20} N={stats['n']:<5} HR={stats['hrs']:<4} rate={fmt_pct(stats['hr_rate'])}")
         lines.append("")
-    lines.append(f"PROVENANCE: {fmt_pct(report['provenance_valid_pct'])} of {report['n_candidates']} "
+    lines.append(f"PROVENANCE: {fmt_pct(report['provenance_valid_pct'])} of {report['provenance_scope_n']} "
                   f"candidate player-games have a verified run_id + generated_at "
                   f"(across {report['n_por_entries']} locked game(s))")
     if report["config_hashes_by_model_version"]:
@@ -763,13 +763,35 @@ def build_report(data_dir: Path, model_version: str | None, as_of: dt.date, live
     candidates = build_candidates(por_entries, pred_cache, outcomes)
 
     n_provenance_valid = 0
+    n_filter_scoped = 0
     excluded_by_reason: dict[str, int] = {}
     included: list[dict] = []
 
     for cand in candidates:
         reason, provenance = classify(cand, outcomes)
-        if provenance == "valid":
-            n_provenance_valid += 1
+        # FILTER-SCOPING FIX (2026-08-21, cleanup pass after Sol audit #2):
+        # provenance_valid_pct used to be computed over every candidate,
+        # counted here before model_version/config_hash filtering below even
+        # runs -- inconsistent with every other statistic in this report
+        # (tier_table, monotonicity, rolling windows), which are all built
+        # from `included`, i.e. AFTER filtering. A run with --model-version
+        # mlb_hr_v3 would report a provenance rate blended across every other
+        # version too, silently answering a different question than the one
+        # asked. matches_filter is evaluated independently of classify()'s
+        # own exclusion reason (a candidate can fail provenance AND still be
+        # in scope for the filter, or vice versa -- these are orthogonal),
+        # so an unfiltered run (the common case) is unaffected: matches_filter
+        # is trivially True for every candidate, giving the exact same
+        # n_provenance_valid/len(candidates) as before.
+        matches_filter = True
+        if model_version and cand.get("model_version") != model_version:
+            matches_filter = False
+        if config_hash and cand.get("config_hash") != config_hash:
+            matches_filter = False
+        if matches_filter:
+            n_filter_scoped += 1
+            if provenance == "valid":
+                n_provenance_valid += 1
         if model_version and cand.get("model_version") != model_version:
             reason = reason or "model_version_filtered"
         # PROVENANCE: an explicit --config-hash filter is a stricter version
@@ -856,7 +878,10 @@ def build_report(data_dir: Path, model_version: str | None, as_of: dt.date, live
         # Denominator is CANDIDATES (player-games), matching excluded_by_reason's
         # own granularity -- not n_por_entries (games). A game with 20 players
         # and missing provenance should count as 20 affected predictions, not 1.
-        "provenance_valid_pct": (n_provenance_valid / len(candidates)) if candidates else None,
+        # Scoped to whichever candidates match --model-version/--config-hash
+        # (n_filter_scoped == len(candidates) when neither filter is given).
+        "provenance_valid_pct": (n_provenance_valid / n_filter_scoped) if n_filter_scoped else None,
+        "provenance_scope_n": n_filter_scoped,
         "tier_table": table,
         "monotonicity": mono,
         "rolling": rolling,

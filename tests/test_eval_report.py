@@ -634,6 +634,73 @@ print(f"ok   Sol audit #2 fixes: {CHECKS - _SOL2_CHECKS_BEFORE} assertions, lock
       f"correctly excluded (not read as on-time) + a real outcome preserved when its whole "
       f"prediction_log has aged out + --as-of defaults to Phoenix local time, not UTC")
 
+# ── CLEANUP: provenance_valid_pct filter-scoping (2026-08-21, quick review's
+# lower-severity list) ──────────────────────────────────────────────────────
+# provenance_valid_pct used to be computed over EVERY candidate regardless of
+# --model-version/--config-hash, inconsistent with every other stat in the
+# report (tier_table, monotonicity, rolling windows), which are all built
+# from the FILTERED set. Two model versions, deliberately different
+# provenance rates, prove the percentage now actually changes under a filter
+# instead of always reporting the same blended number no matter what's asked.
+_PROVSCOPE_CHECKS_BEFORE = CHECKS
+with tempfile.TemporaryDirectory() as d5:
+    tmp5 = Path(d5)
+    DATE_F = "2026-08-20"
+    AS_OF_F = dt.date(2026, 8, 21)
+
+    # v3: two candidates, BOTH with valid provenance (run_id + generated_at).
+    gp_v3_a, gp_v3_b = "9800", "9801"
+    run_v3_a = "2026-08-20.100000Z.test-v3-a"
+    run_v3_b = "2026-08-20.100100Z.test-v3-b"
+    write_por_log(tmp5, DATE_F, [
+        por(gp_v3_a, run_v3_a, "mlb_hr_v3", "2026-08-20T10:00:00+00:00", False, DATE_F),
+        por(gp_v3_b, run_v3_b, "mlb_hr_v3", "2026-08-20T10:01:00+00:00", False, DATE_F),
+    ])
+    write_pred_log(tmp5, run_v3_a, DATE_F, [{"pid": 6001, "name": "V3a", "gp": gp_v3_a, "score": 95.0}])
+    write_pred_log(tmp5, run_v3_b, DATE_F, [{"pid": 6002, "name": "V3b", "gp": gp_v3_b, "score": 95.0}])
+    write_outcome_log(tmp5, DATE_F, [outcome(gp_v3_a, 6001, True), outcome(gp_v3_b, 6002, False)])
+
+    # v4: one valid-provenance candidate, one missing-provenance candidate
+    # (run_id/generated_at both None, exactly like the missing_provenance
+    # fixture above) -- but model_version IS set on the por entry, so this
+    # candidate still counts toward mlb_hr_v4's own filtered scope.
+    gp_v4_a, gp_v4_b = "9802", "9803"
+    run_v4_a = "2026-08-20.100200Z.test-v4-a"
+    write_por_log(tmp5, DATE_F, [
+        por(gp_v4_a, run_v4_a, "mlb_hr_v4", "2026-08-20T10:02:00+00:00", False, DATE_F),
+        por(gp_v4_b, None, "mlb_hr_v4", None, None, DATE_F),
+    ])
+    write_pred_log(tmp5, run_v4_a, DATE_F, [{"pid": 6003, "name": "V4a", "gp": gp_v4_a, "score": 95.0}])
+    write_outcome_log(tmp5, DATE_F, [outcome(gp_v4_a, 6003, True), outcome(gp_v4_b, 6004, False)])
+
+    unfiltered = ev.build_report(tmp5, model_version=None, as_of=AS_OF_F)
+    check("unfiltered: 4 candidates total (2 v3 + 2 v4)", unfiltered["n_candidates"], 4)
+    check("unfiltered provenance_scope_n covers all 4 candidates (no filter applied)",
+          unfiltered["provenance_scope_n"], 4)
+    approx("unfiltered provenance_valid_pct blends both versions: 3 of 4 valid",
+           unfiltered["provenance_valid_pct"], 3 / 4)
+
+    filtered_v3 = ev.build_report(tmp5, model_version="mlb_hr_v3", as_of=AS_OF_F)
+    check("--model-version mlb_hr_v3 scopes provenance to just v3's 2 candidates",
+          filtered_v3["provenance_scope_n"], 2)
+    check("v3-only provenance_valid_pct is 1.0 -- BOTH v3 candidates have valid provenance, "
+          "not the unfiltered 0.75 blended across v4 too",
+          filtered_v3["provenance_valid_pct"], 1.0)
+
+    filtered_v4 = ev.build_report(tmp5, model_version="mlb_hr_v4", as_of=AS_OF_F)
+    check("--model-version mlb_hr_v4 scopes provenance to just v4's 2 candidates",
+          filtered_v4["provenance_scope_n"], 2)
+    check("v4-only provenance_valid_pct is 0.5 -- v4's actual (worse) rate, not v3's blended-in 1.0",
+          filtered_v4["provenance_valid_pct"], 0.5)
+
+    checkTrue("the rendered PROVENANCE line under --model-version mlb_hr_v4 shows the scoped "
+              "denominator (2), not the unfiltered total (4)",
+              "PROVENANCE: 50.0% of 2 " in ev.render_text(filtered_v4))
+
+print(f"ok   cleanup (provenance_valid_pct filter-scoping): {CHECKS - _PROVSCOPE_CHECKS_BEFORE} "
+      f"assertions, --model-version/--config-hash now scope the provenance percentage the same "
+      f"way they scope every other statistic in the report")
+
 if FAILED:
     print(f"\n{len(FAILED)} FAILED\n" + "\n".join(f"  · {f}" for f in FAILED))
     sys.exit(1)

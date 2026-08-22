@@ -1920,6 +1920,23 @@ def find_unresolved_outcome_dates(
         ]
         if unresolved:
             out[date_str] = unresolved
+            # OBSERVABILITY FIX (2026-08-21, cleanup pass after Sol audit #2's
+            # lower-severity list): a suspended game unresolved past this
+            # window used to just silently stop being rechecked, forever, with
+            # nothing anywhere saying so -- a documented trade-off, but a
+            # trade-off nobody could actually see happen. back == lookback_days
+            # is the OLDEST date this call looks at; if it's still unresolved
+            # here, this is the LAST run that will ever revisit it (next
+            # run's `back` for this same date_str would be lookback_days + 1,
+            # outside range() entirely, so find_unresolved_outcome_dates would
+            # simply never look at this date again). Loud now, rather than a
+            # permanently-stuck is_final=False nobody notices.
+            if back == lookback_days:
+                stuck_game_pks = sorted({u["game_pk"] for u in unresolved})
+                print(f"⚠️ regrade-stale: {date_str} has {len(unresolved)} still-open "
+                      f"player-game(s) at the EDGE of the {lookback_days}-day lookback window "
+                      f"(game_pks: {stuck_game_pks}) -- if still unresolved after this run, "
+                      f"they will never be automatically rechecked again.")
     return out
 
 

@@ -56,9 +56,26 @@ def checkTrue(name, cond):
         FAILED.append(f"{name}: expected truthy, got falsy")
 
 
+# WALL-CLOCK FIX (2026-08-21, cleanup pass after Sol audit #2). Every
+# temporal helper in this file used to call dt.datetime.now()/dt.date.today()
+# fresh on every invocation, computed relative to whatever instant the
+# interpreter happened to reach that line. That's fine within a single call,
+# but this file makes MANY such calls across one run, and pick_lock.main()'s
+# own slate-date derivation (bots/pick_lock.py: "date = min(first_pitch
+# times).date()...") independently reads real wall-clock-derived timestamps
+# too -- so two "now"s captured a few lines apart could, in principle, land
+# on opposite sides of a real UTC midnight if the process happened to be
+# scheduled right at that instant, producing a real (if rare) flaky
+# mismatch between a test's own expected date string and the date
+# pick_lock.py actually derived. A single frozen reference instant, captured
+# once at import time and reused everywhere below, makes every date/offset
+# in this file internally consistent regardless of when the suite actually
+# runs -- no live clock read anywhere past this point.
+_NOW = dt.datetime.now(dt.timezone.utc)
+
+
 def iso(offset_min: int) -> str:
-    return (dt.datetime.now(dt.timezone.utc)
-            + dt.timedelta(minutes=offset_min)).isoformat().replace("+00:00", "Z")
+    return (_NOW + dt.timedelta(minutes=offset_min)).isoformat().replace("+00:00", "Z")
 
 
 _RID_SEQ = [0]
@@ -69,7 +86,7 @@ def opaque_run_id(tag: str = "") -> str:
     label in these tests -- nothing here is ever parsed for time. The
     number only exists so two calls never collide."""
     _RID_SEQ[0] += 1
-    today = dt.date.today().isoformat()
+    today = _NOW.date().isoformat()
     return f"{today}.{_RID_SEQ[0]:06d}Z.test-{tag or _RID_SEQ[0]}"
 
 
@@ -336,7 +353,7 @@ with tempfile.TemporaryDirectory() as d:
     tmp = Path(d)
     started = iso(-10)
     old_shaped_ledger = {
-        "date": dt.datetime.now(dt.timezone.utc).date().isoformat(),
+        "date": _NOW.date().isoformat(),
         "games": {"800": {"first_pitch": started, "cats": {
             "TOP": {"pid": 1, "name": "Ann", "at": started, "locked": True, "locked_late": False,
                     "history": [{"pid": 1, "name": "Ann", "at": started}]}}}},
@@ -430,7 +447,7 @@ with tempfile.TemporaryDirectory() as d:
 with tempfile.TemporaryDirectory() as d:
     tmp = Path(d)
     cur = tmp / "current"
-    today_str = dt.datetime.now(dt.timezone.utc).date().isoformat()
+    today_str = _NOW.date().isoformat()
     por_log_path = cur / f"por_log_{today_str}.jsonl"
 
     rid_a = opaque_run_id("g10a")
@@ -476,7 +493,7 @@ with tempfile.TemporaryDirectory() as d:
     # new date -- prove that por_log_<today_str>.jsonl (yesterday's file, in
     # this scenario) is completely untouched by that, because archival never
     # goes through fetch_lock()/pick_lock.json at all.
-    tomorrow_str = (dt.datetime.now(dt.timezone.utc).date() + dt.timedelta(days=1)).isoformat()
+    tomorrow_str = (_NOW.date() + dt.timedelta(days=1)).isoformat()
     # First pitch a genuine 10 minutes in the past (so the game actually
     # locks this run) while the payload's own "date" is explicitly
     # tomorrow_str -- forcing main() to key this run as tomorrow's slate,
