@@ -29,7 +29,7 @@ set -euo pipefail
 LABEL="${1:-Data}"
 STAGE=/tmp/data-out
 PREV=/tmp/data-prev
-MAX_ATTEMPTS=4
+MAX_ATTEMPTS=6
 
 # Files the Streamlit app actually reads.
 PUBLISH_FILES=(
@@ -163,6 +163,78 @@ POR_LOG_KEEP=150
 # lives one directory deeper than the rest of PUBLISH_FILES.
 SOCIAL_HISTORY_KEEP=180
 
+# ── READING THE BRANCH, AND NOT PUBLISHING BACKWARDS ────────────────────────
+#
+# Both of these exist because of 2026-08-22, when the site spent the whole day
+# flipping between tonight's board and the previous night's. Every "Today" run
+# went green and published the right slate; minutes later a Graded-results
+# publish put the 03:35 UTC build back. Three separate holes, all in this file.
+
+# fetch_data -- get the data branch into a remote-tracking ref we can trust.
+#
+# `git fetch origin data` writes FETCH_HEAD and only *opportunistically*
+# updates refs/remotes/origin/data. This branch is a force-pushed ORPHAN commit
+# every single run, so every update is a non-fast-forward -- exactly the update
+# an opportunistic, non-'+' refspec is allowed to refuse. When it does,
+# origin/data stays pinned to whatever it was the first time this job looked,
+# and everything downstream reads a stale tree: carry_forward() copies an old
+# slate forward as if it were current, and the remote_before/remote_now
+# comparison below can never see the branch move because both sides read the
+# same frozen ref. An explicit '+' refspec makes the update forced, so
+# origin/data is always the real current tip.
+fetch_data() {
+  git fetch --depth 1 --force origin '+refs/heads/data:refs/remotes/origin/data' 2>/dev/null || true
+}
+
+# meta_time -- the generated_at out of a *_run_meta.json, or '' if there isn't
+# one. Deliberately sed and not python: this script runs in five different
+# workflows and must not acquire a dependency any of them might not have.
+meta_time() {
+  [ -f "$1" ] || return 0
+  # `| head -n 1` under `set -o pipefail` can hand the whole script a SIGPIPE
+  # exit status from sed, which `set -e` then treats as a failed publish. The
+  # trailing `|| true` is not decoration.
+  sed -n 's/.*"generated_at"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$1" 2>/dev/null | head -n 1 || true
+}
+
+# guard_slate_regression -- never publish a slate older than the branch's.
+#
+# Only today.yml and tomorrow.yml BUILD a slate. Every other publisher --
+# grading (hourly at :10 since 2026-08-14), spray cache, pair history, NFL --
+# reaches the push holding nothing but the copy carry_forward() lifted off the
+# branch. If a slate run publishes in the window between that copy and this
+# push, the force-push below puts the older slate back, and the site reverts to
+# yesterday's games under tonight's header until the next slate run, which the
+# next grading run then undoes again.
+#
+# --force-with-lease closes the window where the branch moved. This closes the
+# one where our *view* of the branch was stale to begin with: the two run metas
+# carry generated_at, so the copies can simply be ordered. Newer on the branch
+# than in our hand means the branch wins for that slate's files, whatever this
+# run happens to be holding. A publisher that did not build a slate can now
+# only ever leave the slate alone.
+guard_slate_regression() {
+  local ref="$1" label staged_at remote_at f
+  for label in today tomorrow; do
+    staged_at="$(meta_time "$STAGE/public/data/current/${label}_run_meta.json")"
+    rm -f /tmp/remote-meta.json
+    git show "$ref:public/data/current/${label}_run_meta.json" > /tmp/remote-meta.json 2>/dev/null || continue
+    remote_at="$(meta_time /tmp/remote-meta.json)"
+    [ -n "$remote_at" ] || continue
+    # No staged meta at all means we are not the ones building this slate, so
+    # anything we hold for it came from carry_forward and the branch is at
+    # least as good. Same restore either way.
+    if [ -z "$staged_at" ] || [[ "$remote_at" > "$staged_at" ]]; then
+      for f in "${label}_slim.json" "${label}.json" "${label}.txt" "${label}_run_meta.json"; do
+        git show "$ref:public/data/current/$f" > "$STAGE/public/data/current/$f" 2>/dev/null \
+          || rm -f "$STAGE/public/data/current/$f"
+      done
+      echo "Kept the branch's ${label} slate (${remote_at}) over ours (${staged_at:-none})."
+    fi
+  done
+  return 0
+}
+
 git config user.email "bot@mlb-hr-dashboard"
 git config user.name "mlb-hr-bot"
 
@@ -292,11 +364,12 @@ attempt=1
 while [ "$attempt" -le "$MAX_ATTEMPTS" ]; do
   stage_local
 
-  git fetch origin data --depth 1 2>/dev/null || true
+  fetch_data
   remote_before=""
   if git rev-parse --verify origin/data >/dev/null 2>&1; then
     remote_before="$(git rev-parse origin/data)"
     carry_forward origin/data
+    guard_slate_regression origin/data
   fi
 
   # Fresh orphan branch: no parent, so no history to inherit or grow.
@@ -315,18 +388,33 @@ while [ "$attempt" -le "$MAX_ATTEMPTS" ]; do
 
   # Did another publisher land while we were staging? If so, redo the merge
   # against their commit instead of force-pushing over the top of it.
-  git fetch origin data --depth 1 2>/dev/null || true
+  fetch_data
   remote_now=""
   git rev-parse --verify origin/data >/dev/null 2>&1 && remote_now="$(git rev-parse origin/data)"
 
   if [ "$remote_before" = "$remote_now" ]; then
-    git push --force origin "data-publish-$attempt:data"
-    echo "Published $(du -sh public/data | cut -f1) to the data branch:"
-    ls -la public/data/current
-    exit 0
+    # --force-with-lease, not --force. The check above and the push below are
+    # two separate round trips, and a slate publish landing in between used to
+    # be overwritten silently -- the whole 2026-08-22 flapping. The lease makes
+    # the server itself refuse the push unless data is still the commit we
+    # merged against, so a race costs one retry instead of a night's board.
+    # Plain --force only when the branch does not exist yet (nothing to lose).
+    if [ -z "$remote_before" ]; then
+      push_rc=0
+      git push --force origin "data-publish-$attempt:data" || push_rc=$?
+    else
+      push_rc=0
+      git push --force-with-lease="data:$remote_before" origin "data-publish-$attempt:data" || push_rc=$?
+    fi
+    if [ "$push_rc" -eq 0 ]; then
+      echo "Published $(du -sh public/data | cut -f1) to the data branch:"
+      ls -la public/data/current
+      exit 0
+    fi
+    echo "push rejected — the data branch moved between the check and the push (attempt $attempt)."
+  else
+    echo "data branch moved mid-publish (attempt $attempt) — re-merging."
   fi
-
-  echo "data branch moved mid-publish (attempt $attempt) — re-merging."
   git checkout -q --force main 2>/dev/null || git checkout -q --force -
   attempt=$((attempt + 1))
 done
