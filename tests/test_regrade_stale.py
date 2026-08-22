@@ -313,6 +313,100 @@ with tempfile.TemporaryDirectory() as td:
     print("doubleheader (Sol audit #2 finding #1): 13 assertions, a player's two doubleheader legs "
           "keep independent, uncontaminated outcome lines in both the outcome log and pool grading")
 
+    # ── DISTANCE-MERGE DOUBLEHEADER KEYING FIX (2026-08-21, quick review of
+    # finding #1's fix) ──
+    #
+    # merge_homer_distances() (extracted from main() specifically so it's
+    # testable here) used to key its lookup dict by player_id alone -- the
+    # same collision class as actual_by_pid, one layer up the display
+    # pipeline. A player who homered in both legs of a doubleheader would
+    # have one leg's distance/exit-velo data silently overwrite the other's
+    # on the merged "who hit it farthest" board.
+
+    _dist_checks_before = CHECKS
+    dh_capture_report = {
+        "all_homer_entries": [
+            {"player_id": DH_PID, "game_pk": DH_GAME_1, "longest_ft": 430, "max_ev_mph": 112.0},
+            {"player_id": DH_PID, "game_pk": DH_GAME_2, "longest_ft": 395, "max_ev_mph": 101.5},
+        ],
+    }
+    dh_merged_leg1 = {"player_id": DH_PID, "name": "DH Player", "base_row": {"game_pk": DH_GAME_1}}
+    dh_merged_leg2 = {"player_id": DH_PID, "name": "DH Player", "base_row": {"game_pk": DH_GAME_2}}
+    dh_merged_rows = [dh_merged_leg1, dh_merged_leg2]
+    lrt.merge_homer_distances(dh_merged_rows, dh_capture_report)
+    check("distance merge: leg-1 row picks up leg 1's own distance (430ft), not leg 2's",
+          dh_merged_leg1["longest_ft"], 430)
+    check("distance merge: leg-1 row picks up leg 1's own exit velo (112.0), not leg 2's",
+          dh_merged_leg1["max_ev_mph"], 112.0)
+    check("distance merge: leg-2 row picks up leg 2's own distance (395ft), not leg 1's",
+          dh_merged_leg2["longest_ft"], 395)
+    check("distance merge: leg-2 row picks up leg 2's own exit velo (101.5), not leg 1's",
+          dh_merged_leg2["max_ev_mph"], 101.5)
+    print(f"distance merge (quick review of finding #1's fix): {CHECKS - _dist_checks_before} assertions, "
+          f"a doubleheader player's two legs keep independent distance/exit-velo data on the merged board")
+
+    # ── PER-ITEM ISOLATION, ROUND 2 (2026-08-21, quick review of finding #6's
+    # fix) ──
+    #
+    # get_player_batting_line() used to sit outside regrade_stale_dates()'s
+    # inner try/except -- a failure there would propagate to the outer
+    # per-date handler and abort every other still-pending game on that
+    # date too, not just the one that actually failed. Proves a batting-line
+    # lookup failure for one game_pk doesn't block a DIFFERENT game_pk's
+    # item, still pending on the very same date, from resolving normally.
+
+    _iso2_checks_before = CHECKS
+    tmp3 = tempfile.TemporaryDirectory()
+    tmp3p = Path(tmp3.name)
+
+    ISO2_GAME_BAD, ISO2_GAME_GOOD = 900201, 900202
+    ISO2_PID_BAD, ISO2_PID_GOOD = 881, 882
+    seed_outcome_log(tmp3p, "2026-08-18", [
+        {"player_id": ISO2_PID_BAD, "game_pk": ISO2_GAME_BAD, "detailed_state": "Suspended: Rain"},
+        {"player_id": ISO2_PID_GOOD, "game_pk": ISO2_GAME_GOOD, "detailed_state": "Suspended: Rain"},
+    ])
+
+    def fake_fetch_game_feed3(game_pk):
+        return {"game_pk": game_pk}
+
+    def fake_get_game_status3(feed):
+        return {"detailed_state": "Final", "abstract_state": "Final"}
+
+    def fake_get_player_batting_line3(game_feed, player_id):
+        if game_feed.get("game_pk") == ISO2_GAME_BAD:
+            raise ValueError("simulated boxscore parse failure")
+        return {"hits": 1, "hr": 1, "runs": 1, "rbi": 1, "tb": 4, "ab": 4, "bb": 0, "k": 0}
+
+    _o_fetch, _o_status, _o_line = lrt.fetch_game_feed, lrt.get_game_status, lrt.get_player_batting_line
+    lrt.fetch_game_feed = fake_fetch_game_feed3
+    lrt.get_game_status = fake_get_game_status3
+    lrt.get_player_batting_line = fake_get_player_batting_line3
+    try:
+        lrt.regrade_stale_dates(fetch_dir=tmp3p, publish_dir=tmp3p, today=TODAY,
+                                 graded_at="2026-08-21T14:00:00Z", lookback_days=14)
+    finally:
+        lrt.fetch_game_feed, lrt.get_game_status, lrt.get_player_batting_line = _o_fetch, _o_status, _o_line
+
+    lines_good = (tmp3p / "outcome_log_2026-08-18.jsonl").read_text(encoding="utf-8").strip().splitlines()
+    good_by_pid = {json.loads(l)["player_id"]: json.loads(l) for l in lines_good}
+    checkTrue("isolation round 2: the GOOD game_pk's player still got a new final revision "
+              "despite the BAD game_pk's batting-line lookup failing",
+              any(row["player_id"] == ISO2_PID_GOOD and row["revision"] == 2 and row["is_final"]
+                  for row in (json.loads(l) for l in lines_good)))
+    bad_revisions = [json.loads(l)["revision"] for l in lines_good if json.loads(l)["player_id"] == ISO2_PID_BAD]
+    check("isolation round 2: the BAD game_pk's player got NO new revision (stayed at revision 1, "
+          "safe to retry next hourly run)", bad_revisions, [1])
+
+    still_open = lrt.find_unresolved_outcome_dates(tmp3p, TODAY, lookback_days=14)
+    checkTrue("isolation round 2: 2026-08-18 is still flagged unresolved (the bad game_pk's player "
+              "is still open, correctly not silently marked resolved)",
+              "2026-08-18" in still_open)
+
+    tmp3.cleanup()
+    print(f"isolation round 2 (quick review of finding #6's fix): {CHECKS - _iso2_checks_before} assertions, "
+          f"a batting-line lookup failure for one game_pk on a date doesn't block another game_pk's "
+          f"item on that same date from resolving")
+
 
 if FAILED:
     print(f"\n{len(FAILED)} FAILED\n" + "\n".join(f"  · {f}" for f in FAILED))

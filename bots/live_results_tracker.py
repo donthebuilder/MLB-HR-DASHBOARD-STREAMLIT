@@ -1971,8 +1971,22 @@ def regrade_stale_dates(
                         print(f"regrade-stale: {date_str} game_pk {game_pk} fetch failed ({exc}) -- "
                               f"skipping this game, continuing with the rest of the queue.")
                         continue
+                # ISOLATION FIX ROUND 2 (2026-08-21, quick review of finding #6's
+                # fix): get_player_batting_line() used to sit outside this
+                # try/except -- if it ever raised (it's defensive today, all
+                # .get()-based, but that's not a guarantee), the exception would
+                # propagate to the outer per-date handler and abort every other
+                # still-pending game on this date too, not just this one,
+                # contradicting the isolation this fix exists to provide.
+                try:
+                    line = get_player_batting_line(game_cache[game_pk], pid)
+                except Exception as exc:
+                    failed_game_pks.add(game_pk)
+                    print(f"regrade-stale: {date_str} game_pk {game_pk} batting-line lookup failed ({exc}) -- "
+                          f"skipping this game, continuing with the rest of the queue.")
+                    continue
                 rows.append({"player_id": pid, "game_pk": game_pk})
-                actual_by_pid[(game_pk, pid)] = get_player_batting_line(game_cache[game_pk], pid)
+                actual_by_pid[(game_pk, pid)] = line
             if not rows:
                 continue
             write_outcome_log(
@@ -2082,6 +2096,34 @@ def merge_homer_entries(graded_slots: List[Dict[str, Any]]) -> List[Dict[str, An
         return (emoji_order.get(first[0], 99), item["name"])
 
     return sorted(out, key=sort_key)
+
+
+def merge_homer_distances(merged_homers: List[Dict[str, Any]], hr_capture_report: Dict[str, Any]) -> None:
+    """Fold per-play distance/exit-velo data from the capture report's raw
+    homer entries onto merge_homer_entries()'s per-player rows, in place --
+    the app reads the merged rows, and "who hit it farthest tonight" is a
+    question about the board, not the box score.
+
+    DOUBLEHEADER KEYING FIX (2026-08-21, quick review of finding #1's fix):
+    extracted from main() specifically so this is independently testable.
+    The lookup dict used to be keyed by player_id alone, the same bug class
+    as actual_by_pid -- a player who homered in both legs of a split
+    doubleheader would have one leg's distance/exit-velo silently overwrite
+    the other's. all_homer_entries already carries game_pk (stamped at
+    build_hr_capture_report()'s own game_cache loop), and each merged row's
+    base_row (a graded_slot row, itself built from SLOT_FIELDS, which
+    includes game_pk) tells us which game that row's numbers came from -- so
+    key and look up by (game_pk, player_id) to match the right leg."""
+    dist_by_pid = {
+        (safe_int(h.get("game_pk"), 0), safe_int(h.get("player_id"), 0)): h
+        for h in (hr_capture_report.get("all_homer_entries") or [])
+    }
+    for m in merged_homers:
+        m_gp = safe_int((m.get("base_row") or {}).get("game_pk"), 0)
+        src = dist_by_pid.get((m_gp, safe_int(m.get("player_id"), 0))) or {}
+        for k in ("longest_ft", "distances_ft", "max_ev_mph", "launch_angle"):
+            if src.get(k) is not None:
+                m[k] = src[k]
 
 
 def format_stat_line(r: Dict[str, Any]) -> str:
@@ -2863,20 +2905,7 @@ def main() -> int:
     pair_pool_results = grade_pairs_pools(pair_pool_sections, actual_by_pid)
     merged_homers = merge_homer_entries(graded_slots)
     hr_capture_report = build_hr_capture_report(rows, game_cache, actual_by_pid)
-
-    # Distance is measured per PLAY, so it lands on the capture report's raw
-    # homer entries. Fold it onto the merged rows too -- the app reads those,
-    # and "who hit it farthest tonight" is a question about the board, not
-    # about the box score.
-    _dist_by_pid = {
-        safe_int(h.get("player_id"), 0): h
-        for h in (hr_capture_report.get("all_homer_entries") or [])
-    }
-    for _m in merged_homers:
-        _src = _dist_by_pid.get(safe_int(_m.get("player_id"), 0)) or {}
-        for _k in ("longest_ft", "distances_ft", "max_ev_mph", "launch_angle"):
-            if _src.get(_k) is not None:
-                _m[_k] = _src[_k]
+    merge_homer_distances(merged_homers, hr_capture_report)
     unique_player_report = build_unique_player_hr_report(graded_slots)
 
     summary = build_summary_text(date_str, graded_slots, merged_homers, pair_pool_results, hr_capture_report, unique_player_report, live_mode=live_mode)

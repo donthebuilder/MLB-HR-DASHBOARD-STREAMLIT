@@ -279,6 +279,31 @@ checkTrue("(coverage) hashing without calculate_pitch_mix_fit/score_hitter produ
           "hash than the real list -- proving they're load-bearing, not decorative additions",
           h_full != h_without_pmix_and_weak_spot)
 
+# ── COVERAGE FIX ROUND 2 (2026-08-21, quick review of the finding-#2 fix
+# itself) ── compute_damage_conversion_v31 and apply_decision_engine_v31 had
+# the exact same gap: apply_model_v2_layers only calls them, and
+# function_structure_hash() hashes a named function's own AST, not its
+# callees' bodies -- so their internals (weights, thresholds, penalty
+# branches) could change forever without moving apply_model_v2_layers's
+# hash. Same two-part proof as above: membership, then that removing them
+# changes the hash.
+checkTrue("(coverage round 2) compute_damage_conversion_v31 is in the hashed formula-func list",
+          md.compute_damage_conversion_v31 in md._HR_CONFIG_FORMULA_FUNCS)
+checkTrue("(coverage round 2) apply_decision_engine_v31 is in the hashed formula-func list",
+          md.apply_decision_engine_v31 in md._HR_CONFIG_FORMULA_FUNCS)
+
+_funcs_without_damage_and_decision = tuple(
+    f for f in md._HR_CONFIG_FORMULA_FUNCS
+    if f not in (md.compute_damage_conversion_v31, md.apply_decision_engine_v31)
+)
+checkTrue("(coverage round 2) removing them actually shrinks the tuple (sanity check on the filter above)",
+          len(_funcs_without_damage_and_decision) == len(md._HR_CONFIG_FORMULA_FUNCS) - 2)
+h_full_2 = cf.hr_config_hash(weights, md._HR_CONFIG_FORMULA_FUNCS)
+h_without_damage_and_decision = cf.hr_config_hash(weights, _funcs_without_damage_and_decision)
+checkTrue("(coverage round 2) hashing without compute_damage_conversion_v31/apply_decision_engine_v31 "
+          "produces a DIFFERENT hash than the real list -- proving they're load-bearing too",
+          h_full_2 != h_without_damage_and_decision)
+
 
 if FAILED:
     print(f"\n{len(FAILED)} FAILED\n" + "\n".join(f"  · {f}" for f in FAILED))

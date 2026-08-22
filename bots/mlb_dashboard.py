@@ -12560,6 +12560,21 @@ def _current_git_sha() -> str:
 # model-evaluation decision. Surgically extracting just the six-tier ladder
 # would be a scoring-code refactor, explicitly out of scope for a
 # provenance-only change.
+#
+# COVERAGE FIX ROUND 2 (2026-08-21, quick review of the finding-#2 fix itself):
+# compute_damage_conversion_v31 and apply_decision_engine_v31 had the exact
+# same gap. compute_damage_conversion_v31 blends five weighted terms
+# (0.30/0.24/0.22/0.14/0.10) plus several literal penalty branches into
+# h.damage_conversion_score, which apply_model_v2_layers reads into hr_raw at
+# a weight comparable to the two functions above (see MODEL_WEIGHTS'
+# damage_conversion_score entry). apply_model_v2_layers's own source only
+# contains the *call site* `compute_damage_conversion_v31(h)` / the decision
+# engine's call site -- function_structure_hash() hashes each named function's
+# own ast.dump(), not its callees' bodies, so a callee's internals can change
+# forever without moving apply_model_v2_layers's hash. Tuning either
+# function's weights/thresholds silently changed hr_score while
+# hr_config_hash() stayed identical -- the same failure mode finding #2 was
+# supposed to close, just one layer deeper.
 _HR_CONFIG_FORMULA_FUNCS = (
     apply_model_v2_layers,
     minmax_norm,
@@ -12567,6 +12582,8 @@ _HR_CONFIG_FORMULA_FUNCS = (
     _spot_damage_for_batter,
     calculate_pitch_mix_fit,
     score_hitter,
+    compute_damage_conversion_v31,
+    apply_decision_engine_v31,
 )
 # The centralized HR tuning surface from MODEL_WEIGHTS (see that dict's own
 # header comment). Order fixed for readability only -- canonical_json sorts

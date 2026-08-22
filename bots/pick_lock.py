@@ -886,7 +886,14 @@ def main() -> int:
     print(f"pick lock — {date}, run #{ledger['runs']}")
     print(f"  {len(games)} games · {n_locked} designations locked ({n_late} locked late)")
     print(f"  pre-game re-picks recorded: {changed_before} · froze this run: {froze_now}")
-    n_por_late = sum(1 for p in por.values() if p.get("locked_late"))
+    # TRI-STATE FIX (2026-08-21, quick review of eval_report.py's finding #3
+    # fix): locked_late is tri-state here too (True/False/None -- see this
+    # file's own docstring above), and a plain truthy check reads None
+    # ("timing genuinely unverifiable") the same as False ("confirmed
+    # on-time"), same bug pattern eval_report.classify() had. This only feeds
+    # a printed summary line, not any exclusion/grading logic, but it's worth
+    # being honest here too rather than leaving one instance of the same bug.
+    n_por_late = sum(1 for p in por.values() if p.get("locked_late") is not False)
     n_por_no_run = sum(1 for p in por.values() if not p.get("run_id"))
     print(f"  prediction_of_record: {len(por)} game(s) locked to a run_id "
           f"({por_new} newly this run, {n_por_late} late, {n_por_no_run} missing a run_id, "
