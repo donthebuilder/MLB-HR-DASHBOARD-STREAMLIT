@@ -1,0 +1,59 @@
+# ⚾ DASH Social — Game Card (2026-08-22).
+#
+# On-demand share card for one matchup. Pass a team abbreviation (either
+# side, e.g. NYY) via the Actions tab's "Run workflow" form. workflow_dispatch
+# only, no schedule — trigger it whenever you want that game as a card.
+# Same "never auto-post" rule as every other social workflow.
+name: Social — Game Card
+
+on:
+  workflow_dispatch:
+    inputs:
+      team:
+        description: 'Either team abbreviation in the matchup, e.g. NYY'
+        required: true
+      date:
+        description: 'Slate date YYYY-MM-DD (defaults to today, UTC)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+concurrency:
+  group: social-game-card
+  cancel-in-progress: false
+
+jobs:
+  game-card:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install deps
+        run: pip install -r bots/requirements.txt
+
+      - name: Build game card draft
+        run: |
+          if [ -n "${{ github.event.inputs.date }}" ]; then
+            python bots/social_game_card.py --team "${{ github.event.inputs.team }}" --date "${{ github.event.inputs.date }}"
+          else
+            python bots/social_game_card.py --team "${{ github.event.inputs.team }}"
+          fi
+
+      - name: Publish to data branch
+        run: bash .github/scripts/publish_data.sh "Social game card"

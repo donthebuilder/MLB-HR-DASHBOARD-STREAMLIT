@@ -24,9 +24,9 @@ from pathlib import Path
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from bots.social import (assets, daily_board, fingerprint as fp, night_recap, pick_cashed,
-                          player_spotlight, publishers, schema, stacked_game, storyline, store,
-                          top_plays, watchlist)
+from bots.social import (assets, board_snapshot, daily_board, fingerprint as fp, game_card,
+                          night_recap, pick_cashed, player_card, player_spotlight, publishers,
+                          schema, stacked_game, storyline, store, top_plays, track_record, watchlist)
 from bots.social.brands import BRANDS, brand
 
 FAILED: list[str] = []
@@ -194,7 +194,8 @@ def test_asset_sizes_defined_for_all_three_variants():
 
 def test_content_types_include_the_2026_08_22_additions():
     for ct in ("player_spotlight", "pick_cashed", "daily_board", "watchlist",
-               "top_plays", "stacked_game", "storyline"):
+               "top_plays", "stacked_game", "storyline",
+               "track_record", "board_snapshot", "game_card", "player_card"):
         check_true(f"{ct} is a valid CONTENT_TYPE", ct in schema.CONTENT_TYPES)
 
 
@@ -384,6 +385,122 @@ def test_render_card_strips_emoji_the_bundled_font_cannot_draw():
     check("emoji-only string collapses to empty", assets._clean("\U0001F9E9"), "")
     check("plain text passes through untouched", assets._clean("PMix Elite"), "PMix Elite")
     check("non-emoji punctuation is preserved", assets._clean("TOP15 · 6/15"), "TOP15 · 6/15")
+
+
+def test_track_record_pools_counts_across_every_day():
+    real_fetch = track_record._fetch
+    try:
+        track_record._fetch = lambda url, timeout=20: {
+            "per_day": {
+                "2026-08-01": {"tiers": {"TOP_PICKS": {"metric_counts": {"HR": [2, 10]}}}},
+                "2026-08-02": {"tiers": {"TOP_PICKS": {"metric_counts": {"HR": [3, 10]}}}},
+            }
+        }
+        data = track_record.build(date_str="2026-08-21")
+        check_true("track record data returned", data is not None)
+        row = next((r for r in (data or {}).get("rows", []) if r["label"] == "TOP PICKS"), None)
+        check_true("TOP PICKS row present", row is not None)
+        check("pooled ok is summed across both days", (row or {}).get("ok"), 5)
+        check("pooled n is summed across both days", (row or {}).get("n"), 20)
+        check("pct computed from the pooled counts, not either day alone", (row or {}).get("pct"), 25.0)
+        check("days reflects how many dates were pooled", data.get("days"), 2)
+    finally:
+        track_record._fetch = real_fetch
+
+
+def test_track_record_returns_none_without_any_headline_tier():
+    real_fetch = track_record._fetch
+    try:
+        track_record._fetch = lambda url, timeout=20: {
+            "per_day": {"2026-08-01": {"tiers": {"CONTACT_PICKS": {"metric_counts": {"XBH": [1, 5]}}}}}
+        }
+        check("no headline-tier counts anywhere -> no track record post",
+              track_record.build(date_str="2026-08-21"), None)
+    finally:
+        track_record._fetch = real_fetch
+
+
+def test_board_snapshot_respects_top_n():
+    real_fetch = board_snapshot._fetch
+    try:
+        board_snapshot._fetch = lambda url, timeout=20: [
+            {"name": f"P{i}", "team": "X", "opponent": "Y", "game_pick_role": "TOP",
+             "top_board_score_v2": 100 - i, "game_pk": 1}
+            for i in range(5)
+        ]
+        data = board_snapshot.build(date_str="2026-08-21", top_n=3)
+        check_true("board snapshot data returned", data is not None)
+        check("top_n caps the returned board size", len(data.get("board", [])), 3)
+        check("board is ranked by score, highest first",
+              [r["name"] for r in data["board"]], ["P0", "P1", "P2"])
+    finally:
+        board_snapshot._fetch = real_fetch
+
+
+def test_game_card_identifies_a_game_by_team_and_overlays_results_once_graded():
+    real_fetch = game_card._fetch
+    try:
+        def fake_fetch(url, timeout=20):
+            if "today_slim.json" in url:
+                return [
+                    {"name": "A", "team": "NYY", "opponent": "BOS", "game_pk": 1,
+                     "game_pick_role": "TOP", "top_board_score_v2": 80, "player_id": 1, "game_time": "t"},
+                    {"name": "B", "team": "BOS", "opponent": "NYY", "game_pk": 1,
+                     "game_pick_role": "HR", "top_board_score_v2": 60, "player_id": 2, "game_time": "t"},
+                    {"name": "C", "team": "TOR", "opponent": "TB", "game_pk": 2,
+                     "game_pick_role": "TOP", "top_board_score_v2": 90, "player_id": 3, "game_time": "t"},
+                ]
+            if "graded_results" in url:
+                return {"graded_slots": [
+                    {"player_id": 1, "game_pk": 1, "actual_hr": 1, "actual_hits": 2,
+                     "game_status": {"detailed_state": "Final"}},
+                ]}
+            return None
+        game_card._fetch = fake_fetch
+
+        data = game_card.build(date_str="2026-08-21", team="nyy")
+        check_true("game card data returned", data is not None)
+        check("resolves the right game_pk from the team", (data or {}).get("game_pk"), 1)
+        names = [p["name"] for p in (data or {}).get("picks", [])]
+        check_true("only picks from the matched game are included", "C" not in names)
+        a_row = next((p for p in data["picks"] if p["name"] == "A"), None)
+        check("graded pick gets its real actual_hr overlaid", (a_row or {}).get("actual_hr"), 1)
+        b_row = next((p for p in data["picks"] if p["name"] == "B"), None)
+        check_true("ungraded pick in the same game gets no invented result", "actual_hr" not in (b_row or {}))
+        check("status reflects the graded game_status", data.get("status"), "final")
+    finally:
+        game_card._fetch = real_fetch
+
+
+def test_player_card_disambiguates_a_real_same_name_collision():
+    """Regression test for a real find during visual QA: today_slim.json can
+    legitimately carry two different active players with the same name (e.g.
+    two real "Max Muncy"s). A bare name lookup must not silently return
+    whichever one happens to sort first — it should prefer the one actually
+    on today's board, and --team must be able to force the other one."""
+    real_fetch = player_card._fetch
+    try:
+        player_card._fetch = lambda url, timeout=20: [
+            {"name": "Max Muncy", "team": "ATH", "opponent": "HOU", "season_avg": 0.21},
+            {"name": "Max Muncy", "team": "LAD", "opponent": "PIT", "game_pick_role": "TOP/HR",
+             "top_board_score_v2": 89.0, "season_avg": 0.25},
+        ]
+        default = player_card.build(date_str="2026-08-21", name="Max Muncy")
+        check("bare name lookup prefers the one on today's board", (default or {}).get("team"), "LAD")
+
+        forced = player_card.build(date_str="2026-08-21", name="Max Muncy", team="ATH")
+        check("--team forces the other same-name player", (forced or {}).get("team"), "ATH")
+    finally:
+        player_card._fetch = real_fetch
+
+
+def test_player_card_returns_none_for_a_player_not_on_the_slate():
+    real_fetch = player_card._fetch
+    try:
+        player_card._fetch = lambda url, timeout=20: [{"name": "A", "team": "X"}]
+        check("player not on today's slate -> no card", player_card.build(date_str="2026-08-21", name="Nobody"), None)
+    finally:
+        player_card._fetch = real_fetch
 
 
 def test_pick_cashed_queue_hr_writes_a_pending_review_post():

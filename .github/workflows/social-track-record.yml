@@ -1,0 +1,46 @@
+# 📈 DASH Social — Track Record (2026-08-22).
+#
+# On-demand share card of the site's own pooled proof numbers (TOP/HIT/HRR
+# rates) — not tied to a single slate, so this is workflow_dispatch only,
+# no schedule. Trigger it from the Actions tab whenever you want a fresh
+# one to share. Same "never auto-post" rule as every other social workflow.
+name: Social — Track Record
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: social-track-record
+  cancel-in-progress: false
+
+jobs:
+  track-record:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install deps
+        run: pip install -r bots/requirements.txt
+
+      - name: Build track record draft
+        run: python bots/social_track_record.py
+
+      - name: Publish to data branch
+        run: bash .github/scripts/publish_data.sh "Social track record"
