@@ -12539,11 +12539,34 @@ def _current_git_sha() -> str:
 # future function added to the HR path must be added here by hand (same
 # "declared, not derived" honesty tradeoff model_registry.py already makes
 # about MODEL_VERSIONS; see that module's own docstring).
+#
+# COVERAGE FIX (2026-08-21, Sol audit #2 finding #2): calculate_pitch_mix_fit
+# and score_hitter were missing from this list even though both directly move
+# hr_score -- calculate_pitch_mix_fit populates h.pitch_mix_score and
+# h.pitch_type_match_score, which apply_model_v2_layers weights at 0.06+0.05
+# (11% of hr_blend) into hr_raw; score_hitter computes h.weak_spot_bonus (a
+# six-tier ladder up to +3.4 points, also added into hr_raw). Before this fix,
+# tuning either function's thresholds changed every row's hr_score while
+# hr_config_hash() stayed byte-identical -- exactly the silent-drift failure
+# mode this module's own docstring says it exists to catch.
+#
+# score_hitter is ~400 lines and computes plenty besides weak_spot_bonus
+# (spot/zone damage labels, HRW inputs, etc.) -- adding the whole function is
+# deliberately over-inclusive, the same documented tradeoff already accepted
+# for apply_model_v2_layers's sibling markets (see this file's own "KNOWN,
+# DOCUMENTED SCOPE LIMIT" section in config_fingerprint.py): an occasional
+# false "config changed" flag on an unrelated score_hitter edit is a two-
+# minute check; missing a real weak_spot_bonus tuning change is a wrong
+# model-evaluation decision. Surgically extracting just the six-tier ladder
+# would be a scoring-code refactor, explicitly out of scope for a
+# provenance-only change.
 _HR_CONFIG_FORMULA_FUNCS = (
     apply_model_v2_layers,
     minmax_norm,
     _hr2_clip,
     _spot_damage_for_batter,
+    calculate_pitch_mix_fit,
+    score_hitter,
 )
 # The centralized HR tuning surface from MODEL_WEIGHTS (see that dict's own
 # header comment). Order fixed for readability only -- canonical_json sorts

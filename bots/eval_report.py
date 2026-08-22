@@ -63,7 +63,10 @@ INCLUDE IN OFFICIAL EVAL (all must hold):
     not void
 Everything else is preserved (never discarded) but excluded from the
 headline tier table, with an honest reason:
-    locked_late            -- run_meta says the run itself came after first pitch
+    locked_late            -- run_meta says the run itself came after first pitch,
+                                OR locking-timing couldn't be verified at all
+                                (locked_late is None, not just True) -- an
+                                unknown timing is never treated as on-time
     missing_provenance      -- run_id and/or generated_at could not be verified
     legacy_or_unknown_model -- model_version missing (predates stamping, or a
                                 registry failure that run)
@@ -311,6 +314,20 @@ def build_candidates(por_entries: list[dict], pred_cache: PredictionLogCache,
             # one placeholder candidate so this game is counted as excluded
             # (missing_prediction_log) rather than silently vanishing from
             # every count in the report.
+            #
+            # PRESERVATION FIX (2026-08-21, Sol audit #2 finding #4): this
+            # used to `continue` right here, which skipped the loop below
+            # that preserves any player with a REAL graded outcome for this
+            # game_pk -- exactly the "(b)" case this function's own
+            # docstring says must never vanish. `rows` being empty means
+            # `seen_pids` stays empty too, so falling through costs nothing
+            # (the "for row in rows" loop is simply a zero-iteration no-op)
+            # and now correctly reaches the preservation loop below. A
+            # player who genuinely homered in a game whose prediction_log
+            # aged out of the 300-file retention window is now still
+            # counted -- as its own per-player missing_score_row, alongside
+            # (not instead of) this one game-level placeholder -- rather
+            # than silently dropped from a 30-day rolling window.
             out.append({
                 "game_pk": gp, "player_id": None, "player": None,
                 "prediction_date": prediction_date, "por": por,
@@ -318,7 +335,6 @@ def build_candidates(por_entries: list[dict], pred_cache: PredictionLogCache,
                 "config_hash": por.get("config_hash"),
                 "row": None,
             })
-            continue
 
         seen_pids: set[str] = set()
         for row in rows:
@@ -388,7 +404,16 @@ def classify(cand: dict, outcomes_by_pgid: dict[str, dict]) -> tuple[str | None,
     # absorbed a HR that no tier could account for, and nothing said a word.
     if not _tierable(cand.get("hr_score")):
         return "unusable_hr_score", provenance
-    if por.get("locked_late"):
+    # LOCKED_LATE FIX (2026-08-21, Sol audit #2 finding #3). pick_lock.py sets
+    # locked_late to None -- deliberately not False -- when generated_at
+    # itself couldn't be verified against run_meta (its own comment: "so
+    # 'unknown' is never silently read as 'on time'"). A plain truthy check
+    # here (`if por.get("locked_late"):`) treated None as falsy -- the exact
+    # "unknown silently read as on time" outcome pick_lock.py's own comment
+    # says must never happen, since a None can still have valid run_id/
+    # generated_at and pass every earlier gate. Only an explicit `False`
+    # (verified on-time) is allowed through now.
+    if por.get("locked_late") is not False:
         return "locked_late", provenance
 
     pgid = f"{cand['game_pk']}|{cand['player_id']}"
@@ -518,6 +543,32 @@ def monotonicity(table: dict[str, dict], min_n: int = 20) -> dict:
         })
     real_violations = [p for p in pairs if p.get("status") == "inverted"]
     return {"pairs": pairs, "monotonic": len(real_violations) == 0, "violations": real_violations}
+
+
+def _phoenix_today() -> dt.date:
+    """Phoenix is UTC-7 year-round (no DST) -- same definition as
+    live_results_tracker.py's _phoenix_today(), duplicated here rather than
+    imported so this module keeps its own lightweight dependency footprint
+    (no requests/sqlite/etc. pulled in just for a date). AS-OF TIMEZONE FIX
+    (2026-08-21, Sol audit #2 finding #7): `--as-of` used to default to
+    `datetime.now(UTC).date()`, while prediction_date/game_date_actual are
+    both anchored to Phoenix local time everywhere else in this pipeline.
+    Between ~5pm and midnight Phoenix time, UTC's calendar date has already
+    rolled to "tomorrow" -- a rolling_window() call with that UTC date as
+    as_of silently drops the oldest day that should be in the window (a
+    7-day window becomes 6 real days) any time this script runs at night
+    without an explicit --as-of."""
+    try:
+        from zoneinfo import ZoneInfo
+        return dt.datetime.now(ZoneInfo("America/Phoenix")).date()
+    except Exception:
+        return (dt.datetime.utcnow() - dt.timedelta(hours=7)).date()
+
+
+def _resolve_as_of(as_of_arg: str | None) -> dt.date:
+    """The CLI's --as-of resolution, factored out of main() so it's directly
+    unit-testable (see AS-OF TIMEZONE FIX below on _phoenix_today())."""
+    return dt.date.fromisoformat(as_of_arg) if as_of_arg else _phoenix_today()
 
 
 def rolling_window(included: list[dict], as_of: dt.date, days: int) -> dict:
@@ -859,12 +910,14 @@ def main() -> int:
                                                           "(both may be given together). Default: all configs together, "
                                                           "with any multi-config drift under one model_version reported "
                                                           "as a loud warning rather than silently pooled.")
-    ap.add_argument("--as-of", default=None, help="Date (YYYY-MM-DD) the rolling windows end on. Default: today (UTC).")
+    ap.add_argument("--as-of", default=None, help="Date (YYYY-MM-DD) the rolling windows end on. "
+                                                    "Default: today, Phoenix local time (matches prediction_date / "
+                                                    "game_date_actual elsewhere in the pipeline).")
     ap.add_argument("--out", default=None, help="Where to write the JSON summary. Default: eval_report.json "
                                                   "next to this script.")
     a = ap.parse_args()
 
-    as_of = dt.date.fromisoformat(a.as_of) if a.as_of else dt.datetime.now(dt.timezone.utc).date()
+    as_of = _resolve_as_of(a.as_of)
 
     if a.dir:
         data_dir = Path(a.dir)

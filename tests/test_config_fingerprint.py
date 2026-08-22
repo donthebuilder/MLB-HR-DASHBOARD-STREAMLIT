@@ -252,6 +252,34 @@ checkTrue("(short_hash) a real hash gets shortened but keeps the sha256: prefix"
           cf.short_hash(h1).startswith("sha256:") and len(cf.short_hash(h1)) < len(h1))
 
 
+# ── COVERAGE FIX (2026-08-21, Sol audit #2 finding #2) ──────────────────
+# calculate_pitch_mix_fit (populates h.pitch_mix_score/h.pitch_type_match_score,
+# weighted 0.06+0.05 -- 11% of hr_blend -- into hr_raw) and score_hitter
+# (computes h.weak_spot_bonus, a six-tier ladder up to +3.4 points, also
+# added into hr_raw) both directly move hr_score but were missing from
+# _HR_CONFIG_FORMULA_FUNCS -- tuning either changed every row's hr_score
+# while hr_config_hash() stayed byte-identical. Proven two ways: membership
+# (a future accidental removal is caught the instant this list shrinks
+# back), and that removing them from the hashed set actually changes the
+# resulting hash (proving they're not just present but load-bearing).
+checkTrue("(coverage) calculate_pitch_mix_fit is in the hashed formula-func list",
+          md.calculate_pitch_mix_fit in md._HR_CONFIG_FORMULA_FUNCS)
+checkTrue("(coverage) score_hitter is in the hashed formula-func list",
+          md.score_hitter in md._HR_CONFIG_FORMULA_FUNCS)
+
+_funcs_without_pmix_and_weak_spot = tuple(
+    f for f in md._HR_CONFIG_FORMULA_FUNCS
+    if f not in (md.calculate_pitch_mix_fit, md.score_hitter)
+)
+checkTrue("(coverage) removing them actually shrinks the tuple (sanity check on the filter above)",
+          len(_funcs_without_pmix_and_weak_spot) == len(md._HR_CONFIG_FORMULA_FUNCS) - 2)
+h_full = cf.hr_config_hash(weights, md._HR_CONFIG_FORMULA_FUNCS)
+h_without_pmix_and_weak_spot = cf.hr_config_hash(weights, _funcs_without_pmix_and_weak_spot)
+checkTrue("(coverage) hashing without calculate_pitch_mix_fit/score_hitter produces a DIFFERENT "
+          "hash than the real list -- proving they're load-bearing, not decorative additions",
+          h_full != h_without_pmix_and_weak_spot)
+
+
 if FAILED:
     print(f"\n{len(FAILED)} FAILED\n" + "\n".join(f"  · {f}" for f in FAILED))
     sys.exit(1)

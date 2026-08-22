@@ -954,7 +954,7 @@ def get_all_homers_from_game(game_feed: Dict[str, Any]) -> List[Dict[str, Any]]:
     return homers
 
 
-def build_hr_capture_report(rows: List[Dict[str, Any]], game_cache: Dict[int, Dict[str, Any]], actual_by_pid: Dict[int, Dict[str, int]]) -> Dict[str, Any]:
+def build_hr_capture_report(rows: List[Dict[str, Any]], game_cache: Dict[int, Dict[str, Any]], actual_by_pid: Dict[Tuple[int, int], Dict[str, int]]) -> Dict[str, Any]:
     """Compare every HR hit on the slate against every player included in the model output."""
     tracked_player_ids = {int(r["player_id"]) for r in rows}
     tracked_by_pid = {int(r["player_id"]): r for r in rows}
@@ -1664,7 +1664,7 @@ def outcome_stats_key(row: Dict[str, Any]) -> Tuple:
 def build_outcome_candidates(
     prediction_date: str,
     rows: List[Dict[str, Any]],
-    actual_by_pid: Dict[int, Dict[str, int]],
+    actual_by_pid: Dict[Tuple[int, int], Dict[str, int]],
     game_status_by_pk: Dict[int, Dict[str, Any]],
     graded_at: str,
 ) -> List[Dict[str, Any]]:
@@ -1706,7 +1706,9 @@ def build_outcome_candidates(
         is_postponed = "postponed" in low or "cancel" in low
         is_suspended = "suspended" in low
 
-        actual = actual_by_pid.get(pid) or {}
+        # (game_pk, pid), NOT pid alone -- see Sol audit #2 finding #1. Reuses
+        # `key` above, which is already this exact tuple.
+        actual = actual_by_pid.get(key) or {}
         hits = safe_int(actual.get("hits"), 0)
         hr = safe_int(actual.get("hr"), 0)
         runs = safe_int(actual.get("runs"), 0)
@@ -1847,7 +1849,7 @@ def append_outcome_log(
 def write_outcome_log(
     prediction_date: str,
     rows: List[Dict[str, Any]],
-    actual_by_pid: Dict[int, Dict[str, int]],
+    actual_by_pid: Dict[Tuple[int, int], Dict[str, int]],
     game_status_by_pk: Dict[int, Dict[str, Any]],
     graded_at: str,
     fetch_dir: Path,
@@ -1935,32 +1937,57 @@ def regrade_stale_dates(
         print("regrade-stale: no unresolved outcomes in the lookback window.")
         return
     for date_str, pending in sorted(stale.items()):
-        print(f"regrade-stale: {date_str} has {len(pending)} still-open player-game(s) -- rechecking live status.")
-        game_cache: Dict[int, Dict[str, Any]] = {}
-        game_status_by_pk: Dict[int, Dict[str, Any]] = {}
-        actual_by_pid: Dict[int, Dict[str, int]] = {}
-        rows: List[Dict[str, Any]] = []
-        for item in pending:
-            pid = safe_int(item.get("player_id"), 0)
-            game_pk = safe_int(item.get("game_pk"), 0)
-            if not pid or not game_pk:
+        # PER-ITEM ERROR ISOLATION (2026-08-21, Sol audit #2 finding #6): both
+        # loops below are wrapped so one bad game_pk (a stale ID the live API
+        # 404s on, a transient 5xx) can't block every other game on this date,
+        # or -- since dates are processed oldest-first -- every later stale
+        # date on this same run. Before this fix an unhandled fetch error
+        # propagated straight out of this function, silently skipping the
+        # whole rest of the queue every single hourly invocation, which
+        # contradicted this function's own "safe to run forever" design
+        # intent (see its docstring above).
+        try:
+            print(f"regrade-stale: {date_str} has {len(pending)} still-open player-game(s) -- rechecking live status.")
+            game_cache: Dict[int, Dict[str, Any]] = {}
+            game_status_by_pk: Dict[int, Dict[str, Any]] = {}
+            failed_game_pks: set = set()
+            # Same (game_pk, player_id) keying as main()'s grading loop -- see
+            # the comment there (Sol audit #2 finding #1). A player still
+            # unresolved in both legs of a suspended doubleheader on the same
+            # recheck pass would otherwise collide here too.
+            actual_by_pid: Dict[Tuple[int, int], Dict[str, int]] = {}
+            rows: List[Dict[str, Any]] = []
+            for item in pending:
+                pid = safe_int(item.get("player_id"), 0)
+                game_pk = safe_int(item.get("game_pk"), 0)
+                if not pid or not game_pk or game_pk in failed_game_pks:
+                    continue
+                if game_pk not in game_cache:
+                    try:
+                        game_cache[game_pk] = fetch_game_feed(game_pk)
+                        game_status_by_pk[game_pk] = get_game_status(game_cache[game_pk])
+                    except Exception as exc:
+                        failed_game_pks.add(game_pk)
+                        print(f"regrade-stale: {date_str} game_pk {game_pk} fetch failed ({exc}) -- "
+                              f"skipping this game, continuing with the rest of the queue.")
+                        continue
+                rows.append({"player_id": pid, "game_pk": game_pk})
+                actual_by_pid[(game_pk, pid)] = get_player_batting_line(game_cache[game_pk], pid)
+            if not rows:
                 continue
-            rows.append({"player_id": pid, "game_pk": game_pk})
-            if game_pk not in game_cache:
-                game_cache[game_pk] = fetch_game_feed(game_pk)
-                game_status_by_pk[game_pk] = get_game_status(game_cache[game_pk])
-            actual_by_pid[pid] = get_player_batting_line(game_cache[game_pk], pid)
-        if not rows:
+            write_outcome_log(
+                prediction_date=date_str,
+                rows=rows,
+                actual_by_pid=actual_by_pid,
+                game_status_by_pk=game_status_by_pk,
+                graded_at=graded_at,
+                fetch_dir=fetch_dir,
+                publish_dir=publish_dir,
+            )
+        except Exception as exc:
+            print(f"regrade-stale: {date_str} failed ({exc}) -- skipping this date, "
+                  f"continuing with the rest of the queue.")
             continue
-        write_outcome_log(
-            prediction_date=date_str,
-            rows=rows,
-            actual_by_pid=actual_by_pid,
-            game_status_by_pk=game_status_by_pk,
-            graded_at=graded_at,
-            fetch_dir=fetch_dir,
-            publish_dir=publish_dir,
-        )
 
 
 def grade_slot(slot: Dict[str, Any], actual: Dict[str, Any]) -> Dict[str, Any]:
@@ -2137,7 +2164,19 @@ def load_pair_builder_sections(date_str: str):
     return {"pair_groups": pair_groups, "pools": pools}
 
 
-def grade_pairs_pools(sections: Dict[str, Any], actual_by_pid: Dict[int, Dict[str, int]]) -> Dict[str, Any]:
+def grade_pairs_pools(sections: Dict[str, Any], actual_by_pid: Dict[Tuple[int, int], Dict[str, int]]) -> Dict[str, Any]:
+    # DOUBLEHEADER GRADING FIX (2026-08-21, Sol audit #2 finding #1): looks up
+    # by (game_pk, player_id), matching how actual_by_pid is now keyed
+    # everywhere else. Both pair/pool player-dict sources (_s2_player_dict in
+    # mlb_dashboard.py, and trim_row()'s SLOT_FIELDS here) carry game_pk, so
+    # this is always available; falls back to {} (never a crash or a
+    # cross-game collision) if a player dict somehow lacks it.
+    def _line_for(p: Dict[str, Any]) -> Dict[str, int]:
+        gp = p.get("game_pk")
+        if gp is None:
+            return {}
+        return actual_by_pid.get((int(gp), int(p["player_id"]))) or {}
+
     graded_pair_groups = []
     all_pairs = []
     cleared_pairs = []
@@ -2145,8 +2184,8 @@ def grade_pairs_pools(sections: Dict[str, Any], actual_by_pid: Dict[int, Dict[st
     for group in sections["pair_groups"]:
         graded_pairs = []
         for a, b, score, label in group["pairs"]:
-            a_hr = safe_int(actual_by_pid.get(int(a["player_id"]), {}).get("hr"), 0)
-            b_hr = safe_int(actual_by_pid.get(int(b["player_id"]), {}).get("hr"), 0)
+            a_hr = safe_int(_line_for(a).get("hr"), 0)
+            b_hr = safe_int(_line_for(b).get("hr"), 0)
             homer_names = []
             if a_hr >= 1:
                 homer_names.append(a["name"])
@@ -2186,12 +2225,12 @@ def grade_pairs_pools(sections: Dict[str, Any], actual_by_pid: Dict[int, Dict[st
         void_names = []
         active = []
         for p in players:
-            line = actual_by_pid.get(int(p["player_id"])) or {}
+            line = _line_for(p)
             if safe_int(line.get("ab"), 0) == 0 and safe_int(line.get("hr"), 0) == 0 and line:
                 void_names.append(p["name"])
             else:
                 active.append(p)
-        homer_names = [p["name"] for p in active if safe_int(actual_by_pid.get(int(p["player_id"]), {}).get("hr"), 0) >= 1]
+        homer_names = [p["name"] for p in active if safe_int(_line_for(p).get("hr"), 0) >= 1]
         hr_count = len(homer_names)
         total_count = len(active)
         cleared = 1 if total_count > 0 and hr_count == total_count else 0
@@ -2678,7 +2717,16 @@ def main() -> int:
     game_cache: Dict[int, Dict[str, Any]] = {}
     game_status_by_pk: Dict[int, Dict[str, Any]] = {}
     skipped_live_games: set[int] = set()
-    actual_by_pid: Dict[int, Dict[str, int]] = {}
+    # DOUBLEHEADER GRADING FIX (2026-08-21, Sol audit #2 finding #1). Keyed
+    # (game_pk, player_id), NEVER player_id alone: a player who bats in BOTH
+    # legs of a doubleheader (the normal case -- same lineup, both games,
+    # confirmed real this season, e.g. 2026-08-17 STL@CIN gamePk 824514 +
+    # 824478) has two genuinely different batting lines, one per game_pk. A
+    # player_id-only dict lets whichever game is processed last silently
+    # overwrite the other's line -- corrupting the PERMANENT, append-only
+    # outcome_log record for the game that lost the race, not just a
+    # transient display value.
+    actual_by_pid: Dict[Tuple[int, int], Dict[str, int]] = {}
     graded_slots: List[Dict[str, Any]] = []
 
     for slot in tracking_slots:
@@ -2691,7 +2739,7 @@ def main() -> int:
             skipped_live_games.add(game_pk)
             continue
         actual = get_player_batting_line(game_cache[game_pk], pid)
-        actual_by_pid[pid] = actual
+        actual_by_pid[(game_pk, pid)] = actual
         graded = grade_slot(slot, actual)
         graded["game_status"] = game_status_by_pk.get(game_pk, {})
         graded["is_final"] = 1 if game_is_final(game_cache[game_pk]) else 0
@@ -2705,8 +2753,8 @@ def main() -> int:
         if game_pk not in game_cache:
             game_cache[game_pk] = fetch_game_feed(game_pk)
             game_status_by_pk[game_pk] = get_game_status(game_cache[game_pk])
-        if pid not in actual_by_pid:
-            actual_by_pid[pid] = get_player_batting_line(game_cache[game_pk], pid)
+        if (game_pk, pid) not in actual_by_pid:
+            actual_by_pid[(game_pk, pid)] = get_player_batting_line(game_cache[game_pk], pid)
 
     # MODEL FOUNDATION (Task 5): append-only outcome log, one line per
     # player-game, model-independent (built off actual_by_pid/rows the same
@@ -2795,7 +2843,7 @@ def main() -> int:
     # whole slate, so the comparison is against the game, not just our picks.
     _tb_by_game: Dict[int, list] = {}
     for row in rows:
-        _l = actual_by_pid.get(int(row["player_id"]))
+        _l = actual_by_pid.get((int(row["game_pk"]), int(row["player_id"])))
         if _l is not None:
             _tb_by_game.setdefault(int(row["game_pk"]), []).append(
                 (int(row["player_id"]), int(_l.get("tb") or 0)))

@@ -570,6 +570,70 @@ print(f"ok   rolling-window date fix: {CHECKS - _ROLLING_DATE_CHECKS_BEFORE} ass
       f"resolved game counts as recent, a recent prediction with a long-stale real game date "
       f"does not, and a legacy row with no game_date_actual falls back safely")
 
+
+# ── SOL AUDIT #2 FINDINGS (2026-08-21) ────────────────────────────────────
+# Isolated in its own directory, same pattern as the two sections above.
+_SOL2_CHECKS_BEFORE = CHECKS
+with tempfile.TemporaryDirectory() as d4:
+    tmp4 = Path(d4)
+    DATE_E = "2026-08-20"
+    AS_OF_E = dt.date(2026, 8, 21)
+
+    # Finding #3: locked_late is None (pick_lock.py's own honest "unknown
+    # timing" value -- generated_at itself couldn't be verified against
+    # run_meta), NOT False. A plain truthy check treats None as falsy and
+    # lets it through as if it were confirmed on-time; must be excluded,
+    # same as a confirmed-True locked_late.
+    gp_unknown_timing = "9600"
+    run_unknown_timing = "2026-08-20.100000Z.test-unknown-timing"
+    write_por_log(tmp4, DATE_E, [por(gp_unknown_timing, run_unknown_timing, "mlb_hr_v3",
+                                      "2026-08-20T10:00:00+00:00", None, DATE_E)])
+    write_pred_log(tmp4, run_unknown_timing, DATE_E,
+                    [{"pid": 4001, "name": "UnknownTiming", "gp": gp_unknown_timing, "score": 90.0}])
+    write_outcome_log(tmp4, DATE_E, [outcome(gp_unknown_timing, 4001, True)])
+
+    report_unknown_timing = ev.build_report(tmp4, model_version=None, as_of=AS_OF_E)
+    check("locked_late=None (unverifiable timing, has valid run_id/generated_at/model_version) "
+          "is excluded as locked_late, NOT silently included as on-time",
+          report_unknown_timing["excluded_by_reason"].get("locked_late"), 1)
+    check("locked_late=None does not sneak into n_included", report_unknown_timing["n_included"], 0)
+
+    # Finding #4: run_id known but prediction_log_<run_id>.jsonl was NEVER
+    # WRITTEN at all (retention-expired or never published) -- AND there's a
+    # REAL graded outcome (a home run) for one of that game's players. Before
+    # the fix, build_candidates()'s early `continue` after appending the
+    # game-level placeholder skipped the preservation loop entirely, so this
+    # player -- and his real HR -- never appeared as a candidate at all, not
+    # even as an honest exclusion. He'd simply vanish from a 30-day rolling
+    # window with no trace.
+    gp_expired_log = "9601"
+    run_expired_log = "2026-08-20.110000Z.test-expired-log-NEVER-WRITTEN"
+    write_por_log(tmp4, DATE_E, [por(gp_expired_log, run_expired_log, "mlb_hr_v3",
+                                      "2026-08-20T10:00:00+00:00", False, DATE_E)])
+    # Deliberately no write_pred_log() call -- simulates a prediction_log that
+    # aged out of the 300-file retention window.
+    write_outcome_log(tmp4, DATE_E, [outcome(gp_expired_log, 5001, True)])  # he really homered
+
+    report_expired_log = ev.build_report(tmp4, model_version=None, as_of=AS_OF_E)
+    check("the game-level placeholder is still counted as missing_prediction_log (1 game affected)",
+          report_expired_log["excluded_by_reason"].get("missing_prediction_log"), 1)
+    check("the specific player with a real graded outcome is ALSO preserved, individually, "
+          "as missing_score_row -- not silently dropped just because the whole game's "
+          "prediction_log is gone",
+          report_expired_log["excluded_by_reason"].get("missing_score_row"), 1)
+
+    # Finding #7: --as-of defaults to Phoenix local time, not UTC, matching
+    # prediction_date/game_date_actual everywhere else in the pipeline.
+    checkTrue("_phoenix_today() returns a real date object", isinstance(ev._phoenix_today(), dt.date))
+    check("_resolve_as_of(None) calls _phoenix_today(), not UTC now()",
+          ev._resolve_as_of(None), ev._phoenix_today())
+    check("_resolve_as_of('2026-08-20') parses the explicit override, ignoring _phoenix_today()",
+          ev._resolve_as_of("2026-08-20"), dt.date(2026, 8, 20))
+
+print(f"ok   Sol audit #2 fixes: {CHECKS - _SOL2_CHECKS_BEFORE} assertions, locked_late=None "
+      f"correctly excluded (not read as on-time) + a real outcome preserved when its whole "
+      f"prediction_log has aged out + --as-of defaults to Phoenix local time, not UTC")
+
 if FAILED:
     print(f"\n{len(FAILED)} FAILED\n" + "\n".join(f"  · {f}" for f in FAILED))
     sys.exit(1)

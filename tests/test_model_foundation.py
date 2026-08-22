@@ -320,9 +320,12 @@ outcome_rows = [
     {"player_id": 100, "game_pk": 700, "name": "Slate Player 0"},
     {"player_id": 101, "game_pk": 700, "name": "Slate Player 1"},
 ]
+# Keyed (game_pk, player_id), NOT player_id alone -- see Sol audit #2
+# finding #1 / DOUBLEHEADER GRADING FIX. Matches how build_outcome_candidates()
+# and every other real call site now key this dict.
 actual_by_pid = {
-    100: {"hits": 2, "hr": 1, "runs": 1, "rbi": 2, "tb": 5, "ab": 4, "bb": 0, "k": 1},
-    101: {"hits": 0, "hr": 0, "runs": 0, "rbi": 0, "tb": 0, "ab": 0, "bb": 0, "k": 0},
+    (700, 100): {"hits": 2, "hr": 1, "runs": 1, "rbi": 2, "tb": 5, "ab": 4, "bb": 0, "k": 1},
+    (700, 101): {"hits": 0, "hr": 0, "runs": 0, "rbi": 0, "tb": 0, "ab": 0, "bb": 0, "k": 0},
 }
 game_status_by_pk = {700: {"detailed_state": "Final"}}
 graded_at = dt.datetime.now(dt.timezone.utc).isoformat()
@@ -359,7 +362,7 @@ check("outcome: identical re-grade does not shrink or duplicate history",
 
 # a real change (game just went final with a different stat line) appends a
 # NEW revision and keeps the old one intact
-actual_by_pid[101] = {"hits": 1, "hr": 0, "runs": 0, "rbi": 1, "tb": 1, "ab": 3, "bb": 0, "k": 1}
+actual_by_pid[(700, 101)] = {"hits": 1, "hr": 0, "runs": 0, "rbi": 1, "tb": 1, "ab": 3, "bb": 0, "k": 1}
 changed_candidates = build_outcome_candidates("2026-08-21", outcome_rows, actual_by_pid, game_status_by_pk, graded_at)
 third_lines, third_appended = append_outcome_log(changed_candidates, tmp_outcome)
 check("outcome: a real stat change appends exactly one new revision", third_appended, 1)
@@ -371,7 +374,7 @@ checkTrue("outcome: revision 2 supersedes revision 1",
 # postponed game -> void with an honest reason, never silently dropped
 postponed_rows = [{"player_id": 900, "game_pk": 999, "name": "Rainout Guy"}]
 postponed_status = {999: {"detailed_state": "Postponed"}}
-postponed_actual = {900: {"hits": 0, "hr": 0, "runs": 0, "rbi": 0, "tb": 0, "ab": 0, "bb": 0, "k": 0}}
+postponed_actual = {(999, 900): {"hits": 0, "hr": 0, "runs": 0, "rbi": 0, "tb": 0, "ab": 0, "bb": 0, "k": 0}}
 postponed_cands = build_outcome_candidates("2026-08-21", postponed_rows, postponed_actual, postponed_status, graded_at)
 check("outcome: postponed game produces a row (never silently missing)", len(postponed_cands), 1)
 check("outcome: postponed void_reason is honest", postponed_cands[0]["void_reason"], "postponed")
@@ -379,7 +382,7 @@ check("outcome: postponed void_reason is honest", postponed_cands[0]["void_reaso
 # a game still in progress is NOT void -- it's simply not final yet
 live_status = {998: {"detailed_state": "In Progress"}}
 live_rows = [{"player_id": 901, "game_pk": 998, "name": "Mid Game Guy"}]
-live_actual = {901: {"hits": 1, "hr": 0, "runs": 0, "rbi": 0, "tb": 1, "ab": 2, "bb": 0, "k": 0}}
+live_actual = {(998, 901): {"hits": 1, "hr": 0, "runs": 0, "rbi": 0, "tb": 1, "ab": 2, "bb": 0, "k": 0}}
 live_cands = build_outcome_candidates("2026-08-21", live_rows, live_actual, live_status, graded_at)
 check("outcome: in-progress game is not marked void", live_cands[0]["void"], False)
 check("outcome: in-progress game_status is carried through honestly", live_cands[0]["game_status"], "In Progress")

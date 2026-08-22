@@ -72,9 +72,12 @@ def seed_outcome_log(tmpdir: Path, date_str: str, entries: list[dict]) -> Path:
         e["game_pk"]: {"detailed_state": e["detailed_state"], "abstract_state": e["detailed_state"]}
         for e in entries
     }
+    # Keyed (game_pk, player_id), NOT player_id alone -- see Sol audit #2
+    # finding #1 / DOUBLEHEADER GRADING FIX. Matches how build_outcome_candidates()
+    # and every other real call site now key this dict.
     actual_by_pid = {
-        e["player_id"]: {"hits": 0, "hr": e.get("hr", 0), "runs": 0, "rbi": 0, "tb": 0,
-                          "ab": 1 if "final" in e["detailed_state"].lower() else 0, "bb": 0, "k": 0}
+        (e["game_pk"], e["player_id"]): {"hits": 0, "hr": e.get("hr", 0), "runs": 0, "rbi": 0, "tb": 0,
+                                          "ab": 1 if "final" in e["detailed_state"].lower() else 0, "bb": 0, "k": 0}
         for e in entries
     }
     candidates = lrt.build_outcome_candidates(date_str, rows, actual_by_pid, game_status_by_pk, "2026-08-14T10:00:00Z")
@@ -112,13 +115,13 @@ with tempfile.TemporaryDirectory() as td:
     p1 = tmp / "outcome_log_2026-08-16.jsonl"
     cands_r1 = lrt.build_outcome_candidates(
         "2026-08-16", [{"player_id": 555, "game_pk": 900005}],
-        {555: {"hits": 0, "hr": 0, "runs": 0, "rbi": 0, "tb": 0, "ab": 0, "bb": 0, "k": 0}},
+        {(900005, 555): {"hits": 0, "hr": 0, "runs": 0, "rbi": 0, "tb": 0, "ab": 0, "bb": 0, "k": 0}},
         {900005: {"detailed_state": "Suspended", "abstract_state": "Suspended"}}, "2026-08-14T10:00:00Z")
     lines_r1, _ = lrt.append_outcome_log(cands_r1, None)
     p1.write_text("\n".join(lines_r1) + "\n", encoding="utf-8")
     cands_r2 = lrt.build_outcome_candidates(
         "2026-08-16", [{"player_id": 555, "game_pk": 900005}],
-        {555: {"hits": 2, "hr": 1, "runs": 1, "rbi": 2, "tb": 5, "ab": 4, "bb": 0, "k": 1}},
+        {(900005, 555): {"hits": 2, "hr": 1, "runs": 1, "rbi": 2, "tb": 5, "ab": 4, "bb": 0, "k": 1}},
         {900005: {"detailed_state": "Final", "abstract_state": "Final"}}, "2026-08-15T10:00:00Z")
     lines_r2, appended_r2 = lrt.append_outcome_log(cands_r2, p1)
     p1.write_text("\n".join(lines_r2) + "\n", encoding="utf-8")
@@ -245,6 +248,70 @@ with tempfile.TemporaryDirectory() as td:
 
     found_final = lrt.find_unresolved_outcome_dates(tmp, TODAY, lookback_days=14)
     checkFalse("08-20 is no longer flagged once genuinely resolved", "2026-08-20" in found_final)
+
+    # ── DOUBLEHEADER GRADING FIX (2026-08-21, Sol audit #2 finding #1) ──
+    #
+    # A player who bats in BOTH legs of a doubleheader (same player_id, two
+    # distinct game_pks, same date -- confirmed real this season: 2026-08-17
+    # STL@CIN, gamePk 824514 + 824478) has two genuinely different batting
+    # lines. actual_by_pid used to be keyed by player_id alone, so whichever
+    # game was processed last silently overwrote the other's line in the
+    # PERMANENT, append-only outcome log. Proven directly against
+    # build_outcome_candidates() -- the real function, not a reimplementation.
+
+    DH_PID = 777
+    DH_GAME_1, DH_GAME_2 = 900101, 900102
+    dh_actual_by_pid = {
+        (DH_GAME_1, DH_PID): {"hits": 1, "hr": 1, "runs": 1, "rbi": 1, "tb": 4, "ab": 4, "bb": 0, "k": 1},
+        (DH_GAME_2, DH_PID): {"hits": 0, "hr": 0, "runs": 0, "rbi": 0, "tb": 0, "ab": 4, "bb": 0, "k": 2},
+    }
+    dh_status = {
+        DH_GAME_1: {"detailed_state": "Final", "abstract_state": "Final"},
+        DH_GAME_2: {"detailed_state": "Final", "abstract_state": "Final"},
+    }
+    dh_rows = [{"player_id": DH_PID, "game_pk": DH_GAME_1}, {"player_id": DH_PID, "game_pk": DH_GAME_2}]
+    dh_candidates = lrt.build_outcome_candidates("2026-08-17", dh_rows, dh_actual_by_pid, dh_status, "2026-08-17T22:00:00Z")
+    check("doubleheader: build_outcome_candidates produces exactly 2 candidates (one per leg)",
+          len(dh_candidates), 2)
+    dh_by_game = {c["game_pk"]: c for c in dh_candidates}
+    checkTrue("doubleheader: game 1's candidate (where he homered) has went_yard True",
+              dh_by_game[DH_GAME_1]["went_yard"])
+    checkFalse("doubleheader: game 2's candidate (where he did NOT homer) has went_yard False -- "
+               "NOT overwritten by game 1's line",
+               dh_by_game[DH_GAME_2]["went_yard"])
+    check("doubleheader: game 1's home_runs is 1", dh_by_game[DH_GAME_1]["home_runs"], 1)
+    check("doubleheader: game 2's home_runs is 0, not contaminated by game 1's", dh_by_game[DH_GAME_2]["home_runs"], 0)
+    check("doubleheader: game 1's at_bats is 4", dh_by_game[DH_GAME_1]["at_bats"], 4)
+    check("doubleheader: game 2's strikeouts-implying at_bats also 4 (independent line, not shared)",
+          dh_by_game[DH_GAME_2]["at_bats"], 4)
+
+    # Same fix, same-shaped collision, in grade_pairs_pools() -- pools/pairs
+    # read the same actual_by_pid dict, keyed off each player-dict's own
+    # game_pk (as published by _s2_player_dict/trim_row, both of which carry
+    # it). A pool player whose entry is DH_GAME_2 must never pick up
+    # DH_GAME_1's homer.
+    dh_sections = {
+        "pair_groups": [],
+        "pools": [{
+            "label": "DH TEST POOL",
+            "players": [
+                {"player_id": DH_PID, "name": "DH Player", "game_pk": DH_GAME_1},
+                {"player_id": DH_PID, "name": "DH Player (leg 2 entry)", "game_pk": DH_GAME_2},
+            ],
+        }],
+    }
+    dh_pool_result = lrt.grade_pairs_pools(dh_sections, dh_actual_by_pid)
+    dh_pool = dh_pool_result["graded_pools"][0]
+    check("grade_pairs_pools: only the leg-1 entry (real HR) is in homer_names",
+          dh_pool["homer_names"], ["DH Player"])
+    checkTrue("grade_pairs_pools: leg-2 entry's name is NOT in homer_names -- not contaminated by leg 1's HR",
+              "DH Player (leg 2 entry)" not in dh_pool["homer_names"])
+    check("grade_pairs_pools: hr_count is 1, not 2 (only one leg actually homered)", dh_pool["hr_count"], 1)
+    check("grade_pairs_pools: both legs counted active (neither voided -- both had at-bats)",
+          dh_pool["total_count"], 2)
+
+    print("doubleheader (Sol audit #2 finding #1): 13 assertions, a player's two doubleheader legs "
+          "keep independent, uncontaminated outcome lines in both the outcome log and pool grading")
 
 
 if FAILED:

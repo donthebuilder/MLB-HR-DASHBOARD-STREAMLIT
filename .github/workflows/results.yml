@@ -116,6 +116,35 @@ jobs:
           fi
         continue-on-error: true
 
+      # SILENT-RESET GUARD (2026-08-21, Sol audit #2 finding #5). The restore
+      # step above is deliberately best-effort (continue-on-error: true) --
+      # an infra hiccup (git fetch flaking, origin/data briefly unreachable)
+      # shouldn't fail the whole grading run. But bots/outputs/ is also the
+      # `existing_path` that TODAY's own write_outcome_log() call reads a few
+      # steps below, to tell "nothing changed" from "this needs a new
+      # revision." If the data branch already has TODAY's own
+      # outcome_log_<date>.jsonl (meaning an earlier run today already
+      # published some revisions) but the restore above silently didn't land
+      # it locally, write_outcome_log() would see no prior history at all,
+      # treat every candidate as revision=1, and -- because it always stages
+      # a file for today's date -- permanently overwrite the true
+      # accumulated revision/supersedes history when publish_data.sh's
+      # carry_forward() runs (it only pulls the previous publish's copy when
+      # THIS run didn't already stage one, and this run always does). That's
+      # strictly worse than just skipping today's grading, so this step has
+      # NO continue-on-error: a genuine restore failure here must stop the
+      # job loudly, not corrupt the append-only log silently.
+      - name: Verify today's own outcome log restored cleanly (if it exists on the data branch)
+        run: |
+          PHX_TODAY=$(date -u -d '-7 hours' +%Y-%m-%d)
+          REMOTE="/tmp/outcome-restore/public/data/current/outcome_log_${PHX_TODAY}.jsonl"
+          LOCAL="bots/outputs/outcome_log_${PHX_TODAY}.jsonl"
+          if [ -f "$REMOTE" ] && [ ! -f "$LOCAL" ]; then
+            echo "::error::data branch has outcome_log_${PHX_TODAY}.jsonl but it did not land in bots/outputs/ -- refusing to continue, which would silently reset today's revision history instead of just skipping the stale-date recheck."
+            exit 1
+          fi
+          echo "Restore guard OK (no today-dated outcome log on the data branch that failed to restore locally)."
+
       # FIXED: this step used to call `python bots/grade_results.py`, a file
       # that does not exist in this repo -- the grader is
       # bots/live_results_tracker.py. Every scheduled run had been failing on
