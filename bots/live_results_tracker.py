@@ -703,6 +703,17 @@ def _webhook_transitions(old_payload, new_payload, date_str: str = "") -> None:
                         break
                 _called = f", called pregame at {_pg:.0f}" if _pg else ""
                 hr_lines.append(f"💥 **{name}** ({role} pick{_called}) went deep{extra}{watch}")
+                # Social "pick cashed" post — same transition, same run, no
+                # extra fetch. Isolated try/except so a social-pipeline
+                # failure never costs us this Discord line (2026-08-22).
+                try:
+                    from bots.social import pick_cashed as _pick_cashed
+                    _pick_cashed.queue_hr(name=name, role=role, date_str=date_str or "",
+                                           team=sl.get("team"), opponent=sl.get("opponent"),
+                                           hr_score=_pg or None, hr_count=hr_n,
+                                           called_pregame=_pg or None)
+                except Exception as _sexc:
+                    print(f"  · social pick-cashed skipped for {name}: {_sexc}")
             if hr_n >= 2 and hr_o < 2:
                 multi_lines.append(f"🚀 **{name}**: {hr_n} HR tonight")
             # Big-bases nights (2026-08-06): 4+ TB crossing, gated so a fresh
@@ -807,6 +818,11 @@ def _webhook_transitions(old_payload, new_payload, date_str: str = "") -> None:
             old_hit = oldp.get(label, (0,))[0]
             if hit >= tot and old_hit < tot:
                 ticket_lines.append(f"💰 **POOL CASHED — {label}**: all {tot} went deep")
+                try:
+                    from bots.social import pick_cashed as _pick_cashed
+                    _pick_cashed.queue_pool_cashed(label=label, members=list(members), date_str=date_str or "")
+                except Exception as _sexc:
+                    print(f"  · social pick-cashed skipped for pool {label}: {_sexc}")
             elif hit == tot - 1 and old_hit < tot - 1:
                 missing = [m for m in members if m.lower() not in homered]
                 ticket_lines.append(f"🎟 {label} · **{hit}/{tot}** — one swing away ({', '.join(missing[:3])})")
@@ -824,6 +840,12 @@ def _webhook_transitions(old_payload, new_payload, date_str: str = "") -> None:
                 continue
             if a_n.lower() in new_hr and b_n.lower() in new_hr and not (a_n.lower() in old_hr and b_n.lower() in old_hr):
                 ticket_lines.append(f"💰 **PAIR CASHED — {a_n} + {b_n}** ({pr.get('label', 'pair')})")
+                try:
+                    from bots.social import pick_cashed as _pick_cashed
+                    _pick_cashed.queue_pair_cashed(a=a_n, b=b_n, label=str(pr.get("label", "pair")),
+                                                    date_str=date_str or "")
+                except Exception as _sexc:
+                    print(f"  · social pick-cashed skipped for pair {a_n}+{b_n}: {_sexc}")
 
         # ── night wrap: per-category record, once, when grading turns final ──
         def final_share(p):

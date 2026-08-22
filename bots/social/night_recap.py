@@ -79,18 +79,29 @@ def _odds_price_for(player_id: int, odds_history: dict[str, Any] | None, date_st
     return None
 
 
-def build(*, date_str: str | None = None, odds_history: bool = True) -> dict[str, Any] | None:
-    """Returns a Night Recap `data` dict, or None if the slate isn't graded
-    complete yet / no data is available (the caller should not queue a post
-    in either case)."""
-    date_str = date_str or dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d")
-
+def fetch_graded(date_str: str) -> dict[str, Any] | None:
+    """Fetch + validate the graded payload for date_str, or None. Split out
+    of build() so a caller (social_night_recap.py) can fetch it once and
+    reuse it for a same-run player_spotlight.build(graded=...) instead of a
+    second HTTP round trip for the same file."""
     graded = _fetch(f"{RAW}/graded_results_{date_str}.json")
     if not graded:
         # Same-day slate before the per-date archive file exists yet.
         graded = _fetch(f"{RAW}/results_final.json")
         if graded and str(graded.get("date")) != date_str:
             graded = None
+    return graded
+
+
+def build(*, date_str: str | None = None, odds_history: bool = True,
+          graded: dict[str, Any] | None = None) -> dict[str, Any] | None:
+    """Returns a Night Recap `data` dict, or None if the slate isn't graded
+    complete yet / no data is available (the caller should not queue a post
+    in either case). Pass `graded` to reuse an already-fetched payload."""
+    date_str = date_str or dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d")
+
+    if graded is None:
+        graded = fetch_graded(date_str)
     if not graded:
         print(f"  · no graded results available for {date_str}")
         return None

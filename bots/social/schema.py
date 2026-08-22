@@ -32,6 +32,9 @@ CONTENT_TYPES = (
     "pick_cashed",
     "night_recap",
     "trend",
+    "top_plays",      # 2026-08-22: top N results (hits/HR) of a graded night, leaderboard style
+    "stacked_game",   # 2026-08-22: the single game carrying the most picks on the board
+    "storyline",      # 2026-08-22: a pick's own model-written top_pick_reason, given a card
 )
 
 PLATFORMS = ("x", "instagram", "discord")

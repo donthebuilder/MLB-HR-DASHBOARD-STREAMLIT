@@ -1,0 +1,63 @@
+# 📋 DASH Social — Daily Board (2026-08-22).
+#
+# The pre-game counterpart to Social — Night Recap: once today's lineups
+# have mostly locked, build ONE Moonshot daily-board draft from the site's
+# own today_slim.json ranking and drop it into the approval queue as
+# pending_review. Same "never auto-post" rule as every other social
+# workflow — see bots/social_daily_board.py's own docstring.
+#
+# Scheduled 30 minutes after today.yml's "30 21 * * *" run, which that
+# workflow's own comment marks as "2:30pm Phoenix - most lineups are in by
+# now" — so today_slim.json's game_pick_role assignments are fresh.
+name: Social — Daily Board
+
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Slate date YYYY-MM-DD (defaults to today, UTC)'
+        required: false
+        default: ''
+  schedule:
+    - cron: '0 22 * * *'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: social-daily-board
+  cancel-in-progress: false
+
+jobs:
+  daily-board:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install deps
+        run: pip install -r bots/requirements.txt
+
+      - name: Build daily board draft
+        run: |
+          if [ -n "${{ github.event.inputs.date }}" ]; then
+            python bots/social_daily_board.py --date "${{ github.event.inputs.date }}"
+          else
+            python bots/social_daily_board.py
+          fi
+
+      - name: Publish to data branch
+        run: bash .github/scripts/publish_data.sh "Social daily board"

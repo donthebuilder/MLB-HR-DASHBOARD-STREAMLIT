@@ -1,0 +1,58 @@
+# 🔥 DASH Social — Watchlist (2026-08-22).
+#
+# Players in today's slate running hot by their own last-5-game numbers —
+# see bots/social/watchlist.py for the fixed, documented threshold. Runs
+# once daily alongside the Daily Board, same "never auto-post" rule as
+# every other social workflow.
+name: Social — Watchlist
+
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Slate date YYYY-MM-DD (defaults to today, UTC)'
+        required: false
+        default: ''
+  schedule:
+    - cron: '15 22 * * *'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: social-watchlist
+  cancel-in-progress: false
+
+jobs:
+  watchlist:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install deps
+        run: pip install -r bots/requirements.txt
+
+      - name: Build watchlist draft
+        run: |
+          if [ -n "${{ github.event.inputs.date }}" ]; then
+            python bots/social_watchlist.py --date "${{ github.event.inputs.date }}"
+          else
+            python bots/social_watchlist.py
+          fi
+
+      - name: Publish to data branch
+        run: bash .github/scripts/publish_data.sh "Social watchlist"
