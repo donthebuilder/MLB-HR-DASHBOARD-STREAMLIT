@@ -1249,6 +1249,87 @@ def get_all_homers_from_game(game_feed: Dict[str, Any]) -> List[Dict[str, Any]]:
     return homers
 
 
+def build_pick_coverage_report(rows: List[Dict[str, Any]],
+                               homer_entries: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Per-game HR coverage -- Donovan's standing target (2026-08-23):
+    "90% or close: any designated pick homers, per game, at minimum."
+
+    Coverage in plain words: PRECISION asks "when we name a guy, how often
+    is he right?" -- that is every category's own win rate, already
+    reported. COVERAGE asks the opposite: "when a homer happens in a game,
+    had we named that guy -- under ANY badge?" This report answers the
+    second question, per night, with the games it missed listed by name so
+    a miss is inspectable instead of a percentage.
+
+    Three widening rings per HR game, matching the three standing targets:
+      covered_top_hr   : the homerer wore TOP or HR        (target >= 50%)
+      covered_any_pick : ...any real badge, WATCH excluded
+      covered_with_watch: ...any badge INCLUDING the WATCH
+                          coverage tier                    (target -> 85-90%)
+
+    Measured baselines when this shipped (27 leaked nights / 3 clean):
+    any-designated 59%, TOP-or-HR 31%; six picks by the then-current score
+    topped out ~69% and K=9 reached 85%, which is why WATCH exists at all.
+
+    Reads roles off the CURRENTLY loaded rows' game_pick_role, so it
+    honestly reflects what the site showed; homer_entries is
+    hr_capture_report's outcome-only ledger (all_homer_entries), which
+    cannot leak.
+    """
+    roles_by_key: Dict[Tuple[int, int], set] = {}
+    name_by_key: Dict[Tuple[int, int], str] = {}
+    for r in rows:
+        try:
+            key = (int(r.get("game_pk")), int(r.get("player_id")))
+        except (TypeError, ValueError):
+            continue
+        toks = {t.strip().upper() for t in str(r.get("game_pick_role") or "").split("/") if t.strip()}
+        if toks:
+            roles_by_key[key] = roles_by_key.get(key, set()) | toks
+        name_by_key.setdefault(key, str(r.get("name") or ""))
+
+    by_game: Dict[int, List[Dict[str, Any]]] = {}
+    for e in homer_entries or []:
+        try:
+            gp = int(e.get("game_pk")); pid = int(e.get("player_id"))
+        except (TypeError, ValueError):
+            continue
+        by_game.setdefault(gp, []).append({"pid": pid, "name": str(e.get("name") or "")})
+
+    games_with_hr = len(by_game)
+    cov_top_hr = cov_any = cov_watch = 0
+    uncovered: List[Dict[str, Any]] = []
+    for gp, homers in sorted(by_game.items()):
+        toks_all: set = set()
+        for h in homers:
+            toks_all |= roles_by_key.get((gp, h["pid"]), set())
+        real = toks_all - {"WATCH"}
+        hit_top_hr = bool(toks_all & {"TOP", "HR"})
+        hit_any = bool(real)
+        hit_watch = bool(toks_all)
+        cov_top_hr += 1 if hit_top_hr else 0
+        cov_any += 1 if hit_any else 0
+        cov_watch += 1 if hit_watch else 0
+        if not hit_watch:
+            uncovered.append({"game_pk": gp,
+                              "homered": [h["name"] or str(h["pid"]) for h in homers]})
+
+    def _pct(n: int) -> Optional[float]:
+        return round(100.0 * n / games_with_hr, 1) if games_with_hr else None
+
+    return {
+        "games_with_hr": games_with_hr,
+        "covered_top_hr": cov_top_hr,
+        "covered_any_pick": cov_any,
+        "covered_with_watch": cov_watch,
+        "pct_top_hr": _pct(cov_top_hr),
+        "pct_any_pick": _pct(cov_any),
+        "pct_with_watch": _pct(cov_watch),
+        "targets": {"pct_top_hr": 50.0, "pct_with_watch": 90.0},
+        "uncovered_games": uncovered,
+    }
+
+
 def build_hr_capture_report(rows: List[Dict[str, Any]], game_cache: Dict[int, Dict[str, Any]], actual_by_pid: Dict[Tuple[int, int], Dict[str, int]]) -> Dict[str, Any]:
     """Compare every HR hit on the slate against every player included in the model output."""
     tracked_player_ids = {int(r["player_id"]) for r in rows}
@@ -3372,6 +3453,10 @@ def main() -> int:
     # (4 of 5 "missed" HRs on 2026-08-21 were this, not a real coverage gap).
     hr_capture_report = build_hr_capture_report(rows + dropped_locked_rows, game_cache, actual_by_pid)
     merge_homer_distances(merged_homers, hr_capture_report)
+    # Per-game coverage scoreboard (2026-08-23) -- the third standing target.
+    # Reads roles from the same rows and outcomes from the capture ledger.
+    pick_coverage_report = build_pick_coverage_report(
+        rows + dropped_locked_rows, hr_capture_report.get("all_homer_entries") or [])
     unique_player_report = build_unique_player_hr_report(graded_slots)
 
     summary = build_summary_text(date_str, graded_slots, merged_homers, pair_pool_results, hr_capture_report, unique_player_report, live_mode=live_mode)
@@ -3453,6 +3538,7 @@ def main() -> int:
         "merged_homers": merged_homers,
         "pair_pool_results": pair_pool_results,
         "hr_capture_report": hr_capture_report,
+        "pick_coverage_report": pick_coverage_report,
         "game_status_by_pk": game_status_by_pk,
         "skipped_live_games": sorted(skipped_live_games),
     }

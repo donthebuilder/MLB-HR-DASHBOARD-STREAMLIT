@@ -6693,6 +6693,46 @@ def apply_decision_engine_v31(h: HitterRecord) -> HitterRecord:
         h.beginner_label = "HRR / XBH Lean"
     return h
 
+LEAGUE_ISO = 0.160        # ~MLB league ISO; the shrink target for small samples
+LEAGUE_HR_PER_PA = 0.031  # ~MLB league HR per PA
+LEAGUE_SLG = 0.400        # ~MLB league SLG
+SHRINK_K_PA = 150.0       # PAs of league-average "prior" a rate must overcome
+
+
+def shrink_to_league(rate: float, pa: float, league: float, k: float = SHRINK_K_PA) -> float:
+    """Shrink a small-sample rate toward league average by sample size.
+
+    (pa * rate + k * league) / (pa + k) -- the standard empirical-Bayes
+    shrinkage shape. At pa=0 you get exactly the league rate; at pa=k the
+    player's own number carries half the weight; by ~450 PA it carries 75%.
+
+    THE VEEN BUG (2026-08-17, fixed 2026-08-23). Zac Veen: 15 PA, 2 HR, so
+    "ISO .500" -- and season_power fed that raw number through
+    minmax_norm(iso, .08, .38), which saturates at anything >= .38. A
+    15-PA fluke outranked Max Muncy (435 PA, ISO .249, 25 HR) on the HR
+    board, took the HR badge for his game, and Muncy homered. Measured on
+    the archive: in 17 of 42 games carrying both a sub-100-PA bat and a
+    200+-PA veteran, the small-sample bat outscored every veteran in the
+    game. A 15-PA ISO is noise; this makes the model treat it as noise.
+
+    K=150 is chosen from first principles (the PA scale where individual
+    ISO starts to stabilize), NOT from a sweep over the graded archive --
+    the archive's feature columns leak (roadmap step 9) and tuning K on it
+    would repeat the season_power-0.24 mistake. Worked example at K=150,
+    league ISO .160: Veen 15 PA .500 -> .191; Muncy 435 PA .249 -> .226.
+    The fluke drops below the real bat and nobody's real number moves much.
+
+    Donovan's objective on record (2026-08-22): PRECISION -- and a false
+    top-of-board is precision's single worst failure.
+    """
+    pa = max(0.0, safe_float(pa, 0.0))
+    r = safe_float(rate, 0.0)
+    denom = pa + k
+    if denom <= 0:
+        return league
+    return (pa * r + k * league) / denom
+
+
 def _pitch_match_term(raw: float) -> float:
     """0-100 hr_blend term from pitch_type_match_score (raw 0-120).
 
@@ -7153,7 +7193,19 @@ def apply_model_v2_layers(h: HitterRecord) -> HitterRecord:
     if d375 >= 2 or h.last5_hr >= 2 or batted_shape >= 60:
         lineup_raw = max(lineup_raw, 80.0)
     lineup_opportunity = _hr2_clip(lineup_raw)
-    season_power = 100 * (0.50 * minmax_norm(max(h.season_iso, split_iso), 0.08, 0.38) + 0.30 * minmax_norm(h.hr_per_pa, 0.015, 0.085) + 0.20 * minmax_norm(h.season_slg, 0.330, 0.700))
+    # SMALL-SAMPLE SHRINKAGE (2026-08-23, the Veen bug -- see
+    # shrink_to_league's docstring). All three inputs are season rates and
+    # all three saturate their minmax bands on a handful of hot PAs, so all
+    # three shrink toward league by season_pa. split_iso (the vs-hand ISO)
+    # rides inside the max() and is shrunk by the same season_pa -- a side
+    # split has FEWER PAs than the season line, so this under-shrinks it
+    # slightly rather than inventing a per-side PA the record doesn't carry;
+    # the direction is conservative and stated.
+    _sp_pa = safe_float(getattr(h, "season_pa", 0.0), 0.0)
+    _sp_iso = shrink_to_league(max(h.season_iso, split_iso), _sp_pa, LEAGUE_ISO)
+    _sp_hrpa = shrink_to_league(h.hr_per_pa, _sp_pa, LEAGUE_HR_PER_PA)
+    _sp_slg = shrink_to_league(h.season_slg, _sp_pa, LEAGUE_SLG)
+    season_power = 100 * (0.50 * minmax_norm(_sp_iso, 0.08, 0.38) + 0.30 * minmax_norm(_sp_hrpa, 0.015, 0.085) + 0.20 * minmax_norm(_sp_slg, 0.330, 0.700))
     season_power = _hr2_clip(season_power)
 
     # ── VALIDATED-SIGNAL TERMS ──────────────────────────────────────────────
@@ -9943,8 +9995,18 @@ def build_game_pick_role_map(rows: List[HitterRecord]) -> Dict[Tuple[int, int], 
         # (708/1344) — pure noise as a selector (kept as a display caution).
         # Replay of this exact ladder: TOP 22.9%, HR 18.4%, combined 20.6%
         # vs 17.9% shipped.
+        # SHRINKAGE (2026-08-23): season_iso enters both the rank and the
+        # floor as its shrunk-toward-league value (see shrink_to_league --
+        # the Veen bug). A 15-PA "ISO .500" reads ~.191 here and no longer
+        # outranks a 435-PA .249; the PA >= 15 gate below stays as a hard
+        # eligibility cut but the shrinkage now does the real work.
+        def _shrunk_iso(h) -> float:
+            return shrink_to_league(safe_float(getattr(h, "season_iso", 0.0), 0.0),
+                                    safe_float(getattr(h, "season_pa", 0.0), 0.0),
+                                    LEAGUE_ISO)
+
         def _power_rank(h) -> float:
-            return (100.0 * safe_float(getattr(h, "season_iso", 0.0), 0.0)
+            return (100.0 * _shrunk_iso(h)
                     + 10.0 * safe_float(getattr(h, "last5_hr", 0.0), 0.0)
                     + 0.35 * safe_float(getattr(h, "hr_score", 0.0), 0.0))
 
@@ -9954,7 +10016,7 @@ def build_game_pick_role_map(rows: List[HitterRecord]) -> Dict[Tuple[int, int], 
                 pool = [h for h in hitters if h.player_id not in exclude] or hitters
             # ISO floor first — the one filter the archive validated
             for cond in (
-                lambda h: getattr(h, "season_iso", 0.0) >= 0.180,
+                lambda h: _shrunk_iso(h) >= 0.180,
                 lambda h: True,
             ):
                 tier = [h for h in pool if cond(h)]
@@ -9982,10 +10044,28 @@ def build_game_pick_role_map(rows: List[HitterRecord]) -> Dict[Tuple[int, int], 
         # "/".join(v) return already supported this; it just never fired
         # before). HIT/HRR/CONTACT below are unchanged -- they still exclude
         # both TOP and HR, same as always.
-        def _hr_slot() -> HitterRecord:
-            pool = [h for h in hitters if getattr(h, "season_pa", 0) >= 15] or list(hitters)
+        # HR = THE COVERAGE SLOT (2026-08-23, Donovan's design: "maybe one
+        # can be one and the other be the other"). TOP is the precision slot
+        # -- the bat you'd bet, ISO-led rank above. HR is now the game's
+        # best REMAINING power bat, required to be a DIFFERENT player than
+        # TOP, so the two badges are two shots at the game's homer instead
+        # of one man wearing both. This deliberately reverts the 2026-08-12
+        # same-man double-up: that change was right when both slots meant
+        # precision (forcing a worse second choice was pure loss -- and its
+        # 29.5%-vs-13.2% backtest was leak-measured anyway); with HR
+        # redefined as coverage, distinctness IS the feature. Measured
+        # before this change: TOP and HR were one man in 82% of games, TOP
+        # alone covered 32% of HR games, TOP + best distinct second bat
+        # covered 58% (leak-ceiling). Target on record: a TOP/HR pick
+        # connects in >=50% of games that have a homer.
+        # Ranked on hr_score with the shrunk-ISO floor -- same tiering as
+        # TOP, different rank key, excluding TOP's player.
+        def _hr_slot(exclude: set) -> HitterRecord:
+            pool = [h for h in hitters if h.player_id not in exclude and getattr(h, "season_pa", 0) >= 15]
+            if not pool:
+                pool = [h for h in hitters if h.player_id not in exclude] or list(hitters)
             for cond in (
-                lambda h: getattr(h, "season_iso", 0.0) >= 0.180,
+                lambda h: _shrunk_iso(h) >= 0.180,
                 lambda h: True,
             ):
                 tier = [h for h in pool if cond(h)]
@@ -9993,7 +10073,7 @@ def build_game_pick_role_map(rows: List[HitterRecord]) -> Dict[Tuple[int, int], 
                     return sorted(tier, key=lambda h: safe_float(getattr(h, "hr_score", 0.0), 0.0), reverse=True)[0]
             return pool[0]
 
-        hr_pick = _hr_slot() if hitters else top_pick
+        hr_pick = _hr_slot(used) if hitters else top_pick
         used.add(hr_pick.player_id)
         role_map.setdefault((game_pk, hr_pick.player_id), []).append("HR")
 
@@ -10032,6 +10112,28 @@ def build_game_pick_role_map(rows: List[HitterRecord]) -> Dict[Tuple[int, int], 
         # backtest gap didn't clear significance (+6.2pp, +6.6pp, both n.s.).
         anchor = pick_top(hitters, "contact_score", 1)[0]
         role_map.setdefault((game_pk, anchor.player_id), []).append("CONTACT")
+
+        # WATCH TIER (2026-08-23). Donovan's floor: "90% or close -- any
+        # designated pick homers, per game, at minimum." Measured leak-free
+        # (3 clean nights, 26 HR games): six picks ranked by the current
+        # score cover ~69% of HR games and even nine reach 85%, because 12
+        # of 47 homerers sat ranked 10th or worse pre-game. Six badges
+        # cannot reach 90% with any ranker -- the covered tier has to
+        # widen. WATCH is the next THREE bats by hr_score not already
+        # holding TOP or HR (a HIT/HRR/CONTACT holder may add WATCH -- the
+        # "/".join below already carries combined tags). It is a coverage
+        # marker, not a pick: it changes no slot, no grading category, and
+        # no score; it exists so the coverage report can count it and the
+        # site can show it. Six badges + WATCH sits near the K=9 line
+        # (~85% today), rising as ordering improves.
+        _watch_excl = {top_pick.player_id, hr_pick.player_id}
+        _watch_pool = sorted(
+            [h for h in hitters if h.player_id not in _watch_excl],
+            key=lambda h: safe_float(getattr(h, "hr_score", 0.0), 0.0),
+            reverse=True,
+        )
+        for w in _watch_pool[:3]:
+            role_map.setdefault((game_pk, w.player_id), []).append("WATCH")
 
     return {k: "/".join(v) for k, v in role_map.items()}
 
@@ -12662,6 +12764,10 @@ _HR_CONFIG_FORMULA_FUNCS = (
     # compute_damage_conversion_v31/apply_decision_engine_v31; a future edit
     # to this helper must move the hash.
     _pitch_match_term,
+    # 2026-08-23: small-sample shrinkage policy (the Veen bug). K/league
+    # constants live in MODEL_WEIGHTS-adjacent module scope but the POLICY is
+    # this function's body -- hash it so an edit moves config_hash.
+    shrink_to_league,
 )
 # The centralized HR tuning surface from MODEL_WEIGHTS (see that dict's own
 # header comment). Order fixed for readability only -- canonical_json sorts

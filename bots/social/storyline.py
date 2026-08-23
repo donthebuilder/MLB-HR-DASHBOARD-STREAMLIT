@@ -17,6 +17,15 @@ RAW = ("https://raw.githubusercontent.com/donthebuilder/"
        "MLB-HR-DASHBOARD-STREAMLIT/data/public/data/current")
 
 
+# WATCH-AWARE (2026-08-23): WATCH is a coverage marker, not a pick --
+# build_game_pick_role_map stamps the next 3 power bats per game so the
+# coverage report can count them. A row whose ONLY role is WATCH must not
+# appear on a social board as "the bot's pick".
+def _is_real_pick(role) -> bool:
+    toks = {t.strip().upper() for t in str(role or "").split("/") if t.strip()}
+    return bool(toks - {"WATCH"})
+
+
 def _fetch(url: str, timeout: int = 20) -> Any:
     try:
         with urllib.request.urlopen(url, timeout=timeout) as r:
@@ -39,7 +48,7 @@ def build(*, date_str: str | None = None) -> dict[str, Any] | None:
 
     candidates = [
         r for r in rows
-        if r.get("game_pick_role") and (r.get("top_pick_reason") or r.get("top_board_rank_reason"))
+        if _is_real_pick(r.get("game_pick_role")) and (r.get("top_pick_reason") or r.get("top_board_rank_reason"))
     ]
     if not candidates:
         print("  · no rows on today_slim.json have a model reason attached yet")
