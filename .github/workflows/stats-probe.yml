@@ -1,0 +1,93 @@
+# 🔬 Stats probe — what does StatsAPI actually carry for the fields we want?
+#
+# Donovan, 2026-08-23: "find all of these stats and odds they have all of those.
+# make a modle based on pitcher meatballs wild pitches abs challegene record for
+# cather and pitcher and batter. defense stats and casught stelaing perceantage
+# and pitcher catch stealign and pitcher pick off rate."
+#
+# Two of those eight are already on the slate (pitcher_meatball_pct, and SB v1's
+# season_sb / season_cs). The other six are not carried anywhere in this repo,
+# and Claude's sandbox cannot reach statsapi.mlb.com — the CONNECT tunnel is
+# blocked, verified again the day this was written. So the field names would
+# have to be guessed, and this repo already has the receipt for what guessing an
+# API's shape costs: the odds pipeline needed "eight round trips of failure" to
+# learn one provider's response.
+#
+# ABS is the sharpest case. The automated ball-strike challenge system is new
+# for 2026; whether StatsAPI exposes a challenge record at all, under what name,
+# on which endpoint, keyed to which role, is not something to assume. A model
+# term built on a field that does not exist is WORSE than no term, because every
+# player scores 0.0, nothing errors, and the dead weight still lands in the
+# config hash looking like a feature.
+#
+# So: run this once, read the verdict block at the bottom, and the model gets
+# built on what is confirmed to exist.
+#
+# It writes its answer to the data branch (public/data/current/stats_probe.txt
+# and .json) for the same reason the odds probe now does — a diagnostic whose
+# only output is a log is a diagnostic nobody runs twice, which is exactly how
+# the odds probe got reported as "it didn't work" twice in a row.
+name: Stats probe
+
+on:
+  workflow_dispatch:
+    inputs:
+      game:
+        description: 'A specific gamePk to probe (blank = the most recent final)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+concurrency:
+  group: stats-probe
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Checkout the data branch, to leave the answer on it
+        uses: actions/checkout@v4
+        with:
+          ref: data
+          path: _data
+          fetch-depth: 1
+
+      # stdlib only — no pip install, so a run is seconds of compute.
+      - name: Probe
+        run: |
+          set -o pipefail
+          python bots/stats_probe.py \
+            ${{ github.event.inputs.game && format('--game {0}', github.event.inputs.game) || '' }} \
+            --out /tmp/stats_probe.json 2>&1 | tee /tmp/stats_probe.txt
+
+      - name: Leave the answer on the data branch
+        if: always()
+        run: |
+          mkdir -p _data/public/data/current
+          {
+            echo "stats probe — $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+            echo "run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            echo
+            cat /tmp/stats_probe.txt 2>/dev/null || echo "(the probe step produced no output)"
+          } > _data/public/data/current/stats_probe.txt
+          cp /tmp/stats_probe.json _data/public/data/current/stats_probe.json 2>/dev/null || true
+          cd _data
+          git config user.name  "moonshot-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add public/data/current/stats_probe.txt public/data/current/stats_probe.json 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "probe output unchanged — nothing to commit"
+          else
+            git commit -m "stats probe $(date -u +%F\ %H:%M) UTC"
+            git push
+          fi
