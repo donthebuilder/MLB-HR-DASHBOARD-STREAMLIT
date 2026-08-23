@@ -64,11 +64,28 @@ jobs:
 
       # The scripts resolve paths from their own location, so they're copied
       # next to the data rather than run out of _src.
+      #
+      # ── EVERY .py, NOT A HAND-PICKED FOUR (fixed 2026-08-23) ──────────────
+      # This copied exactly the four entry points by name. Three of them open
+      # with `from archive import rows_of` — archive.py was never in the list,
+      # and `rm -rf _src` on the next line deleted the only other copy. So
+      # season_memory.py (NIGHTLY), validate_context.py and autopsy.py have
+      # died on ModuleNotFoundError on every run since this workflow was
+      # written on 2026-08-09, and public/data/current/season_memory.json has
+      # never existed on the data branch. The job went red nightly and nobody
+      # was reading the run list.
+      #
+      # A cp list that has to be kept in step with an import graph is a trap
+      # that resets every time a script gains a helper. Copying the whole
+      # directory has no such failure mode, costs nothing (35 small files),
+      # and the Publish step below stages three explicit JSON paths, so no .py
+      # can ever be committed to the data branch by accident.
       - name: Stage
         run: |
           mkdir -p bots
-          cp _src/bots/season_memory.py _src/bots/validate_context.py _src/bots/autopsy.py _src/bots/score_shootout.py bots/
+          cp _src/bots/*.py bots/
           rm -rf _src
+          python -c "import ast,sys,pathlib; [ast.parse(p.read_text()) for p in pathlib.Path('bots').glob('*.py')]" 
 
       - name: Season memory
         if: github.event_name == 'schedule' || github.event.inputs.which != 'weekly'
@@ -105,8 +122,7 @@ jobs:
 
       - name: Publish
         run: |
-          rm -f bots/season_memory.py bots/validate_context.py bots/autopsy.py bots/score_shootout.py
-          rmdir bots 2>/dev/null || true
+          rm -rf bots
           git config user.name  "moonshot-bot"
           git config user.email "bot@users.noreply.github.com"
           git add public/data/current/season_memory.json \

@@ -22,10 +22,22 @@ name: Odds probe
 # already wired into today.yml and the runners are unaffected by the Mac's
 # TLS interception.
 #
-# This workflow does nothing but that. It is manual-only (workflow_dispatch),
-# it writes nothing, it publishes nothing, it commits nothing, and it does not
-# touch the request lock — --probe is read-only by design. Click "Run
-# workflow" in the Actions tab and read the log.
+# This workflow does nothing but that. It is manual-only (workflow_dispatch)
+# and it does not touch the request lock — --probe is read-only against the
+# providers by design.
+#
+# ── IT NOW LEAVES AN ANSWER BEHIND (2026-08-23) ──────────────────────────────
+# The original wrote nothing, published nothing and committed nothing: its
+# entire output was the Actions log. Donovan ran it twice and reported both
+# times that it "didn't" work — because from outside the Actions tab a run that
+# changes no file is indistinguishable from a run that never happened. A
+# diagnostic nobody can see the result of is a diagnostic nobody runs twice.
+#
+# The log is now also written to public/data/current/odds_probe.txt on the data
+# branch, so the answer outlives the run, and anyone — a future session, the
+# handoff, Donovan on his phone — can read what the provider actually returned
+# without opening GitHub. It still makes no odds request beyond the probe's own
+# and still never touches the fetch lock.
 #
 # WHAT THE PROBE ANSWERS, and why it is worth a click: it is the only check
 # that hits all three providers with the real credentials and prints the
@@ -47,7 +59,7 @@ on:
         default: false
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   probe:
@@ -62,6 +74,13 @@ jobs:
 
       - name: Install deps
         run: pip install -r bots/requirements.txt
+
+      - name: Checkout the data branch, to leave the answer on it
+        uses: actions/checkout@v4
+        with:
+          ref: data
+          path: _data
+          fetch-depth: 1
 
       - name: Probe every provider
         env:
@@ -83,11 +102,35 @@ jobs:
           echo "  ODDSAPI_IO_BOOKMAKERS: ${ODDSAPI_IO_BOOKMAKERS:-<default>}"
           echo
           echo "── probe ──"
+          # tee, and `set -o pipefail` so a failing probe still fails the step
+          # rather than being swallowed by a successful tee.
+          set -o pipefail
           if [ "${{ inputs.dump }}" = "true" ]; then
             mkdir -p /tmp/odds-dump
-            python bots/odds_fetch.py --probe --dump /tmp/odds-dump
+            python bots/odds_fetch.py --probe --dump /tmp/odds-dump 2>&1 | tee /tmp/probe.txt
           else
-            python bots/odds_fetch.py --probe
+            python bots/odds_fetch.py --probe 2>&1 | tee /tmp/probe.txt
+          fi
+
+      - name: Leave the answer on the data branch
+        if: always()
+        run: |
+          mkdir -p _data/public/data/current
+          {
+            echo "odds probe — $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+            echo "run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            echo
+            cat /tmp/probe.txt 2>/dev/null || echo "(the probe step produced no output)"
+          } > _data/public/data/current/odds_probe.txt
+          cd _data
+          git config user.name  "moonshot-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add public/data/current/odds_probe.txt
+          if git diff --cached --quiet; then
+            echo "probe output unchanged — nothing to commit"
+          else
+            git commit -m "odds probe $(date -u +%F\ %H:%M) UTC"
+            git push
           fi
 
       - name: Upload raw payloads
