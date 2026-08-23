@@ -69,12 +69,37 @@ jobs:
       - name: Install deps
         run: pip install -r bots/requirements.txt
 
-      - name: Checkout the data branch
-        uses: actions/checkout@v4
-        with:
-          ref: data
-          path: _data
-          fetch-depth: 1
+      # ⚠️ NOT the `data` branch. .github/scripts/publish_data.sh creates a
+      # FRESH ORPHAN BRANCH every slate and every results run and force-pushes
+      # it over `data` -- "Creating the orphan branch wipes the tree" in its own
+      # words. Anything not in its PUBLISH_FILES allow-list is destroyed on the
+      # next publish, with no deletion commit to notice: the old commit is
+      # simply no longer an ancestor.
+      #
+      # That is exactly what happened on 2026-08-23. The first full harvest
+      # landed 299 files as commit 010000e, and two publishes later that commit
+      # was not in the branch's history at all. ~2,000 feed requests, gone.
+      #
+      # `bbe-history` is an ordinary branch nothing force-pushes, so a harvest
+      # committed there survives. It is created on first use.
+      - name: Checkout the bbe-history branch
+        run: |
+          git config --global user.name  "moonshot-bot"
+          git config --global user.email "bot@users.noreply.github.com"
+          git clone --quiet --depth 1 --branch bbe-history \
+            "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" _data \
+          || {
+            echo "bbe-history does not exist yet — creating it"
+            git clone --quiet --depth 1 \
+              "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" _data
+            cd _data && git checkout -q --orphan bbe-history
+            git rm -rq --cached . 2>/dev/null || true
+            find . -mindepth 1 -maxdepth 1 -not -name '.git' -exec rm -rf {} + 2>/dev/null || true
+            mkdir -p public/data/current/bbe_history
+            printf 'batted-ball history. NOT the data branch: that one is orphan-force-pushed every publish.\n' > README.md
+            git add README.md && git commit -q -m "start bbe-history"
+            git push -q origin HEAD:bbe-history
+          }
 
       - name: Harvest every batted ball in the range
         run: |
@@ -111,7 +136,7 @@ jobs:
             # onto whatever landed while this was running rather than failing a
             # five-hour harvest on a fast-forward check.
             for i in 1 2 3 4 5; do
-              git pull --rebase origin data && git push origin HEAD:data && break
+              git pull --rebase origin bbe-history && git push origin HEAD:bbe-history && break
               echo "push race, retry $i"; sleep $((i * 5))
             done
           fi
