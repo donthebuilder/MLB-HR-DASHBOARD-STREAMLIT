@@ -13313,6 +13313,68 @@ PREGAME_SNAPSHOT_FIELDS = (
     "pitch_type_match_flag", "pitch_type_match_score", "pitch_mix_score",
     "hidden_hr_value", "high_confidence_hr_flag",
     "multi_hit_score", "multi_hit_flag", "multi_hit_reason",
+    # ── pitcher surface ──
+    # THE PITCHER SURFACE (2026-08-23) — 98 pitcher fields ship on every slate
+    # row and five reached the archive: hr_allowed, fb_rate, hr9, bb_pct, bb9.
+    # Meatball %, barrel and EV allowed, HR/FB%, xHR/BBE, the handedness splits
+    # and the attack score were computed nightly and thrown away, so no analysis
+    # of the arm has ever been possible past two columns. Capture only — no
+    # score reads these yet.
+    "pitcher_meatball_pct", "pitcher_barrel_allowed", "pitcher_ev_allowed",
+    "pitcher_hardhit_allowed", "pitcher_hr_fb_pct", "pitcher_xhr_bbe",
+    "pitcher_xhr_allowed", "pitcher_hr9_vs_lhb", "pitcher_hr9_vs_rhb",
+    "pitcher_attack_score", "pitcher_attack_tag", "pitcher_era",
+    "pitcher_fip", "pitcher_whip", "pitcher_k9", "pitcher_k_rate",
+    "pitcher_gb_rate", "pitcher_ld_rate", "pitcher_popup_rate",
+    "pitcher_iso_against", "pitcher_slg_against", "pitcher_woba_against",
+    "pitcher_babip", "pitcher_l3_era", "pitcher_l3_hr9", "pitcher_l3_whip",
+    "pitcher_hr_luck", "pitcher_weak_side_score", "pitcher_weak_side_gap",
+    "pitcher_zone_damage_score", "pitcher_spot_damage_score",
+    "pitcher_pullair_allowed_pct", "pitcher_375_allowed",
+    "pitcher_400_allowed", "pitcher_first_pitch_strike_pct",
+    "pitcher_swstr_pct", "pitcher_whiff_pct", "pitcher_putaway_pct",
+    "pitcher_statcast_bbe", "pitcher_fb_velo_delta", "pitcher_hr_vs_lhb",
+    "pitcher_hr_vs_rhb", "pitcher_whip_vs_lhb", "pitcher_whip_vs_rhb",
+    "pitcher_xbh_vs_lhb", "pitcher_xbh_vs_rhb", "pitcher_side_ops",
+    "pitcher_side_slug", "pitcher_obp_against", "pitcher_ops_against",
+    "pitcher_avg_against", "pitcher_low_k_flag", "pitcher_safe_flag",
+    "pitcher_trend_direction", "pitcher_mistake_match",
+    # ── batted-ball surface ──
+    # THE BATTED-BALL SURFACE (2026-08-23) — of the 52 fields the site's filter
+    # menu exposes, Max EV, Avg dist, Max dist, Air %, Pull %, Sweet-spot %, BBE
+    # and Hard-hit % had ZERO archived rows and Avg EV had 13 nights of 28.
+    # Launch angle is the batted-ball signal that separates homers (FB% z=+4.02
+    # on 2,275 rows) and exit velocity is not (barrel z=-0.01 on 1,790); neither
+    # statement can be properly checked until these are kept.
+    "recent_ev", "recent_hard_hit_rate", "recent_sweet_spot_rate",
+    "recent_avg_hr_distance", "recent_max_distance",
+    "recent_distance_tracked", "season_max_distance", "recent_xwoba",
+    "l20pa_fb_rate", "l20pa_barrel_rate", "l20pa_hard_hit_rate",
+    "l20pa_ideal_hr_contact", "l20pa_bbe", "l20pa_pull_rate",
+    "l25pa_air_rate", "l25pa_sweet_spot_rate", "l25pa_barrel_rate",
+    "l25pa_gb_rate", "l25pa_ld_rate", "l25pa_popup_rate", "l25pa_fb_rate",
+    "l25pa_avg_ev", "l25pa_bbe", "l25pa_hard_hit_rate", "l5_barrel_rate",
+    "l5_hard_hit_rate", "l5_pull_rate", "l10_barrel_rate",
+    "l10_hard_hit_rate", "l10_pull_rate", "xhr_bbe",
+    # ── season rates ──
+    # SEASON RATE FIELDS the filter menu offers and the archive never kept —
+    # SLG, BABIP and HR per PA all had zero archived rows.
+    "season_slg", "season_babip", "babip", "hr_per_pa",
+    # ── park / air / bvp ──
+    # PARK, AIR AND BATTER-VS-PITCHER. park_hr_factor was archived on 19 of 28
+    # nights and its siblings on none. A field present on only part of the
+    # archive is worse than a missing one: sorted across all nights, a 12-night
+    # field's top quintile can read 88% purely because its quintiles are a date
+    # filter.
+    "park_dist_factor", "park_barrel_factor", "park_hardhit_factor",
+    "park_hits_factor", "park_k_factor", "weather_hr_effect_pct",
+    "weather_wind_boost", "wind_boost", "bvp_iso", "bvp_barrels",
+    "bvp_hard_hit", "bvp_babip",
+    # ── published sub-scores ──
+    # PUBLISHED SCORES THE ARCHIVE DROPPED. Shown on the site, never gradeable.
+    "longest_hr_score", "longest_hr_rank", "hr_due_score",
+    "batted_ball_power_score", "damage_conversion_score",
+    "matchup_power_score",
 )
 
 

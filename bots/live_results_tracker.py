@@ -1947,6 +1947,67 @@ SLOT_FIELDS = {
     "meatball_pct_vs_hand", "meatball_edge_pp",
     "meatball_fit_score", "meatball_fit_status", "meatball_fit_note",
     "pitcher_meatball_pct", "pitcher_meatball_side_status",
+    # ── pitcher surface ──
+    # THE PITCHER SURFACE (2026-08-23) — 98 pitcher fields ship on every slate
+    # row and five reached the archive: hr_allowed, fb_rate, hr9, bb_pct, bb9.
+    # Meatball %, barrel and EV allowed, HR/FB%, xHR/BBE, the handedness splits
+    # and the attack score were computed nightly and thrown away, so no analysis
+    # of the arm has ever been possible past two columns. Capture only — no
+    # score reads these yet.
+    "pitcher_barrel_allowed", "pitcher_ev_allowed",
+    "pitcher_hardhit_allowed", "pitcher_hr_fb_pct", "pitcher_xhr_bbe",
+    "pitcher_xhr_allowed", "pitcher_attack_score", "pitcher_attack_tag",
+    "pitcher_era", "pitcher_fip", "pitcher_whip", "pitcher_k9",
+    "pitcher_k_rate", "pitcher_iso_against", "pitcher_slg_against",
+    "pitcher_woba_against", "pitcher_babip", "pitcher_l3_era",
+    "pitcher_l3_hr9", "pitcher_l3_whip", "pitcher_hr_luck",
+    "pitcher_zone_damage_score", "pitcher_spot_damage_score",
+    "pitcher_pullair_allowed_pct", "pitcher_375_allowed",
+    "pitcher_400_allowed", "pitcher_first_pitch_strike_pct",
+    "pitcher_swstr_pct", "pitcher_whiff_pct", "pitcher_putaway_pct",
+    "pitcher_fb_velo_delta", "pitcher_hr_vs_lhb", "pitcher_hr_vs_rhb",
+    "pitcher_whip_vs_lhb", "pitcher_whip_vs_rhb", "pitcher_xbh_vs_lhb",
+    "pitcher_xbh_vs_rhb", "pitcher_side_ops", "pitcher_side_slug",
+    "pitcher_obp_against", "pitcher_ops_against", "pitcher_avg_against",
+    "pitcher_low_k_flag", "pitcher_safe_flag", "pitcher_mistake_match",
+    # ── batted-ball surface ──
+    # THE BATTED-BALL SURFACE (2026-08-23) — of the 52 fields the site's filter
+    # menu exposes, Max EV, Avg dist, Max dist, Air %, Pull %, Sweet-spot %, BBE
+    # and Hard-hit % had ZERO archived rows and Avg EV had 13 nights of 28.
+    # Launch angle is the batted-ball signal that separates homers (FB% z=+4.02
+    # on 2,275 rows) and exit velocity is not (barrel z=-0.01 on 1,790); neither
+    # statement can be properly checked until these are kept.
+    "recent_hard_hit_rate", "recent_sweet_spot_rate",
+    "recent_avg_hr_distance", "recent_max_distance",
+    "recent_distance_tracked", "season_max_distance", "recent_xwoba",
+    "l20pa_bbe", "l20pa_pull_rate", "l25pa_air_rate",
+    "l25pa_sweet_spot_rate", "l25pa_barrel_rate", "l25pa_gb_rate",
+    "l25pa_ld_rate", "l25pa_popup_rate", "l25pa_fb_rate", "l25pa_avg_ev",
+    "l25pa_bbe", "l25pa_hard_hit_rate", "l5_barrel_rate",
+    "l5_hard_hit_rate", "l5_pull_rate", "l10_barrel_rate",
+    "l10_hard_hit_rate", "l10_pull_rate", "xhr_bbe",
+    # ── season rates ──
+    # SEASON RATE FIELDS the filter menu offers and the archive never kept —
+    # SLG, BABIP and HR per PA all had zero archived rows.
+    "season_slg", "season_babip", "babip", "hr_per_pa",
+    # ── park / air / bvp ──
+    # PARK, AIR AND BATTER-VS-PITCHER. park_hr_factor was archived on 19 of 28
+    # nights and its siblings on none. A field present on only part of the
+    # archive is worse than a missing one: sorted across all nights, a 12-night
+    # field's top quintile can read 88% purely because its quintiles are a date
+    # filter.
+    "park_barrel_factor", "park_hardhit_factor", "park_hits_factor",
+    "park_k_factor", "bvp_iso", "bvp_barrels", "bvp_hard_hit", "bvp_babip",
+    # ── published sub-scores ──
+    # PUBLISHED SCORES THE ARCHIVE DROPPED. Shown on the site, never gradeable.
+    "longest_hr_rank", "batted_ball_power_score", "matchup_power_score",
+    # ── snapshotted pre-game but never archived (fixed 2026-08-23) ──
+    # These were already in PREGAME_SNAPSHOT_FIELDS and never in SLOT_FIELDS, so
+    # they were captured at generation time and dropped before the graded file.
+    # tests/test_capture_completeness.py now asserts the two cannot drift apart
+    # again.
+    "l20pa_hr", "l20pa_xbh", "last10_hr", "recent_ideal_hr_contact",
+    "recent_pull_rate", "season_ab", "season_tb",
 }
 
 
