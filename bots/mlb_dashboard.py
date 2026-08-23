@@ -5718,6 +5718,16 @@ def build_pitcher_profile(client: MLBClient, db: CacheDB, pitcher_id: int, team_
         "tb_allowed": extended["tb_allowed"],
         "bb_allowed": extended["bb_allowed"],
         "bb_pct": extended["bb_pct"],
+        # DATA DEFECT #3 FIX (2026-08-23). compute_pitcher_extended_stats()
+        # has computed a real BB/9 since 2026-08-12 and returned it in this
+        # very dict -- but this kwargs block never copied it, so
+        # PitcherSummary.bb9 stayed at its dataclass default and every
+        # published starter carried the constant 3.20 (30 of 30 on the
+        # 2026-08-22 slate; bb_pct, copied one line up, had 24 distinct
+        # values from the same walk counts). A field that looks like a rate
+        # and is a constant will be built on again -- this is the one line
+        # that was missing.
+        "bb9": extended["bb9"],
         "barrels_allowed_count": extended["barrels_allowed_count"],
         "hr_fb_pct": extended["hr_fb_pct"],
         "extended_stats_status": extended["extended_stats_status"],
