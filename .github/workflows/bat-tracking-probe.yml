@@ -1,0 +1,60 @@
+name: Bat tracking probe
+
+# 🏏 Do Bat Spd / Blast% / SqUp% / Comp% exist here, and can they be asked for
+# AS OF A DATE? (2026-08-23)
+#
+# Donovan's HR Matchups highlights lean on four bat-tracking metrics that could
+# not be backtested at all — they are in no game feed and in no file on the data
+# branch (only `l25pa_avg_bat_speed` exists anywhere). Claude's sandbox cannot
+# reach baseballsavant.mlb.com (CONNECT tunnel blocked), so the column names
+# could only be guessed from there, and this repo has the receipt for what
+# guessing an endpoint's shape costs. A runner can just ask.
+#
+# It writes no model term and changes no score. It prints the header row and
+# leaves the answer on the data branch, because a diagnostic whose only output
+# is an Actions log is one nobody runs twice.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Checkout the data branch, to leave the answer on it
+        uses: actions/checkout@v4
+        with: { ref: data, path: _data, fetch-depth: 1 }
+      - name: Probe
+        run: |
+          set -o pipefail
+          python bots/bat_tracking_probe.py 2>&1 | tee /tmp/probe.txt
+      - name: Leave the answer on the data branch
+        if: always()
+        run: |
+          mkdir -p _data/public/data/current
+          {
+            echo "bat tracking probe — $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+            echo "run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            echo
+            cat /tmp/probe.txt 2>/dev/null || echo "(the probe produced no output)"
+          } > _data/public/data/current/bat_tracking_probe.txt
+          cd _data
+          git config user.name  "moonshot-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add public/data/current/bat_tracking_probe.txt
+          if git diff --cached --quiet; then echo "unchanged"; else
+            git commit -m "bat tracking probe $(date -u +%F\ %H:%M) UTC"
+            for i in 1 2 3; do git pull --rebase origin data && git push origin HEAD:data && break; sleep 5; done
+          fi
+      - name: Summary
+        if: always()
+        run: |
+          { echo '### Bat tracking probe'; echo '```'; head -60 /tmp/probe.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
