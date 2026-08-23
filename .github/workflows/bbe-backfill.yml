@@ -1,0 +1,128 @@
+name: BBE backfill
+
+# 🧱 THE HISTORY THE ARCHIVE NEVER KEPT (2026-08-23).
+#
+# Donovan asked for every field in the site's filter menu to be checked against
+# "all the data/nights we have in history." The check was run. The answer was
+# that most of those fields HAVE no history:
+#
+#   · the slate publishes 424 fields a row; slot_snapshot keeps 55 and the
+#     graded archive keeps 149
+#   · of the 52 fields the filter menu exposes, only 22 exist on 26+ of the
+#     28 graded nights
+#   · Max EV, Avg dist, Max dist, Air %, Pull %, Sweet-spot %, BBE, SLG, BABIP,
+#     HR per PA, Hard-hit % and Arm WHIP have ZERO archived rows
+#   · Avg EV has 13 nights. Park HR factor has 19. Arm BB/9 has 12.
+#
+# A partially-present field is worse than a missing one: sorted across the
+# archive, `pitcher_bb9` shows a top quintile that homers 88.0% purely because
+# its quintiles are a date filter. Any cross-night analysis of those columns
+# measures the calendar.
+#
+# None of it is recoverable from the slate — that is rebuilt nightly and the old
+# values are gone. But the RAW MATERIAL is not gone. Every batted ball of the
+# season is still in StatsAPI's game feeds with launch speed, launch angle,
+# trajectory, distance and spray coordinates on it: the same `hitData` block
+# bots/backfill_hr_events.py has been walking for homers all season.
+#
+# This workflow harvests all of them and rebuilds the feature table as of any
+# date, using only games played BEFORE that date. Claude's sandbox cannot reach
+# statsapi.mlb.com (CONNECT tunnel blocked, re-verified 2026-08-23), so a runner
+# is the only place this can run — same reason odds-probe.yml exists.
+#
+# IDEMPOTENT AND CHUNKABLE. A date already on the data branch is skipped, so
+# re-running continues where the last run stopped and costs nothing for the days
+# already done. Run it in month-sized chunks if you would rather watch it.
+
+on:
+  workflow_dispatch:
+    inputs:
+      start:
+        description: 'First date to harvest (YYYY-MM-DD)'
+        required: true
+      end:
+        description: 'Last date to harvest (YYYY-MM-DD)'
+        required: true
+      build_features:
+        description: 'Also rebuild the as-of feature table for the same range'
+        type: boolean
+        default: true
+      force:
+        description: 'Re-harvest dates already on the data branch'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install deps
+        run: pip install -r bots/requirements.txt
+
+      - name: Checkout the data branch
+        uses: actions/checkout@v4
+        with:
+          ref: data
+          path: _data
+          fetch-depth: 1
+
+      - name: Harvest every batted ball in the range
+        run: |
+          set -o pipefail
+          python bots/backfill_bbe_history.py harvest \
+            --start "${{ inputs.start }}" \
+            --end   "${{ inputs.end }}" \
+            --out-dir _data/public/data/current/bbe_history \
+            ${{ inputs.force && '--force' || '' }} 2>&1 | tee /tmp/harvest.log
+
+      - name: Rebuild the as-of feature table
+        if: ${{ inputs.build_features }}
+        run: |
+          set -o pipefail
+          python bots/backfill_bbe_history.py features \
+            --start "${{ inputs.start }}" \
+            --end   "${{ inputs.end }}" \
+            --out-dir _data/public/data/current/bbe_history \
+            ${{ inputs.force && '--force' || '' }} 2>&1 | tee /tmp/features.log
+
+      - name: Commit to the data branch
+        if: always()
+        run: |
+          cd _data
+          git config user.name  "moonshot-bot"
+          git config user.email "bot@users.noreply.github.com"
+          # Named path only. This repo's rule: a delivery never runs git add -A.
+          git add public/data/current/bbe_history
+          if git diff --cached --quiet; then
+            echo "nothing new — every date in the range was already on the branch"
+          else
+            git commit -m "bbe backfill ${{ inputs.start }}..${{ inputs.end }}"
+            # The data branch has other writers (today.yml, results.yml). Rebase
+            # onto whatever landed while this was running rather than failing a
+            # five-hour harvest on a fast-forward check.
+            for i in 1 2 3 4 5; do
+              git pull --rebase origin data && git push origin HEAD:data && break
+              echo "push race, retry $i"; sleep $((i * 5))
+            done
+          fi
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo '### BBE backfill'
+            echo '```'
+            tail -5 /tmp/harvest.log 2>/dev/null || echo '(harvest produced no output)'
+            tail -3 /tmp/features.log 2>/dev/null || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
