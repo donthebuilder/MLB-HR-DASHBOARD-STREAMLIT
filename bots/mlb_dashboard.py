@@ -924,6 +924,10 @@ class PitcherSummary:
     weak_spots: Tuple[int, ...] = ()
     lineup_spot_damage: Dict[str, Any] = dataclasses.field(default_factory=dict)
     lineup_zone_damage: Dict[str, Any] = dataclasses.field(default_factory=dict)
+    # DATA DEFECT #4 (2026-08-23): the five split axes the modal is waiting
+    # on -- home/away, day/night, RISP, ahead/behind, by-month, by-DOW.
+    # See parse_pitcher_situational_splits.
+    situational_splits: Dict[str, Any] = dataclasses.field(default_factory=dict)
     # Advanced pitch-level stats from Statcast (decimals 0.0–1.0).
     # League-average fallbacks used when sample is too low or pybaseball missing.
     meatball_pct: float = 0.070       # share of pitches in middle-middle "meatball" zone
@@ -1261,6 +1265,10 @@ class HitterRecord:
     pitcher_zone_damage_reason: str = ""
     pitcher_lineup_spot_damage: Dict[str, Any] = dataclasses.field(default_factory=dict)
     pitcher_lineup_zone_damage: Dict[str, Any] = dataclasses.field(default_factory=dict)
+    # The five missing split axes, published for the modal's split control
+    # (2026-08-23, data defect #4). Empty dict when the pull failed --
+    # the site's rule: no data, no button.
+    pitcher_situational_splits: Dict[str, Any] = dataclasses.field(default_factory=dict)
     # Matchup Attack Center fields for dashboard. Safe defaults keep older JSON compatible.
     pitcher_k_rate: float = 0.0
     pitcher_k9: float = 0.0
@@ -1679,6 +1687,33 @@ class MLBClient:
         return self.get_json(
             f"{MLB_BASE}/people/{player_id}/stats",
             params={"stats": "statSplits", "group": "pitching", "season": SEASON, "sitCodes": "vl,vr"},
+        )
+
+    # FIVE MISSING SPLIT AXES (2026-08-23, data defect #4). The pitcher
+    # modal's split control shipped with buttons for exactly the two axes
+    # the slate published (handedness, recent form); Donovan named eight.
+    # These three calls close the other five -- ordinary StatsAPI split
+    # queries, the same statSplits endpoint pitcher_split_stats already
+    # uses, no model change. sitCodes per MLB's docs: h/a home-away ("in
+    # park"), d/n day-night, risp runners in scoring position, ac/bc
+    # ahead/behind in count.
+    def pitcher_situational_stats(self, player_id: int) -> Dict[str, Any]:
+        return self.get_json(
+            f"{MLB_BASE}/people/{player_id}/stats",
+            params={"stats": "statSplits", "group": "pitching", "season": SEASON,
+                    "sitCodes": "h,a,d,n,risp,ac,bc"},
+        )
+
+    def pitcher_month_stats(self, player_id: int) -> Dict[str, Any]:
+        return self.get_json(
+            f"{MLB_BASE}/people/{player_id}/stats",
+            params={"stats": "byMonth", "group": "pitching", "season": SEASON},
+        )
+
+    def pitcher_dow_stats(self, player_id: int) -> Dict[str, Any]:
+        return self.get_json(
+            f"{MLB_BASE}/people/{player_id}/stats",
+            params={"stats": "byDayOfWeek", "group": "pitching", "season": SEASON},
         )
 
     def venue(self, venue_id: int) -> Dict[str, Any]:
@@ -3078,6 +3113,103 @@ def get_player_split_stats(client: MLBClient, db: CacheDB, player_id: int) -> Di
     except Exception:
         pass
     db.set(key, out)
+    return out
+
+
+def _sit_line(stat: Dict[str, Any]) -> Dict[str, Any]:
+    """One split bucket -> the compact line the modal's control reads.
+    Same IP-notation care as the handed splits (a .1/.2 inning is a third,
+    not a decimal); ops read straight off the stat blob when MLB provides
+    it, rebuilt from obp+slg when it does not; bf kept so the site can
+    refuse to draw a conclusion on a 9-batter sample."""
+    ip = _parse_ip_to_float(stat.get("inningsPitched"))
+    hr = safe_float(stat.get("homeRuns"), 0.0)
+    hits = safe_float(stat.get("hits"), 0.0)
+    bb = safe_float(stat.get("baseOnBalls"), 0.0)
+    ops = safe_float(stat.get("ops"), 0.0)
+    if not ops:
+        ops = safe_float(stat.get("obp"), 0.0) + safe_float(stat.get("slg"), 0.0)
+    return {
+        "ip": round(ip, 1),
+        "bf": safe_int(stat.get("battersFaced"), 0),
+        "hr": int(hr),
+        "hr9": round(hr * 9.0 / ip, 2) if ip > 0 else None,
+        "whip": round((hits + bb) / ip, 2) if ip > 0 else None,
+        "ops": round(ops, 3) if ops else None,
+        "avg": safe_float(stat.get("avg"), 0.0) or None,
+    }
+
+
+def parse_pitcher_situational_splits(client: MLBClient, db: CacheDB, pitcher_id: int) -> Dict[str, Any]:
+    """DATA DEFECT #4 (2026-08-23): five of the eight split axes Donovan
+    named for the pitcher modal published nothing -- in park (home/away),
+    day/night, RISP, count state, calendar. The modal deliberately shipped
+    without their buttons rather than faking them ("a dead pill, or one
+    that silently falls back to the season line, answers a question it was
+    not asked" -- claude/moonshot-pitcher-modal.md). This publishes all
+    five as one dict, so each button becomes the promised one-line
+    addition to the control's options array.
+
+    Shape: { status, home, away, day, night, risp, ahead, behind,
+             by_month: {"4".."10": line}, by_dow: {"Monday"..: line} }
+    where every line is _sit_line's compact form. A bucket MLB returns
+    nothing for is simply absent -- the site's rule stands: no data, no
+    button. Cached 2 days, same as the handed splits beside it.
+    """
+    key = f"pitcher_sit_splits_v1:{SEASON}:{pitcher_id}"
+    cached = db.get(key, max_age_days=2)
+    if isinstance(cached, dict) and cached.get("status"):
+        return cached
+
+    CODE_NAMES = {"h": "home", "a": "away", "d": "day", "n": "night",
+                  "risp": "risp", "ac": "ahead", "bc": "behind"}
+    out: Dict[str, Any] = {"status": "empty"}
+    try:
+        blob = client.pitcher_situational_stats(pitcher_id)
+        stats = blob.get("stats") or []
+        first = stats[0] if stats else {}
+        for split in first.get("splits") or []:
+            code = str(((split.get("split") or {}).get("code")) or "").lower()
+            name = CODE_NAMES.get(code)
+            if not name:
+                continue
+            stat = split.get("stat", {}) or {}
+            if stat:
+                out[name] = _sit_line(stat)
+        # calendar, axis 1: by month (the "July" half of the ask)
+        mblob = client.pitcher_month_stats(pitcher_id)
+        mstats = (mblob.get("stats") or [{}])[0]
+        by_month: Dict[str, Any] = {}
+        for split in mstats.get("splits") or []:
+            m = split.get("month")
+            stat = split.get("stat", {}) or {}
+            if m is None or not stat:
+                continue
+            by_month[str(safe_int(m, 0))] = _sit_line(stat)
+        if by_month:
+            out["by_month"] = by_month
+        # calendar, axis 2: by day of week (the "Wednesday / weekends" half)
+        dblob = client.pitcher_dow_stats(pitcher_id)
+        dstats = (dblob.get("stats") or [{}])[0]
+        by_dow: Dict[str, Any] = {}
+        for split in dstats.get("splits") or []:
+            dow = split.get("dayOfWeek")
+            if isinstance(dow, dict):
+                dow = dow.get("description") or dow.get("name") or dow.get("id")
+            stat = split.get("stat", {}) or {}
+            if dow is None or not stat:
+                continue
+            by_dow[str(dow)] = _sit_line(stat)
+        if by_dow:
+            out["by_dow"] = by_dow
+        out["status"] = "ok" if len(out) > 1 else "empty"
+    except Exception as exc:
+        out = {"status": f"error:{type(exc).__name__}"}
+
+    try:
+        db.set(key, out)
+    except Exception:
+        pass
     return out
 
 
@@ -5627,6 +5759,7 @@ def build_pitcher_profile(client: MLBClient, db: CacheDB, pitcher_id: int, team_
         season_stats_status = f"error:{type(exc).__name__}"
     flat = flatten_pitching(stat)
     split_meta = parse_pitcher_handed_splits(client, db, pitcher_id)
+    sit_splits = parse_pitcher_situational_splits(client, db, pitcher_id)
     psc = build_pitcher_statcast_profile(db, pitcher_id, data_end_date)
     _xhr_register_pitcher(pitcher_id, psc)
     advanced = build_pitcher_advanced_stats(db, pitcher_id, data_end_date)
@@ -5700,6 +5833,7 @@ def build_pitcher_profile(client: MLBClient, db: CacheDB, pitcher_id: int, team_
         "weak_spots": weak_spots,
         "lineup_spot_damage": spot_damage.get("spots", {}),
         "lineup_zone_damage": spot_damage.get("zones", {}),
+        "situational_splits": sit_splits,
         "meatball_pct": safe_float(advanced.get("meatball_pct"), 0.070),
         "putaway_pct": safe_float(advanced.get("putaway_pct"), 0.180),
         "swstr_pct": safe_float(advanced.get("swstr_pct"), 0.110),
@@ -8933,6 +9067,7 @@ def build_hitter_records(client: MLBClient, db: CacheDB, game: Dict[str, Any], s
                 pitcher_side_slug=(pitcher.slug_vs_lhb if effective_side(bats, pitcher.throws) == "L" else pitcher.slug_vs_rhb),
                 pitcher_side_ops=(pitcher.ops_vs_lhb if effective_side(bats, pitcher.throws) == "L" else pitcher.ops_vs_rhb),
                 pitcher_lineup_spot_damage=getattr(pitcher, "lineup_spot_damage", {}) or {},
+                pitcher_situational_splits=getattr(pitcher, "situational_splits", {}) or {},
                 pitcher_lineup_zone_damage=getattr(pitcher, "lineup_zone_damage", {}) or {},
                 pitch_mix_score=safe_float(pmix_fit.get("score"), 50.0),
                 pitch_mix_note=str(pmix_fit.get("note", "PMix N/A")),
