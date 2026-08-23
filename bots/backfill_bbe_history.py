@@ -18,9 +18,14 @@ launch angle, trajectory, distance and spray coordinates on it -- the same
 `hitData` block `bots/backfill_hr_events.py` already walks for homers, and the
 same numbers `score_hitter()` turns into `recent_barrel_rate` and friends.
 
-This script harvests EVERY batted ball (not just homers), then rebuilds, for any
-date, the exact feature set the live bot computes -- using only games played
-BEFORE that date.
+This script harvests EVERY batted ball (not just homers) WITH THE PITCH THAT WAS
+HIT, then rebuilds, for any date, the exact feature set the live bot computes --
+using only games played BEFORE that date.
+
+PITCH TYPE (2026-08-23): every batted ball now carries pitch_type, pitch_name
+and pitch_velocity off the same playEvent that carries hitData. Re-harvest with
+--force to add them to dates already on disk; the feature builder does not use
+them, so features_*.jsonl is unaffected either way.
 
 LEAK-FREE BY CONSTRUCTION
 -------------------------
@@ -79,7 +84,15 @@ FEED_FIELDS = (
     "liveData,plays,allPlays,result,event,eventType,rbi,about,inning,isTopInning,"
     "matchup,batter,pitcher,id,fullName,batSide,pitchHand,playEvents,details,"
     "type,description,code,isInPlay,hitData,launchSpeed,launchAngle,"
-    "totalDistance,trajectory,hardness,coordinates,coordX,coordY"
+    "totalDistance,trajectory,hardness,coordinates,coordX,coordY,"
+    # PITCH CAPTURE (2026-08-23). Donovan's hypothesis is about line drives
+    # "on one or two of the main pitches they have" — which is untestable
+    # without knowing WHICH pitch was hit. Both paths below are already proven
+    # in this repo: details.type.code/description is what
+    # backfill_hr_events.py reads for its homers, and pitchData.startSpeed is
+    # what live_results_tracker.py reads at line ~1212. Nothing here is a
+    # guessed field name.
+    "pitchData,startSpeed"
 )
 TIMEOUT = 30
 DEFAULT_OUT = Path("public/data/current/bbe_history")
@@ -184,6 +197,10 @@ def bbe_from_payload(payload: dict, pk: int, day: date) -> list[dict]:
         la = num(hit.get("launchAngle"))
         dist = num(hit.get("totalDistance"))
         coords = hit.get("coordinates") or {}
+        # The pitch that was hit is on the SAME playEvent that carries hitData —
+        # that is the whole reason `evt` is captured alongside `hit` above.
+        _det = (evt.get("details") or {}).get("type") or {}
+        _pd = evt.get("pitchData") or {}
         event = str(res.get("event") or "")
         etype = str(res.get("eventType") or "").lower()
         is_hr = etype in ("home_run", "home run")
@@ -201,6 +218,9 @@ def bbe_from_payload(payload: dict, pk: int, day: date) -> list[dict]:
             "launch_angle": la,
             "total_distance": dist,
             "bb_type": (hit.get("trajectory") or ""),
+            "pitch_type": (_det.get("code") or ""),
+            "pitch_name": (_det.get("description") or ""),
+            "pitch_velocity": num(_pd.get("startSpeed")),
             "hc_x": num(coords.get("coordX")),
             "hc_y": num(coords.get("coordY")),
             "is_hr": bool(is_hr),
