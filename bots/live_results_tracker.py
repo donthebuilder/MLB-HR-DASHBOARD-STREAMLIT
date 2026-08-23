@@ -2008,6 +2008,41 @@ SLOT_FIELDS = {
     # again.
     "l20pa_hr", "l20pa_xbh", "last10_hr", "recent_ideal_hr_contact",
     "recent_pull_rate", "season_ab", "season_tb",
+    # ── THE RUNNING GAME (2026-08-23) ───────────────────────────────────────
+    # Donovan: "wild pitches, pickoffs, pitcher SB-against, catcher CS%, team
+    # defense." Four of those came off a blob the bot was already fetching and
+    # two came off Baseball Savant; all of them are new on the row and none of
+    # them is in any blend.
+    #
+    #   steal_risk_score      the model built on them, worth ZERO points in
+    #     + _status           hr_raw. Archived UNSCORED so that in a few weeks
+    #     + _note             "do high-risk spots actually produce steals" is
+    #                         answerable against actual_sb, which SB v1 already
+    #                         grades. Same deal as meatball_fit_score above: if
+    #                         the answer is no, it gets deleted.
+    #   the pitcher counts    wild pitches, pickoffs and runners going against
+    #                         him. Kept because the SCORE is not enough to
+    #                         audit the score — a night where every arm reads
+    #                         0 attempts is a data gap, not a slate of arms
+    #                         nobody runs on, and only the raw counts can tell
+    #                         the two apart.
+    #   the catcher           including opp_catcher_source, because a catcher
+    #                         read off a POSTED lineup and one guessed from the
+    #                         roster are different facts and a graded night
+    #                         that cannot distinguish them cannot be trusted
+    #                         about either.
+    #
+    # Left out: pitcher_balks (not in the model, not on any board) and the
+    # team-defence fields (they are per-team and identical for all nine bats,
+    # so archiving them per row buys nothing).
+    "steal_risk_score", "steal_risk_status", "steal_risk_note",
+    "pitcher_wild_pitches", "pitcher_pickoffs", "pitcher_sb_against",
+    "pitcher_cs_against", "pitcher_sb_attempts_against",
+    "pitcher_cs_rate_against", "pitcher_wp9", "pitcher_pickoff_rate",
+    "pitcher_running_game_status",
+    "opp_catcher_id", "opp_catcher_name", "opp_catcher_source",
+    "opp_catcher_cs_rate", "opp_catcher_sb_attempts", "opp_catcher_status",
+    "opp_def_oaa_vs_hand", "opp_def_status",
 }
 
 

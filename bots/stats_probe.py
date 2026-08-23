@@ -53,6 +53,7 @@ import ssl
 import sys
 import urllib.error
 import urllib.request
+from pathlib import Path
 
 BASE = "https://statsapi.mlb.com/api/v1"
 FEED = "https://statsapi.mlb.com/api/v1.1"
@@ -251,6 +252,84 @@ def main() -> int:
         for i in range(0, len(ks), 6):
             print("   " + "  ".join(k.ljust(24) for k in ks[i:i + 6]))
 
+    # ── 6. SAVANT: THE TWO FEEDS, AND THE ONE UNKNOWN PARAMETER ────────────
+    head("6. Baseball Savant — catcher throwing, team defence, and ABS")
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import savant_feeds as SF                              # noqa: PLC0415
+
+        season = dt.date.today().year
+        cat, cat_status = SF.catcher_throwing(season)
+        print(f"  catcher-throwing  {cat_status:<18} {len(cat)} catchers")
+        for pid, v in list(cat.items())[:3]:
+            print(f"     {v['name']:<22} {v['team']:<4} {v['cs']}/{v['sb_attempts']}"
+                  f"  cs={v['cs_rate']}  xcs={v['cs_rate_expected']}"
+                  f"  pop={v['pop_time']}  arm={v['arm_strength']}")
+        found["savant_catcher_status"] = cat_status
+        found["savant_catcher_count"] = len(cat)
+
+        tm, tm_status = SF.team_defense(season)
+        print(f"  team defence      {tm_status:<18} {len(tm)} teams")
+        for tid, v in list(tm.items())[:3]:
+            print(f"     {v['team_name']:<14} id={tid}  OAA {v['oaa']:>4}"
+                  f"  vsR {v['oaa_vs_rhb']:>4}  vsL {v['oaa_vs_lhb']:>4}")
+        found["savant_teamdef_status"] = tm_status
+        found["savant_teamdef_count"] = len(tm)
+
+        # ── THE ONE THING THIS PROBE EXISTS FOR NOW ─────────────────────────
+        #
+        # The ABS challenge leaderboard is real, serves csv=true, and its
+        # columns are known verbatim. What is NOT known is the parameter that
+        # selects Batters vs Catchers vs Pitchers: the control is rendered by
+        # JavaScript, and every name tried by hand (type, playerType,
+        # perspective, ...) returned the BATTER table with a 200. It does not
+        # error — it ignores you.
+        #
+        # A model term built on that would give every pitcher a batter's
+        # challenge record and nothing anywhere would say so. So: sweep the
+        # candidates, and decide by whether the RETURNED NAMES CHANGE. The
+        # batter table's first rows are the control; a parameter that actually
+        # selects a different role produces a different first row.
+        print("")
+        print("  ABS challenge parameter sweep — which one actually changes the table?")
+        base_rows, base_status = SF.abs_challenges_raw(season)
+        base_names = [str(r.get("entity_name", "")) for r in base_rows[:5]]
+        print(f"     (no parameter)   {base_status:<16} {len(base_rows):>5} rows   "
+              f"{', '.join(base_names[:3])}")
+        found["abs_default_status"] = base_status
+        found["abs_default_names"] = base_names
+        found["abs_columns"] = sorted((base_rows[0] or {}).keys()) if base_rows else []
+        hits = []
+        for param, values in SF.ABS_PARAM_CANDIDATES:
+            for value in values:
+                rows, st = SF.abs_challenges_raw(season, param, value)
+                names = [str(r.get("entity_name", "")) for r in rows[:5]]
+                changed = bool(rows) and names != base_names
+                mark = "CHANGED" if changed else "same" if rows else st
+                print(f"     {param}={value:<10} {st:<16} {len(rows):>5} rows   "
+                      f"{mark:<8} {', '.join(names[:3])}")
+                if changed:
+                    hits.append({"param": param, "value": value, "names": names,
+                                 "rows": len(rows)})
+        found["abs_param_hits"] = hits
+        if hits:
+            h = hits[0]
+            print("")
+            print(f"  ➜ USE {h['param']}={h['value']} — it returns a different table "
+                  f"({', '.join(h['names'][:3])}).")
+            print("     Check those names ARE pitchers before wiring it. If they are")
+            print("     not, this parameter changed something else and the answer is")
+            print("     still unknown.")
+        else:
+            print("")
+            print("  ➜ NO CANDIDATE CHANGED THE TABLE. Every name tried returns the")
+            print("     batter view. Do NOT wire ABS by role off this endpoint yet —")
+            print("     open the dashboard in a browser, switch to Pitchers, and read")
+            print("     the query string off the address bar or the CSV button.")
+    except Exception as e:                                       # noqa: BLE001
+        print(f"  savant feeds failed: {type(e).__name__}: {e}")
+        found["savant_error"] = f"{type(e).__name__}: {e}"
+
     head("VERDICT")
     def say(label, ok, detail=""):
         print(f"  {'✓' if ok else '✗'} {label:34} {detail}")
@@ -263,11 +342,27 @@ def main() -> int:
         ", ".join(look_for(pk, "stolenbase", "caughtstealing")))
     say("catcher caught stealing", bool(look_for(ck, "caughtstealing")),
         ", ".join(look_for(ck, "caughtstealing", "stolenbase")))
-    say("team defense", bool(tk), f"{len(tk)} fields")
-    say("ABS challenge record", bool(found.get("abs_keys")),
-        ", ".join(found.get("abs_keys") or []) or "not in the live feed")
-    print("\n  Already on the slate and unused by any model: pitcher_meatball_pct,")
-    print("  season_sb, season_cs, season_sb_attempt_rate.")
+    say("team defense (StatsAPI)", bool(tk), f"{len(tk)} fields")
+    say("catcher CS% (Savant)", found.get("savant_catcher_status") == "ok",
+        f"{found.get('savant_catcher_count', 0)} catchers, {found.get('savant_catcher_status', 'not run')}")
+    say("team defence OAA (Savant)", found.get("savant_teamdef_status") == "ok",
+        f"{found.get('savant_teamdef_count', 0)} teams, {found.get('savant_teamdef_status', 'not run')}")
+    say("ABS columns exist", bool(found.get("abs_columns")),
+        f"{len(found.get('abs_columns') or [])} columns")
+    _hits = found.get("abs_param_hits") or []
+    say("ABS role parameter FOUND", bool(_hits),
+        (f"{_hits[0]['param']}={_hits[0]['value']}" if _hits
+         else "no candidate changed the table — see section 6"))
+    print("")
+    print("  WIRED ALREADY, off blobs the bot was fetching all along:")
+    print("    wildPitches, pickoffs, balks, stolenBases, caughtStealing")
+    print("    -> pitcher_wild_pitches, pitcher_pickoffs, pitcher_sb_against,")
+    print("       pitcher_cs_against, pitcher_cs_rate_against, pitcher_wp9,")
+    print("       pitcher_pickoff_rate  (compute_pitcher_extended_stats)")
+    print("")
+    print("  Already on the slate and unused by any model: pitcher_meatball_pct")
+    print("  is now used (hand-split, mlb_hr_v4); season_sb, season_cs and")
+    print("  season_sb_attempt_rate feed the steal board.")
 
     if a.out:
         with open(a.out, "w", encoding="utf-8") as f:

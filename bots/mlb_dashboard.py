@@ -94,6 +94,24 @@ except Exception as _config_fingerprint_exc:
     print(f"config_fingerprint import failed ({_config_fingerprint_exc}); "
           f"config_hash stamping is disabled for this run.", file=sys.stderr)
 
+# SAVANT FEEDS (2026-08-23): the two league-wide tables StatsAPI does not carry
+# — catcher throwing and team Outs Above Average (bots/savant_feeds.py). Same
+# defensive-import pattern as the two above, and the reason is not theoretical:
+# `from archive import rows_of` in three staged scripts, with archive.py never
+# copied alongside them, is exactly why the accountability bot published
+# nothing for two weeks and nobody noticed.
+#
+# ONE report at startup rather than a swallowed failure per game. A message
+# printed thirty times is a message nobody reads, and a message printed zero
+# times is how a feed goes dark for a fortnight.
+try:
+    import savant_feeds as SAVANT_FEEDS
+except Exception as _savant_exc:
+    SAVANT_FEEDS = None
+    print(f"savant_feeds import failed ({_savant_exc}); opposing-catcher "
+          f"throwing and team-defence fields will publish as 'missing' for "
+          f"this run. Nothing else is affected.", file=sys.stderr)
+
 try:
     import pandas as pd
 except ImportError as exc:
@@ -962,6 +980,23 @@ class PitcherSummary:
     situational_splits: Dict[str, Any] = dataclasses.field(default_factory=dict)
     # Advanced pitch-level stats from Statcast (decimals 0.0–1.0).
     # League-average fallbacks used when sample is too low or pybaseball missing.
+    # ── THE RUNNING GAME (2026-08-23) ─────────────────────────────────────
+    # Off StatsAPI's season pitching blob, which build_pitcher_profile already
+    # fetches — wildPitches, pickoffs, balks, stolenBases and caughtStealing
+    # are top-level keys on it, verified verbatim before this was written.
+    # The rates are Optional because a rate over four attempts is not a rate,
+    # and 0.0 would rank an unmeasured arm beside one that genuinely cannot
+    # hold a runner.
+    wild_pitches: int = 0
+    pickoffs: int = 0
+    balks: int = 0
+    sb_against: int = 0
+    cs_against: int = 0
+    sb_attempts_against: int = 0
+    cs_rate_against: Optional[float] = None   # the PAIR's number — the catcher throws it
+    wp9: Optional[float] = None
+    pickoff_rate: Optional[float] = None      # pickoffs per baserunner allowed
+    running_game_status: str = "missing"
     meatball_pct: float = 0.070       # share of pitches in middle-middle "meatball" zone
     meatball_pct_vs_lhb: float = 0.070   # ...to LEFT-handed bats specifically
     meatball_pct_vs_rhb: float = 0.070   # ...to RIGHT-handed bats specifically
@@ -1437,6 +1472,52 @@ class HitterRecord:
     # Advanced pitcher stats — sourced from Statcast/pybaseball when available.
     # Each is a decimal 0.0–1.0. Defaults are league averages so the model behaves
     # neutrally when the data is missing instead of NaN-ing out.
+    # ── THE RUNNING GAME, ON THE HITTER'S ROW (2026-08-23) ────────────────
+    # Donovan asked for wild pitches, pickoffs and pitcher stolen-bases-against
+    # among "the other six" stats. Four of the six were never missing — they
+    # were keys on a blob build_pitcher_profile already fetched every night.
+    #
+    # They land on the hitter's row like every other pitcher fact here,
+    # because a slate row is one hitter facing one arm and the site reads it
+    # that way. The rates are Optional: a caught-stealing rate over four
+    # attempts is not a rate, and a 0.0 would put an unmeasured arm at the
+    # bottom of the steal board beside one who genuinely cannot hold anybody.
+    # ── WHO IS CATCHING, AND WHAT IS BEHIND HIM (2026-08-23) ──────────────
+    # Donovan: "catcher CS%, team defense." Both are league-wide tables on
+    # Baseball Savant (bots/savant_feeds.py); neither is on StatsAPI in a
+    # usable shape. The catcher is resolved off the boxscore's posted order —
+    # see find_catcher — and `catcher_source` travels with him because a
+    # confirmed catcher and a likely one are not the same fact.
+    #
+    # opp_catcher_cs_rate is Optional and stays None under 10 attempts. A
+    # backup at 1-of-2 is not a 50% thrower, and the steal board would put him
+    # top.
+    opp_catcher_id: int = 0
+    opp_catcher_name: str = ""
+    opp_catcher_source: str = ""            # lineup | roster | "" (not found)
+    opp_catcher_cs_rate: Optional[float] = None
+    opp_catcher_cs_rate_expected: Optional[float] = None
+    opp_catcher_pop_time: Optional[float] = None
+    opp_catcher_arm_strength: Optional[float] = None
+    opp_catcher_sb_attempts: int = 0
+    opp_catcher_status: str = "missing"
+    # Team defence behind tonight's arm, split by batter hand — which is the
+    # half that matters here, because every other pitcher term on this row is
+    # already asking a platoon question.
+    opp_def_oaa: Optional[int] = None
+    opp_def_oaa_vs_hand: Optional[int] = None
+    opp_def_success_rate: Optional[float] = None
+    opp_def_status: str = "missing"
+    pitcher_wild_pitches: int = 0
+    pitcher_pickoffs: int = 0
+    pitcher_balks: int = 0
+    pitcher_sb_against: int = 0
+    pitcher_cs_against: int = 0
+    pitcher_sb_attempts_against: int = 0
+    pitcher_cs_rate_against: Optional[float] = None
+    pitcher_wp9: Optional[float] = None
+    pitcher_pickoff_rate: Optional[float] = None
+    pitcher_running_game_status: str = "missing"
     pitcher_meatball_pct: float = 0.070
     # The hand split of the same number (2026-08-23) -- see the long note in
     # build_pitcher_advanced_stats. `_vs_hand` is the one that applies to THIS
@@ -1456,6 +1537,17 @@ class HitterRecord:
     # for a few weeks and earns its way into the score afterwards -- the same
     # path personal_shape_match took. Status exists so a dead 0.0 on an arm
     # with no Statcast data is never mistaken for "this matchup is cold".
+    # ── THE RUNNING GAME MODEL (2026-08-23) ───────────────────────────────
+    # Donovan asked for a model built on the stats he listed. This is it, and
+    # like meatball_fit_score it is a PUBLISHED, GRADED COLUMN worth zero
+    # points in any blend — the standing rule is that no hr_blend weight moves
+    # before 9c, and a steal model has no business inside a home-run score
+    # anyway. It exists so the steal board can rank on something better than
+    # raw volume, and so the question "do high-risk spots actually produce
+    # steals" becomes answerable off graded nights.
+    steal_risk_score: float = 0.0
+    steal_risk_status: str = "missing"   # ok | thin | missing
+    steal_risk_note: str = ""
     meatball_fit_score: float = 0.0
     meatball_fit_status: str = "missing"   # ok | no_side_split | missing
     meatball_fit_note: str = ""
@@ -2619,6 +2711,70 @@ def extract_lineup(team_box: Dict[str, Any]) -> List[Tuple[int, int]]:
         if lineup:
             return lineup
     return []
+
+
+def find_catcher(team_box: Dict[str, Any]) -> Tuple[int, str, str]:
+    """(player_id, name, source) for the team's catcher tonight.
+
+    2026-08-23. components/tabs/StealBoard.js has shipped with a written
+    refusal at the bottom of it since the day it was built:
+
+        Who is catching is not on this board — the slate does not carry the
+        opposing catcher, and that is the other half of a steal; saying so is
+        more useful than ranking as though it were counted.
+
+    It IS on the boxscore, and always was. Every entry under team_box.players
+    carries position.abbreviation, and this walks the posted batting order
+    looking for "C". Walking the ORDER rather than the whole players dict
+    matters: the dict includes the bench, so the first "C" in it is as likely
+    to be the backup as the starter.
+
+    `source` travels with the answer because the two ways of getting it are
+    not equally good, and a caller that cannot tell them apart will present a
+    guess as a fact:
+      "lineup"  — he is in the posted batting order at C. This is the answer.
+      "roster"  — no posted order yet, so the boxscore's own player list was
+                  used; on a projected lineup this is the likeliest catcher
+                  and not a confirmed one.
+      ""        — nobody found. The caller must say so rather than fall back
+                  to a league-average catcher, which is how a matchup against
+                  the best throwing catcher in baseball ends up scored neutral.
+    """
+    players = team_box.get("players", {}) or {}
+
+    def _named(p):
+        person = p.get("person") or {}
+        return safe_int(person.get("id"), 0), str(person.get("fullName") or "").strip()
+
+    order = team_box.get("battingOrder") or []
+    for pid in order:
+        k = str(pid)
+        if not k.startswith("ID"):
+            k = f"ID{k}"
+        p = players.get(k)
+        if not p:
+            continue
+        if ((p.get("position") or {}).get("abbreviation") or "").upper() == "C":
+            cid, name = _named(p)
+            if cid:
+                return cid, name, "lineup"
+
+    # No posted order. Prefer whoever the boxscore lists at C with the most
+    # plate appearances this season — the everyday catcher, not the first key
+    # the dict happens to yield.
+    best = (0, "", -1)
+    for p in players.values():
+        if ((p.get("position") or {}).get("abbreviation") or "").upper() != "C":
+            continue
+        cid, name = _named(p)
+        if not cid:
+            continue
+        pa = safe_int((((p.get("seasonStats") or {}).get("batting") or {}).get("plateAppearances")), 0)
+        if pa > best[2]:
+            best = (cid, name, pa)
+    if best[0]:
+        return best[0], best[1], "roster"
+    return 0, "", ""
 
 
 def build_projected_lineup(client: MLBClient, team_box: Dict[str, Any], team_id: int) -> List[Tuple[int, int]]:
@@ -5742,6 +5898,44 @@ def compute_pitcher_extended_stats(stat: Dict[str, Any], flat: Dict[str, float],
     # pulled for bb_pct above -- zero new fields fetched.
     bb9 = (bb * 9.0 / ip) if ip > 0 else 3.20
 
+    # ── THE RUNNING GAME (2026-08-23) ─────────────────────────────────────
+    #
+    # Donovan asked for wild pitches, pickoffs and pitcher stolen-bases-against
+    # among six stats "we need to see if we can find anywhere". Four of the six
+    # were never anywhere else — they were in THIS dict's own input the whole
+    # time. `stat` is StatsAPI's season pitching blob, already fetched by
+    # build_pitcher_profile, and it carries wildPitches, pickoffs, balks,
+    # stolenBases and caughtStealing as top-level keys. Verified verbatim
+    # against statsapi.mlb.com before a line of this was written, which is the
+    # standing rule here: this repo has the receipt for what guessing an API's
+    # shape costs (the odds pipeline needed "eight round trips of failure" to
+    # learn one provider's response).
+    #
+    # Zero new network calls, same as everything else in this function.
+    #
+    # RATES, NOT COUNTS, for the ones that scale with innings. A reliever with
+    # 3 wild pitches in 40 innings is wilder than a starter with 5 in 180, and
+    # a board sorted on the raw count says the opposite. The counts ride along
+    # too, because a rate over 12 innings is not a rate and the reader needs
+    # the denominator to know that.
+    wild_pitches = safe_int(stat.get("wildPitches"), 0)
+    pickoffs = safe_int(stat.get("pickoffs"), 0)
+    balks = safe_int(stat.get("balks"), 0)
+    sb_against = safe_int(stat.get("stolenBases"), 0)
+    cs_against = safe_int(stat.get("caughtStealing"), 0)
+    sb_attempts_against = sb_against + cs_against
+    # A pitcher's caught-stealing rate is NOT his alone — the catcher throws
+    # the ball. It is published as the pair's number and named that way
+    # everywhere it surfaces, because attributing it to the arm would be a
+    # quiet lie about who is doing the work.
+    cs_rate_against = (cs_against / sb_attempts_against) if sb_attempts_against >= 5 else None
+    wp9 = (wild_pitches * 9.0 / ip) if ip > 0 else None
+    # Pickoffs per time on base, not per inning: the chance to pick a man off
+    # only exists when there is a man on. Baserunners allowed is the honest
+    # denominator and it is already here (hits + walks + hit batsmen).
+    baserunners = hits + bb + hbp
+    pickoff_rate = (pickoffs / baserunners) if baserunners >= 20 else None
+
     return {
         "fip": round(fip, 2),
         "avg_against": round(avg_against, 3),
@@ -5757,6 +5951,21 @@ def compute_pitcher_extended_stats(stat: Dict[str, Any], flat: Dict[str, float],
         "barrels_allowed_count": safe_int(psc.get("barrels_allowed_count_season"), 0),
         "hr_fb_pct": round(safe_float(psc.get("hr_fb_pct"), 0.100), 3),
         "extended_stats_status": "ok" if (ab > 0 or bf > 0) else "missing",
+        # ── the running game, off the same blob ──────────────────────────
+        "wild_pitches": wild_pitches,
+        "pickoffs": pickoffs,
+        "balks": balks,
+        "sb_against": sb_against,
+        "cs_against": cs_against,
+        "sb_attempts_against": sb_attempts_against,
+        # None, not 0.0, under the sample floors. A pitcher who has faced two
+        # attempts has no caught-stealing rate, and publishing 0.0 for him
+        # would put him at the bottom of every board beside arms who genuinely
+        # cannot hold a runner. The site renders None as an em-dash.
+        "cs_rate_against": round(cs_rate_against, 3) if cs_rate_against is not None else None,
+        "wp9": round(wp9, 2) if wp9 is not None else None,
+        "pickoff_rate": round(pickoff_rate, 4) if pickoff_rate is not None else None,
+        "running_game_status": "ok" if ip > 0 else "missing",
     }
 
 
@@ -5977,6 +6186,23 @@ def build_pitcher_profile(client: MLBClient, db: CacheDB, pitcher_id: int, team_
         "tb_allowed": extended["tb_allowed"],
         "bb_allowed": extended["bb_allowed"],
         "bb_pct": extended["bb_pct"],
+        # ── THE RUNNING GAME (2026-08-23) ───────────────────────────────
+        # Copied one-for-one out of `extended`, and copied here rather than
+        # left to a dataclass default because DATA DEFECT #3 (the note four
+        # lines down) is exactly what happens when a computed field is
+        # returned and never carried: every starter published the constant
+        # 3.20 for BB/9 for eleven days and it looked like a rate the whole
+        # time. Nine fields, nine lines, no cleverness.
+        "wild_pitches": extended["wild_pitches"],
+        "pickoffs": extended["pickoffs"],
+        "balks": extended["balks"],
+        "sb_against": extended["sb_against"],
+        "cs_against": extended["cs_against"],
+        "sb_attempts_against": extended["sb_attempts_against"],
+        "cs_rate_against": extended["cs_rate_against"],
+        "wp9": extended["wp9"],
+        "pickoff_rate": extended["pickoff_rate"],
+        "running_game_status": extended["running_game_status"],
         # DATA DEFECT #3 FIX (2026-08-23). compute_pitcher_extended_stats()
         # has computed a real BB/9 since 2026-08-12 and returned it in this
         # very dict -- but this kwargs block never copied it, so
@@ -7406,6 +7632,127 @@ def apply_model_v2_layers(h: HitterRecord) -> HitterRecord:
     # overall who runs 9.4% to lefties IS a mistake-pitch setup for a lefty
     # and was not being called one.
     h.mistake_pitch_setup_flag = bool(has_advanced and meatball_hand >= 0.080 and pullair_allowed >= 0.255)
+
+    # ── THE RUNNING GAME: THE OTHER GRADED COLUMN ──────────────────────────
+    #
+    # Donovan, 2026-08-23: "pitcher meatballs wild pitches abs challenge record
+    # for cather and pitcher and batter. defense stats and casught stelaing
+    # perceantage and pitcher catch stealign and pitcher pick off rate. add
+    # those ... then also build a model with them."
+    #
+    # This is the model on the running-game half of that list. It answers one
+    # question — how good a steal spot is this man tonight — and it is worth
+    # ZERO points in hr_raw or any other blend. A steal model has no business
+    # inside a home-run score, and the standing no-weights-before-9c rule
+    # covers the rest.
+    #
+    # FIVE TERMS, and the last one is the one everybody forgets. A steal needs
+    # a runner who RUNS, a runner who SUCCEEDS, an arm that can be run on, a
+    # catcher who cannot throw — and a man who REACHES BASE. A 42-steal hitter
+    # batting .190 is not tonight's steal; his rate is real and his opportunity
+    # is not. StealBoard.js has said that in words since it was built; this
+    # puts it in the number.
+    #
+    # NOTHING HERE IS INVENTED WHERE DATA IS MISSING. Each term contributes
+    # only if its input exists, the weights are renormalised over what actually
+    # landed, and `steal_risk_status` says "thin" whenever the pitcher or
+    # catcher half is absent. A score built on the runner alone is a volume
+    # ranking wearing a matchup's clothes, and it says so.
+    _sr_terms = []
+    _sr_add = lambda w, v: _sr_terms.append((w, max(0.0, min(1.0, v))))   # noqa: E731
+
+    _run_att = safe_float(getattr(h, "season_sb_attempt_rate", 0.0), 0.0)
+    _run_sb = safe_int(getattr(h, "season_sb", 0), 0)
+    _run_cs = safe_int(getattr(h, "season_cs", 0), 0)
+    _run_tries = _run_sb + _run_cs
+    # ── THE RUNNER IS A GATE, NOT A TERM ──────────────────────────────────
+    # Caught in the first run of this model: a hitter with NO attempt history
+    # scored 78.7 — the highest on the test slate — because with both runner
+    # terms absent the renormalisation handed his whole score to the arm and
+    # the catcher. A soft arm and a weak-throwing catcher are a great steal
+    # spot for somebody who runs; for a man who has not attempted a base all
+    # season they are a fact about two other people.
+    #
+    # So it gates. No attempt history, no steal score, and the note says which
+    # of the two reasons it is. This is the same shape as meatball_fit_score's
+    # "missing" path: an unmeasured thing must never outrank a measured one.
+    _has_runner = (_run_tries > 0) or (_run_att > 0)
+    if _has_runner and _run_att > 0:
+        # The bot publishes this as a rate; some slates have carried it as a
+        # per-100 number, so normalise rather than trust the scale.
+        _sr_add(0.34, minmax_norm(_run_att if _run_att <= 1 else _run_att / 100.0, 0.02, 0.28))
+    elif _run_tries:
+        _sr_add(0.34, minmax_norm(_run_tries, 2, 40))
+    if _run_tries >= 5:
+        # Break-even on a stolen base is about 75%; below it the attempt costs
+        # more than it wins, which is the line StealBoard already colours to.
+        _sr_add(0.18, minmax_norm(_run_sb / _run_tries, 0.55, 0.90))
+    # The arm. Runners going against him, and how rarely he checks them.
+    _p_att = safe_int(getattr(h, "pitcher_sb_attempts_against", 0), 0)
+    _p_pick = getattr(h, "pitcher_pickoff_rate", None)
+    _p_wp9 = getattr(h, "pitcher_wp9", None)
+    _arm_ok = False
+    if _p_att >= 5:
+        _sr_add(0.14, minmax_norm(_p_att, 3, 30))
+        _arm_ok = True
+    if _p_pick is not None:
+        # LOW pickoff rate is the runner's friend, so this term inverts.
+        _sr_add(0.06, 1.0 - minmax_norm(safe_float(_p_pick, 0.0), 0.0, 0.06))
+        _arm_ok = True
+    if _p_wp9 is not None:
+        # A wild pitch moves the runner for free. Not a steal, but the same
+        # bet's neighbour, and it is on the list he asked for.
+        _sr_add(0.06, minmax_norm(safe_float(_p_wp9, 0.0), 0.10, 0.80))
+        _arm_ok = True
+    # The catcher. A weak thrower raises the risk, so this inverts too, and it
+    # is measured against what Statcast EXPECTED of his throws where possible —
+    # a catcher behind arms who never hold a runner posts a poor raw rate that
+    # is not his fault.
+    _cat_rate = getattr(h, "opp_catcher_cs_rate", None)
+    _cat_exp = getattr(h, "opp_catcher_cs_rate_expected", None)
+    _cat_ok = False
+    if _cat_rate is not None:
+        _sr_add(0.16, 1.0 - minmax_norm(safe_float(_cat_rate, 0.20), 0.10, 0.35))
+        _cat_ok = True
+        if _cat_exp is not None:
+            # Over- or under-performing his expectation, worth a small nudge.
+            _sr_add(0.06, 1.0 - minmax_norm(safe_float(_cat_rate, 0.2) - safe_float(_cat_exp, 0.2), -0.10, 0.10))
+    # ── AND THE HALF NOBODY COUNTS: HE HAS TO GET ON ──────────────────────
+    # A MULTIPLIER, not a term, and the first version had it wrong. As a 0.10
+    # additive slice, a 42-steal man with a .262 on-base scored 75.5 against
+    # 75.6 for a .352 runner — the model was saying they were the same bet
+    # while its own comment said one of them "is not tonight's steal". You
+    # cannot steal first base, so opportunity SCALES the whole thing rather
+    # than adding a tenth of it.
+    #
+    # Floor of 0.55 rather than 0: a poor on-base still reaches sometimes, and
+    # a multiplier that can hit zero would rank a .240 burner below a catcher
+    # who never runs. Ceiling 1.0 — reaching base is not a bonus, it is the
+    # precondition, so the best it can do is fail to penalise.
+    _obp = safe_float(getattr(h, "season_obp", 0.0), 0.0)
+    _reach = (0.55 + 0.45 * minmax_norm(_obp, 0.270, 0.390)) if _obp > 0 else 1.0
+
+    _sr_w = sum(w for w, _ in _sr_terms)
+    if not _has_runner:
+        h.steal_risk_score = 0.0
+        h.steal_risk_status = "no_runner"
+        h.steal_risk_note = ("no stolen-base attempt on his record this season — "
+                             "the arm and the catcher are somebody else's matchup")
+    elif _sr_w <= 0:
+        h.steal_risk_score = 0.0
+        h.steal_risk_status = "missing"
+        h.steal_risk_note = "nothing published for this runner tonight"
+    else:
+        _raw = 100.0 * sum(w * v for w, v in _sr_terms) / _sr_w
+        h.steal_risk_score = round(_raw * _reach, 1)
+        h.steal_risk_status = "ok" if (_arm_ok and _cat_ok) else "thin"
+        _cat_word = (f"catcher {100 * safe_float(_cat_rate, 0.0):.0f}% CS" if _cat_ok
+                     else "catcher unmeasured")
+        _arm_word = (f"{_p_att} attempts against this arm" if _p_att >= 5
+                     else "no run history against this arm")
+        _reach_word = (f" · {_obp:.3f} OBP".replace("0.", ".") if _obp > 0 else "")
+        h.steal_risk_note = (f"{_run_sb} SB / {_run_tries} tries · {_arm_word}"
+                             f" · {_cat_word}{_reach_word}")
 
     # ── MEATBALL FIT: THE GRADED COLUMN ────────────────────────────────────
     #
@@ -8975,6 +9322,28 @@ def build_hitter_records(client: MLBClient, db: CacheDB, game: Dict[str, Any], s
         "home": build_team_bullpen_profile(client, db, team_ids["home"], home_abbr, probable_home_id, data_end),
         "away": build_team_bullpen_profile(client, db, team_ids["away"], away_abbr, probable_away_id, data_end),
     }
+    # ── THE OTHER HALF OF A STEAL (2026-08-23) ────────────────────────────
+    # Both feeds are LEAGUE-WIDE and cached for the whole run, so this is two
+    # HTTP round trips for the entire slate rather than two per game. If either
+    # is down, its status says so and every row it would have filled says
+    # "missing" rather than quietly taking a league-average value — an unknown
+    # catcher scored as average is exactly how a matchup against the best
+    # thrower in baseball reads neutral.
+    _savant_season = slate_date.year
+    _catchers, _catcher_status = ({}, "missing")
+    _team_def, _team_def_status = ({}, "missing")
+    if SAVANT_FEEDS is not None:
+        try:
+            _catchers, _catcher_status = SAVANT_FEEDS.catcher_throwing(_savant_season)
+            _team_def, _team_def_status = SAVANT_FEEDS.team_defense(_savant_season)
+        except Exception as _exc:                                 # noqa: BLE001
+            _catcher_status = _team_def_status = f"error:{type(_exc).__name__}"
+    else:
+        _catcher_status = _team_def_status = "module_missing"
+    catchers_by_side = {}
+    for _side in ("home", "away"):
+        cid, cname, csrc = find_catcher(teams_box.get(_side, {}) or {})
+        catchers_by_side[_side] = {"id": cid, "name": cname, "source": csrc}
 
     rows: List[HitterRecord] = []
     for side in ("away", "home"):
@@ -8989,6 +9358,10 @@ def build_hitter_records(client: MLBClient, db: CacheDB, game: Dict[str, Any], s
 
         opp_key = "home" if side == "away" else "away"
         pitcher = pitchers[opp_key]
+        # The catcher THIS lineup is running against is the OPPOSING team's.
+        _c = catchers_by_side.get(opp_key, {}) or {}
+        _cprof = _catchers.get(_c.get("id") or 0) or {}
+        _tdef = _team_def.get(team_ids.get(opp_key, 0)) or {}
         opp_bullpen = bullpens.get(opp_key, {})
         # Pull pitch mix scoped by hitter handedness — pitchers throw very different
         # mixes vs LHB vs RHB. Each call hits the same underlying Statcast pull (cached).
@@ -9392,6 +9765,45 @@ def build_hitter_records(client: MLBClient, db: CacheDB, game: Dict[str, Any], s
                 weak_spot_bonus=0.0,  # computed by score_hitter from tiered criteria
                 weak_spot_reason=_weak_spot_reason_for(pitcher, spot),
                 # Pitcher advanced stats — passed through from PitcherSummary.
+                # ── the catcher and the defence behind tonight's arm ──────
+                opp_catcher_id=_c.get("id", 0),
+                opp_catcher_name=_c.get("name", ""),
+                opp_catcher_source=_c.get("source", ""),
+                opp_catcher_cs_rate=_cprof.get("cs_rate"),
+                opp_catcher_cs_rate_expected=_cprof.get("cs_rate_expected"),
+                opp_catcher_pop_time=_cprof.get("pop_time"),
+                opp_catcher_arm_strength=_cprof.get("arm_strength"),
+                opp_catcher_sb_attempts=_cprof.get("sb_attempts", 0),
+                # Three ways this can be unknown and they are NOT the same:
+                # the feed failed, the feed is fine but this catcher is not
+                # qualified for it, or we never worked out who is catching.
+                # A reader who cannot tell them apart cannot tell a hard
+                # matchup from an unmeasured one.
+                opp_catcher_status=(
+                    _catcher_status if _catcher_status != "ok"
+                    else "ok" if _cprof
+                    else "no_catcher" if not _c.get("id")
+                    else "unqualified"
+                ),
+                opp_def_oaa=_tdef.get("oaa"),
+                opp_def_oaa_vs_hand=(
+                    _tdef.get("oaa_vs_lhb")
+                    if effective_side(bats, getattr(pitcher, "throws", "")) == "L"
+                    else _tdef.get("oaa_vs_rhb")
+                ) if _tdef else None,
+                opp_def_success_rate=_tdef.get("success_rate"),
+                opp_def_status=(_team_def_status if _team_def_status != "ok"
+                                else "ok" if _tdef else "no_team"),
+                pitcher_wild_pitches=getattr(pitcher, "wild_pitches", 0),
+                pitcher_pickoffs=getattr(pitcher, "pickoffs", 0),
+                pitcher_balks=getattr(pitcher, "balks", 0),
+                pitcher_sb_against=getattr(pitcher, "sb_against", 0),
+                pitcher_cs_against=getattr(pitcher, "cs_against", 0),
+                pitcher_sb_attempts_against=getattr(pitcher, "sb_attempts_against", 0),
+                pitcher_cs_rate_against=getattr(pitcher, "cs_rate_against", None),
+                pitcher_wp9=getattr(pitcher, "wp9", None),
+                pitcher_pickoff_rate=getattr(pitcher, "pickoff_rate", None),
+                pitcher_running_game_status=getattr(pitcher, "running_game_status", "missing"),
                 pitcher_meatball_pct=getattr(pitcher, "meatball_pct", 0.070),
                 pitcher_meatball_pct_vs_lhb=getattr(pitcher, "meatball_pct_vs_lhb", 0.070),
                 pitcher_meatball_pct_vs_rhb=getattr(pitcher, "meatball_pct_vs_rhb", 0.070),
