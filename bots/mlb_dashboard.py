@@ -5590,6 +5590,20 @@ def build_pitcher_profile(client: MLBClient, db: CacheDB, pitcher_id: int, team_
             hr9 = safe_float(allowed.get("hr9"), 1.10)
             whip = safe_float(allowed.get("whip"), 1.30)
             allowed["weak_spots"] = _estimate_weak_spots_from_rates(hr9, whip)
+        # DATA DEFECT #2 FIX (2026-08-22): pitcher_xhr_allowed/pitcher_hr_luck
+        # were 0 on every starter of every published slate. Root cause: this
+        # early cache return sits ABOVE the _xhr_register_pitcher() call in
+        # the cold path below, so on any run where this profile is served
+        # from cache -- every run after the day's first, ~12 of 13 today.yml
+        # runs -- no pitcher was ever registered in _XHR_PITCHERS, and
+        # finalize_xhr_fields() found nothing to stamp. The batter half of
+        # the identical machinery works because its register call sits in
+        # the always-run per-hitter loop (mlb_dashboard main), not behind a
+        # profile cache hit. Registration is a per-RUN accumulator side
+        # effect and must happen on every path that produces a profile;
+        # build_pitcher_statcast_profile() is itself day-cached, so on a
+        # cache hit this costs one db read.
+        _xhr_register_pitcher(pitcher_id, build_pitcher_statcast_profile(db, pitcher_id, data_end_date))
         return PitcherSummary(**allowed)
 
     person_blob = client.person(pitcher_id)
