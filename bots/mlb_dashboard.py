@@ -6669,6 +6669,37 @@ def apply_decision_engine_v31(h: HitterRecord) -> HitterRecord:
         h.beginner_label = "HRR / XBH Lean"
     return h
 
+def _pitch_match_term(raw: float) -> float:
+    """0-100 hr_blend term from pitch_type_match_score (raw 0-120).
+
+    MISSING-DATA SENTINEL FIX (2026-08-22). A raw score of exactly 0 is
+    calculate_pitch_mix_fit()'s DEFAULT -- it means no candidate pitch
+    cleared the five sequential sample gates (batter bbe>=5 on the pitch,
+    good-contact>=.50, pitcher usage>=5%, pitcher bbe>=5 on it, HH>league
+    average). Every one of those is a sample-size gate, so on a real slate
+    the 0 is overwhelmingly "not enough per-pitch data," not a measured bad
+    matchup: 65.0% of 695 rated player-nights sat at exactly 0 on
+    2026-08-20..22's pre-game logs, including 20 of those nights' 47 actual
+    homerers. Feeding that 0 straight through minmax_norm scored "we don't
+    know" as the literal floor of the term -- while the sibling PMix term's
+    own N/A path returns a neutral 50 ("PMix N/A", calculate_pitch_mix_fit's
+    empty-input default). One missing-data policy, both matchup terms:
+    missing scores neutral. A real qualifying match (raw > 0) is unchanged.
+    In practice real matches score raw >55 (the gate arithmetic guarantees
+    good_contact*60 >= 30 plus positive vulnerability terms; 3 of 695
+    observed rows fell in (0,50]), so the neutral floor does not invert any
+    meaningful measured signal.
+
+    Weights untouched; model_version stays mlb_hr_v3. This IS a scoring-
+    config change and config_hash moves with it by design -- the function is
+    listed in _HR_CONFIG_FORMULA_FUNCS, so runs before and after are
+    distinguishable in the archive (see docs/MODELS.md provenance rules).
+    """
+    if raw <= 0.0:
+        return 50.0
+    return _hr2_clip(minmax_norm(raw, 0, 120) * 100)
+
+
 def apply_model_v2_layers(h: HitterRecord) -> HitterRecord:
     """HR Score 2.0: replace broad HR score with true HR-shape score.
 
@@ -7114,7 +7145,10 @@ def apply_model_v2_layers(h: HitterRecord) -> HitterRecord:
         compute_damage_conversion_v31(h)
         damage_conversion_score = safe_float(getattr(h, "damage_conversion_score", 50.0), 50.0)
     pitch_match_score_raw = safe_float(getattr(h, "pitch_type_match_score", 0.0), 0.0)
-    pitch_match_term = _hr2_clip(minmax_norm(pitch_match_score_raw, 0, 120) * 100)
+    # Missing-data sentinel handled in _pitch_match_term (2026-08-22): a raw
+    # 0 means "no qualifying per-pitch sample," and now scores the same
+    # neutral 50 as PMix's own N/A path instead of the floor of the term.
+    pitch_match_term = _pitch_match_term(pitch_match_score_raw)
 
     # Weak-spot x contact-quality interaction: batting in the pitcher's
     # documented weak lineup spot/zone only matters if the hitter also shows
@@ -12599,6 +12633,11 @@ _HR_CONFIG_FORMULA_FUNCS = (
     score_hitter,
     compute_damage_conversion_v31,
     apply_decision_engine_v31,
+    # 2026-08-22: the pitch-match missing-data sentinel policy lives here --
+    # same only-called-not-hashed gap the quick review closed for
+    # compute_damage_conversion_v31/apply_decision_engine_v31; a future edit
+    # to this helper must move the hash.
+    _pitch_match_term,
 )
 # The centralized HR tuning surface from MODEL_WEIGHTS (see that dict's own
 # header comment). Order fixed for readability only -- canonical_json sorts
