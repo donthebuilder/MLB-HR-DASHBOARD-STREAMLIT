@@ -213,6 +213,51 @@ meta_time() {
 # than in our hand means the branch wins for that slate's files, whatever this
 # run happens to be holding. A publisher that did not build a slate can now
 # only ever leave the slate alone.
+# payload_date -- the "date" a results payload claims ('' if absent). The
+# results files carry a plain slate date rather than a generated_at, so they
+# need their own reader; same sed-not-python reasoning as meta_time above, and
+# the same `|| true` for the same SIGPIPE reason.
+payload_date() {
+  [ -f "$1" ] || return 0
+  sed -n 's/.*"date"[[:space:]]*:[[:space:]]*"\([0-9-]\{10\}\)".*/\1/p' "$1" 2>/dev/null | head -n 1 || true
+}
+
+# guard_results_regression -- the same rule as the slate guard, for the two
+# ACTIVE results files.
+#
+# 2026-08-23: results_live.json and results_final.json on the branch were still
+# dated 2026-08-21 while graded_results_2026-08-22.json (90 slots, complete) and
+# graded_results_2026-08-23.json sat beside them, both current. The dated files
+# and the active files are written by the SAME sync call in
+# live_results_tracker.py, so the branch showing one fresh and the other two days
+# old means a publisher put an older copy back after a grading run had landed a
+# newer one -- the slate bug, one directory over. Donovan saw it as the Results
+# page calling a finished night "tonight".
+#
+# So: never publish an active results file older than the branch's. Also prints
+# what it saw either way, because the question "which publisher last touched
+# this file, and with what date" has cost two sessions of guessing at it.
+guard_results_regression() {
+  local ref="$1" f staged_at remote_at
+  for f in results_live.json results_final.json; do
+    staged_at="$(payload_date "$STAGE/public/data/current/$f")"
+    rm -f /tmp/remote-results.json
+    git show "$ref:public/data/current/$f" > /tmp/remote-results.json 2>/dev/null || continue
+    remote_at="$(payload_date /tmp/remote-results.json)"
+    [ -n "$remote_at" ] || continue
+    echo "publish: $f staged=${staged_at:-none} branch=${remote_at}"
+    if [ -z "$staged_at" ] || [[ "$remote_at" > "$staged_at" ]]; then
+      git show "$ref:public/data/current/$f" > "$STAGE/public/data/current/$f" 2>/dev/null \
+        || rm -f "$STAGE/public/data/current/$f"
+      # The .txt sibling has to move with it or the two disagree about which
+      # night the page is showing.
+      git show "$ref:public/data/current/${f%.json}.txt" > "$STAGE/public/data/current/${f%.json}.txt" 2>/dev/null || true
+      echo "publish: kept the branch's $f (${remote_at}) over ours (${staged_at:-none})."
+    fi
+  done
+  return 0
+}
+
 guard_slate_regression() {
   local ref="$1" label staged_at remote_at f
   for label in today tomorrow; do
@@ -370,6 +415,7 @@ while [ "$attempt" -le "$MAX_ATTEMPTS" ]; do
     remote_before="$(git rev-parse origin/data)"
     carry_forward origin/data
     guard_slate_regression origin/data
+    guard_results_regression origin/data
   fi
 
   # Fresh orphan branch: no parent, so no history to inherit or grow.
