@@ -192,13 +192,29 @@ def load_locked_run_ids(date_str: str, fetch_dir: Path) -> Dict[int, str]:
     return out
 
 
-def load_locked_prediction_rows(run_ids: Iterable[str], fetch_dir: Path) -> Dict[Tuple[int, int], Dict[str, Any]]:
+def load_locked_prediction_rows(run_ids: Iterable[str], fetch_dir: Path,
+                                run_id_by_game: Optional[Dict[int, str]] = None) -> Dict[Tuple[int, int], Dict[str, Any]]:
     """{(game_pk, player_id): prediction_log row} for every distinct locked
     run_id whose prediction_log_<run_id>.jsonl was fetched locally. A
     run_id with no local file (aged out of prediction_log's retention
     window, or the fetch failed) simply contributes no matches for its
     games -- those rows grade as feature_snapshot="unavailable" downstream,
-    never silently treated as locked."""
+    never silently treated as locked.
+
+    CROSS-GAME GUARD (2026-08-22, 9b-fix defect B). A prediction_log file
+    carries EVERY rated player on the slate, not just the players in the
+    games that locked to that run. Without the guard below, one late-locked
+    game's run sprayed its features across every OTHER game on the slate --
+    games already Final when that run was generated -- and stamped them all
+    feature_snapshot="locked". Observed in production on the very first
+    night 9b ran (2026-08-22): por_log held one locked game (823422, locked
+    22:18Z, locked_late=True) and graded_results carried 11 rows across two
+    DIFFERENT, already-Final games (823509, 823743), every one stamped
+    "locked" with that run's post-game features. That is the leak this
+    module exists to close, wearing the clean stamp -- worse than the honest
+    "unavailable" path, which at least tells downstream analysis which rows
+    to exclude. When run_id_by_game is provided, a row only joins if its own
+    game_pk actually locked to the run_id whose file it came from."""
     out: Dict[Tuple[int, int], Dict[str, Any]] = {}
     for rid in run_ids:
         path = fetch_dir / f"prediction_log_{rid}.jsonl"
@@ -224,9 +240,15 @@ def load_locked_prediction_rows(run_ids: Iterable[str], fetch_dir: Path) -> Dict
             if pid is None or gp is None:
                 continue
             try:
-                out[(int(gp), int(pid))] = obj
+                gp_i, pid_i = int(gp), int(pid)
             except (TypeError, ValueError):
                 continue
+            # Defect B guard: this row's game must have LOCKED to this
+            # run -- a slate-wide prediction_log also carries every other
+            # game's players, and those rows must not join.
+            if run_id_by_game is not None and run_id_by_game.get(gp_i) != rid:
+                continue
+            out[(gp_i, pid_i)] = obj
     return out
 
 
@@ -255,7 +277,8 @@ def apply_locked_features(
         MEMBERSHIP (hr_capture_report) rather than a pickable row.
     """
     run_id_by_game = load_locked_run_ids(date_str, fetch_dir)
-    locked_by_key = load_locked_prediction_rows(set(run_id_by_game.values()), fetch_dir)
+    locked_by_key = load_locked_prediction_rows(
+        set(run_id_by_game.values()), fetch_dir, run_id_by_game)
 
     def _overlay(dst: Dict[str, Any], locked: Dict[str, Any], gp: int) -> None:
         scores = locked.get("scores") or {}
@@ -1888,9 +1911,25 @@ def build_tracking_slots(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         # carry game_pick_role; the designation on the sheet IS the pick.
         # Re-derivation survives only as the fallback for archive rows that
         # predate the field.
-        def _designated(role: str):
+        # TRACKER JOIN FIX (2026-08-22, defect C). The dashboard's TOP/HR
+        # double-up (2026-08-12, build_game_pick_role_map) deliberately
+        # allows ONE hitter to hold both badges, and CONTACT excludes no
+        # one. This loop's `used` set predates that change: it consumed
+        # TOP's player and then _designated("HR") skipped him, so in every
+        # dual-badge game (94 of 94 measured since 08-12) the board graded a
+        # DIFFERENT player than the site's published HR pick -- only 16% of
+        # board "HR" rows (14% of "CONTACT") carried that badge on the site,
+        # the board understated the real HR designation (19.9% shown vs
+        # 20.8% actual) and overstated CONTACT by 16 points (52.9% vs
+        # 37.0%). Full evidence:
+        # claude/moonshot-hr-pick-correction-and-scoring.md. The 2026-08-08
+        # comment below said it plainly the first time: the designation on
+        # the sheet IS the pick. `respect_used` now mirrors the dashboard's
+        # own exclusion rules exactly: HR and CONTACT may repeat a player
+        # who already holds another badge; HIT and HRR still may not.
+        def _designated(role: str, respect_used: bool = True):
             for h in hitters:
-                if int(h.get("player_id") or 0) in used:
+                if respect_used and int(h.get("player_id") or 0) in used:
                     continue
                 roles = str(h.get("game_pick_role") or "").upper().split("/")
                 if role in [r.strip() for r in roles]:
@@ -1901,7 +1940,7 @@ def build_tracking_slots(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         used.add(int(top_pick["player_id"]))
         tracking.append({**trim_row(top_pick), "pick_type": "TOP"})
 
-        hr_pick = _designated("HR") or (pick_top(hitters, "hr_score", 1, used)[0] if len(hitters) > 1 else top_pick)
+        hr_pick = _designated("HR", respect_used=False) or (pick_top(hitters, "hr_score", 1, used)[0] if len(hitters) > 1 else top_pick)
         used.add(int(hr_pick["player_id"]))
         tracking.append({**trim_row(hr_pick), "pick_type": "HR"})
 
@@ -1916,7 +1955,7 @@ def build_tracking_slots(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         used.add(int(hrr_pick["player_id"]))
         tracking.append({**trim_row(hrr_pick), "pick_type": "HRR"})
 
-        contact_pick = _designated("CONTACT") or (pick_top(hitters, "contact_score", 1, used) or pick_top(hitters, "contact_score", 1))[0]
+        contact_pick = _designated("CONTACT", respect_used=False) or (pick_top(hitters, "contact_score", 1, used) or pick_top(hitters, "contact_score", 1))[0]
         tracking.append({**trim_row(contact_pick), "pick_type": "CONTACT"})
 
     return tracking

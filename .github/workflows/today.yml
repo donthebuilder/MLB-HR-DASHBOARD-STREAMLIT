@@ -193,6 +193,51 @@ jobs:
           ODDS_MAX_PER_SLATE: ${{ vars.ODDS_MAX_PER_SLATE }}
         run: python bots/odds_fetch.py --out public/data/current
 
+      # POR_LOG RESTORE (2026-08-22, 9b-fix defect A). pick_lock.py's
+      # append_por_log() appends to public/data/current/por_log_<date>.jsonl
+      # ON THE RUNNER'S DISK -- and a fresh checkout starts without the locks
+      # earlier runs already took. por_newly_locked only ever contains
+      # game_pks newly locked THIS run (`if gp in por: continue`), and
+      # publish_data.sh's carry_forward() re-copies only what a run DIDN'T
+      # produce -- so without this restore, every today.yml run published a
+      # por_log holding only its own new locks and wiped every earlier lock
+      # for the same date. Observed in production on 9b's first live night
+      # (2026-08-22): the file held 2 locked games at 19:30 UTC and 1 at
+      # 22:37. A lock, once lost, is not re-derivable -- which is the entire
+      # reason append_por_log()'s own docstring gives for the file existing.
+      # Same restore-then-guard shape results.yml uses for outcome_log_*
+      # (Sol audit #2 finding #5): a best-effort restore, then a separate
+      # hard-failing guard so a silent restore failure cannot masquerade as
+      # "no locks yet."
+      - name: Restore prediction-of-record locks from the data branch
+        continue-on-error: true
+        run: |
+          git fetch origin data --depth 1 2>/dev/null || true
+          if git rev-parse --verify origin/data >/dev/null 2>&1; then
+            rm -rf /tmp/por-restore && mkdir -p /tmp/por-restore
+            git archive origin/data public/data 2>/dev/null | tar -x -C /tmp/por-restore || true
+            mkdir -p public/data/current
+            cp /tmp/por-restore/public/data/current/por_log_*.jsonl public/data/current/ 2>/dev/null || true
+            echo "Restored $(ls public/data/current/por_log_*.jsonl 2>/dev/null | wc -l) por_log file(s)."
+          fi
+
+      - name: Verify today's own por_log restored cleanly (if it exists on the data branch)
+        run: |
+          PHX_TODAY="$(TZ=America/Phoenix date +%F)"
+          if ! git rev-parse --verify origin/data >/dev/null 2>&1; then
+            echo "origin/data not fetchable -- cannot verify; continuing (first-ever run shape)."
+            exit 0
+          fi
+          if git cat-file -e "origin/data:public/data/current/por_log_${PHX_TODAY}.jsonl" 2>/dev/null; then
+            if [ ! -f "public/data/current/por_log_${PHX_TODAY}.jsonl" ]; then
+              echo "::error::data branch has por_log_${PHX_TODAY}.jsonl but it did not land in public/data/current/ -- refusing to continue, which would let pick_lock.py rebuild today's lock history from scratch and publish it over the real one."
+              exit 1
+            fi
+            echo "por_log_${PHX_TODAY}.jsonl restored ($(grep -c . "public/data/current/por_log_${PHX_TODAY}.jsonl") lock line(s))."
+          else
+            echo "No por_log_${PHX_TODAY}.jsonl on the data branch yet -- nothing to protect."
+          fi
+
       - name: Lock designations at first pitch
         continue-on-error: true
         env:

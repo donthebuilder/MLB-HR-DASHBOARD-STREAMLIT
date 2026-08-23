@@ -231,7 +231,68 @@ def run():
               trimmed["hr_score"], 71.4)
 
 
+def run_cross_game_guard():
+    """9b-fix defect B (2026-08-22): a prediction_log carries EVERY rated
+    player on the slate, so a run locked for ONE game must not lend its
+    features to players in OTHER games. Production shape this reproduces:
+    por_log held one locked game (823422, locked 22:18Z) and grading stamped
+    11 rows in two different, already-Final games (823509/823743) as
+    feature_snapshot="locked" with that late run's post-game features."""
+    with tempfile.TemporaryDirectory() as tmp:
+        d = Path(tmp)
+        # only game 900001 locked to LOCKED_RUN...
+        write_por_log(d, DATE, POR_LINES)
+        # ...but the run's prediction_log also carries a player in game
+        # 900002 (never locked), with a big post-game-looking score.
+        stray = {
+            "prediction_date": DATE, "player_id": 700200, "player": "Not Yet Locked",
+            "game_pk": 900002, "team": "CCC", "opp": "DDD", "run_id": LOCKED_RUN,
+            "generated_at": "2026-08-22T22:17:00+00:00",
+            "config_hash": "sha256:LOCKEDHASH",
+            "scores": {"hr": 99.0},
+            "components": {"recent_form_last5_hr": 3, "games_since_last_hr": 0},
+        }
+        write_prediction_log(d, LOCKED_RUN, PRED_HEADER, PRED_ROWS + [stray])
+
+        # the loader itself refuses the cross-game row when given the map
+        run_id_by_game = lrt.load_locked_run_ids(DATE, d)
+        guarded = lrt.load_locked_prediction_rows({LOCKED_RUN}, d, run_id_by_game)
+        checkTrue("GUARD B: loader drops a row whose game never locked to this run",
+                  (900002, 700200) not in guarded)
+        checkTrue("GUARD B: rows for the actually-locked game still load",
+                  (900001, 500100) in guarded)
+        # legacy call shape (no map) keeps the old permissive behaviour, so
+        # the guard is opt-in at the one call site that has the map
+        unguarded = lrt.load_locked_prediction_rows({LOCKED_RUN}, d)
+        checkTrue("loader without a map is unchanged (back-compat)",
+                  (900002, 700200) in unguarded)
+
+        # end to end: the unlocked game's player keeps his published values
+        # and the honest stamp, never the stray run's features
+        rows_in = [
+            {"player_id": 500100, "name": "Locked Hitter", "game_pk": 900001,
+             "team": "AAA", "hr_score": 95.0, "last5_hr": 2, "last5_xbh": 2,
+             "games_since_last_hr": 0, "config_hash": "sha256:POSTGAMEHASH"},
+            {"player_id": 700200, "name": "Not Yet Locked", "game_pk": 900002,
+             "team": "CCC", "hr_score": 33.0, "last5_hr": 1, "last5_xbh": 1,
+             "games_since_last_hr": 7},
+        ]
+        rows_out, _dropped = lrt.apply_locked_features(rows_in, DATE, d)
+        by_pid = {r["player_id"]: r for r in rows_out}
+        check("GUARD B: unlocked game's player stays feature_snapshot=unavailable "
+              "even though the locked run's file carries a row for him",
+              by_pid[700200]["feature_snapshot"], "unavailable")
+        check("GUARD B: unlocked game's player keeps his published hr_score, "
+              "not the stray run's 99.0",
+              by_pid[700200]["hr_score"], 33.0)
+        check("GUARD B: the locked game still joins normally",
+              by_pid[500100]["feature_snapshot"], "locked")
+        check("GUARD B: locked game's overlay still applies",
+              by_pid[500100]["hr_score"], 71.4)
+
+
 run()
+run_cross_game_guard()
 
 if FAILED:
     print(f"\n{len(FAILED)} FAILED\n" + "\n".join(f"  · {f}" for f in FAILED))
