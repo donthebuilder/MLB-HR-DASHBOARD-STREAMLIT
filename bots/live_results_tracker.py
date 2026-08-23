@@ -1918,6 +1918,35 @@ SLOT_FIELDS = {
     # it ever reached graded_results_*.json -- exactly the failure mode the
     # comment above model_version/run_id already describes for those two.
     "config_hash", "feature_snapshot", "locked_run_id",
+    # ── MEATBALL, BY HAND (2026-08-23) ──────────────────────────────────────
+    # Donovan: "meat ball percent needs to be used in hr for sure hand splits
+    # and everything." Two of these five moved a number tonight; three exist
+    # only so the question can be answered later.
+    #
+    #   meatball_pct_vs_hand   the pitcher's middle-middle rate against THIS
+    #                          bat's side. It now feeds the 0.12 meatball slice
+    #                          of pitcher_damage in place of his overall rate,
+    #                          so hr_score moves -- archived so a night before
+    #                          and a night after are distinguishable.
+    #   meatball_edge_pp       how many percentage points MORE this side sees
+    #                          than the other. 0.0 whenever both sides did not
+    #                          clear the 150-pitch floor, which is why the
+    #                          status field below has to travel with it.
+    #   meatball_fit_score     the new column. Worth ZERO points in hr_raw on
+    #     + _status            purpose. After a few weeks the test is: holding
+    #     + _note              hr_score fixed, do high-fit bats homer more? If
+    #                          the answer is no it gets deleted, and that is
+    #                          only possible if it was archived UNSCORED from
+    #                          the first night -- the personal_shape_match
+    #                          path, for the same reason.
+    #
+    # Left OUT deliberately: pitcher_meatball_pct_vs_lhb/_vs_rhb and their
+    # pitch counts. They are pitcher-level and identical for all nine bats in
+    # a lineup, so archiving them per row buys nothing that
+    # meatball_pct_vs_hand + meatball_edge_pp does not already carry.
+    "meatball_pct_vs_hand", "meatball_edge_pp",
+    "meatball_fit_score", "meatball_fit_status", "meatball_fit_note",
+    "pitcher_meatball_pct", "pitcher_meatball_side_status",
 }
 
 

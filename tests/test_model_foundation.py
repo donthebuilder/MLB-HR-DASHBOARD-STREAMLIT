@@ -95,10 +95,18 @@ for market, version in R.MODEL_VERSIONS.items():
     checkTrue(f"registry: {market} version matches the registry's own pattern",
                bool(R._VERSION_PATTERN.match(version)))
 check("registry: hr market is registered", "hr" in R.MODEL_VERSIONS, True)
-# model_versions_snapshot() must be a defensive copy
+# model_versions_snapshot() must be a defensive copy.
+# READ THE VERSION, DO NOT SPELL IT (2026-08-23). This assertion is about
+# MUTATION LEAKING, not about which version is current -- but it was written
+# against the literal "mlb_hr_v3", so the first legitimate bump (hr v3 -> v4,
+# the meatball hand split) failed it. A test that breaks every time the thing
+# it does not test changes is a test people learn to ignore. The registry's
+# "never rewrite a version string in place" rule is enforced by docs/MODELS.md
+# and code review, not by pinning a literal in an unrelated assertion.
+_hr_before = R.MODEL_VERSIONS["hr"]
 snap = R.model_versions_snapshot()
 snap["hr"] = "TAMPERED"
-check("registry: snapshot mutation does not leak into MODEL_VERSIONS", R.MODEL_VERSIONS["hr"], "mlb_hr_v3")
+check("registry: snapshot mutation does not leak into MODEL_VERSIONS", R.MODEL_VERSIONS["hr"], _hr_before)
 
 # a deliberately broken registry must fail validate_registry(), not silently pass
 _bad_versions = {"hr": ""}
@@ -201,7 +209,7 @@ h = make_hitter(player_id=42, name="Stamped Guy", game_pk=900)
 h.model_version = R.MODEL_VERSIONS["hr"]
 h.run_id = rm1["run_id"]
 # (6) stamped rows contain model_version, (7) stamped rows contain run_id
-check("stamping: model_version lands on the row", h.model_version, "mlb_hr_v3")
+check("stamping: model_version lands on the row", h.model_version, R.MODEL_VERSIONS["hr"])
 check("stamping: run_id lands on the row", h.run_id, rm1["run_id"])
 
 # (5) HitterRecord legacy/default loading still works -- a saved row that

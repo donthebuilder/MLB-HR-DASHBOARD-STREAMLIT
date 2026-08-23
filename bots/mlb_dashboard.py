@@ -339,6 +339,38 @@ def effective_side(bats: Any, throws: Any) -> str:
     return b
 
 
+def meatball_vs_hand(h: Any) -> "tuple":
+    """(rate against this bat's side, rate against the other side, is_real).
+
+    One resolver, because two places need the answer -- the decision engine's
+    `pitcher_meatball_high` gate and the pitcher_damage blend -- and two copies
+    of a platoon resolution is exactly how switch hitters fell out of every
+    side-specific term for a season (see effective_side above).
+
+    `is_real` is False whenever the side rate is just his overall rate wearing
+    a split's clothes: no Statcast pull, a side under the 150-pitch floor, or a
+    bat whose side could not be resolved. Callers that publish a gap must check
+    it; callers that only want the best available rate need not.
+    """
+    overall = safe_float(getattr(h, "pitcher_meatball_pct", 0.070), 0.070)
+    side = effective_side(getattr(h, "bats", ""), getattr(h, "pitcher_throws", ""))
+    if side not in ("L", "R"):
+        return overall, overall, False
+    status = str(getattr(h, "pitcher_meatball_side_status", "missing"))
+    real = (status == "ok") or (status == "one_side:%s" % side)
+    lhb = safe_float(getattr(h, "pitcher_meatball_pct_vs_lhb", overall), overall)
+    rhb = safe_float(getattr(h, "pitcher_meatball_pct_vs_rhb", overall), overall)
+    this_side, other_side = (lhb, rhb) if side == "L" else (rhb, lhb)
+    if not real:
+        return overall, overall, False
+    if status != "ok":
+        # One real side. The rate is usable; the GAP is not, and returning the
+        # other side's number here would let a caller that skipped the flag
+        # compute a difference against a fabricated value.
+        return this_side, this_side, False
+    return this_side, other_side, True
+
+
 _hr_blend_sum = round(sum(MODEL_WEIGHTS["hr_blend"].values()), 6)
 if abs(_hr_blend_sum - 1.0) > 1e-6:
     raise ValueError(
@@ -931,6 +963,11 @@ class PitcherSummary:
     # Advanced pitch-level stats from Statcast (decimals 0.0–1.0).
     # League-average fallbacks used when sample is too low or pybaseball missing.
     meatball_pct: float = 0.070       # share of pitches in middle-middle "meatball" zone
+    meatball_pct_vs_lhb: float = 0.070   # ...to LEFT-handed bats specifically
+    meatball_pct_vs_rhb: float = 0.070   # ...to RIGHT-handed bats specifically
+    meatball_pitches_vs_lhb: int = 0     # sample behind the LHB rate
+    meatball_pitches_vs_rhb: int = 0     # sample behind the RHB rate
+    meatball_side_status: str = "missing"  # ok | one_side:L | one_side:R | low_sample | missing
     putaway_pct: float = 0.180        # 2-strike finishing rate (K / 2-strike pitches)
     swstr_pct: float = 0.110          # swinging strikes / total pitches
     first_pitch_strike_pct: float = 0.600  # 1st-pitch strikes / total PA
@@ -1401,6 +1438,27 @@ class HitterRecord:
     # Each is a decimal 0.0–1.0. Defaults are league averages so the model behaves
     # neutrally when the data is missing instead of NaN-ing out.
     pitcher_meatball_pct: float = 0.070
+    # The hand split of the same number (2026-08-23) -- see the long note in
+    # build_pitcher_advanced_stats. `_vs_hand` is the one that applies to THIS
+    # bat tonight, switch-hitter aware; `_edge_pp` is how many percentage
+    # points MORE middle-middle this side sees than the other one.
+    pitcher_meatball_pct_vs_lhb: float = 0.070
+    pitcher_meatball_pct_vs_rhb: float = 0.070
+    pitcher_meatball_pitches_vs_lhb: int = 0
+    pitcher_meatball_pitches_vs_rhb: int = 0
+    pitcher_meatball_side_status: str = "missing"
+    meatball_pct_vs_hand: float = 0.070
+    meatball_edge_pp: float = 0.0
+    # THE GRADED COLUMN. Published and archived, deliberately NOT in hr_blend:
+    # the standing rule is that no hr_blend weight moves before roadmap 9c
+    # (~2026-09-22) because the graded archive still manufactures tuning
+    # signals out of its own leak. So this ships as a column that is measured
+    # for a few weeks and earns its way into the score afterwards -- the same
+    # path personal_shape_match took. Status exists so a dead 0.0 on an arm
+    # with no Statcast data is never mistaken for "this matchup is cold".
+    meatball_fit_score: float = 0.0
+    meatball_fit_status: str = "missing"   # ok | no_side_split | missing
+    meatball_fit_note: str = ""
     pitcher_putaway_pct: float = 0.180
     pitcher_swstr_pct: float = 0.110
     pitcher_first_pitch_strike_pct: float = 0.600
@@ -4363,6 +4421,25 @@ def build_pitcher_advanced_stats(db: CacheDB, pitcher_id: int, end_date: Optiona
     key = f"pitcher_advanced_stats_v1:{SEASON}:{pitcher_id}:{end_date.isoformat()}"
     defaults = {
         "meatball_pct": 0.070,
+        # THE HAND SPLIT (2026-08-23). Donovan: "meat ball percent needs to be
+        # used in hr for sure hand splits and everything. wtf ." He is right to
+        # be annoyed: meatball% has been on every row since it was added and the
+        # only thing that ever read it was a 0.12 slice of the pitcher_damage
+        # sub-score -- as ONE number, the same against a lefty and a righty.
+        #
+        # A middle-middle rate is not one number. An arm with a good slider away
+        # to same-side bats and nothing but a straight fastball to the other side
+        # gives up the heart of the plate to ONE of them, and averaging the two
+        # hides exactly the matchup we are here to find.
+        #
+        # This costs no new network call. The dataframe below already carries
+        # `stand` -- the pullair-allowed block a few lines down has been reading
+        # it for months -- so both sides come out of the same pull.
+        "meatball_pct_vs_lhb": 0.070,
+        "meatball_pct_vs_rhb": 0.070,
+        "meatball_pitches_vs_lhb": 0,
+        "meatball_pitches_vs_rhb": 0,
+        "meatball_side_status": "missing",
         "putaway_pct": 0.180,
         "swstr_pct": 0.110,
         "first_pitch_strike_pct": 0.600,
@@ -4451,6 +4528,33 @@ def build_pitcher_advanced_stats(db: CacheDB, pitcher_id: int, end_date: Optiona
         meatball_coord_mask = (plate_x.abs() < 0.55) & (plate_z > 2.2) & (plate_z < 3.3)
         meatball_mask = (meatball_zone_mask | meatball_coord_mask).fillna(False)
         out["meatball_pct"] = float(meatball_mask.sum() / total_pitches)
+
+        # ── Meatball BY THE HAND HE IS FACING ──────────────────────────────
+        # Same mask, sliced by `stand`. A side needs its own floor: at 200
+        # total pitches a pitcher can have 190 against righties and 10 against
+        # lefties, and 1-for-10 would publish as a 10% meatball rate against
+        # LHB -- a number with the shape of a finding and the content of noise.
+        # 150 is the floor; under it the side inherits his overall rate, which
+        # is the honest neutral ("no evidence he is different to this side"),
+        # and the status field says which sides actually cleared it.
+        MIN_SIDE_PITCHES = 150
+        stand_all = df.get("stand", pd.Series([""] * total_pitches)).astype(str).fillna("")
+        _sides_ok = []
+        for _hand, _key in (("L", "lhb"), ("R", "rhb")):
+            side_mask = (stand_all == _hand)
+            n_side = int(side_mask.sum())
+            out["meatball_pitches_vs_%s" % _key] = n_side
+            if n_side >= MIN_SIDE_PITCHES:
+                out["meatball_pct_vs_%s" % _key] = float((meatball_mask & side_mask).sum() / n_side)
+                _sides_ok.append(_hand)
+            else:
+                out["meatball_pct_vs_%s" % _key] = out["meatball_pct"]
+        if len(_sides_ok) == 2:
+            out["meatball_side_status"] = "ok"
+        elif len(_sides_ok) == 1:
+            out["meatball_side_status"] = "one_side:%s" % _sides_ok[0]
+        else:
+            out["meatball_side_status"] = "low_sample"
 
         # Pull-air allowed — balls in play that are pulled AND in the air (FB/LD).
         # bb_type: ground_ball / line_drive / fly_ball / popup.
@@ -5851,6 +5955,11 @@ def build_pitcher_profile(client: MLBClient, db: CacheDB, pitcher_id: int, team_
         "lineup_zone_damage": spot_damage.get("zones", {}),
         "situational_splits": sit_splits,
         "meatball_pct": safe_float(advanced.get("meatball_pct"), 0.070),
+        "meatball_pct_vs_lhb": safe_float(advanced.get("meatball_pct_vs_lhb"), safe_float(advanced.get("meatball_pct"), 0.070)),
+        "meatball_pct_vs_rhb": safe_float(advanced.get("meatball_pct_vs_rhb"), safe_float(advanced.get("meatball_pct"), 0.070)),
+        "meatball_pitches_vs_lhb": safe_int(advanced.get("meatball_pitches_vs_lhb"), 0),
+        "meatball_pitches_vs_rhb": safe_int(advanced.get("meatball_pitches_vs_rhb"), 0),
+        "meatball_side_status": str(advanced.get("meatball_side_status", "missing")),
         "putaway_pct": safe_float(advanced.get("putaway_pct"), 0.180),
         "swstr_pct": safe_float(advanced.get("swstr_pct"), 0.110),
         "first_pitch_strike_pct": safe_float(advanced.get("first_pitch_strike_pct"), 0.600),
@@ -6698,7 +6807,12 @@ def apply_decision_engine_v31(h: HitterRecord) -> HitterRecord:
     ambush_setup = bool(getattr(h, "ambush_setup_flag", False))
     pitch_match = bool(getattr(h, "pitch_type_match_flag", False))
     pitcher_hr9_high = safe_float(getattr(h, "pitcher_hr9", 1.10), 1.10) >= 1.50
-    pitcher_meatball_high = safe_float(getattr(h, "pitcher_meatball_pct", 0.070), 0.070) >= 0.085
+    # Per-hitter, as of 2026-08-23: an arm at 7.9% overall who runs 9.6% to
+    # lefties clears this gate for a lefty and does not for a righty, which is
+    # the whole point of a platoon read. meatball_vs_hand() falls back to the
+    # overall rate whenever the split is not real, so nothing changes for the
+    # arms that have no usable split.
+    pitcher_meatball_high = meatball_vs_hand(h)[0] >= 0.085
 
     conversion_override = bool(
         dc >= 65
@@ -7171,6 +7285,38 @@ def apply_model_v2_layers(h: HitterRecord) -> HitterRecord:
     pullair_allowed = safe_float(getattr(h, "pitcher_pullair_allowed_pct", 0.220), 0.220)
     has_advanced = str(getattr(h, "pitcher_advanced_stats_status", "missing")) == "ok"
 
+    # ── MEATBALL, BY THE HAND HE IS FACING (2026-08-23) ────────────────────
+    #
+    # Donovan: "meat ball percent needs to be used in hr for sure hand splits
+    # and everything. wtf ." Two separate things happen here, and they are
+    # deliberately different in kind:
+    #
+    #   1. The 0.12 meatball slice of pitcher_damage below stops reading the
+    #      pitcher's OVERALL middle-middle rate and starts reading his rate
+    #      AGAINST THIS BAT'S SIDE. That is not a tuning move -- the weight is
+    #      untouched, hr_blend still sums to 1.00, and no other term shifts. It
+    #      is the same term being fed the correct number. The standing rule
+    #      ("no hr_blend weight moves before 9c, ~2026-09-22, because the
+    #      graded archive still manufactures tuning signals out of its own
+    #      leak") is about WEIGHTS, and this changes none of them.
+    #
+    #   2. The genuinely new signal -- the meatball EDGE, crossed with whether
+    #      this particular bat can punish a mistake -- lands as
+    #      meatball_fit_score: published, archived, graded, and worth exactly
+    #      zero points in hr_raw until it has a few weeks of nights behind it.
+    #      That is the same path personal_shape_match took, and the reason is
+    #      the same: a term that has never been measured does not get to move
+    #      the board just because the idea is good.
+    #
+    # _eff_bats is resolved ~200 lines above (switch hitters bat opposite the
+    # arm, so they hold the platoon edge in every matchup).
+    # "both_real" means BOTH sides cleared the 150-pitch floor, so the GAP
+    # between them is a fact rather than an artifact of one thin sample. The
+    # rate itself is usable one side at a time; the edge is not.
+    meatball_hand, _mb_other, _mb_both_real = meatball_vs_hand(h)
+    h.meatball_pct_vs_hand = round(meatball_hand, 4)
+    h.meatball_edge_pp = round(100.0 * (meatball_hand - _mb_other), 2) if _mb_both_real else 0.0
+
     if str(getattr(h, "pitcher_statcast_status", "missing")) == "ok" and safe_int(getattr(h, "pitcher_statcast_bbe", 0), 0) > 0:
         # When advanced stats are present, give them ~25% of the pitcher_damage layer.
         # When missing, weights collapse back into the existing HR/9-driven blend.
@@ -7183,7 +7329,10 @@ def apply_model_v2_layers(h: HitterRecord) -> HitterRecord:
                 0.04 * minmax_norm(getattr(h, "pitcher_statcast_fb_rate", 0.34), 0.28, 0.48) +
                 0.03 * minmax_norm(getattr(h, "pitcher_375_allowed", 0), 0, 8) +
                 # Mistake-pitch path: high meatball + high pullair allowed → HRs.
-                0.12 * minmax_norm(meatball, 0.040, 0.105) +
+                # meatball_hand, not meatball: his middle-middle rate against
+                # THIS bat's side (see the block above). Same weight, same
+                # blend, correct input.
+                0.12 * minmax_norm(meatball_hand, 0.040, 0.105) +
                 0.09 * minmax_norm(pullair_allowed, 0.16, 0.32) +
                 # NEW (2026-07-07): wOBA against (season damage rate, direct
                 # signal of how hard he's actually being hit) and FIP (his
@@ -7253,7 +7402,44 @@ def apply_model_v2_layers(h: HitterRecord) -> HitterRecord:
 
     # ─── MATCHUP TAGS from advanced stats ───────────────────────────────
     # Mistake-pitch setup: pitcher coughs up the meatball + pulled-air HR shape.
-    h.mistake_pitch_setup_flag = bool(has_advanced and meatball >= 0.080 and pullair_allowed >= 0.255)
+    # Per-hitter flag, so it reads the per-hitter rate. An arm at 6.2%
+    # overall who runs 9.4% to lefties IS a mistake-pitch setup for a lefty
+    # and was not being called one.
+    h.mistake_pitch_setup_flag = bool(has_advanced and meatball_hand >= 0.080 and pullair_allowed >= 0.255)
+
+    # ── MEATBALL FIT: THE GRADED COLUMN ────────────────────────────────────
+    #
+    # A meatball is only a homer if somebody punishes it. Half of this score is
+    # the pitcher (how often the heart of the plate opens up to this side, and
+    # how much more this side sees it than the other), half is the bat (what it
+    # does with a mistake, and whether it is squaring anything up right now).
+    #
+    # It is worth ZERO points in hr_raw. It is written to the row, whitelisted
+    # into the graded archive, and shown on the site as a column -- and in a few
+    # weeks the question "do high-fit bats homer more often, holding hr_score
+    # fixed" becomes answerable off real nights instead of off a hunch. If the
+    # answer is no, it is deleted. That is the deal.
+    if not has_advanced:
+        h.meatball_fit_score = 0.0
+        h.meatball_fit_status = "missing"
+        h.meatball_fit_note = "no Statcast pitch data for this arm — not a cold matchup, an unmeasured one"
+    else:
+        _mb_edge_term = minmax_norm(max(0.0, h.meatball_edge_pp), 0.0, 3.0)
+        _mb_fit = 100.0 * (
+            0.42 * minmax_norm(meatball_hand, 0.040, 0.105) +
+            0.18 * _mb_edge_term +
+            0.25 * minmax_norm(safe_float(split_iso, 0.150), 0.090, 0.300) +
+            0.15 * minmax_norm(safe_float(barrel_rate, 0.060), 0.030, 0.150)
+        )
+        h.meatball_fit_score = round(max(0.0, min(100.0, _mb_fit)), 1)
+        h.meatball_fit_status = "ok" if _mb_both_real else "no_side_split"
+        _mb_side_word = "lefties" if _eff_bats == "L" else "righties" if _eff_bats == "R" else "this side"
+        if _mb_both_real:
+            _mb_gap = h.meatball_edge_pp
+            _mb_gap_txt = ("%+0.1fpp vs the other side" % _mb_gap) if abs(_mb_gap) >= 0.3 else "even both ways"
+            h.meatball_fit_note = "%.1f%% middle-middle to %s (%s)" % (100.0 * meatball_hand, _mb_side_word, _mb_gap_txt)
+        else:
+            h.meatball_fit_note = "%.1f%% middle-middle overall — not enough pitches to split by hand" % (100.0 * meatball_hand)
 
     # Ambush setup: pitcher behind in counts + hitter swings early at fastballs.
     # We don't yet have per-hitter 1st-pitch swing% from a feed, so we infer it
@@ -9207,6 +9393,11 @@ def build_hitter_records(client: MLBClient, db: CacheDB, game: Dict[str, Any], s
                 weak_spot_reason=_weak_spot_reason_for(pitcher, spot),
                 # Pitcher advanced stats — passed through from PitcherSummary.
                 pitcher_meatball_pct=getattr(pitcher, "meatball_pct", 0.070),
+                pitcher_meatball_pct_vs_lhb=getattr(pitcher, "meatball_pct_vs_lhb", 0.070),
+                pitcher_meatball_pct_vs_rhb=getattr(pitcher, "meatball_pct_vs_rhb", 0.070),
+                pitcher_meatball_pitches_vs_lhb=getattr(pitcher, "meatball_pitches_vs_lhb", 0),
+                pitcher_meatball_pitches_vs_rhb=getattr(pitcher, "meatball_pitches_vs_rhb", 0),
+                pitcher_meatball_side_status=getattr(pitcher, "meatball_side_status", "missing"),
                 pitcher_putaway_pct=getattr(pitcher, "putaway_pct", 0.180),
                 pitcher_swstr_pct=getattr(pitcher, "swstr_pct", 0.110),
                 pitcher_first_pitch_strike_pct=getattr(pitcher, "first_pitch_strike_pct", 0.600),
@@ -12922,6 +13113,14 @@ _HR_CONFIG_FORMULA_FUNCS = (
     # constants live in MODEL_WEIGHTS-adjacent module scope but the POLICY is
     # this function's body -- hash it so an edit moves config_hash.
     shrink_to_league,
+    # 2026-08-23: the meatball hand-split resolver. Its BODY is the policy --
+    # the 150-pitch per-side floor, and the rule that a thin side falls back to
+    # the arm's overall rate rather than publishing a rate built on ten
+    # pitches. Both feed the 0.12 slice of pitcher_damage and the decision
+    # engine's pitcher_meatball_high gate, so an edit here changes produced
+    # numbers and must move the hash. Same only-called-not-hashed gap the two
+    # entries above closed.
+    meatball_vs_hand,
 )
 # The centralized HR tuning surface from MODEL_WEIGHTS (see that dict's own
 # header comment). Order fixed for readability only -- canonical_json sorts
@@ -12931,7 +13130,7 @@ _HR_CONFIG_WEIGHT_KEYS = ("hr_blend", "hr_gate_thresholds", "recency_multiplier"
 
 def hr_config_hash() -> Optional[str]:
     """Deterministic fingerprint of the exact scoring configuration
-    currently producing mlb_hr_v3's HR Score -- see config_fingerprint.py
+    currently producing mlb_hr_v4's HR Score -- see config_fingerprint.py
     and docs/MODELS.md. None if the fingerprint module failed to import, or
     if hashing itself raises for any reason (e.g. a function in
     _HR_CONFIG_FORMULA_FUNCS can't be source-located) -- a provenance

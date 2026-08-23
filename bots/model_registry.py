@@ -84,7 +84,15 @@ MODEL_FAMILY = "moonshot-mlb"
 # dataclass default); at analysis time those are `pre_registry`, not
 # silently attributed to v1/v2/v3. See docs/MODELS.md.
 MODEL_VERSIONS: Dict[str, str] = {
-    "hr":        "mlb_hr_v3",
+    # v3 -> v4 (2026-08-23). The 0.12 meatball slice of pitcher_damage now
+    # reads the pitcher's middle-middle rate AGAINST THIS BAT'S SIDE rather
+    # than his overall rate, and the decision engine's pitcher_meatball_high
+    # gate does the same. No weight moved and hr_blend still sums to 1.00 --
+    # but the registry's rule is about NUMBERS, not weights ("bump if and only
+    # if the change could alter the numeric output for at least one historical
+    # input"), and this changes numbers. A rule that only fires on weight edits
+    # would have let this exact change through unlabeled.
+    "hr":        "mlb_hr_v4",
     "hr_shadow": "mlb_hr_v1_recency",
     "hit":       "mlb_hit_v2",
     "hrr":       "mlb_hrr_v2",

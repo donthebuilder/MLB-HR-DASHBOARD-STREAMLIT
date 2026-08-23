@@ -1,0 +1,80 @@
+# 🎯 Precision study — would fewer picks have been better picks?
+#
+# Donovan, 2026-08-23: "i was thinking what about the 4 best bets then from
+# dividing up the picks top hit hrr bases whatever, what would the socring look
+# like if we did that over the time — if bad or not good just forget that idea."
+#
+# bots/precision_study.py reads the graded archive and answers it. It changes
+# nothing and it writes nothing to the model; it is a measurement.
+#
+# It leaves its answer ON THE DATA BRANCH rather than only in the run log, for
+# the same reason the odds probe and the stats probe now do: a diagnostic whose
+# only output is a log is a diagnostic nobody runs twice, which is exactly how
+# the odds probe got reported as "it didn't work" twice in a row.
+name: Precision study
+
+on:
+  workflow_dispatch:
+  # First of the month, so the curve gets re-checked as the archive grows
+  # without anyone remembering to ask. A finding measured on 25 nights and a
+  # finding measured on 90 are different findings.
+  schedule:
+    - cron: '17 13 1 * *'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: precision-study
+  cancel-in-progress: false
+
+jobs:
+  study:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # The graded nights live on the data branch, not on main. Without this
+      # the study runs against an empty folder and correctly refuses — which
+      # would be a confusing thing to schedule monthly.
+      - name: Checkout the data branch
+        uses: actions/checkout@v4
+        with:
+          ref: data
+          path: _data
+          fetch-depth: 1
+
+      # stdlib only — no pip install, so a run is seconds of compute.
+      - name: Study
+        run: |
+          set -o pipefail
+          python bots/precision_study.py \
+            --dir _data/public/data/current \
+            --out /tmp/precision_study.json 2>&1 | tee /tmp/precision_study.txt
+
+      - name: Leave the answer on the data branch
+        if: always()
+        run: |
+          mkdir -p _data/public/data/current
+          {
+            echo "precision study — $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+            echo "run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            echo
+            cat /tmp/precision_study.txt 2>/dev/null || echo "(the study step produced no output)"
+          } > _data/public/data/current/precision_study.txt
+          cp /tmp/precision_study.json _data/public/data/current/precision_study.json 2>/dev/null || true
+          cd _data
+          git config user.name  "moonshot-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add public/data/current/precision_study.txt public/data/current/precision_study.json 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "study output unchanged — nothing to commit"
+          else
+            git commit -m "precision study $(date -u +%F\ %H:%M) UTC"
+            git push
+          fi

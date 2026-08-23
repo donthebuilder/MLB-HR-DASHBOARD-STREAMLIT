@@ -16,11 +16,11 @@ The registry module is the thing the bot actually imports.
 
 ---
 
-## Current model versions (as of 2026-08-21)
+## Current model versions (as of 2026-08-23)
 
 | Market | Version | What it represents |
 |---|---|---|
-| `hr` | `mlb_hr_v3` | The home-run score (`hr_score`) — the blend in `MODEL_WEIGHTS["hr_blend"]` plus the HR gate, caps, and recency multiplier. The flagship score; every other market's version below is versioned independently of it. |
+| `hr` | `mlb_hr_v4` | The home-run score (`hr_score`) — the blend in `MODEL_WEIGHTS["hr_blend"]` plus the HR gate, caps, and recency multiplier. The flagship score; every other market's version below is versioned independently of it. |
 | `hr_shadow` | `mlb_hr_v1_recency` | The recency-first HR variant kept alongside the production HR score for comparison (`hr_score_shadow`) — an older blend, not a candidate replacement. |
 | `hit` | `mlb_hit_v2` | The 1+ hit score (`hit_score`). |
 | `hrr` | `mlb_hrr_v2` | The hits+runs+RBI production score (`hrr_score`). |
@@ -274,6 +274,45 @@ concern (candidate model promotion is explicitly not implemented as part of
 this change) — this file only needs to say, permanently, "as of this
 version bump, here is what changed and when," so a future row's
 `model_version` can always be traced back to a real, dated explanation.
+
+## mlb_hr_v4 — 2026-08-23
+supersedes: mlb_hr_v3
+commit: (this commit)
+what changed: the 0.12 meatball slice of the `pitcher_damage` sub-score now
+reads `meatball_pct_vs_hand` — the starter's middle-middle rate against THIS
+bat's side — instead of `pitcher_meatball_pct`, his rate against everybody.
+The `pitcher_meatball_high` gate in `apply_decision_engine_v31` (part of the
+`conversion_override` condition) does the same. Both resolve through one new
+helper, `meatball_vs_hand()`, which is switch-hitter aware and falls back to
+the overall rate whenever a side has under 150 tracked pitches, so an arm with
+no usable split scores exactly as it did before.
+
+**No weight moved.** `MODEL_WEIGHTS["hr_blend"]` is byte-identical and still
+sums to 1.00; the standing rule that no `hr_blend` weight moves before roadmap
+9c (~2026-09-22) is intact. This bump is here because the registry's rule is
+about NUMBERS, not weights — "bump if and only if the change could alter the
+numeric output for at least one historical input" — and feeding a different
+rate into an unchanged weight does exactly that. A rule that only fired on
+weight edits would have let this through unlabeled.
+
+Why at all: Donovan, 2026-08-23 — "meat ball percent needs to be used in hr
+for sure hand splits and everything." `pitcher_meatball_pct` had been
+published on every slate row since it was added and read by one 0.12 slice, as
+a single number identical against a lefty and a righty. An arm who can bury a
+slider against same-side bats and has nothing but a straight fastball to the
+other side does not leave the heart of the plate open equally to both.
+Averaging the two hides the matchup. The split costs no new network call — the
+Statcast frame `build_pitcher_advanced_stats` already pulls carries `stand`,
+which the pull-air block a few lines below has been reading for months.
+
+Also landed, and deliberately NOT part of this version: `meatball_fit_score`
+(+ `_status`, `_note`, `meatball_edge_pp`). That is the genuinely new signal —
+the meatball EDGE between sides crossed with whether this bat punishes a
+mistake — and it is worth **zero points** in `hr_raw`. It ships as a published,
+archived column so that in a few weeks the question "holding `hr_score` fixed,
+do high-fit bats homer more often?" can be answered off real graded nights. If
+the answer is no it gets deleted. Same path `personal_shape_match` took, same
+reason. `config_hash` is unchanged by it; it is not a scoring input.
 
 ---
 
