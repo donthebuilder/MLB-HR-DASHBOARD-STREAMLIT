@@ -159,7 +159,27 @@ CATEGORY_MARKET = {
 GRID_MARKETS = ["batter_runs_scored", "batter_rbis",
                 # 2026-08-15, Donovan: "add doubles and triples."
                 "batter_doubles", "batter_triples"]
-MARKETS = sorted(set(CATEGORY_MARKET.values()) | set(GRID_MARKETS))
+
+# STOLEN BASES — ASKED FOR, not just matched (2026-08-23).
+#
+# SB v1 armed the alias matcher above ("stolen base" -> batter_stolen_bases) so
+# the day a provider priced it, the join would light up. It never could: the
+# matcher only sees markets the fetch REQUESTED, and batter_stolen_bases was in
+# neither CATEGORY_MARKET nor GRID_MARKETS, so `markets=",".join(MARKETS)` never
+# named it. The probe was run to find out whether SB props exist and could not
+# have answered either way.
+#
+# It is requested by name now. If the provider does not carry it the market
+# simply comes back absent — the same silent, honest nothing every other
+# unpriced row gets — and the run costs no extra request, since MARKETS is one
+# comma-joined parameter on a single call. If it DOES carry it, the matcher
+# that has been waiting since this morning starts filling.
+#
+# The odds-api.io path asks for "Player Props" as a category rather than a
+# market list, so on that provider SB may arrive without this — but the primary
+# path is the one that must ask, and asking twice costs nothing.
+SB_MARKETS = ["batter_stolen_bases"]
+MARKETS = sorted(set(CATEGORY_MARKET.values()) | set(GRID_MARKETS) | set(SB_MARKETS))
 
 SUFFIXES = {"jr", "sr", "ii", "iii", "iv", "v"}
 
@@ -1315,6 +1335,76 @@ def write_empty_board(out: Path, reason: str, **extra) -> None:
     print(f"wrote an empty odds_latest.json — {reason}")
 
 
+# ── WHICH SLATE IS THIS? ─────────────────────────────────────────────────────
+# Lifted out of main() on 2026-08-23 so the per-slate LOCK can ask the same
+# question the writer answers. See the note on the cap gate in main() for why
+# that mattered — in short, the gate was comparing a fetch count without ever
+# checking which slate it belonged to, and deadlocked the whole pipeline for
+# six days.
+#
+# Not "what is today in UTC": today.yml fires at 00:00-03:00 UTC, which is
+# still the PREVIOUS day's card on the west coast. Filing those under the UTC
+# date puts the truest closing snapshot of the night on the wrong day, where
+# odds_history would settle it against the wrong box scores.
+def _slate_candidates(slate_arg):
+    # BOTH LOCATIONS. mlb_dashboard writes public/data/today.json; other
+    # payloads land in public/data/current/. pick_lock.py already carries the
+    # same pair for the same reason.
+    return ([Path(slate_arg)] if slate_arg else
+            [Path("public/data/today.json"),
+             Path("public/data/current/today.json"),
+             Path("public/data/today_slim.json"),
+             Path("public/data/current/today_slim.json")])
+
+
+def resolve_slate_date(slate_arg, now=None, *, quiet: bool = False) -> str:
+    """The date of the card being priced, US/Eastern, YYYY-MM-DD."""
+    now = now or dt.datetime.now(dt.timezone.utc)
+    cands = _slate_candidates(slate_arg)
+    slate_path = next((c for c in cands if c.exists()), cands[0])
+    # The first attempt read `slate.get("slate_date")` behind an
+    # `isinstance(s, dict)` guard. public/data/today.json is a BARE LIST --
+    # mlb_dashboard writes `[asdict(r) for r in rows]` -- so that branch never
+    # ran once and every snapshot silently took the UTC fallback. The rows
+    # themselves carry the answer, so take it from them.
+    slate_date = None
+    try:
+        if slate_path.exists():
+            s = json.loads(slate_path.read_text())
+            if isinstance(s, dict):
+                slate_date = s.get("slate_date") or s.get("date")
+                if not slate_date:
+                    s = s.get("players") or []
+            if isinstance(s, list) and s:
+                for r in s[:200]:
+                    if not isinstance(r, dict):
+                        continue
+                    d = r.get("slate_date") or r.get("date") or r.get("game_date")
+                    if d:
+                        slate_date = str(d)[:10]
+                        break
+                if not slate_date:
+                    # game_time is a UTC timestamp for a game that belongs to
+                    # the LOCAL day, converted to US Eastern the same way the
+                    # site's StaleBanner pins its own idea of "tonight".
+                    t = next((r.get("game_time") for r in s
+                              if isinstance(r, dict) and r.get("game_time")), None)
+                    if t:
+                        ts = dt.datetime.fromisoformat(str(t).replace("Z", "+00:00"))
+                        if ts.tzinfo is None:
+                            ts = ts.replace(tzinfo=dt.timezone.utc)
+                        slate_date = (ts - dt.timedelta(hours=4)).date().isoformat()
+    except Exception as e:
+        if not quiet:
+            print(f"  slate date not readable ({type(e).__name__}: {e})")
+    if not slate_date:
+        # Last resort, and it is US Eastern rather than UTC for the same reason.
+        slate_date = (now - dt.timedelta(hours=4)).date().isoformat()
+        if not quiet:
+            print(f"  WARNING: no slate date found; filing under {slate_date} (US/Eastern of now)")
+    return str(slate_date)[:10]
+
+
 def _write_dump(path: str) -> None:
     """One file that answers any remaining question about the response shape.
 
@@ -1397,9 +1487,41 @@ def main() -> int:
 
     prev = published("odds_latest.json") if not a.force else None
     prev_count = 0
+    # THE CARD WE ARE ABOUT TO PRICE. Resolved here, before the lock, because
+    # the per-slate cap below is meaningless without it — see the deadlock note
+    # on that gate.
+    tonight = resolve_slate_date(a.slate, dt.datetime.now(dt.timezone.utc), quiet=True)
     if isinstance(prev, dict):
         stamp = prev.get("fetched_at")
         prev_count = int(prev.get("fetches_this_slate") or 0)
+        # ── THE SIX-DAY DEADLOCK (found 2026-08-23) ────────────────────────
+        # The counter is incremented with a slate-date check further down:
+        #
+        #     "fetches_this_slate": (prev_count + 1
+        #                            if prev.get("slate_date") == slate_date
+        #                            else 1)
+        #
+        # ...but the GATE below never checked the slate date. It compared a raw
+        # count against the cap, so the instant one card reached five fetches
+        # every later run — on every later card — hit `5 >= 5` and returned
+        # BEFORE reaching the code that would have reset the counter. The reset
+        # lives in the write path the gate blocks, so it could never run: the
+        # pipeline capped itself permanently. Its own status message promised
+        # "Resets when the slate date changes," which it was structurally
+        # incapable of doing.
+        #
+        # Caught on real data: odds_latest.json sat at slate_date 2026-08-17
+        # with fetches_this_slate 5, and every price on the site was six days
+        # old while the status file cheerfully read "capped".
+        #
+        # A DIFFERENT CARD IS A FRESH BUDGET. The 90-minute min_gap lock above
+        # still governs how often we may fetch, so this cannot become a spend
+        # loop — it only stops yesterday's spend from being charged to today.
+        prev_slate = str(prev.get("slate_date") or "")[:10]
+        if prev_slate and prev_slate != tonight:
+            print(f"lock: last snapshot was for {prev_slate}, tonight is {tonight} "
+                  f"— per-slate count resets from {prev_count} to 0")
+            prev_count = 0
         # AN EMPTY BOARD DOESN'T DESERVE THE FULL LOCK (2026-08-15, Donovan:
         # "i still see no odds on the site" while the status read "skipped —
         # snapshot from 10 minutes ago is still fresh"). The 90-minute gap
@@ -1516,11 +1638,7 @@ def main() -> int:
     # same pair for the same reason, and defaulting to current/ alone would
     # have made this join silently match nobody on the very first run — the
     # file would publish, look fine, and be keyed only by name.
-    candidates = ([Path(a.slate)] if a.slate else
-                  [Path("public/data/today.json"),
-                   Path("public/data/current/today.json"),
-                   Path("public/data/today_slim.json"),
-                   Path("public/data/current/today_slim.json")])
+    candidates = _slate_candidates(a.slate)
     slate_path = next((c for c in candidates if c.exists()), candidates[0])
     if slate_path.exists():
         print(f"  joining against {slate_path}")
@@ -1550,53 +1668,7 @@ def main() -> int:
 
     now = dt.datetime.now(dt.timezone.utc)
 
-    # WHICH SLATE IS THIS? Not "what is today in UTC" -- today.yml fires at
-    # 00:00, 01:00, 02:00 and 03:00 UTC, which is still the PREVIOUS day's card
-    # on the west coast. Filing those under the UTC date puts the truest
-    # closing snapshot of the night (03:00 UTC, minutes before a Pacific first
-    # pitch) on the wrong day, where odds_history would settle it against the
-    # wrong box scores.
-    #
-    # The first attempt read `slate.get("slate_date")` behind an
-    # `isinstance(s, dict)` guard. public/data/today.json is a BARE LIST --
-    # mlb_dashboard writes `[asdict(r) for r in rows]` -- so that branch never
-    # ran once and every snapshot silently took the UTC fallback. The rows
-    # themselves carry the answer, so take it from them.
-    slate_date = None
-    try:
-        if slate_path.exists():
-            s = json.loads(slate_path.read_text())
-            if isinstance(s, dict):
-                slate_date = s.get("slate_date") or s.get("date")
-                if not slate_date:
-                    s = s.get("players") or []
-            if isinstance(s, list) and s:
-                # Every row carries the slate's own date; game_time is the
-                # fallback, and it is a UTC timestamp for a game that belongs
-                # to the LOCAL day, so it is converted to US Eastern the same
-                # way the site's StaleBanner pins its own idea of "tonight".
-                for r in s[:200]:
-                    if not isinstance(r, dict):
-                        continue
-                    d = r.get("slate_date") or r.get("date") or r.get("game_date")
-                    if d:
-                        slate_date = str(d)[:10]
-                        break
-                if not slate_date:
-                    t = next((r.get("game_time") for r in s
-                              if isinstance(r, dict) and r.get("game_time")), None)
-                    if t:
-                        ts = dt.datetime.fromisoformat(str(t).replace("Z", "+00:00"))
-                        if ts.tzinfo is None:
-                            ts = ts.replace(tzinfo=dt.timezone.utc)
-                        slate_date = (ts - dt.timedelta(hours=4)).date().isoformat()
-    except Exception as e:
-        print(f"  slate date not readable ({type(e).__name__}: {e})")
-    if not slate_date:
-        # Last resort, and it is US Eastern rather than UTC for the same reason.
-        slate_date = (now - dt.timedelta(hours=4)).date().isoformat()
-        print(f"  WARNING: no slate date found; filing under {slate_date} (US/Eastern of now)")
-    slate_date = str(slate_date)[:10]
+    slate_date = resolve_slate_date(a.slate, now)
 
     # ── FROZEN AT FIRST PITCH (2026-08-15) ────────────────────────────────
     #
