@@ -1502,6 +1502,11 @@ class HitterRecord:
     pitcher_pitch_arsenal_detail: List[Dict[str, Any]] = dataclasses.field(default_factory=list)
     # Docket #4-7: exact season counting stats (were client-estimated).
     season_tb: int = 0
+    # STOLEN BASES v1 (2026-08-23) — fetched-and-discarded until now; see
+    # claude/moonshot-sb-research.md. No score reads these.
+    season_sb: int = 0
+    season_cs: int = 0
+    season_sb_attempt_rate: float = 0.0
     season_ab: int = 0
     season_doubles: int = 0
     season_triples: int = 0
@@ -2235,6 +2240,17 @@ def flatten_season_hitting(stat: Dict[str, Any]) -> Dict[str, float]:
         "season_triples": safe_int(stat.get("triples"), 0),
         "season_babip": safe_float(stat.get("babip"), 0.0),
         "season_k_rate": safe_int(stat.get("strikeOuts"), 0) / pa,
+        # ── STOLEN BASES, v1 (2026-08-23; claude/moonshot-sb-research.md) ──
+        # These two fields have been ON this stat blob in every pull the bot
+        # has ever made and were never read -- the research pass's headline.
+        # Attempt rate per game (not per PA: a steal is a baserunning event,
+        # its opportunity is reaching base, and games is the denominator the
+        # books quote SB props against). Zero new network calls.
+        "season_sb": safe_int(stat.get("stolenBases"), 0),
+        "season_cs": safe_int(stat.get("caughtStealing"), 0),
+        "season_sb_attempt_rate": round(
+            (safe_int(stat.get("stolenBases"), 0) + safe_int(stat.get("caughtStealing"), 0))
+            / max(1, safe_int(stat.get("gamesPlayed"), 0)), 3),
         # Added per audit (2026-06-28): season-long RBI/runs were completely
         # absent despite hrr_v2 (literally "Hits, Runs, RBI") having zero
         # season-long production context -- only recency windows and a
@@ -8928,6 +8944,9 @@ def build_hitter_records(client: MLBClient, db: CacheDB, game: Dict[str, Any], s
                 season_iso=season["season_iso"],
                 season_tb=season.get("season_tb", 0),
                 season_ab=season.get("season_ab", 0),
+                season_sb=season.get("season_sb", 0),
+                season_cs=season.get("season_cs", 0),
+                season_sb_attempt_rate=season.get("season_sb_attempt_rate", 0.0),
                 season_doubles=season.get("season_doubles", 0),
                 season_triples=season.get("season_triples", 0),
                 season_babip=season.get("season_babip", 0.0),
@@ -13070,6 +13089,34 @@ def sync_model_foundation_outputs_to_website_repo(slate_label: str, run_meta: Di
         print(f"⚠️ Model-foundation sync failed: {exc}", file=sys.stderr)
 
 
+# Every SLOT_FIELDS key whose value comes from a live, no-as-of-date API pull
+# and therefore moves as the night's games finish — the leak surface Sol
+# confirmed at code level (claude/moonshot-sol-verdict-graded-archive-leak.md).
+# Snapshotted per-row into prediction_log's slot_snapshot at generation time;
+# grading overlays them from the LOCKED run. Scores are covered separately by
+# the `scores` dict. Static/identity keys are deliberately not here.
+PREGAME_SNAPSHOT_FIELDS = (
+    "season_iso", "season_avg", "season_hr", "season_xbh", "season_pa",
+    "season_k_rate", "season_bb_rate", "season_tb", "season_ab",
+    "season_sb", "season_cs", "season_sb_attempt_rate",
+    "last5_hits", "last5_hr", "last5_xbh", "last10_xbh", "last10_hr",
+    "l20pa_hr", "l20pa_xbh", "games_since_last_hr",
+    "avg_vs_lhp", "avg_vs_rhp", "iso_vs_lhp", "iso_vs_rhp",
+    "recent_350_num", "recent_350_den", "recent_375_num",
+    "recent_barrel_rate", "recent_fb_rate", "recent_ld_rate",
+    "recent_gb_rate", "recent_popup_rate", "recent_ideal_hr_contact",
+    "recent_pull_rate",
+    "pitcher_hr_allowed", "pitcher_fb_rate", "pitcher_hr9",
+    "pitcher_bb_pct", "pitcher_bb9",
+    "weak_spot_flag", "weak_spot_reason", "trap_flag", "alt_look_tag",
+    "best_bet_type", "best_bet_type_raw", "hr_gate_flagged", "true_avoid_hr",
+    "best_non_hr_category", "final_hr_role", "top_board_tags",
+    "pitch_type_match_flag", "pitch_type_match_score", "pitch_mix_score",
+    "hidden_hr_value", "high_confidence_hr_flag",
+    "multi_hit_score", "multi_hit_flag", "multi_hit_reason",
+)
+
+
 def build_prediction_log_lines(run_meta: Dict[str, Any], rows_payload: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     lines: List[Dict[str, Any]] = [run_meta]
     prediction_date = run_meta.get("slate_date", "")
@@ -13227,6 +13274,16 @@ def build_prediction_log_lines(run_meta: Dict[str, Any], rows_payload: List[Dict
                 # not inside _HR_CONFIG_FORMULA_FUNCS.
                 "games_since_last_hr": row.get("games_since_last_hr"),
             },
+            # ── THE FULL PRE-GAME SNAPSHOT (2026-08-23) ─────────────────────
+            # 11cec10's own scope note, closed: "a SLOT_FIELDS key not yet in
+            # _LOCKED_SCORE_MAP/_LOCKED_COMPONENT_MAP stays exposed to the
+            # leak until it's added". Instead of widening two maps one field
+            # at a time, every leak-prone SLOT_FIELDS key is snapshotted here
+            # wholesale at generation time, and apply_locked_features overlays
+            # whatever this dict carries. Identity/static keys (ids, names,
+            # venue, park factors) are deliberately absent — they cannot leak
+            # an outcome and overlaying them would fight the live row.
+            "slot_snapshot": {k: row.get(k) for k in PREGAME_SNAPSHOT_FIELDS if k in row},
             # Moonshot scores are 0-100 indices, not probabilities. Never a
             # bare number here -- only a real calibrated probability would
             # ever populate this field, and none exists yet.

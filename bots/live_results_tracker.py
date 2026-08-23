@@ -156,6 +156,13 @@ _LOCKED_SCORE_MAP: Dict[str, str] = {
 # e.g. components' recent_form_last10_hr/l20pa_hr/l20pa_xbh have no
 # SLOT_FIELDS counterpart at all (SLOT_FIELDS only ever kept last5_hr/
 # last5_xbh/last10_xbh), so they are not (and should not be) mapped here.
+# Keys an overlay must NEVER rewrite, whatever a snapshot claims -- row
+# identity and join keys. Belt over the by-construction suspenders.
+_SNAPSHOT_NEVER_OVERLAY = {
+    "player_id", "game_pk", "name", "team", "opponent", "pitcher_id",
+    "pitcher_name", "game_time", "venue_name", "lineup_spot",
+}
+
 _LOCKED_COMPONENT_MAP: Dict[str, str] = {
     "last5_hr": "recent_form_last5_hr",
     "last5_xbh": "recent_form_last5_xbh",
@@ -289,6 +296,21 @@ def apply_locked_features(
         for flat_key, comp_key in _LOCKED_COMPONENT_MAP.items():
             if comp_key in components:
                 dst[flat_key] = components[comp_key]
+        # THE FULL SNAPSHOT (2026-08-23) -- closes 11cec10's stated scope
+        # limit wholesale: a prediction_log row now carries slot_snapshot,
+        # every leak-prone SLOT_FIELDS key at generation time (see
+        # PREGAME_SNAPSHOT_FIELDS in mlb_dashboard.py). Whatever the locked
+        # run wrote down wins; a legacy prediction_log without the dict
+        # changes nothing (the two maps above still cover the headline
+        # fields). Identity keys never appear in the snapshot by
+        # construction, but guard anyway -- an overlay must never rewrite
+        # who/where a row is about.
+        snap = locked.get("slot_snapshot") or {}
+        if isinstance(snap, dict):
+            for k, v in snap.items():
+                if k in _SNAPSHOT_NEVER_OVERLAY:
+                    continue
+                dst[k] = v
         if locked.get("config_hash"):
             dst["config_hash"] = locked["config_hash"]
         dst["feature_snapshot"] = "locked"
@@ -1133,6 +1155,7 @@ def get_player_batting_line(game_feed: Dict[str, Any], player_id: int) -> Dict[s
                 "pa": safe_int(batting.get("plateAppearances"),
                                safe_int(batting.get("atBats"), 0) + safe_int(batting.get("baseOnBalls"), 0)),
                 "doubles": safe_int(batting.get("doubles"), 0),
+                "sb": safe_int(batting.get("stolenBases"), 0),
                 "triples": safe_int(batting.get("triples"), 0),
                 "hr_events": hr_events,  # JOB 1: per-homer batted-ball capture
                 "was_substitute": was_substitute,
@@ -1140,7 +1163,7 @@ def get_player_batting_line(game_feed: Dict[str, Any], player_id: int) -> Dict[s
             }
     return {
         "hits": 0, "hr": 0, "runs": 0, "rbi": 0, "tb": 0, "ab": 0, "k": 0, "bb": 0,
-        "pa": 0, "doubles": 0, "triples": 0, "hr_events": [],
+        "pa": 0, "doubles": 0, "triples": 0, "sb": 0, "hr_events": [],
         "was_substitute": False, "was_replaced": False,
     }
 
@@ -1734,6 +1757,10 @@ SLOT_FIELDS = {
     # trim_row's whole point is keeping the payload small and this adds bytes,
     # not kilobytes.
     "multi_hit_score", "multi_hit_flag", "multi_hit_reason",
+    # ── STOLEN BASES v1 (2026-08-23; claude/moonshot-sb-research.md) ────────
+    # The season fields were on every stat pull and never read; the archive
+    # gets them so an SB "look" can be measured before it is ever scored.
+    "season_sb", "season_cs", "season_sb_attempt_rate",
     # ── THE HR GATE, MADE BACKTESTABLE (2026-08-16) ─────────────────────────
     # Exactly the same shape of gap as multi_hit above, found the same way.
     #
@@ -2520,6 +2547,11 @@ def grade_slot(slot: Dict[str, Any], actual: Dict[str, Any]) -> Dict[str, Any]:
         "actual_bb": actual.get("bb", 0),
         "actual_doubles": actual.get("doubles", 0),
         "actual_triples": actual.get("triples", 0),
+        # SB v1 (2026-08-23): the outcome column FIRST, per the standing rule
+        # -- no SB look gets built until its outcome is graded and
+        # trustworthy. Same boxscore call, one more field.
+        "actual_sb": actual.get("sb", 0),
+        "got_sb": 1 if actual.get("sb", 0) >= 1 else 0,
         "got_base_hit": 1 if actual["hits"] >= 1 else 0,
         "got_hr": 1 if actual["hr"] >= 1 else 0,
         # Singles are worth exactly one base each, so total bases only

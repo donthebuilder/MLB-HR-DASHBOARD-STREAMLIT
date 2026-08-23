@@ -123,6 +123,12 @@ PROP_HINTS = [
                                "hits / runs", "hits/runs", "h+r+rbi", "h+r+rbis",
                                "hits runs rbis", "hits runs and rbis")),
     ("batter_total_bases", ("total base",)),
+    # SB v1 (2026-08-23): whether the primary provider PRICES a stolen-base
+    # prop at all is unknown until the odds probe prints its market names --
+    # this matcher costs nothing while absent and lights up the day it
+    # exists. Multi-word, so it sits above the single-word matchers per this
+    # table's own ordering rule.
+    ("batter_stolen_bases", ("stolen base",)),
     ("batter_home_runs", ("home run",)),
     ("batter_doubles", ("double",)),
     ("batter_triples", ("triple",)),
