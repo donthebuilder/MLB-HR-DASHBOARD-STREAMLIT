@@ -447,7 +447,14 @@ with tempfile.TemporaryDirectory() as d:
 with tempfile.TemporaryDirectory() as d:
     tmp = Path(d)
     cur = tmp / "current"
-    today_str = _NOW.date().isoformat()
+    # NOT _NOW.date(). pick_lock.main() derives the slate from min(first
+    # pitch) -- fp_a below is iso(-30) -- so between 00:00 and 00:30 UTC
+    # _NOW.date() is already tomorrow while the bot is still writing
+    # yesterday's por_log. This file was red for that half hour every night,
+    # and every delivery script that runs the suite refused to push during it.
+    # Anchor to the same instant the bot keys off.
+    _SLATE_REF = _NOW - dt.timedelta(minutes=30)
+    today_str = _SLATE_REF.date().isoformat()
     por_log_path = cur / f"por_log_{today_str}.jsonl"
 
     rid_a = opaque_run_id("g10a")
@@ -493,7 +500,7 @@ with tempfile.TemporaryDirectory() as d:
     # new date -- prove that por_log_<today_str>.jsonl (yesterday's file, in
     # this scenario) is completely untouched by that, because archival never
     # goes through fetch_lock()/pick_lock.json at all.
-    tomorrow_str = (_NOW.date() + dt.timedelta(days=1)).isoformat()
+    tomorrow_str = (_SLATE_REF.date() + dt.timedelta(days=1)).isoformat()
     # First pitch a genuine 10 minutes in the past (so the game actually
     # locks this run) while the payload's own "date" is explicitly
     # tomorrow_str -- forcing main() to key this run as tomorrow's slate,

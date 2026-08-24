@@ -1,0 +1,143 @@
+name: hr_score_v3 shadow
+
+# 🌑 THE SHADOW LANE (2026-08-23).
+#
+# Publishes a second home-run score every night and grades yesterday's against
+# the batted balls that actually happened. IT CHANGES NOTHING — no pick moves,
+# no badge moves, no hr_blend weight moves, and mlb_dashboard.py is not touched
+# by any of this. See the docstring in bots/hr_v3_shadow.py for the terms and
+# the 31,673-row measurement behind them.
+#
+# WHY A SEPARATE WORKFLOW rather than a term inside the score: the finding it is
+# built on is HOURS OLD, and the previous version of that finding — measured on
+# 328 rows and a leaked archive — was backwards. A score built on evidence that
+# new belongs on a scoreboard before it belongs in a pick. In ~2 weeks
+# hr_v3_record.jsonl answers whether it beats the live score on the same slates.
+#
+# ORDER MATTERS AND IS NOT COSMETIC:
+#   1. harvest yesterday's batted balls  (so grading has outcomes)
+#   2. grade yesterday's board           (before features move under it)
+#   3. rebuild today's as-of features    (which now include yesterday)
+#   4. score today's slate               (pre-game, from today's features)
+# Scoring must happen BEFORE first pitch or the "live hr_score" column it
+# records is the leaked one and the comparison is worthless.
+
+on:
+  schedule:
+    # 15:20 UTC ≈ 8:20am Phoenix — after the slate publishes, before the
+    # earliest first pitch (~17:05 UTC).
+    - cron: '20 15 * * *'
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Slate date to score (YYYY-MM-DD, default: today UTC)'
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  shadow:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install deps
+        run: pip install -r bots/requirements.txt
+
+      # TWO BRANCHES ON PURPOSE. today_slim.json lives on `data`; the harvest
+      # and the shadow boards live on `bbe-history`.
+      #
+      # `data` is rebuilt from a FRESH ORPHAN BRANCH and force-pushed on every
+      # slate and every results run (.github/scripts/publish_data.sh: "Creating
+      # the orphan branch wipes the tree"). Anything outside its PUBLISH_FILES
+      # allow-list is destroyed — and not by a deletion commit anyone could spot,
+      # the old commit simply stops being an ancestor. The first full harvest,
+      # 299 files, was orphaned that way within an hour on 2026-08-23. Nothing
+      # that accumulates can live there.
+      - name: Checkout the data branch (read-only — the slate)
+        uses: actions/checkout@v4
+        with:
+          ref: data
+          path: _slate
+          fetch-depth: 1
+
+      - name: Checkout the bbe-history branch (read/write)
+        run: |
+          git config --global user.name  "moonshot-bot"
+          git config --global user.email "bot@users.noreply.github.com"
+          git clone --quiet --depth 1 --branch bbe-history \
+            "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" _data
+          mkdir -p _data/public/data/current/bbe_history
+          # The scorer reads the slate and writes its board side by side, so the
+          # slate is copied in — and deleted again before staging, below, so it
+          # can never land on the wrong branch.
+          cp _slate/public/data/current/today_slim.json _data/public/data/current/ 2>/dev/null || true
+
+      - name: Dates
+        id: d
+        run: |
+          TODAY="${{ inputs.date }}"
+          [ -n "$TODAY" ] || TODAY="$(date -u +%F)"
+          echo "today=$TODAY"                                   >> "$GITHUB_OUTPUT"
+          echo "yday=$(date -u -d "$TODAY - 1 day" +%F)"        >> "$GITHUB_OUTPUT"
+
+      - name: 1 · harvest yesterday's batted balls
+        run: |
+          python bots/backfill_bbe_history.py harvest \
+            --start "${{ steps.d.outputs.yday }}" --end "${{ steps.d.outputs.yday }}" \
+            --out-dir _data/public/data/current/bbe_history --force
+
+      - name: 2 · grade yesterday's shadow board
+        working-directory: _data
+        continue-on-error: true   # no board yet on the first night is not a failure
+        run: python ../bots/hr_v3_shadow.py grade --date "${{ steps.d.outputs.yday }}"
+
+      - name: 3 · rebuild today's as-of features
+        run: |
+          python bots/backfill_bbe_history.py features \
+            --start "${{ steps.d.outputs.today }}" --end "${{ steps.d.outputs.today }}" \
+            --out-dir _data/public/data/current/bbe_history --force
+
+      - name: 4 · score today's slate, pre-game
+        working-directory: _data
+        run: python ../bots/hr_v3_shadow.py score --date "${{ steps.d.outputs.today }}"
+
+      - name: Commit to the data branch
+        if: always()
+        working-directory: _data
+        run: |
+          git config user.name  "moonshot-bot"
+          git config user.email "bot@users.noreply.github.com"
+          # Named paths only. This repo's rule: a delivery never runs git add -A.
+          rm -f public/data/current/today_slim.json   # belongs to `data`, not here
+          git add public/data/current/bbe_history \
+                  public/data/current/hr_v3_*.json \
+                  public/data/current/hr_v3_record.jsonl 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "nothing changed"
+          else
+            git commit -m "hr_score_v3 shadow ${{ steps.d.outputs.today }}"
+            # today.yml and results.yml also write this branch; rebase onto
+            # whatever landed rather than failing on a fast-forward check.
+            for i in 1 2 3 4 5; do
+              git pull --rebase origin bbe-history && git push origin HEAD:bbe-history && break
+              echo "push race, retry $i"; sleep $((i * 5))
+            done
+          fi
+
+      - name: Summary
+        if: always()
+        working-directory: _data
+        run: |
+          {
+            echo '### hr_score_v3 shadow — ${{ steps.d.outputs.today }}'
+            echo '```'
+            tail -3 public/data/current/hr_v3_record.jsonl 2>/dev/null || echo '(no graded nights yet)'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
