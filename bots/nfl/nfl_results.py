@@ -162,6 +162,51 @@ def grade(card: dict, actual: dict) -> tuple[dict, dict]:
     return graded, totals
 
 
+# ── MODEL FOUNDATION: outcome log (2026-08-24) ───────────────────────────────
+#
+# results.json is OVERWRITTEN every single grading run (nfl.yml's "Grade the
+# card" step runs on every one of its ~12 scheduled firings/week, continue-
+# on-error, unconditional) -- so without this, every earlier grading pass's
+# numbers are gone the instant a newer one lands, the same loss the MLB side
+# closed with bots/live_results_tracker.py's append_outcome_log()/
+# write_outcome_log(). This is that idea's NFL sibling, not a port of its
+# mechanics: MLB's version keys one file per SLATE NIGHT and appends one
+# revision per player-GAME (player_game_id = "{game_pk}|{player_id}"), with
+# a supersedes chain, because MLB grades one night's games at a time. NFL
+# grades a whole WEEK at once (see grade() above) and a week's games span
+# three-plus calendar dates (Thu/Sun/Mon), so there is no single "the slate
+# night" to key a file by, and no single game_pk this payload belongs to.
+# The natural unit here is one line per grading RUN (this function's whole
+# `payload` -- card, totals, lines, names -- as it stood when this pass
+# finished), appended to a file named for the UTC calendar date the run
+# executed on. That date describes "when this grading pass ran," not "the
+# night of the game" the way MLB's does -- a real difference from MLB's
+# shape, documented here rather than silently assumed away.
+
+def append_nfl_outcome_log(payload: dict, now: dt.datetime, out_dir: Path, prefix: str = "") -> "Path | None":
+    """Append this grading run's full payload as one line to
+    {out_dir}/{prefix}outcome_log_{date}.jsonl, `date` = `now`'s UTC
+    calendar date. Grading is idempotent and re-run often (every firing, per
+    nfl.yml's own comment on the "Grade the card" step) -- appending every
+    call rather than de-duplicating means a day with several grading passes
+    (a live Sunday, waves 3 hours apart) accumulates several lines, each a
+    true record of what the card looked like at that point in the week; the
+    caller can always take the last line for "latest," and no earlier
+    revision is ever overwritten or lost. Best-effort: an outcome-log
+    failure must never block the results.json the rest of main() already
+    wrote."""
+    try:
+        date_str = now.date().isoformat()
+        path = out_dir / f"{prefix}outcome_log_{date_str}.jsonl"
+        with path.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(payload, default=str))
+            f.write("\n")
+        return path
+    except Exception as exc:
+        print(f"nfl outcome log append failed: {exc}")
+        return None
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--mode", choices=["preseason", "week"], default="preseason")
@@ -224,6 +269,10 @@ def main() -> int:
         if t["n"]:
             print(f"  {k:<9} {t['hit']}/{t['n']}  {t['pct']:.0f}%"
                   + (f"  ({t['void']} void)" if t["void"] else ""))
+
+    log_path = append_nfl_outcome_log(payload, now, out, a.prefix)
+    if log_path is not None:
+        print(f"  outcome log: {log_path.name}")
     return 0
 
 

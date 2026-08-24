@@ -157,6 +157,37 @@ OUTCOME_LOG_KEEP=150
 POR_LOG_GLOB="por_log_*.jsonl"
 POR_LOG_KEEP=150
 
+# MODEL FOUNDATION, NFL side (2026-08-24, the #1 gap in the NFL-vs-MLB parity
+# audit). Same accumulate-and-cap shape as PRED_LOG_GLOB/OUTCOME_LOG_GLOB
+# above, generalized into the same trim loop below -- but NOT the same KEEP
+# numbers. MLB runs ~13x/day, every day; the NFL bot fires on a weekly cadence
+# (.github/workflows/nfl.yml's cron list: 12 scheduled firings/week -- every
+# entry runs the "Build slate" step unconditionally, so that is also the
+# prediction-log write rate) that is active roughly Aug through February, not
+# 365 days a year the way MLB's slate turns over. Scaling MLB's numbers down
+# by cadence, not copying them:
+#
+# nfl_prediction_log_*.jsonl: ONE FILE PER RUN, same as PRED_LOG_GLOB. 12
+# firings/week x ~25 weeks (preseason ramp-up in August, 18 regular-season
+# weeks, ~4 postseason weeks through the Super Bowl) is roughly 300 runs --
+# a genuine full-season span, landing near MLB's own 300 by coincidence of
+# this arithmetic (a ~3-week buffer at MLB's daily cadence), not because it
+# was copied from it.
+NFL_PRED_LOG_GLOB="nfl_prediction_log_*.jsonl"
+NFL_PRED_LOG_KEEP=300
+
+# nfl_outcome_log_*.jsonl: ONE FILE PER DATE, same as OUTCOME_LOG_GLOB --
+# append_nfl_outcome_log() in bots/nfl/nfl_results.py appends a new line to
+# that date's file every grading pass rather than opening a new file. Real
+# NFL games land on roughly 3 distinct calendar dates a week in season
+# (Thu/Sun/Mon, with the occasional Fri/Sat in the preseason and playoffs);
+# 3 x ~25 weeks (same full-season span as above) is roughly 75 distinct
+# dates -- a real full season of grading history, and well under half of
+# MLB's 150 (which covers ~150 individual game NIGHTS across an every-day,
+# ~180-day season -- a scale NFL's weekly schedule never approaches).
+NFL_OUTCOME_LOG_GLOB="nfl_outcome_log_*.jsonl"
+NFL_OUTCOME_LOG_KEEP=75
+
 # social/history/social_history_<date>.jsonl (2026-08-21, DASH social
 # pipeline). Same accumulate-and-cap shape as the logs above; kept via its
 # own trim block in carry_forward() rather than the generic loop, since it
@@ -306,7 +337,9 @@ stage_local() {
            "$SRC"/data/$ODDS_GLOB "$SRC"/data/current/$ODDS_GLOB \
            "$SRC"/data/$PRED_LOG_GLOB "$SRC"/data/current/$PRED_LOG_GLOB \
            "$SRC"/data/$OUTCOME_LOG_GLOB "$SRC"/data/current/$OUTCOME_LOG_GLOB \
-           "$SRC"/data/$POR_LOG_GLOB "$SRC"/data/current/$POR_LOG_GLOB; do
+           "$SRC"/data/$POR_LOG_GLOB "$SRC"/data/current/$POR_LOG_GLOB \
+           "$SRC"/data/$NFL_PRED_LOG_GLOB "$SRC"/data/current/$NFL_PRED_LOG_GLOB \
+           "$SRC"/data/$NFL_OUTCOME_LOG_GLOB "$SRC"/data/current/$NFL_OUTCOME_LOG_GLOB; do
     [ -f "$g" ] && cp "$g" "$STAGE/public/data/current/"
   done
 
@@ -350,7 +383,8 @@ carry_forward() {
   # find exits 0 on no matches.
   for spec in "$GRADED_GLOB:$GRADED_KEEP" "$GRADED_JSON_GLOB:$GRADED_KEEP" "$ODDS_GLOB:$ODDS_KEEP" \
               "$PRED_LOG_GLOB:$PRED_LOG_KEEP" "$OUTCOME_LOG_GLOB:$OUTCOME_LOG_KEEP" \
-              "$POR_LOG_GLOB:$POR_LOG_KEEP"; do
+              "$POR_LOG_GLOB:$POR_LOG_KEEP" \
+              "$NFL_PRED_LOG_GLOB:$NFL_PRED_LOG_KEEP" "$NFL_OUTCOME_LOG_GLOB:$NFL_OUTCOME_LOG_KEEP"; do
     glob="${spec%:*}"; keep="${spec##*:}"
     n=$(find "$STAGE/public/data/current" -maxdepth 1 -type f -name "$glob" | wc -l)
     if [ "$n" -gt "$keep" ]; then

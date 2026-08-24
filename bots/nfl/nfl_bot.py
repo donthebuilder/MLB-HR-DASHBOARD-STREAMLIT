@@ -24,6 +24,10 @@ import datetime as dt
 import bisect
 import json
 import math
+import os
+import platform
+import subprocess
+import uuid
 from pathlib import Path
 from statistics import NormalDist
 
@@ -39,6 +43,23 @@ import nfl_field
 import nfl_picks
 from nfl_features import build, season_baseline, PLAYER_FORM, USAGE_FORM
 from nfl_scoring import MODELS, OUTCOME, score, derive, _pctile
+
+# MODEL FOUNDATION (2026-08-24) -- the NFL side of the same provenance work
+# bots/model_registry.py / bots/config_fingerprint.py did for MLB on
+# 2026-08-21. Same defensive-import pattern mlb_dashboard.py uses for
+# MODEL_REGISTRY/CONFIG_FINGERPRINT: a broken/missing module must never take
+# down a slate build over a metadata-only failure.
+try:
+    import nfl_registry as NFL_REGISTRY
+except Exception as _nfl_registry_exc:
+    NFL_REGISTRY = None
+    print(f"nfl_registry import failed ({_nfl_registry_exc}); model_versions will be empty this run.")
+
+try:
+    import nfl_config_fingerprint as NFL_CONFIG_FINGERPRINT
+except Exception as _nfl_config_fingerprint_exc:
+    NFL_CONFIG_FINGERPRINT = None
+    print(f"nfl_config_fingerprint import failed ({_nfl_config_fingerprint_exc}); config_hash will be empty this run.")
 
 PHX = dt.timezone(dt.timedelta(hours=-7))
 
@@ -471,6 +492,189 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
     }
 
 
+# ── MODEL FOUNDATION: run metadata + prediction log ──────────────────────────
+#
+# One run_id per bot EXECUTION (~12 scheduled firings/week during an active
+# game week -- see .github/workflows/nfl.yml's cron list; every firing runs
+# the "Build slate" step unconditionally), mirroring build_run_meta() in
+# bots/mlb_dashboard.py. Not a straight import of that function or its two
+# small helpers below -- mlb_dashboard.py is a 14,000+ line module that
+# imports pybaseball and the rest of the MLB dependency tree at module scope,
+# and nfl.yml's own requirements-file comment is explicit that a football run
+# must never drag that tree onto the runner. So _current_git_sha() and
+# _run_env_metadata() are reimplemented here, small and NFL-local, rather
+# than reused across that boundary.
+
+def _current_git_sha() -> str:
+    """Commit identity for this run -- same git-rev-parse-first,
+    GITHUB_SHA-fallback logic as mlb_dashboard.py's _current_git_sha(), and
+    the same reason: actions/checkout's `ref: main` resolves to whatever
+    main's tip is AT CHECKOUT TIME, which can be newer than GITHUB_SHA (fixed
+    at event-trigger time) if a push lands in the gap between trigger and
+    checkout. `git rev-parse HEAD` in the tree that is actually executing
+    this process cannot have that race. Never raises -- provenance is
+    nice-to-have, not worth failing a slate."""
+    try:
+        out = subprocess.run(
+            ["git", "-C", str(Path(__file__).resolve().parent.parent.parent), "rev-parse", "HEAD"],
+            capture_output=True, text=True, timeout=5,
+        )
+        if out.returncode == 0 and out.stdout.strip():
+            return out.stdout.strip()
+    except Exception:
+        pass
+    sha = os.environ.get("GITHUB_SHA", "").strip()
+    if sha:
+        return sha
+    return "unknown"
+
+
+def _run_env_metadata() -> dict:
+    """Environment fingerprint for this run -- the NFL sibling of
+    mlb_dashboard.py's _run_env_metadata(), reporting nflreadpy's version
+    (this bot's own equivalent of "which pybaseball version scored
+    tonight") rather than pybaseball's. Nothing here is required for the bot
+    to run; a missing package version reads as "unknown" rather than
+    raising."""
+    env: dict = {"python": platform.python_version()}
+    try:
+        import importlib.metadata as _ilm
+        env["nflreadpy"] = _ilm.version("nflreadpy")
+    except Exception:
+        env["nflreadpy"] = "unknown"
+    return env
+
+
+def build_nfl_run_meta(mode: str, season: int, week: int | None, args: "argparse.Namespace") -> dict:
+    """One run identity per bot execution. Same shape and field names as
+    build_run_meta() in bots/mlb_dashboard.py -- see that function's
+    docstring and docs/MODELS.md for the policy this embeds.
+
+    run_id shape: "{key}.{HHMMSSZ}.{source}" -- seconds granularity (not
+    minutes) because two firings landing in the same minute (the workflow's
+    own Sunday cadence has waves 3 hours apart, but a manual re-run could
+    still collide with a scheduled one) would otherwise share a run_id;
+    GitHub's own run id is included as the source so a run_id is traceable
+    back to the exact Actions run (or "local-<8 hex>" off the runner for a
+    Mac execution).
+
+    `key` is season+week ("2026-wk03") in week mode, or the run's own UTC
+    date in preseason mode -- the natural per-run identity for each mode,
+    mirroring MLB's use of slate_date. WEEK CAN BE None IN WEEK MODE: none
+    of nfl.yml's 12 scheduled firings pass --week (only a manual
+    workflow_dispatch with the week input filled in does), so `mode=="week"`
+    with `week is None` is the common case in production, not an edge case
+    -- nfl_espn.fetch(week=None) auto-detects the current week from ESPN's
+    schedule instead. run_id must not crash over a None the rest of this
+    bot already tolerates; it falls back to "wkNA" rather than embedding the
+    literal string "None" in every run's identity.
+    """
+    now = dt.datetime.now(dt.timezone.utc)
+    gha_run_id = os.environ.get("GITHUB_RUN_ID", "").strip()
+    source = f"gha-{gha_run_id}" if gha_run_id else f"local-{uuid.uuid4().hex[:8]}"
+    if mode == "week":
+        key = f"{season}-{('wk%02d' % week) if week else 'wkNA'}"
+    else:
+        key = now.strftime("%Y-%m-%d")
+    run_id = f"{key}.{now.strftime('%H%M%S')}Z.{source}"
+
+    if NFL_REGISTRY is not None:
+        model_family = NFL_REGISTRY.MODEL_FAMILY
+        model_versions = NFL_REGISTRY.model_versions_snapshot()
+        schema_version = NFL_REGISTRY.SCHEMA_VERSION
+    else:
+        model_family = "unknown"
+        model_versions = {}
+        schema_version = 0
+
+    config_hash = None
+    if NFL_CONFIG_FINGERPRINT is not None:
+        try:
+            config_hash = NFL_CONFIG_FINGERPRINT.nfl_config_hash(MODELS, [derive, score])
+        except Exception as exc:
+            print(f"nfl_config_hash() failed ({exc}); config_hash will be empty this run.")
+
+    return {
+        "run_id": run_id,
+        "generated_at": now.isoformat(),
+        "mode": mode,
+        "season": season,
+        "week": week,
+        # Not GITHUB_WORKFLOW's filename (Actions doesn't expose that) -- the
+        # workflow's display NAME, matching build_run_meta()'s own field.
+        "trigger": os.environ.get("GITHUB_WORKFLOW", "").strip() or "local",
+        "git_sha": _current_git_sha(),
+        "model_family": model_family,
+        "model_versions": model_versions,
+        # Explicit {"nfl": None} rather than an absent key when hashing
+        # fails, so "we tried and it failed" is distinguishable from "this
+        # run predates config_hash existing" at analysis time -- same
+        # reasoning as build_run_meta()'s own config_hashes dict.
+        "config_hashes": {"nfl": config_hash},
+        "schema_version": schema_version,
+        "env": _run_env_metadata(),
+    }
+
+
+def build_nfl_prediction_log_lines(run_meta: dict, players: list[dict]) -> list[dict]:
+    """One line per player per market scored this run, mirroring
+    build_prediction_log_lines() in bots/mlb_dashboard.py's shape (identity
+    keys, run/version metadata, then the score) but built off the already-
+    merged `payload["players"]` rows (one dict per player, `scores`/
+    `components` keyed by market) rather than a flat per-market DataFrame,
+    since that is the shape build_payload() already produces here."""
+    lines: list[dict] = [run_meta]
+    for pl_row in players:
+        if not isinstance(pl_row, dict):
+            continue
+        for market, sc in (pl_row.get("scores") or {}).items():
+            if sc is None:
+                continue
+            lines.append({
+                "player_id": pl_row.get("player_id"),
+                "player": pl_row.get("name"),
+                "team": pl_row.get("team"),
+                "opp": pl_row.get("opp"),
+                "position": pl_row.get("position"),
+                "market": market,
+                "run_id": run_meta.get("run_id"),
+                "generated_at": run_meta.get("generated_at"),
+                "model_version": (run_meta.get("model_versions") or {}).get(market),
+                "config_hash": (run_meta.get("config_hashes") or {}).get("nfl"),
+                "score": sc,
+                "components": (pl_row.get("components") or {}).get(market, {}),
+                "carryover": pl_row.get("carryover", False),
+                "questionable": pl_row.get("questionable", False),
+                "low_sample": pl_row.get("low_sample", False),
+            })
+    return lines
+
+
+def write_nfl_prediction_log(run_meta: dict, players: list[dict], out_dir: Path, prefix: str = "") -> "Path | None":
+    """Write {out_dir}/{prefix}prediction_log_{run_id}.jsonl for this run --
+    the NFL sibling of write_prediction_log() in bots/mlb_dashboard.py.
+    nfl_-prefixed (via `prefix`, already "nfl_" in production per nfl.yml)
+    specifically so this file never collides with MLB's own
+    prediction_log_*.jsonl glob in .github/scripts/publish_data.sh. Writes
+    straight into out_dir (already public/data/current in production --
+    unlike MLB's OUT_DIR-then-sync-to-website-repo dance, nfl_bot.py's
+    --out already points at the publish directory, so there is no separate
+    sync step to wire this into). Best-effort: a logging failure must never
+    block the slate the rest of main() already wrote."""
+    try:
+        run_id = run_meta["run_id"]
+        path = out_dir / f"{prefix}prediction_log_{run_id}.jsonl"
+        lines = build_nfl_prediction_log_lines(run_meta, players)
+        with path.open("w", encoding="utf-8") as f:
+            for obj in lines:
+                f.write(json.dumps(obj, default=str))
+                f.write("\n")
+        return path
+    except Exception as exc:
+        print(f"nfl prediction log write failed: {exc}")
+        return None
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--mode", choices=["preseason", "week"], default="preseason")
@@ -488,6 +692,17 @@ def main() -> int:
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     payload = build_payload(a.mode, a.season, a.week, out)
+
+    # MODEL FOUNDATION (2026-08-24). One run identity per execution, and a
+    # durable per-run prediction log -- see build_nfl_run_meta() /
+    # write_nfl_prediction_log() above. Computed right after the payload so
+    # every player row this run scored is available to log; before the
+    # extras pop below since that only touches payload["extras"], never
+    # payload["players"].
+    run_meta = build_nfl_run_meta(a.mode, a.season, a.week, a)
+    pred_log_path = write_nfl_prediction_log(run_meta, payload.get("players", []), out, a.prefix)
+    if pred_log_path is not None:
+        print(f"  prediction log: {pred_log_path.name}")
 
     extras = payload.pop("extras", {})
     stat_season = payload.get("stat_season")
@@ -581,6 +796,15 @@ def main() -> int:
         "built_at_human": payload["built_at_human"],
         "mode": payload["mode"], "label": payload["label"],
         "counts": payload["counts"],
+        # MODEL FOUNDATION (2026-08-24). nfl_meta.json is already a dict
+        # (unlike today_slim.json's bare list on the MLB side -- see
+        # sync_model_foundation_outputs_to_website_repo()'s docstring in
+        # bots/mlb_dashboard.py for why THAT required a companion
+        # *_run_meta.json file), so run_meta nests straight in here rather
+        # than needing its own nfl_run_meta.json companion file. Nested
+        # under its own key, not flattened, so a future top-level meta.json
+        # field can never collide with a run_meta field name.
+        "run_meta": run_meta,
     }, indent=2))
     for f in ("week", "matchup", "logs", "meta", "picks"):
         fp = out / f"{a.prefix}{f}.json"
