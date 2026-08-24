@@ -116,9 +116,19 @@ jobs:
           git config user.email "bot@users.noreply.github.com"
           # Named paths only. This repo's rule: a delivery never runs git add -A.
           rm -f public/data/current/today_slim.json   # belongs to `data`, not here
-          git add public/data/current/bbe_history \
-                  public/data/current/hr_v3_*.json \
-                  public/data/current/hr_v3_record.jsonl 2>/dev/null || true
+          # stage each path on its own. `git add A B C` validates EVERY pathspec
+          # before staging ANY of them, so one missing file stages nothing at
+          # all -- and on the first night hr_v3_record.jsonl does not exist yet.
+          # That is exactly how the first live run harvested 718 batted balls,
+          # scored 259 bats, printed "nothing changed" and kept none of it.
+          for p in public/data/current/bbe_history \
+                   public/data/current/hr_v3_record.jsonl; do
+            [ -e "$p" ] && git add "$p"
+          done
+          for f in public/data/current/hr_v3_*.json; do
+            [ -e "$f" ] && git add "$f"
+          done
+          git status --short | head -20
           if git diff --cached --quiet; then
             echo "nothing changed"
           else

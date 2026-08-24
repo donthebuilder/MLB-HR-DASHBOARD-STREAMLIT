@@ -203,8 +203,15 @@ def cmd_score(args) -> int:
             **{f: num(prof.get(f)) for f, _, _, _ in TERMS},
         })
     ok = sum(1 for r in out if r["hr_score_v3_status"] == "ok")
+    # Record WHICH slate was actually read. The workflow is scheduled for 15:20
+    # UTC, when today_slim.json holds today's slate -- but run by hand at, say,
+    # 00:22 UTC it still holds yesterday's, and the board would carry today's
+    # date over yesterday's players with nothing to say so.
+    _slate_dates = {str(r.get("game_date") or r.get("date") or "") for r in slate}
+    _slate_dates.discard("")
     payload = {
         "date": date,
+        "slate_dates_seen": sorted(_slate_dates)[:3],
         "n": len(out),
         "scoreable": ok,
         "terms": [{"field": f, "weight": w, "league_low": lo, "league_high": hi}
@@ -230,8 +237,13 @@ def cmd_grade(args) -> int:
     board_path = DATA / f"hr_v3_{date}.json"
     bbe_path = BBE / f"bbe_{date}.jsonl"
     if not board_path.exists():
-        print(f"no hr_v3_{date}.json to grade")
-        return 1
+        # Not an error: on the first night there is no yesterday. A red step
+        # that is expected teaches you to ignore red steps, so this says what
+        # it means and exits clean. A board that EXISTS and cannot be graded
+        # still fails below.
+        print(f"no hr_v3_{date}.json — nothing was published for that date yet "
+              f"(expected on the first run; the board scored today gets graded tomorrow)")
+        return 0
     if not bbe_path.exists():
         print(f"no bbe_{date}.jsonl — the harvest has not run for this date")
         return 1
