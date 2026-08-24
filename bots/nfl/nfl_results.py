@@ -63,26 +63,34 @@ def _reg_lines(season: int, week: int) -> pl.DataFrame:
         pl.col("player_id").cast(pl.Utf8),
         pl.col(name_col).alias("name"),
         pl.col("team").cast(pl.Utf8) if "team" in have else pl.lit("").alias("team"),
+        pl.col("position").cast(pl.Utf8) if "position" in have else pl.lit("").alias("position"),
         *[pl.col(c) for c in STATS],
     ])
 
 
 # ── preseason ─────────────────────────────────────────────────────────────────
 
-def _espn_to_gsis() -> dict[str, str]:
-    """espn_id -> gsis_id. Empty dict if the players table is unavailable."""
+def _espn_to_gsis() -> tuple[dict[str, str], dict[str, str]]:
+    """(espn_id -> gsis_id, gsis_id -> position). Empty dicts if the players
+    table is unavailable. Position rides the same load as the espn/gsis xref
+    so preseason lines can carry a position column exactly like _reg_lines()
+    does, with no second API call."""
     try:
         import nflreadpy as nfl
         p = nfl.load_players()
     except Exception as exc:
         print(f"  players table unavailable ({type(exc).__name__}) — preseason cannot be joined")
-        return {}
+        return {}, {}
     if "espn_id" not in p.columns or "gsis_id" not in p.columns:
         print("  players table has no espn_id/gsis_id pair")
-        return {}
-    out: dict[str, str] = {}
-    for r in p.select(["espn_id", "gsis_id"]).iter_rows():
-        e, g = r
+        return {}, {}
+    has_pos = "position" in p.columns
+    cols = ["espn_id", "gsis_id"] + (["position"] if has_pos else [])
+    espn_gsis: dict[str, str] = {}
+    gsis_pos: dict[str, str] = {}
+    for r in p.select(cols).iter_rows():
+        e, g = r[0], r[1]
+        pos = r[2] if has_pos else None
         if e is None or g is None:
             continue
         # espn_id arrives as a float on some builds — 12345.0 must key as "12345".
@@ -90,8 +98,10 @@ def _espn_to_gsis() -> dict[str, str]:
         if e.endswith(".0"):
             e = e[:-2]
         if e:
-            out[e] = str(g)
-    return out
+            espn_gsis[e] = str(g)
+        if pos:
+            gsis_pos[str(g)] = str(pos)
+    return espn_gsis, gsis_pos
 
 
 def _pre_lines(season: int, week: int | None) -> pl.DataFrame:
@@ -99,9 +109,9 @@ def _pre_lines(season: int, week: int | None) -> pl.DataFrame:
              if g.get("completed")]
     print(f"  {len(games)} completed preseason game(s)")
     if not games:
-        return pl.DataFrame(schema={"player_id": pl.Utf8, "name": pl.Utf8,
-                                    "team": pl.Utf8, **{c: pl.Float64 for c in STATS}})
-    xref = _espn_to_gsis()
+        return pl.DataFrame(schema={"player_id": pl.Utf8, "name": pl.Utf8, "team": pl.Utf8,
+                                    "position": pl.Utf8, **{c: pl.Float64 for c in STATS}})
+    xref, pos_by_gsis = _espn_to_gsis()
     rows, unjoined = [], 0
     for g in games:
         for r in nfl_espn.box_score(g["game_id"]):
@@ -111,17 +121,18 @@ def _pre_lines(season: int, week: int | None) -> pl.DataFrame:
                 continue
             rows.append({"player_id": gsis, "name": r.get("name") or "",
                          "team": r.get("team") or "",
+                         "position": pos_by_gsis.get(gsis, ""),
                          **{c: float(r.get(c) or 0.0) for c in STATS}})
     if unjoined:
         print(f"  {unjoined} ESPN line(s) had no gsis match — dropped, not name-matched")
     if not rows:
-        return pl.DataFrame(schema={"player_id": pl.Utf8, "name": pl.Utf8,
-                                    "team": pl.Utf8, **{c: pl.Float64 for c in STATS}})
+        return pl.DataFrame(schema={"player_id": pl.Utf8, "name": pl.Utf8, "team": pl.Utf8,
+                                    "position": pl.Utf8, **{c: pl.Float64 for c in STATS}})
     # A man can appear in two categories of the same box score; sum, don't
     # overwrite, or a rusher who also caught a pass loses one of the two.
     return (pl.DataFrame(rows)
               .group_by("player_id")
-              .agg([pl.col("name").first(), pl.col("team").first(),
+              .agg([pl.col("name").first(), pl.col("team").first(), pl.col("position").first(),
                     *[pl.col(c).sum() for c in STATS]]))
 
 
@@ -136,6 +147,28 @@ def outcomes(lines: pl.DataFrame) -> dict[str, dict[str, float]]:
     for r in d.iter_rows(named=True):
         out[str(r["player_id"])] = {k: float(r[f"_o_{k}"] or 0.0) for k in MODELS}
     return out
+
+
+def eligible_lines(actual: dict[str, dict[str, float]],
+                    positions: dict[str, str]) -> dict[str, dict[str, float]]:
+    """Filter outcomes()'s {player_id: {market: value}} down to the markets
+    each player is actually eligible for, keyed by MODELS[market]["pos"] --
+    the same position list nfl_scoring.score() filters its own pool on.
+
+    outcomes() defaults every one of the 7 markets to 0.0 for every player
+    (float(... or 0.0)), so truthiness (`if v`) can't distinguish "he
+    genuinely went scoreless" (an RB with 0 TDs -- a real miss) from "this
+    market doesn't apply to him" (a kicker's REC_YDS) -- both are 0.0.
+    Position eligibility is the only thing that actually tells them apart.
+
+    A player with unknown position (positions.get(pid) is None, e.g. a
+    preseason ESPN row whose gsis join found no position) is ineligible for
+    every market -- the same drop-rather-than-guess call _espn_to_gsis()
+    already makes for an unjoined line."""
+    return {
+        pid: {k: v for k, v in vals.items() if positions.get(pid) in MODELS[k]["pos"]}
+        for pid, vals in actual.items()
+    }
 
 
 def grade(card: dict, actual: dict) -> tuple[dict, dict]:
@@ -228,6 +261,9 @@ def main() -> int:
     print(f"  {lines.height} player line(s)")
 
     actual = outcomes(lines)
+    # See eligible_lines()'s docstring for why this join has to happen by
+    # position, not by truthiness.
+    positions = {str(r["player_id"]): r.get("position") or "" for r in lines.iter_rows(named=True)}
 
     card = {}
     cp = Path(a.card)
@@ -255,7 +291,7 @@ def main() -> int:
         "graded_at_human": now.strftime("%b %-d, %-I:%M %p UTC"),
         "bars": {k: m["bar"] for k, m in MODELS.items()},
         # Every player who recorded a line — see the module docstring.
-        "lines": {pid: {k: v for k, v in vals.items() if v} for pid, vals in actual.items()},
+        "lines": eligible_lines(actual, positions),
         "names": {str(r["player_id"]): r["name"] for r in lines.iter_rows(named=True)},
         "card": graded,
         "totals": totals,
