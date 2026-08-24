@@ -1551,6 +1551,9 @@ class HitterRecord:
     meatball_fit_score: float = 0.0
     meatball_fit_status: str = "missing"   # ok | no_side_split | missing
     meatball_fit_note: str = ""
+    hr_pace_flag: bool = False             # honest EV-gap dueness x hot recent pitcher HR9
+    hr_pace_gap: float = 0.0               # expected HRs (season rate) minus actual, over his recent PA
+    hr_pace_note: str = ""
     pitcher_putaway_pct: float = 0.180
     pitcher_swstr_pct: float = 0.110
     pitcher_first_pitch_strike_pct: float = 0.600
@@ -7788,6 +7791,52 @@ def apply_model_v2_layers(h: HitterRecord) -> HitterRecord:
         else:
             h.meatball_fit_note = "%.1f%% middle-middle overall — not enough pitches to split by hand" % (100.0 * meatball_hand)
 
+    # ── HR PACE FLAG: HONEST DUENESS x A PITCHER GIVING THEM UP RIGHT NOW ──
+    #
+    # due_score() (removed 2026-08-24, see where it used to live below)
+    # blended six shape/contact-quality terms into one continuous number,
+    # and the archive taught it that "last5_hr==0"
+    # was informative -- which the archive leak (bots/leak_scan.py,
+    # 2026-08-23) proved was tautological (last5_hr is refreshed AFTER the
+    # game in graded rows, so a player who homered tonight always shows
+    # last5_hr>=1). Only one ingredient in that blend was honest on its own
+    # terms: the expected-value gap -- at his own season HR/PA rate, how
+    # many HRs he "should" have hit over his recent PA window versus how
+    # many he actually hit. That gap survives here as a boolean flag,
+    # matched with the one thing that makes "due" mean something TONIGHT
+    # instead of just narrating the last two weeks: an opposing pitcher who
+    # is CURRENTLY giving up home runs at an elevated rate over his last 3
+    # starts, not his season number. Gated on pitcher_l3_starts_found >= 2
+    # -- under two starts pitcher_l3_hr9 is too thin to trust, and this flag
+    # simply does not fire rather than quietly falling back to a season
+    # rate that isn't "recent" anymore.
+    _hp_season_pa = max(1, safe_int(h.season_pa, 1))
+    _hp_hr_per_pa = safe_float(h.season_hr, 0.0) / _hp_season_pa
+    _hp_recent_pa = safe_int(getattr(h, "l20pa_pa", 0), 0) or max(0, safe_int(h.recent_350_den, 0))
+    _hp_recent_hr = safe_int(getattr(h, "l20pa_hr", 0), 0) or safe_int(h.last5_hr, 0)
+    _hp_expected = _hp_recent_pa * _hp_hr_per_pa if _hp_recent_pa else 0.0
+    h.hr_pace_gap = round(max(0.0, _hp_expected - _hp_recent_hr), 2)
+
+    _hp_l3_starts = safe_int(getattr(h, "pitcher_l3_starts_found", 0), 0)
+    _hp_pitcher_hot = _hp_l3_starts >= 2 and safe_float(getattr(h, "pitcher_l3_hr9", 1.10), 1.10) >= 1.30
+
+    # Sample floor on the hitter side too -- a "gap" over 4 PA is noise, not
+    # dueness, no matter how large the raw number looks.
+    h.hr_pace_flag = bool(_hp_recent_pa >= 15 and h.hr_pace_gap >= 0.75 and _hp_pitcher_hot)
+    if h.hr_pace_flag:
+        h.hr_pace_note = ("%.2f HRs behind his own season pace over his last %d PA, into a "
+                          "pitcher allowing %.2f HR/9 across his last %d starts"
+                          % (h.hr_pace_gap, _hp_recent_pa,
+                             safe_float(getattr(h, "pitcher_l3_hr9", 1.10), 1.10), _hp_l3_starts))
+    elif _hp_recent_pa < 15:
+        h.hr_pace_note = "recent sample too thin to call it (%d PA, need 15)" % _hp_recent_pa
+    elif _hp_l3_starts < 2:
+        h.hr_pace_note = "no recent-pitcher read yet (need 2+ starts, have %d)" % _hp_l3_starts
+    elif not _hp_pitcher_hot:
+        h.hr_pace_note = "pitcher not currently HR-prone by his last 3 starts"
+    else:
+        h.hr_pace_note = "on pace or ahead of his own season rate"
+
     # Ambush setup: pitcher behind in counts + hitter swings early at fastballs.
     # We don't yet have per-hitter 1st-pitch swing% from a feed, so we infer it
     # from lineup-spot tendencies (1, 4, 5 spots ambush more) and recent K%.
@@ -10423,9 +10472,14 @@ def build_top10_alt_board(rows: List[HitterRecord]) -> str:
         return out
 
     taken_ids = set(top10_ids) | set(game_slot_ids)
+    # due_score() removed from this weight (2026-08-24, see hr_pace_flag) --
+    # its continuous weight folds into hot_score, and the honest part of it
+    # (the EV gap, matched with a currently HR-prone pitcher) survives as a
+    # small flat bonus rather than a re-blended signal.
     hot_due_candidates = sorted(
         [r for r in rows if trusted_sample(r)],
-        key=lambda r: (0.56 * hot_score(r) + 0.44 * due_score(r) + 0.08 * minmax_norm(r.hr_score, 18, 60)),
+        key=lambda r: (0.90 * hot_score(r) + 0.08 * minmax_norm(r.hr_score, 18, 60)
+                       + (0.10 if r.hr_pace_flag else 0.0)),
         reverse=True,
     )
     hot_due = pick_unique(hot_due_candidates, taken_ids, 5)
@@ -10459,7 +10513,8 @@ def build_top10_alt_board(rows: List[HitterRecord]) -> str:
     if len(alt_rows) < 15:
         filler_candidates = sorted(
             [r for r in rows if r.player_id not in taken_ids and not getattr(r, "true_avoid_hr", False)],
-            key=lambda r: (0.34 * matchup_score(r) + 0.33 * hot_score(r) + 0.33 * due_score(r)),
+            key=lambda r: (0.34 * matchup_score(r) + 0.58 * hot_score(r)
+                           + (0.08 if r.hr_pace_flag else 0.0)),
             reverse=True,
         )
         fillers = pick_unique(filler_candidates, taken_ids, 15 - len(alt_rows))
@@ -10604,31 +10659,21 @@ def hot_score(rec: HitterRecord) -> float:
     )
 
 
-def due_score(rec: HitterRecord) -> float:
-    tracked = max(1, rec.recent_350_den)
-    # Expected-value dueness component (per audit, 2026-06-27): replaces the
-    # earlier cycle-timing estimate (which assumed a fixed 4.2 PA/game
-    # constant) with the cleaner expected-HRs-minus-actual approach already
-    # used in hr_due_score/_pb_power -- expected HRs in his recent PA window
-    # (at his season rate) minus actual HRs hit. No estimated constants,
-    # just his own real season rate applied to his own real recent sample.
-    season_pa = max(1, safe_int(rec.season_pa, 1))
-    hr_per_pa = safe_float(rec.season_hr, 0.0) / season_pa
-    recent_pa = safe_int(rec.l20pa_pa, 0) or max(0, safe_int(rec.recent_350_den, 0))
-    recent_hr = safe_int(rec.l20pa_hr, 0) or safe_int(rec.last5_hr, 0)
-    expected_hrs = recent_pa * hr_per_pa if recent_pa else 0.0
-    due_gap = max(0.0, expected_hrs - recent_hr)
-    _ev_component = minmax_norm(due_gap, 0.0, 1.5)  # 0 = on pace or ahead, 1 = meaningfully overdue
-    return (
-        0.20 * minmax_norm(rec.recent_350_num / tracked, 0.08, 0.42) +
-        0.15 * minmax_norm(rec.recent_375_num / tracked, 0.03, 0.24) +
-        0.15 * minmax_norm(rec.recent_ideal_hr_contact, 0.05, 0.22) +
-        0.12 * minmax_norm(rec.recent_barrel_rate, 0.03, 0.18) +
-        0.09 * minmax_norm(rec.recent_hard_hit_rate, 0.28, 0.62) +
-        0.07 * minmax_norm(rec.season_iso, 0.08, 0.34) +
-        0.07 * (1.0 - minmax_norm(rec.last5_hr, 0, 3)) +
-        0.15 * _ev_component
-    )
+# REMOVED (2026-08-24): due_score() blended six recent-shape/contact-quality
+# terms (0.20 recent_350, 0.15 recent_375, 0.15 ideal-contact, 0.12 barrel,
+# 0.09 hard-hit, 0.07 season ISO) with a 0.07 "last5_hr==0" term and a 0.15
+# expected-value gap term into one continuous number. The archive leak
+# investigation (bots/leak_scan.py, 2026-08-23) found that last5_hr in
+# graded rows is refreshed AFTER the game, making that 0.07 term -- and by
+# extension the whole blend's apparent "predictiveness" on archived data --
+# largely an artifact of the archive remembering the outcome, not a real
+# signal (measured at 78% contact-quality hotness / 15% honest EV-gap
+# dueness / 7% recency once decomposed). Only the EV-gap piece was honest
+# on its own terms, so it survives -- as hr_pace_flag/hr_pace_gap above,
+# gated to fire only when matched with a pitcher who is CURRENTLY (last 3
+# starts) giving up home runs at an elevated rate, not blended back into a
+# continuous score. Every call site above now uses rec.hr_pace_flag
+# directly (a flat bonus or a boolean tag) instead of this function.
 
 
 def matchup_score(rec: HitterRecord) -> float:
@@ -10656,9 +10701,11 @@ def pair_allowed(a: HitterRecord, b: HitterRecord) -> bool:
 # were both confirmed dead -- never called anywhere. Both were superseded by
 # the dict-based _pb_pair_score() system (lanes: "Best HR Pair", "Hot + Due
 # Pair", etc) that actually powers the real pair-builder output today.
-# matchup_score, hot_score, and due_score themselves are NOT dead -- all
-# three are still genuinely used elsewhere in the file -- only these two
-# pair-combination wrappers were orphaned leftovers from an earlier system.
+# matchup_score and hot_score themselves are NOT dead -- both are still
+# genuinely used elsewhere in the file -- only these two pair-combination
+# wrappers were orphaned leftovers from an earlier system. (due_score
+# itself was removed 2026-08-24 -- see the note above where it used to
+# live, and hr_pace_flag/hr_pace_gap earlier in this file.)
 
 
 # REMOVED per audit (2026-06-27): numerology_pair_score was confirmed dead
@@ -10699,9 +10746,9 @@ def build_pool(rows: List[HitterRecord], size: int, variant: str, used_players=N
             score = (
                 0.30 * r.hr_score +      # reduced — HR score alone not predictive enough
                 0.25 * r.hrr_score +     # added — HRR guys homer most per graded data
-                0.20 * hot_score(r) +    # L5/L7 form — key signal from homer analysis
-                0.15 * due_score(r) +
+                0.30 * hot_score(r) +    # L5/L7 form — absorbed due_score's old 0.15 weight
                 0.10 * matchup_score(r)
+                + (0.05 if r.hr_pace_flag else 0.0)  # honest EV gap x hot recent pitcher
             )
             scored.append((r, score))
     else:
@@ -10709,10 +10756,10 @@ def build_pool(rows: List[HitterRecord], size: int, variant: str, used_players=N
             score = (
                 0.28 * r.hr_score +
                 0.24 * r.hrr_score +     # HRR weighted higher for 6-man pools too
-                0.18 * hot_score(r) +
-                0.15 * due_score(r) +
+                0.28 * hot_score(r) +    # absorbed due_score's old 0.15 weight
                 0.10 * matchup_score(r) +
                 0.05 * (r.overall_score / 100.0)
+                + (0.05 if r.hr_pace_flag else 0.0)  # honest EV gap x hot recent pitcher
             )
             scored.append((r, score))
     scored.sort(key=lambda x: x[1], reverse=True)
@@ -11021,9 +11068,9 @@ def build_signature_pools(rows: List[HitterRecord], size: int = 4) -> Dict[str, 
             return None
         score = (
             0.45 * rec.hr_score +
-            0.20 * hot_score(rec) +
-            0.20 * due_score(rec) +
+            0.35 * hot_score(rec) +    # absorbed due_score's old 0.20 weight
             0.15 * matchup_score(rec)
+            + (0.05 if rec.hr_pace_flag else 0.0)  # honest EV gap x hot recent pitcher
         )
         return (rec, score)
 
@@ -11218,12 +11265,13 @@ def _hr_alignment_score(rec: HitterRecord) -> float:
         score += 4.0
     if rec.hr_score >= 34 and rec.hrw_score >= 55:
         score += 2.0
-    # due_score/consistency_score added per audit (2026-06-27) -- this
+    # due_score removed here (2026-08-24) -- see hr_pace_flag above. This
     # ranking function drives top_pool_candidates and most bucket sorting
-    # in System 2's pairs/pools, but had neither signal at all. due_score
-    # weighted higher here since it's directly timing-relevant to "is this
-    # HR confirmed/due now," which is this function's whole purpose.
-    score += due_score(rec) * 8.0
+    # in System 2's pairs/pools, and dueness is directly timing-relevant to
+    # "is this HR confirmed/due now," which is this function's whole
+    # purpose, so it keeps a real bonus -- just a flat one, not a re-blended
+    # continuous score built on a contaminated signal.
+    score += 4.0 if rec.hr_pace_flag else 0.0
     score += minmax_norm(rec.consistency_score, 25, 65) * 4.0
     return round(score, 3)
 
@@ -11239,13 +11287,15 @@ def _hrr_power_score(rec: HitterRecord) -> float:
         score += 2.0
     if rec.hrr_score >= 60 and rec.hr_score < 20:
         score -= 5.0
-    # due_score/consistency_score added per audit (2026-06-27), same gap as
-    # _hr_alignment_score. consistency_score weighted higher here since this
-    # function is specifically about trustworthy, reliable production bats
-    # (its whole purpose is catching HRR-high/HR-low mismatches above) --
-    # consistency_score's balance/confidence read fits that intent directly.
+    # due_score removed here (2026-08-24) -- see hr_pace_flag above.
+    # consistency_score stays weighted higher since this function is
+    # specifically about trustworthy, reliable production bats (its whole
+    # purpose is catching HRR-high/HR-low mismatches above) --
+    # consistency_score's balance/confidence read fits that intent
+    # directly; dueness gets a smaller flat bonus here than in
+    # _hr_alignment_score for the same reason.
     score += minmax_norm(rec.consistency_score, 25, 65) * 6.0
-    score += due_score(rec) * 5.0
+    score += 2.5 if rec.hr_pace_flag else 0.0
     return round(score, 3)
 
 
@@ -11725,7 +11775,7 @@ def build_structured_pairs(
             # there. Modest weight since this formula already has 6 solid
             # components; these add a complementary dueness/reliability
             # read rather than dominating.
-            0.04 * (due_score(a) + due_score(b)) +
+            0.04 * ((1.0 if a.hr_pace_flag else 0.0) + (1.0 if b.hr_pace_flag else 0.0)) +
             0.04 * (minmax_norm(a.consistency_score, 25, 65) + minmax_norm(b.consistency_score, 25, 65))
         )
 
@@ -11938,7 +11988,7 @@ def _s2_pair_reason(a: HitterRecord, b: HitterRecord) -> str:
         reasons.append(f"L7 {a.last7_hr}HR+{b.last7_hr}HR")
     if (a.last5_xbh or 0) >= 3 and (b.last5_xbh or 0) >= 3:
         reasons.append(f"L5 XBH {a.last5_xbh}+{b.last5_xbh}")
-    if due_score(a) >= 0.55 or due_score(b) >= 0.55:
+    if a.hr_pace_flag or b.hr_pace_flag:
         reasons.append("due-rate pressure")
     if a.consistency_score >= 50 and b.consistency_score >= 50:
         reasons.append("both balanced/reliable")
@@ -11968,7 +12018,7 @@ def _s2_pair_tags(a: HitterRecord, b: HitterRecord) -> List[str]:
     b_side = (b.bats == 'L' and b.pitcher_weak_side == 'LHB') or (b.bats == 'R' and b.pitcher_weak_side == 'RHB')
     if a_side or b_side: tags.append("Weak side")
     if (a.last7_hr or 0) >= 1 or (b.last7_hr or 0) >= 1: tags.append("Recent HR")
-    if due_score(a) >= 0.55 or due_score(b) >= 0.55: tags.append("Due")
+    if a.hr_pace_flag or b.hr_pace_flag: tags.append("Due")
     if a.consistency_score >= 50 and b.consistency_score >= 50: tags.append("Reliable")
     return tags[:7]
 
@@ -12265,7 +12315,7 @@ def _build_pair_sections(rows: List[HitterRecord]) -> Tuple[str, Dict[str, Any]]
             r_tag = r.pitcher_attack_tag or ''
             if 'BLOWUP' in r_tag and "Blowup incoming" not in pool_tags: pool_tags.append("Blowup incoming")
             elif 'HR ENVIRONMENT' in r_tag and "HR environment" not in pool_tags: pool_tags.append("HR environment")
-            if due_score(r) >= 0.55 and "Due" not in pool_tags: pool_tags.append("Due")
+            if r.hr_pace_flag and "Due" not in pool_tags: pool_tags.append("Due")
             if r.consistency_score >= 50 and "Reliable" not in pool_tags: pool_tags.append("Reliable")
             if (r.last7_hr or 0) >= 1 and "Recent HR" not in pool_tags: pool_tags.append("Recent HR")
         same_game = len(set(r.game_pk for r in selected)) < len(selected)
@@ -12441,7 +12491,7 @@ def build_hrr_builder(rows: List[HitterRecord]) -> str:
             + 3.0 * k_floor
             + 3.0 * hit_floor
             + 2.0 * minmax_norm(r.recent_ideal_hr_contact, 0.04, 0.18)
-            + 2.5 * due_score(r)
+            + (1.5 if r.hr_pace_flag else 0.0)
             + 2.0 * minmax_norm(r.consistency_score, 25, 65)
         )
 
@@ -12539,7 +12589,7 @@ def build_hrr_builder(rows: List[HitterRecord]) -> str:
         avg_hit = sum(p.hit_score for p in combo) / len(combo)
         if avg_hit >= 70:
             parts.append("strong contact")
-        due_hits = sum(1 for p in combo if due_score(p) >= 0.55)
+        due_hits = sum(1 for p in combo if p.hr_pace_flag)
         if due_hits >= 1:
             parts.append(f"{due_hits} due-rate play{'s' if due_hits > 1 else ''}")
         reliable_hits = sum(1 for p in combo if p.consistency_score >= 50)

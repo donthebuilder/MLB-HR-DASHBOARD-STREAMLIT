@@ -1491,15 +1491,19 @@ def hot_score(rec: Dict[str, Any]) -> float:
     )
 
 
-def due_score(rec: Dict[str, Any]) -> float:
-    num = safe_float(rec.get("recent_350_num"))
-    den = max(1.0, safe_float(rec.get("recent_350_den"), 1.0))
-    return (
-        0.40 * minmax_norm(num / den, 0.05, 0.45) +
-        0.25 * minmax_norm(safe_float(rec.get("recent_barrel_rate")), 0.02, 0.25) +
-        0.20 * minmax_norm(safe_float(rec.get("recent_fb_rate")), 0.20, 0.55) +
-        0.15 * (1.0 - minmax_norm(safe_float(rec.get("last5_hr")), 0, 3))
-    )
+# REMOVED (2026-08-24): this was a second, independent copy of
+# mlb_dashboard.py's due_score() -- same shape, dict-keyed instead of
+# dataclass-attribute-keyed, used only as this file's own fallback
+# pair/pool builder (see build_pair_pool_sections, exercised when
+# load_pair_builder_sections() finds nothing saved for a date). It carried
+# the same problem: mostly recent contact-quality dressed up as dueness,
+# plus a "last5_hr==0" term that the archive leak (bots/leak_scan.py,
+# 2026-08-23) showed is refreshed AFTER the game in graded rows. Every call
+# site below now reads rec.get("hr_pace_flag", False) directly -- the
+# boolean archived alongside every row (see SLOT_FIELDS above) that fires
+# only on the honest EV-gap matched with a currently HR-prone pitcher. Rows
+# from before 2026-08-24 simply have no flag and read False, same as any
+# new field introduced after the fact.
 
 
 def matchup_score(rec: Dict[str, Any]) -> float:
@@ -1541,9 +1545,11 @@ def best_hr_pair_score(a: Dict[str, Any], b: Dict[str, Any]) -> float:
 
 
 def hot_due_pair_score(a: Dict[str, Any], b: Dict[str, Any]) -> float:
+    # due_score(...) * 0.45 replaced with a flat bonus off hr_pace_flag
+    # (2026-08-24) -- see the note above where due_score() used to live.
     return max(
-        0.55 * hot_score(a) + 0.45 * due_score(b),
-        0.55 * hot_score(b) + 0.45 * due_score(a),
+        0.55 * hot_score(a) + (0.45 if b.get("hr_pace_flag") else 0.0),
+        0.55 * hot_score(b) + (0.45 if a.get("hr_pace_flag") else 0.0),
     )
 
 
@@ -1577,23 +1583,26 @@ def select_diverse_pairs(scored_pairs: List[Tuple[Dict[str, Any], Dict[str, Any]
 def build_pool(rows: List[Dict[str, Any]], size: int, variant: str, used_players=None):
     used_players = set(used_players or [])
     scored = []
+    # due_score(r)'s old 0.20/0.18 weight absorbed into hot_score below, with
+    # a small flat bonus off hr_pace_flag instead of a re-blended continuous
+    # signal (2026-08-24) -- see the note above where due_score() used to live.
     if variant == "4":
         for r in rows:
             score = (
                 0.45 * safe_float(r.get("hr_score")) +
-                0.20 * hot_score(r) +
-                0.20 * due_score(r) +
+                0.35 * hot_score(r) +
                 0.15 * matchup_score(r)
+                + (0.05 if r.get("hr_pace_flag") else 0.0)
             )
             scored.append((r, score))
     else:
         for r in rows:
             score = (
                 0.38 * safe_float(r.get("hr_score")) +
-                0.18 * hot_score(r) +
-                0.18 * due_score(r) +
+                0.31 * hot_score(r) +
                 0.16 * matchup_score(r) +
                 0.10 * (safe_float(r.get("overall_score")) / 100.0)
+                + (0.05 if r.get("hr_pace_flag") else 0.0)
             )
             scored.append((r, score))
     scored.sort(key=lambda x: x[1], reverse=True)
@@ -1625,7 +1634,10 @@ def build_pair_pool_sections(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
         if kind == "bomb_matchup":
             return 0.58 * safe_float(a.get("hr_score")) + 0.18 * safe_float(b.get("hr_score")) + 0.24 * matchup_score(b)
         if kind == "bomb_variance":
-            return 0.52 * safe_float(a.get("hr_score")) + 0.20 * safe_float(b.get("hr_score")) + 0.28 * due_score(b)
+            # due_score(b) * 0.28 replaced with a flat bonus off hr_pace_flag
+            # (2026-08-24) -- see the note above where due_score() used to live.
+            return (0.52 * safe_float(a.get("hr_score")) + 0.20 * safe_float(b.get("hr_score"))
+                    + (0.28 if b.get("hr_pace_flag") else 0.0))
         return best_hr_pair_score(a, b)
 
     def select_pair(kind: str, right_key: str = "hr_score") -> Tuple[Dict[str, Any], Dict[str, Any], float, str]:
@@ -2043,6 +2055,20 @@ SLOT_FIELDS = {
     "opp_catcher_id", "opp_catcher_name", "opp_catcher_source",
     "opp_catcher_cs_rate", "opp_catcher_sb_attempts", "opp_catcher_status",
     "opp_def_oaa_vs_hand", "opp_def_status",
+    # ── HR PACE FLAG (2026-08-24) ────────────────────────────────────────
+    # due_score() is gone from every ranking formula and pool/pair tag (see
+    # bots/mlb_dashboard.py, where it used to live) -- 0.78 of it was recent
+    # contact quality wearing a dueness name, and the archive taught it that
+    # "no HR in his last 5" was informative only because that field gets
+    # refreshed AFTER the game (see bots/leak_scan.py). The one honest piece,
+    # the EV gap, survives as hr_pace_flag: a boolean that fires only when
+    # matched with an opposing pitcher CURRENTLY (last 3 starts) giving up
+    # home runs at an elevated rate. Archived UNSCORED, same deal as
+    # meatball_fit_score and steal_risk_score above -- in a few weeks "do
+    # hr_pace_flag nights homer more than the rest of the board, holding
+    # hr_score fixed" is answerable off real graded nights. If the answer is
+    # no, it gets deleted same as the others would.
+    "hr_pace_flag", "hr_pace_gap", "hr_pace_note",
 }
 
 

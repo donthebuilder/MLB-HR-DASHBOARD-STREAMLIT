@@ -13,16 +13,27 @@ TWO THINGS SHARE THE NAME, and separating them is most of the work.
                  actually hit) * 25, expected at his own season rate. This is
                  exactly the "he's owed one" quantity.
 
-  due_score()    The MODEL function feeding pick ranking, pools and pairs.
-                 Only 0.15 of it is that gap and 0.07 is "he has not homered
-                 lately". The other 0.78 is recent CONTACT QUALITY -- 350ft
-                 rate, 375ft rate, ideal-contact rate, barrel rate, hard-hit
-                 rate, season ISO. It is a hotness score wearing a dueness
-                 name, and it would test as predictive on the strength of its
+  due_score()    REMOVED from scoring 2026-08-24. It was the MODEL function
+                 feeding pick ranking, pools and pairs. Only 0.15 of it was
+                 that gap and 0.07 was "he has not homered lately". The
+                 other 0.78 was recent CONTACT QUALITY -- 350ft rate, 375ft
+                 rate, ideal-contact rate, barrel rate, hard-hit rate,
+                 season ISO. It was a hotness score wearing a dueness name,
+                 and it tested as predictive on the strength of its
                  contact-quality majority while telling us nothing about
-                 dueness at all.
+                 dueness at all. It has been deleted from
+                 bots/mlb_dashboard.py; every call site that used it now
+                 reads rec.hr_pace_flag instead -- a boolean that fires ONLY
+                 on the honest EV-gap piece (expected HRs at his own season
+                 rate minus actual, over his recent PA), matched with an
+                 opposing pitcher who is CURRENTLY (last 3 starts, gated on
+                 pitcher_l3_starts_found >= 2) allowing home runs at an
+                 elevated rate. No contact-quality blend, no continuous
+                 re-weighting -- a flag or a small flat bonus, never a score.
 
-So the question is whether the DUENESS PART carries its own weight.
+So the question this study still asks is whether the DUENESS PART carries
+its own weight -- now measurable directly off hr_pace_flag/hr_due_score
+instead of needing to be decomposed out of due_score()'s blend.
 
 THIS STUDY CANNOT ANSWER IT YET, AND SAYS SO
 --------------------------------------------
