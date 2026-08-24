@@ -94,6 +94,13 @@ PUBLISH_FILES=(
   nfl_logs.json
   nfl_picks.json
   nfl_results.json
+  # NFL ODDS (2026-08-24). bots/nfl/nfl_odds_fetch.py's own two regenerated-
+  # every-run outputs, the nfl_ analog of odds_latest.json/odds_status.json
+  # above. No nfl_odds_history.json yet -- see that script's module docstring
+  # for why the dated-snapshot file was cut from this first pass, so there is
+  # no NFL_ODDS_GLOB/KEEP pair to add to the accumulate-and-cap loop below.
+  nfl_odds_latest.json
+  nfl_odds_status.json
   # MODEL FOUNDATION (2026-08-21, Task 2). One run identity per bot
   # execution -- see docs/MODELS.md and bots/model_registry.py. Small,
   # regenerated every run, so it belongs with the rest of PUBLISH_FILES

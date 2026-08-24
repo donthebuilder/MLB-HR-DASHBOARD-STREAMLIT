@@ -113,6 +113,30 @@ jobs:
           python nfl_bot.py $ARGS \
             --out "$GITHUB_WORKSPACE/public/data/current" --prefix nfl_
 
+      # ODDS. Runs right after the slate build so nfl_week.json exists for the
+      # name join, same ordering rule today.yml uses for the MLB fetch.
+      # continue-on-error and a soft-fail inside the script both: a book
+      # outage, a spent quota or an unset key must never cost a slate publish.
+      #
+      # Same three secrets today.yml's MLB fetch step uses -- they are repo
+      # secrets, not MLB-specific, so nothing new to provision. Only ONE
+      # provider is ported here (see nfl_odds_fetch.py's module docstring for
+      # why); ODDS_PROVIDER_ORDER / ODDSAPI_IO_BOOKMAKERS are MLB's multi-
+      # provider knobs and don't apply to this script, so they're not passed.
+      - name: Fetch NFL odds
+        continue-on-error: true
+        working-directory: bots/nfl
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          ODDSAPI_IO_KEY: ${{ secrets.ODDSAPI_IO_KEY }}
+          ODDSPAPI_KEY: ${{ secrets.ODDSPAPI_KEY }}
+          # NFL fires ~12x/week (this file's own cron list), nowhere near
+          # MLB's 13x/day, so the lock exists only to stop back-to-back manual
+          # re-runs from burning quota, not to ration a busy schedule. A repo
+          # variable so it can be tuned without a code change, same as MLB's.
+          NFL_ODDS_MIN_INTERVAL_MIN: ${{ vars.NFL_ODDS_MIN_INTERVAL_MIN }}
+        run: python nfl_odds_fetch.py --out "$GITHUB_WORKSPACE/public/data/current"
+
       # The report card is a full backtest over two seasons — minutes, not
       # seconds, and it only changes when the WEIGHTS change, not when the
       # slate does. So it rebuilds on the Tuesday open and on demand, never on
