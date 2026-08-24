@@ -1,0 +1,104 @@
+# 🩺 Archive health — is a feature column remembering tonight instead of predicting it?
+#
+# WHY THIS IS SCHEDULED AND THE PRECISION STUDY IS MONTHLY
+#
+# On 2026-08-23 the due-score study produced a table saying hitters with no home
+# run in their last five games homered 0 times in 217 rows. That is not a cold
+# streak, it is `last5_hr` being refreshed AFTER the game — a man who homered
+# tonight has last5_hr >= 1 by construction, so the zero bucket excludes him.
+# Every night before 2026-08-22 carries it, and hr_due_score is built from that
+# same field, so the whole overlap is unusable.
+#
+# A model tuned against a leaked column learns the leak. This project's standing
+# "no hr_blend changes before 9c" rule exists because of exactly that, and this
+# job is how the rule stops being folklore. Weekly, not monthly: a leak that
+# reappears should be caught in days, not in a month of nights nobody can use.
+#
+# THE JOB FAILS ON A LEAK IN THE LOCKED ROWS, and only there. A leak in the
+# pre-fix archive is history — failing forever over it would train everyone to
+# ignore a red X.
+name: Archive health
+
+on:
+  workflow_dispatch:
+  # Monday morning, after a full week of slates has landed.
+  schedule:
+    - cron: '23 12 * * 1'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: archive-health
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # The graded nights live on the data branch, not on main.
+      - name: Checkout the data branch
+        uses: actions/checkout@v4
+        with:
+          ref: data
+          path: _data
+          fetch-depth: 1
+
+      # stdlib only — no pip install, so a run is seconds of compute.
+      # continue-on-error so the answer still reaches the data branch when the
+      # scan fails; the verdict step below re-raises it afterwards.
+      - name: Leak scan
+        id: leak
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          python bots/leak_scan.py \
+            --dir _data/public/data/current \
+            --out /tmp/leak_scan.json 2>&1 | tee /tmp/leak_scan.txt
+
+      - name: Due study
+        if: always()
+        run: |
+          set -o pipefail
+          python bots/due_study.py \
+            --dir _data/public/data/current 2>&1 | tee /tmp/due_study.txt
+
+      - name: Leave both answers on the data branch
+        if: always()
+        run: |
+          mkdir -p _data/public/data/current
+          {
+            echo "archive health — $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+            echo "run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            echo
+            cat /tmp/leak_scan.txt 2>/dev/null || echo "(the leak scan produced no output)"
+            echo
+            cat /tmp/due_study.txt 2>/dev/null || echo "(the due study produced no output)"
+          } > _data/public/data/current/archive_health.txt
+          cp /tmp/leak_scan.json _data/public/data/current/leak_scan.json 2>/dev/null || true
+          cd _data
+          git config user.name  "moonshot-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add public/data/current/archive_health.txt public/data/current/leak_scan.json 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "archive health unchanged — nothing to commit"
+          else
+            git commit -m "archive health $(date -u +%F\ %H:%M) UTC"
+            git push
+          fi
+
+      # The answer is on the data branch either way; NOW the run goes red if a
+      # locked night is leaking.
+      - name: Fail if a locked night is leaking
+        if: steps.leak.outcome == 'failure'
+        run: |
+          echo "::error::leak_scan found a leaked feature column on rows stamped feature_snapshot=locked."
+          echo "Read public/data/current/archive_health.txt on the data branch for which field."
+          exit 1

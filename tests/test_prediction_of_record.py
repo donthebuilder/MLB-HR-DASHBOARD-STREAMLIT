@@ -71,7 +71,21 @@ def checkTrue(name, cond):
 # once at import time and reused everywhere below, makes every date/offset
 # in this file internally consistent regardless of when the suite actually
 # runs -- no live clock read anywhere past this point.
-_NOW = dt.datetime.now(dt.timezone.utc)
+# ...and the midnight fix below (_SLATE_REF) can only be watched failing for
+# half an hour a night, which by this project's own rule makes it dead code:
+# a guard that never fires is one nobody trusts. MOONSHOT_TEST_NOW forces the
+# reference instant so the broken window can be entered on demand at any hour:
+#
+#   MOONSHOT_TEST_NOW=2026-08-24T00:10:00+00:00 python3 tests/test_prediction_of_record.py
+#
+# The code under test still reads the real clock, which is exactly the point:
+# the offsets stay in the past relative to it, so games still lock, while the
+# derived slate date lands on the far side of midnight from _NOW.
+_FORCED_NOW = os.environ.get("MOONSHOT_TEST_NOW", "").strip()
+_NOW = (dt.datetime.fromisoformat(_FORCED_NOW.replace("Z", "+00:00"))
+        if _FORCED_NOW else dt.datetime.now(dt.timezone.utc))
+if _NOW.tzinfo is None:
+    _NOW = _NOW.replace(tzinfo=dt.timezone.utc)
 
 
 def iso(offset_min: int) -> str:
