@@ -600,6 +600,63 @@ def rolling_window(included: list[dict], as_of: dt.date, days: int) -> dict:
     }
 
 
+HR_OVERLAY_TIERS = [
+    ("verified_shape", "Verified Shape", "3/3: barrel, fly-ball rate and exit velocity"),
+    ("premium_power", "Premium Power", "Verified Shape + ISO ≥ .230 + HRW ≥ 60"),
+    ("elite_matchup", "Elite Matchup", "Premium Power + opposing pitcher HR/9 ≥ 1.40"),
+]
+
+
+def hr_overlay_performance(included: list[dict], as_of: dt.date) -> dict:
+    """Grade only tier labels physically stored on the locked prediction.
+
+    Older rows are intentionally not backfilled from archived/postgame
+    metrics. A zero here means clean tracking has not accumulated yet, not
+    that the historical archive had no qualifying hitters.
+    """
+    overall_n = len(included)
+    overall_hrs = sum(1 for c in included if c["went_yard"])
+    overall_rate = overall_hrs / overall_n if overall_n else None
+    schema_rows = [c for c in included if isinstance((c.get("row") or {}).get("hr_overlay"), dict)]
+
+    def stats(rows: list[dict]) -> dict:
+        n = len(rows)
+        hrs = sum(1 for c in rows if c["went_yard"])
+        rate = hrs / n if n else None
+        return {
+            "n": n, "hrs": hrs, "hr_rate": rate, "ci_95": wilson_ci(hrs, n),
+            "lift_vs_overall": (rate / overall_rate) if rate is not None and overall_rate else None,
+        }
+
+    tiers = {}
+    for key, label, rule in HR_OVERLAY_TIERS:
+        rows = [c for c in schema_rows if key in ((c["row"]["hr_overlay"].get("qualified_tiers")) or [])]
+        windows = {}
+        for days in (7, 30):
+            start = (as_of - dt.timedelta(days=days - 1)).isoformat()
+            window = [c for c in rows if c.get("game_date_actual") and start <= c["game_date_actual"] <= as_of.isoformat()]
+            windows[str(days)] = {"days": days, "start": start, "end": as_of.isoformat(), **stats(window)}
+        tiers[key] = {
+            "label": label, "rule": rule, "all": stats(rows), "rolling": windows,
+            "status": "tracking" if len(rows) < 200 else "measured",
+        }
+
+    return {
+        "version": "hr_overlay_v1",
+        "method": "locked pregame prediction-of-record only; no historical backfill",
+        "eligible_schema_n": len(schema_rows),
+        "legacy_without_overlay_n": overall_n - len(schema_rows),
+        "overall": stats(included),
+        "reference": {
+            "verified_shape": {
+                "hr_rate": 0.162, "n": 334, "baseline_hr_rate": 0.111,
+                "lift": 1.46, "label": "chronological held-out reference; separate from live locked record",
+            }
+        },
+        "tiers": tiers,
+    }
+
+
 # ── report ───────────────────────────────────────────────────────────────
 
 def fmt_pct(x: float | None) -> str:
@@ -675,6 +732,14 @@ def render_text(report: dict) -> str:
     for w in report["rolling"]:
         lines.append(f"  {w['days']:>2}-day ({w['start']}..{w['end']}): N={w['n']:<5} HR={w['hrs']:<4} "
                       f"rate={fmt_pct(w['hr_rate']):<7} CI {fmt_ci(w['ci_95'])}")
+    lines.append("")
+    lines.append("LOCKED HR OVERLAY TIERS")
+    overlay = report.get("hr_overlay") or {}
+    for key, label, _rule in HR_OVERLAY_TIERS:
+        tier = (overlay.get("tiers") or {}).get(key) or {}
+        full = tier.get("all") or {}
+        lines.append(f"  {label:<18} N={full.get('n', 0):<5} HR={full.get('hrs', 0):<4} "
+                     f"rate={fmt_pct(full.get('hr_rate')):<7} status={tier.get('status', 'tracking')}")
     lines.append("")
     if report["by_model_version"]:
         lines.append("BY MODEL VERSION (cross-version comparison is not apples-to-apples — see docs/MODELS.md)")
@@ -822,6 +887,7 @@ def build_report(data_dir: Path, model_version: str | None, as_of: dt.date, live
     table = tier_table(included)
     mono = monotonicity(table["tiers"])
     rolling = [rolling_window(included, as_of, d) for d in (7, 14, 30)]
+    overlay_report = hr_overlay_performance(included, as_of)
 
     by_mv: dict[str, dict] = {}
     for c in included:
@@ -885,6 +951,7 @@ def build_report(data_dir: Path, model_version: str | None, as_of: dt.date, live
         "tier_table": table,
         "monotonicity": mono,
         "rolling": rolling,
+        "hr_overlay": overlay_report,
         "by_model_version": by_mv,
         "config_hashes_by_model_version": config_hashes_by_mv,
         "config_hash_warnings": config_warnings,

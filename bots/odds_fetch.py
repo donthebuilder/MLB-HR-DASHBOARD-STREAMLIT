@@ -267,6 +267,102 @@ def implied(odds: int | None) -> float | None:
     return round(100 * p, 1)
 
 
+MOVE_HISTORY_LIMIT = 8
+
+
+def _move_point(q: dict, stamp: str) -> dict | None:
+    """Compact, comparable point for one player-market quote."""
+    if not isinstance(q, dict):
+        return None
+    line = q.get("line")
+    over = american(q.get("over"))
+    if line is None or over is None:
+        return None
+    try:
+        line = float(line)
+    except (TypeError, ValueError):
+        return None
+    need = q.get("implied")
+    try:
+        need = round(float(need), 1)
+    except (TypeError, ValueError):
+        need = implied(over)
+    return {"at": stamp, "line": line, "over": over, "implied": need}
+
+
+def attach_movement(new_mkts: dict, old_mkts: dict, stamp: str,
+                    old_stamp: str = "", same_slate: bool = True) -> dict:
+    """Attach opening, previous and current movement to every live quote.
+
+    Movement is measured in break-even probability points, not raw American
+    odds. A move from +500 to +400 is +3.3 probability points; treating it as
+    "-100 odds" is not comparable with a move through zero. A line change is
+    recorded but never mixed into the price delta because 0.5 and 1.5 are
+    different bets.
+    """
+    old_mkts = old_mkts if isinstance(old_mkts, dict) else {}
+    out = {}
+    for market, raw in (new_mkts or {}).items():
+        if not isinstance(raw, dict):
+            out[market] = raw
+            continue
+        q = dict(raw)
+        current = _move_point(q, stamp)
+        if current is None:
+            out[market] = q
+            continue
+
+        old = old_mkts.get(market) if same_slate else None
+        prior_move = old.get("movement") if isinstance(old, dict) else None
+        history = list((prior_move or {}).get("history") or [])
+        if not history and isinstance(old, dict):
+            first = _move_point(old, old_stamp or stamp)
+            if first:
+                history.append(first)
+
+        last = history[-1] if history else None
+        changed = not last or any(last.get(k) != current.get(k)
+                                  for k in ("line", "over", "implied"))
+        if changed:
+            history.append(current)
+        elif not history:
+            history = [current]
+        if len(history) > MOVE_HISTORY_LIMIT:
+            # The first point is the real opener. Keep it forever and rotate
+            # only the recent tail; otherwise "from open" quietly becomes
+            # "from the eighth-most-recent change" on a busy market.
+            history = [history[0], *history[-(MOVE_HISTORY_LIMIT - 1):]]
+
+        opening = history[0]
+        previous = history[-2] if len(history) > 1 else opening
+        same_open_line = opening.get("line") == current.get("line")
+        same_prev_line = previous.get("line") == current.get("line")
+
+        def delta(a, b, allowed):
+            if not allowed or a is None or b is None:
+                return None
+            return round(float(a) - float(b), 1)
+
+        from_open = delta(current.get("implied"), opening.get("implied"), same_open_line)
+        from_previous = delta(current.get("implied"), previous.get("implied"), same_prev_line)
+        q["movement"] = {
+            "opened_at": opening.get("at"),
+            "opening_line": opening.get("line"),
+            "opening_over": opening.get("over"),
+            "opening_implied": opening.get("implied"),
+            "previous_at": previous.get("at"),
+            "previous_line": previous.get("line"),
+            "previous_over": previous.get("over"),
+            "previous_implied": previous.get("implied"),
+            "from_open_pp": from_open,
+            "from_previous_pp": from_previous,
+            "line_changed": opening.get("line") != current.get("line"),
+            "history": history,
+        }
+        out[market] = q
+    return out
+
+
 def probe(key: str) -> int:
     """Answer 'what does my key actually see' before anything depends on it."""
     if not key:
@@ -1612,6 +1708,8 @@ def main() -> int:
     prev_board = published("odds_latest.json") or {}
     prev_by_id = prev_board.get("by_player_id") or {}
     prev_by_name = prev_board.get("by_name") or {}
+    same_movement_slate = str(prev_board.get("slate_date") or "") == slate_date
+    previous_stamp = str(prev_board.get("fetched_at") or "")
 
     def started(q) -> bool:
         t = q.get("commence") or q.get("game_time")
@@ -1653,9 +1751,17 @@ def main() -> int:
         # can actually use — with the by-name board kept beside it so a miss is
         # visible rather than just absent.
         # frozen per player at his own first pitch — see freeze() above
-        "by_player_id": {pid: freeze(mkts, prev_by_id.get(pid) or {})
+        "by_player_id": {pid: freeze(
+                             attach_movement(mkts, prev_by_id.get(pid) or {},
+                                             now.isoformat(), previous_stamp,
+                                             same_movement_slate),
+                             prev_by_id.get(pid) or {})
                          for pid, mkts in matched.items()},
-        "by_name": {nm: freeze(mkts, prev_by_name.get(nm) or {})
+        "by_name": {nm: freeze(
+                         attach_movement(mkts, prev_by_name.get(nm) or {},
+                                         now.isoformat(), previous_stamp,
+                                         same_movement_slate),
+                         prev_by_name.get(nm) or {})
                     for nm, mkts in board.items()},
         "match_rate": round(100 * len(matched) / max(1, len(board)), 1),
         "unmatched": sorted(unmatched),
@@ -1668,7 +1774,10 @@ def main() -> int:
         "note": ("Consensus line is the one the most books post; over/under are the "
                  "median price at that line; best_over is the best available price "
                  "for taking the over. `implied` is the break-even percentage — "
-                 "compare it to a hit rate, not to a score."),
+                 "compare it to a hit rate, not to a score. `movement` retains up "
+                 "to eight changed intraday observations; positive probability-"
+                 "point movement means the price shortened, negative means it "
+                 "drifted. A line change is a different bet and has no price delta."),
     }
     out.mkdir(parents=True, exist_ok=True)
     dest = out / "odds_latest.json"

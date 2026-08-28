@@ -99,7 +99,7 @@ MODEL_VERSIONS: Dict[str, str] = {
 # The shape of a published/archived record. Bump only when the record
 # structure itself changes (a field added/renamed/dropped in the
 # prediction-log or run-meta contract) -- never for a scoring/weight change.
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 # "{market}_v{N}" with an optional trailing qualifier (e.g. the shadow
 # model's "mlb_hr_v1_recency") -- the load-bearing part is that a version

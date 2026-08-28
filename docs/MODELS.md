@@ -31,7 +31,7 @@ The registry module is the thing the bot actually imports.
 | `multi_hit` | `mlb_multihit_v1` | The multi-hit score (`multi_hit_score`). |
 | `picks` | `mlb_pickmap_v3` | The designation/selection logic (`build_game_pick_role_map()`) that decides who gets called TOP / HR / HIT / HRR / CONTACT on a given slate. This is versioned too, separately from any score, because it is itself a model: it determines who gets evaluated as "the pick," and changing the selection logic (e.g. the 2026-08 double-up redesign) can move results without any score formula changing at all. |
 
-`SCHEMA_VERSION = 1` — the *shape* of a published/archived prediction
+`SCHEMA_VERSION = 2` — the *shape* of a published/archived prediction
 record (field names and types). See "Model version vs schema version"
 below.
 

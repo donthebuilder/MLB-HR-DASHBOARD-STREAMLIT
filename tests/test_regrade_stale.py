@@ -311,8 +311,11 @@ with tempfile.TemporaryDirectory() as td:
     check("grade_pairs_pools: hr_count is 1, not 2 (only one leg actually homered)", dh_pool["hr_count"], 1)
     check("grade_pairs_pools: both legs counted active (neither voided -- both had at-bats)",
           dh_pool["total_count"], 2)
+    check("pool grade: primary bar is two homers", dh_pool["bar"], 2)
+    checkFalse("pool grade: one homer is tracked but is not a primary win", bool(dh_pool["primary"]))
+    check("pool grade: explicit 2+ ladder grade is a miss", dh_pool["grade_2plus"], "miss")
 
-    print("doubleheader (Sol audit #2 finding #1): 13 assertions, a player's two doubleheader legs "
+    print("doubleheader + pool ladder: 16 assertions, a player's two doubleheader legs "
           "keep independent, uncontaminated outcome lines in both the outcome log and pool grading")
 
     # ── DISTANCE-MERGE DOUBLEHEADER KEYING FIX (2026-08-21, quick review of
