@@ -11222,6 +11222,49 @@ def _recent_rate(rec: HitterRecord, num: int) -> float:
     return num / max(1, rec.recent_350_den)
 
 
+def _season_hr_game_probability(rec: HitterRecord) -> float:
+    """Transparent HR chance estimate derived only from the hitter's season.
+
+    This is intentionally not called a calibrated model probability. It turns
+    HR/PA into a one-game chance with a conservative lineup-slot PA estimate,
+    which gives pairs and pools a common, interpretable objective while the
+    prediction log accumulates enough locked outcomes for true calibration.
+    """
+    pa = max(0, safe_int(getattr(rec, "season_pa", 0), 0))
+    hrs = max(0, safe_int(getattr(rec, "season_hr", 0), 0))
+    rate = safe_float(getattr(rec, "hr_per_pa", 0.0), 0.0)
+    if rate <= 0.0 and pa > 0:
+        rate = hrs / pa
+    # Small-sample shrinkage toward an 11% per-game league-ish baseline. The
+    # 120-PA prior stops a 2-HR cup of coffee from outranking established bats.
+    raw_game = 1.0 - (1.0 - max(0.0, min(rate, 0.15))) ** 4.15
+    weight = pa / (pa + 120.0)
+    return round(max(0.025, min(0.40, weight * raw_game + (1.0 - weight) * 0.11)), 4)
+
+
+def _ticket_probability_at_least(players: List[HitterRecord], need: int) -> float:
+    """Independent-leg estimate for a pair/pool grade ladder."""
+    probs = [_season_hr_game_probability(r) for r in players]
+    if not probs or need <= 0:
+        return 1.0 if need <= 0 else 0.0
+    dist = [1.0] + [0.0] * len(probs)
+    for prob in probs:
+        nxt = [0.0] * len(dist)
+        for hits, mass in enumerate(dist):
+            nxt[hits] += mass * (1.0 - prob)
+            if hits + 1 < len(nxt):
+                nxt[hits + 1] += mass * prob
+        dist = nxt
+    return round(sum(dist[need:]), 4)
+
+
+def _pool_leg_score(rec: HitterRecord) -> float:
+    """Rank a leg for a 2+ pool: season chance first, audited context second."""
+    probability_rank = minmax_norm(_season_hr_game_probability(rec), 0.06, 0.25)
+    context_rank = minmax_norm(_hr_alignment_score(rec), 35.0, 85.0)
+    return round(100.0 * (0.65 * probability_rank + 0.35 * context_rank), 3)
+
+
 def _split_iso_for(rec: HitterRecord) -> float:
     return rec.iso_vs_lhp if rec.pitcher_throws == "L" else rec.iso_vs_rhp
 
@@ -11302,7 +11345,7 @@ def _hrr_power_score(rec: HitterRecord) -> float:
 def top_pool_candidates(rows: List[HitterRecord], limit: int = 62) -> List[HitterRecord]:
     # Do not use raw HR score only here. Results showed HRR/HRW are timing confirmation,
     # so pools/pairs should start from aligned HR candidates.
-    return sorted(dedupe_players(rows), key=_hr_alignment_score, reverse=True)[:limit]
+    return sorted(dedupe_players(rows), key=_pool_leg_score, reverse=True)[:limit]
 
 
 def classify_pool_buckets(rows: List[HitterRecord]) -> Dict[str, List[HitterRecord]]:
@@ -11311,21 +11354,21 @@ def classify_pool_buckets(rows: List[HitterRecord]) -> Dict[str, List[HitterReco
     hot_hrr = sorted([
         r for r in ranked
         if r.hrr_score >= 50.0 and r.hrw_score >= 45.0 and _power_signal(r)
-    ], key=_hrr_power_score, reverse=True)
+    ], key=_pool_leg_score, reverse=True)
 
     hybrid = sorted([
         r for r in ranked
         if r.hr_score >= 28.0 and r.hrr_score >= 48.0 and r.hrw_score >= 45.0 and _power_signal(r)
-    ], key=_hr_alignment_score, reverse=True)
+    ], key=_pool_leg_score, reverse=True)
 
     core = sorted([
         r for r in ranked
         if r.hr_score >= 32.0 and _power_signal(r) and (r.hrw_score >= 42.0 or r.hrr_score >= 55.0)
-    ], key=_hr_alignment_score, reverse=True)
+    ], key=_pool_leg_score, reverse=True)
     if len(core) < 10:
         # fallback keeps old HR ceiling alive, but still sorted by alignment
         extra = [r for r in ranked if r not in core and r.hr_score >= 30.0 and _power_signal(r)]
-        core = dedupe_players(core + sorted(extra, key=_hr_alignment_score, reverse=True))[:14]
+        core = dedupe_players(core + sorted(extra, key=_pool_leg_score, reverse=True))[:14]
 
     mid = sorted([
         r for r in ranked
@@ -11333,7 +11376,7 @@ def classify_pool_buckets(rows: List[HitterRecord]) -> Dict[str, List[HitterReco
         and r.player_id not in {p.player_id for p in hot_hrr[:10]}
         and (r.hr_score >= 24.0 or r.hrw_score >= 50.0 or r.hrr_score >= 54.0)
         and _power_signal(r)
-    ], key=_hr_alignment_score, reverse=True)
+    ], key=_pool_leg_score, reverse=True)
 
     wtf = sorted([
         r for r in ranked
@@ -11348,7 +11391,7 @@ def classify_pool_buckets(rows: List[HitterRecord]) -> Dict[str, List[HitterReco
             or r.last5_hr >= 1
             or r.last5_xbh >= 2
         )
-    ], key=_hrr_power_score, reverse=True)
+    ], key=_pool_leg_score, reverse=True)
 
     return {
         "all": ranked,
@@ -11478,7 +11521,7 @@ def fallback_fill(
     blocked_ids: Optional[set[int]] = None,
     blocked_top_ids: Optional[set[int]] = None,
 ) -> List[HitterRecord]:
-    ranked = sorted(candidate_rows, key=_hr_alignment_score, reverse=True)
+    ranked = sorted(candidate_rows, key=_pool_leg_score, reverse=True)
     out: List[HitterRecord] = []
     for r in ranked:
         if not can_use_player(r, buckets, global_exposure, local_ids, local_games, blocked_ids, blocked_top_ids):
@@ -11646,7 +11689,7 @@ def build_structured_pairs(
     buckets: Dict[str, List[HitterRecord]],
     global_exposure: Dict[int, int],
 ) -> Dict[str, List[Tuple[HitterRecord, HitterRecord, float, str]]]:
-    ranked = sorted(candidate_rows, key=_hr_alignment_score, reverse=True)
+    ranked = sorted(candidate_rows, key=_pool_leg_score, reverse=True)
 
     def pitcher_weakness_points(rec: HitterRecord) -> float:
         pts = 0.0
@@ -11779,8 +11822,10 @@ def build_structured_pairs(
             0.04 * (minmax_norm(a.consistency_score, 25, 65) + minmax_norm(b.consistency_score, 25, 65))
         )
 
-        # Shared day bonus — same reason to homer today
-        score += shared_day_bonus(a, b) * 0.5
+        # Shared-context bonuses are intentionally not added. The archive
+        # showed same game/team/park at chance, while the useful overlap
+        # signals (ISO and recent HR) are already carried by each leg's own
+        # probability/context inputs. Adding them again double-counts them.
 
         # Lineup spot bonus
         if a.lineup_spot in (1,2,3,4,5): score += 0.8
@@ -11844,7 +11889,14 @@ def build_structured_pairs(
         if (a.lineup_spot or 9) >= 8: score -= 3.0
         if (b.lineup_spot or 9) >= 8: score -= 3.0
 
-        return round(score, 2)
+        # The ticket only wins when both legs homer. Make the geometric mean
+        # of their transparent season estimates the primary rank and keep the
+        # audited context formula as a smaller tiebreaker. This prevents a
+        # large pile of shared-day bonuses from outranking two better bats.
+        joint_quality = 100.0 * math.sqrt(
+            _season_hr_game_probability(a) * _season_hr_game_probability(b)
+        )
+        return round(0.80 * joint_quality + 0.20 * score, 2)
 
     hrr_hot = buckets.get("hrr", [])[:18]
     core = buckets.get("core", [])[:18]
@@ -11891,7 +11943,7 @@ def build_structured_pairs(
     if hot: out["A"]=[(*p,"🏁 HRR Hot Stack") for p in hot]
     if trigger: out["B"]=[(*p,"⚡ Trigger + Power") for p in trigger]
     if hybrid_sel: out["C"]=[(*p,"🎯 Hybrid Core") for p in hybrid_sel]
-    if value: out["D"]=[(*p,"🎲 Value Power") for p in value]
+    if value: out["D"]=[(*p,"🎲 Variance Power") for p in value]
     return out
 
 
@@ -11935,7 +11987,7 @@ def top_up_pool(
             out.append(r)
             used.add(r.player_id)
 
-    ranked = sorted(candidate_rows, key=_hr_alignment_score, reverse=True)
+    ranked = sorted(candidate_rows, key=_pool_leg_score, reverse=True)
     if prefer_variance:
         untagged_quality = sorted([
             r for r in ranked
@@ -12056,6 +12108,8 @@ def _s2_player_dict(r: HitterRecord) -> Dict[str, Any]:
         "recent_ev": getattr(r, "recent_ev", None), "last5_hits": r.last5_hits,
         "last5_hr": r.last5_hr, "last5_xbh": r.last5_xbh, "last7_hr": r.last7_hr,
         "season_hr": r.season_hr, "season_pa": r.season_pa, "hr_per_pa": r.hr_per_pa,
+        "season_hr_game_probability": _season_hr_game_probability(r),
+        "probability_source": "season HR/PA, shrunk; not calibrated model probability",
         "pitcher_name": r.pitcher_name, "pitcher_team": getattr(r, "pitcher_team", ""),
         "pitcher_throws": r.pitcher_throws, "pitcher_hr9": r.pitcher_hr9, "pitcher_whip": r.pitcher_whip,
         "pitcher_attack_tag": getattr(r, "pitcher_attack_tag", ""),
@@ -12082,11 +12136,11 @@ def build_top30_pairs(top30: List[HitterRecord]) -> Tuple[str, List[Dict[str, An
             a, b = eligible[i], eligible[j]
             if not pair_allowed(a, b):
                 continue
-            score = round(
-                0.5 * (a.hr_score + b.hr_score)
-                + 0.25 * (safe_float(getattr(a, "damage_conversion_score", 0.0), 0.0) + safe_float(getattr(b, "damage_conversion_score", 0.0), 0.0)),
-                2,
+            chance_quality = 100.0 * math.sqrt(
+                _season_hr_game_probability(a) * _season_hr_game_probability(b)
             )
+            context_quality = 0.25 * (_hr_alignment_score(a) + _hr_alignment_score(b))
+            score = round(0.80 * chance_quality + 0.20 * context_quality, 2)
             candidates.append((a, b, score))
     candidates.sort(key=lambda x: x[2], reverse=True)
 
@@ -12115,6 +12169,7 @@ def build_top30_pairs(top30: List[HitterRecord]) -> Tuple[str, List[Dict[str, An
             "lane_key": "TOP30",
             "pair_key": "|".join(sorted([str(a.player_id), str(b.player_id)])),
             "pair_score": score,
+            "estimated_both_hr_probability": _ticket_probability_at_least([a, b], 2),
             "risk": _s2_risk(score),
             "tags": _s2_pair_tags(a, b),
             "reason": reason_txt,
@@ -12156,7 +12211,7 @@ def _build_pair_sections(rows: List[HitterRecord]) -> Tuple[str, Dict[str, Any]]
     LAST_HR_SECTION_USED_IDS = set()
     if len(rows) < 6: return "", {"recommended_pairs": [], "pools_4man": [], "pools_6man": [], "pools_3man": []}
     candidate_rows = top_pool_candidates(rows, 62)
-    ranked = sorted(candidate_rows, key=_hr_alignment_score, reverse=True)
+    ranked = sorted(candidate_rows, key=_pool_leg_score, reverse=True)
     pick_tag_map = game_pick_type_map(rows)
     buckets = classify_pool_buckets(rows)
     global_exposure: Dict[int, int] = {}
@@ -12189,7 +12244,7 @@ def _build_pair_sections(rows: List[HitterRecord]) -> Tuple[str, Dict[str, Any]]
     if top30_pair_text:
         lines.append("")
         lines.append(top30_pair_text)
-    pair_titles={"A":"🔒 CORE HR PAIRS","B":"🧬 STATCAST HR PAIRS","C":"🎯 FLEX HR PAIRS","D":"🎲 VALUE POWER PAIRS"}
+    pair_titles={"A":"🔒 CORE HR PAIRS","B":"🧬 STATCAST HR PAIRS","C":"🎯 FLEX HR PAIRS","D":"🎲 VARIANCE POWER PAIRS"}
     json_pairs: List[Dict[str, Any]] = list(top30_json_pairs)
     for key in ("A","B","C","D"):
         if key not in structured_pairs:
@@ -12206,6 +12261,7 @@ def _build_pair_sections(rows: List[HitterRecord]) -> Tuple[str, Dict[str, Any]]
                 "lane_key": key,
                 "pair_key": "|".join(sorted([str(a.player_id), str(b.player_id)])),
                 "pair_score": score,
+                "estimated_both_hr_probability": _ticket_probability_at_least([a, b], 2),
                 "risk": _s2_risk(score),
                 "tags": _s2_pair_tags(a, b),
                 "reason": reason_txt,
@@ -12239,7 +12295,7 @@ def _build_pair_sections(rows: List[HitterRecord]) -> Tuple[str, Dict[str, Any]]
     pool4_d=build_structured_pool(candidate_rows,{"mid":1,"wtf":3},buckets,global_exposure,blocked_ids=pool4_blocked,blocked_top_ids=top5_ids)
     pair_pool_used_ids.update(r.player_id for r in pool4_d)
     lines.append(""); lines.append("🏊 4-MAN HR POOLS")
-    lines.extend(format_pool_columns("POOL A — Strongest", pool4_a, "POOL B — HRR+Power", pool4_b, "POOL C — Balanced", pool4_c, "POOL D — Contrarian", pool4_d, pick_tag_map, width=34))
+    lines.extend(format_pool_columns("POOL A — Strongest", pool4_a, "POOL B — HRR+Power", pool4_b, "POOL C — Balanced", pool4_c, "POOL D — Variance", pool4_d, pick_tag_map, width=34))
     # 6-man pools use their own exposure budget so C/D do not disappear after pairs + 4-man pools.
     # MINI-BOT AUDIT (2026-08-08, B4): this budget was seeded only with ALT
     # ids, so pair/TOP30/4-man players could reappear in 6-man pools. Seed
@@ -12292,8 +12348,8 @@ def _build_pair_sections(rows: List[HitterRecord]) -> Tuple[str, Dict[str, Any]]
     pool3_d=build_structured_pool(candidate_rows,{"wtf":2,"mid":1},buckets,pool6_exposure,blocked_ids=pool6_blocked,blocked_top_ids=top5_ids); pool3_d=top_up_pool(pool3_d,3,candidate_rows,pool6_blocked,pick_tag_map,avoid_top_ids=top5_ids,prefer_variance=True)
     pair_pool_used_ids.update(r.player_id for r in pool3_d)
     lines.append(""); lines.append("🏊 3-MAN HR POOLS  (replaces the 6-man — see the note in the code)")
-    lines.append("   Graded on HOW MANY went, not all-or-nothing. 1+ is the bar; 2+ is a good night.")
-    lines.extend(format_pool_columns("POOL A — Strongest", pool3_a, "POOL B — HRR+Var", pool3_b, "POOL C — Balanced", pool3_c, "POOL D — Contrarian", pool3_d, pick_tag_map, width=34))
+    lines.append("   Grade ladder: 2+ is a hit, 3/3 is perfect. One homer is not a win.")
+    lines.extend(format_pool_columns("POOL A — Strongest", pool3_a, "POOL B — HRR+Var", pool3_b, "POOL C — Balanced", pool3_c, "POOL D — Variance", pool3_d, pick_tag_map, width=34))
     # Kept under the old names so downstream consumers that read pool6_* keep
     # working; they now hold three names each rather than six.
     pool6_a, pool6_b, pool6_c, pool6_d = pool3_a, pool3_b, pool3_c, pool3_d
@@ -12304,7 +12360,7 @@ def _build_pair_sections(rows: List[HitterRecord]) -> Tuple[str, Dict[str, Any]]
     # built from System 2's actual selected players so both the .txt report
     # and this JSON payload always reflect the same underlying selection.
     def _s2_pool_json(name: str, selected: List[HitterRecord], size: int) -> Dict[str, Any]:
-        pool_score = round(sum(_hr_alignment_score(r) for r in selected) / max(1, len(selected)), 1)
+        pool_score = round(sum(_pool_leg_score(r) for r in selected) / max(1, len(selected)), 1)
         pool_tags: List[str] = []
         for r in selected:
             if (r.hrw_score or 0) >= 60 and "HRW" not in pool_tags: pool_tags.append("HRW")
@@ -12319,13 +12375,20 @@ def _build_pair_sections(rows: List[HitterRecord]) -> Tuple[str, Dict[str, Any]]
             if r.consistency_score >= 50 and "Reliable" not in pool_tags: pool_tags.append("Reliable")
             if (r.last7_hr or 0) >= 1 and "Recent HR" not in pool_tags: pool_tags.append("Recent HR")
         same_game = len(set(r.game_pk for r in selected)) < len(selected)
-        reason = f"{name} build" + (" · includes same-game stacking" if same_game else "") + f" · {len(selected)}/{size} players filled"
+        reason = f"{name} build · optimized for 2+" + (" · includes same-game legs" if same_game else "") + f" · {len(selected)}/{size} players filled"
         return {
             "name": name, "size": size, "pool_score": pool_score,
             # pool_score is an alignment AVERAGE (~50–75), not a pair score —
             # rescale into pair units before labeling (audit B12: pools all
             # printed "High" while pairs all printed "Lower")
             "risk": _s2_risk((pool_score - 45.0) / 2.5), "tags": pool_tags[:9], "reason": reason,
+            "primary_bar": 2,
+            "estimated_grade_probability": {
+                "2plus": _ticket_probability_at_least(selected, 2),
+                "3plus": _ticket_probability_at_least(selected, 3),
+                "perfect": _ticket_probability_at_least(selected, len(selected)),
+                "source": "independent season HR/PA estimates; screening estimate, not calibrated forecast",
+            },
             "players": [_s2_player_dict(r) for r in selected],
         }
 
@@ -12333,7 +12396,7 @@ def _build_pair_sections(rows: List[HitterRecord]) -> Tuple[str, Dict[str, Any]]
         _s2_pool_json("Pool A — Strongest", pool4_a, len(pool4_a)),
         _s2_pool_json("Pool B — HRR+Power", pool4_b, len(pool4_b)),
         _s2_pool_json("Pool C — Balanced", pool4_c, len(pool4_c)),
-        _s2_pool_json("Pool D — Contrarian", pool4_d, len(pool4_d)),
+        _s2_pool_json("Pool D — Variance", pool4_d, len(pool4_d)),
     ]
     # PUBLISHED KEY FIX (2026-08-12): pool6_a-d have held the retired-6-man's
     # 3-man replacement since 2026-08-09 ("kept under the old names so
@@ -12344,14 +12407,14 @@ def _build_pair_sections(rows: List[HitterRecord]) -> Tuple[str, Dict[str, Any]]
     # met: real 3-man pools have been arriving under "pools_6man" and getting
     # labelled "(retired)" on the site ever since. Ships under the name the
     # site already expects; labels match the text output above (Strongest /
-    # HRR+Var / Balanced / Contrarian) instead of the stale pre-retirement
+    # HRR+Var / Balanced / Variance) instead of the stale pre-retirement
     # set. pools_6man goes genuinely empty rather than carrying today's data
     # under yesterday's name.
     json_pools_3man = [
         _s2_pool_json("Pool A — Strongest", pool6_a, len(pool6_a)),
         _s2_pool_json("Pool B — HRR+Var", pool6_b, len(pool6_b)),
         _s2_pool_json("Pool C — Balanced", pool6_c, len(pool6_c)),
-        _s2_pool_json("Pool D — Contrarian", pool6_d, len(pool6_d)),
+        _s2_pool_json("Pool D — Variance", pool6_d, len(pool6_d)),
     ]
     json_payload = {
         # available_pool added per audit (2026-06-27) -- the frontend
@@ -13374,6 +13437,11 @@ def enrich_hr_pa_payload(rows_payload: List[Dict[str, Any]]) -> List[Dict[str, A
         pa_per_hr = (pa / hr) if hr > 0 else None
         x["hr_per_pa"] = round(hr_per_pa, 4)
         x["pa_per_hr"] = round(pa_per_hr, 1) if pa_per_hr else None
+        raw_game = 1.0 - (1.0 - max(0.0, min(hr_per_pa, 0.15))) ** 4.15
+        sample_weight = pa / (pa + 120.0)
+        season_game_prob = max(0.025, min(0.40, sample_weight * raw_game + (1.0 - sample_weight) * 0.11))
+        x["season_hr_game_probability"] = round(season_game_prob, 4)
+        x["hr_probability_source"] = "season HR/PA, shrunk; not calibrated model probability"
         x["hr_pa_tier"] = _hr_pa_tier(hr_per_pa)
         # A current-form proxy until exact PA-since-last-HR is produced by the history cache builder.
         recent_pa = _v30_safe_int(x.get("l20pa_pa"), 0) or max(0, _v30_safe_int(x.get("recent_350_den"), 0))
@@ -13841,6 +13909,11 @@ PREGAME_SNAPSHOT_FIELDS = (
 
 
 def build_prediction_log_lines(run_meta: Dict[str, Any], rows_payload: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    try:
+        from .hr_tiers import build_hr_overlay
+    except ImportError:
+        from hr_tiers import build_hr_overlay
+
     lines: List[Dict[str, Any]] = [run_meta]
     prediction_date = run_meta.get("slate_date", "")
     for row in rows_payload:
@@ -13996,6 +14069,12 @@ def build_prediction_log_lines(run_meta: Dict[str, Any], rows_payload: List[Dict
                 # above -- an existing computed value, not a new calculation,
                 # not inside _HR_CONFIG_FORMULA_FUNCS.
                 "games_since_last_hr": row.get("games_since_last_hr"),
+                # Inputs used by the immutable HR overlay. These are copied
+                # individually too so ordinary feature research does not have
+                # to understand the tier schema.
+                "season_iso": row.get("season_iso"),
+                "recent_ev": row.get("recent_ev"),
+                "season_hr_game_probability": row.get("season_hr_game_probability"),
             },
             # ── THE FULL PRE-GAME SNAPSHOT (2026-08-23) ─────────────────────
             # 11cec10's own scope note, closed: "a SLOT_FIELDS key not yet in
@@ -14007,6 +14086,7 @@ def build_prediction_log_lines(run_meta: Dict[str, Any], rows_payload: List[Dict
             # venue, park factors) are deliberately absent — they cannot leak
             # an outcome and overlaying them would fight the live row.
             "slot_snapshot": {k: row.get(k) for k in PREGAME_SNAPSHOT_FIELDS if k in row},
+            "hr_overlay": build_hr_overlay(row),
             # Moonshot scores are 0-100 indices, not probabilities. Never a
             # bare number here -- only a real calibrated probability would
             # ever populate this field, and none exists yet.

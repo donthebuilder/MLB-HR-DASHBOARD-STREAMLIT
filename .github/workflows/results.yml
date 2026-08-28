@@ -274,6 +274,19 @@ jobs:
           python bots/backtest_report.py --dir public/data --out-dir public/data/current
         continue-on-error: true
 
+      - name: Build locked HR tier record
+        run: |
+          mkdir -p /tmp/hr-tier-eval public/data/current
+          cp /tmp/histout/public/data/current/por_log_*.jsonl /tmp/hr-tier-eval/ 2>/dev/null || true
+          cp /tmp/histout/public/data/current/outcome_log_*.jsonl /tmp/hr-tier-eval/ 2>/dev/null || true
+          cp /tmp/histout/public/data/current/prediction_log_*.jsonl /tmp/hr-tier-eval/ 2>/dev/null || true
+          cp bots/outputs/por_log_*.jsonl /tmp/hr-tier-eval/ 2>/dev/null || true
+          cp bots/outputs/outcome_log_*.jsonl /tmp/hr-tier-eval/ 2>/dev/null || true
+          cp bots/outputs/prediction_log_*.jsonl /tmp/hr-tier-eval/ 2>/dev/null || true
+          cp bots/outputs/pick_lock.json /tmp/hr-tier-eval/ 2>/dev/null || true
+          python bots/eval_report.py --dir /tmp/hr-tier-eval --out public/data/current/eval_report.json
+        continue-on-error: true
+
       # TRUE PRICE (2026-08-15, Donovan: "find the true price of a player to do
       # certian things"). Joins the pre-game odds snapshots the today workflow
       # dropped on the branch to the graded file for the SAME date, and settles

@@ -45,6 +45,9 @@ PUBLISH_FILES=(
   results_final.json
   results_final.txt
   backtest_summary.json
+  # Official, prediction-of-record HR tier records. Built from the locked
+  # pregame rows; the Results page never recalculates membership later.
+  eval_report.json
   # the bot's own copy of the site's context lane (2026-08-08)
   context_pack_latest.json
   # fence-line contact board from spray_cache (2026-08-08)

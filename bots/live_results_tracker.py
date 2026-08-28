@@ -167,6 +167,12 @@ _LOCKED_COMPONENT_MAP: Dict[str, str] = {
     "last5_hr": "recent_form_last5_hr",
     "last5_xbh": "recent_form_last5_xbh",
     "games_since_last_hr": "games_since_last_hr",
+    "season_iso": "season_iso",
+    "recent_barrel_rate": "barrel_rate",
+    "recent_fb_rate": "fb_rate",
+    "recent_ev": "recent_ev",
+    "pitcher_hr9": "pitcher_hr9",
+    "season_hr_game_probability": "season_hr_game_probability",
 }
 
 
@@ -311,6 +317,13 @@ def apply_locked_features(
                 if k in _SNAPSHOT_NEVER_OVERLAY:
                     continue
                 dst[k] = v
+        overlay = locked.get("hr_overlay")
+        if isinstance(overlay, dict):
+            dst["hr_overlay"] = overlay
+            dst["hr_fit_passed"] = overlay.get("fit_passed")
+            dst["hr_fit_total"] = overlay.get("fit_total")
+            dst["hr_tier"] = overlay.get("primary_tier")
+            dst["hr_tiers"] = overlay.get("qualified_tiers")
         if locked.get("config_hash"):
             dst["config_hash"] = locked["config_hash"]
         dst["feature_snapshot"] = "locked"
@@ -1733,6 +1746,10 @@ SLOT_FIELDS = {
     # tonight's slate — exact for today, wrong for any archived day.
     "hrw_score", "pitch_mix_score", "top_board_score_v2", "recent_375_num",
     "pitcher_name", "pitcher_id", "pitcher_hr9",
+    # Frozen HR overlay: exact pregame tier membership and its screening
+    # estimate. Never recomputed from the postgame/current slate.
+    "hr_overlay", "hr_fit_passed", "hr_fit_total", "hr_tier", "hr_tiers",
+    "season_hr_game_probability", "recent_ev",
     # Walks data (2026-08-12, Donovan): batter BB% was already archived
     # (season_bb_rate, below) -- these two are the pitcher-side half.
     "pitcher_bb_pct", "pitcher_bb9",
@@ -3003,12 +3020,13 @@ def grade_pairs_pools(sections: Dict[str, Any], actual_by_pid: Dict[Tuple[int, i
         # ever saw said the product had never once worked. That is not a
         # measurement of the pools, it is a measurement of an impossible bar.
         #
-        # So `primary` is the headline the site reads: 1+ homered for a 3- or
-        # 4-man, 2+ for anything larger. `cleared` keeps its old all-or-nothing
-        # meaning so nothing downstream silently changes its mind, and
-        # `bar_label` carries the wording so the site never has to guess.
+        # 2026-08-26: 1+ is retained as a diagnostic only. It is too easy for
+        # a four-leg list and does not describe the user's actual ticket goal.
+        # The primary grade is now 2+ for every active 3- or 4-man pool, with
+        # 3+ and perfect preserved as separate ladder grades. `cleared` keeps
+        # its old all-or-nothing meaning for backwards compatibility.
         size = total_count or len(players)
-        need = 1 if size <= 4 else 2
+        need = min(2, size)
         primary = 1 if hr_count >= need else 0
         entry = {
             "label": pool["label"],
@@ -3024,6 +3042,10 @@ def grade_pairs_pools(sections: Dict[str, Any], actual_by_pid: Dict[Tuple[int, i
             "hit_any": 1 if hr_count >= 1 else 0,
             "hit_2plus": 1 if hr_count >= 2 else 0,
             "hit_3plus": 1 if hr_count >= 3 else 0,
+            "hit_4plus": 1 if hr_count >= 4 else 0,
+            "grade_2plus": "hit" if hr_count >= 2 else "miss",
+            "grade_3plus": "hit" if hr_count >= 3 else "miss",
+            "grade_perfect": "hit" if total_count > 0 and hr_count == total_count else "miss",
         }
         graded_pools.append(entry)
         if pool["label"].startswith("4-MAN"):
