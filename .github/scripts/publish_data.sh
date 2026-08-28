@@ -198,6 +198,20 @@ NFL_PRED_LOG_KEEP=300
 NFL_OUTCOME_LOG_GLOB="nfl_outcome_log_*.jsonl"
 NFL_OUTCOME_LOG_KEEP=75
 
+# nfl_odds_<date>.json (B1, 2026-08-28 master plan): ONE FILE PER FETCH-RUN
+# DATE, written by bots/nfl/nfl_odds_fetch.py's main(), same accumulate-and-
+# cap shape as ODDS_GLOB above -- a closing-ish price, once overwritten by
+# the next fetch, is not re-fetchable from a free API. Kept without this line
+# already lost the exact same way pick_lock.json and pick_matrix.json did
+# (see those PUBLISH_FILES comments above) -- a real file, a green step, and
+# no line here to carry it forward. KEEP scaled down from MLB's ODDS_KEEP=120
+# by the same cadence argument NFL_OUTCOME_LOG_KEEP above already makes: NFL
+# fetches ~12x/week in season vs MLB's ~13x/day, so 90 kept files is a
+# genuine multi-month span at NFL's cadence rather than a MLB-sized number
+# copied over.
+NFL_ODDS_GLOB="nfl_odds_20*.json"
+NFL_ODDS_KEEP=90
+
 # social/history/social_history_<date>.jsonl (2026-08-21, DASH social
 # pipeline). Same accumulate-and-cap shape as the logs above; kept via its
 # own trim block in carry_forward() rather than the generic loop, since it
@@ -349,7 +363,8 @@ stage_local() {
            "$SRC"/data/$OUTCOME_LOG_GLOB "$SRC"/data/current/$OUTCOME_LOG_GLOB \
            "$SRC"/data/$POR_LOG_GLOB "$SRC"/data/current/$POR_LOG_GLOB \
            "$SRC"/data/$NFL_PRED_LOG_GLOB "$SRC"/data/current/$NFL_PRED_LOG_GLOB \
-           "$SRC"/data/$NFL_OUTCOME_LOG_GLOB "$SRC"/data/current/$NFL_OUTCOME_LOG_GLOB; do
+           "$SRC"/data/$NFL_OUTCOME_LOG_GLOB "$SRC"/data/current/$NFL_OUTCOME_LOG_GLOB \
+           "$SRC"/data/$NFL_ODDS_GLOB "$SRC"/data/current/$NFL_ODDS_GLOB; do
     [ -f "$g" ] && cp "$g" "$STAGE/public/data/current/"
   done
 
@@ -394,7 +409,8 @@ carry_forward() {
   for spec in "$GRADED_GLOB:$GRADED_KEEP" "$GRADED_JSON_GLOB:$GRADED_KEEP" "$ODDS_GLOB:$ODDS_KEEP" \
               "$PRED_LOG_GLOB:$PRED_LOG_KEEP" "$OUTCOME_LOG_GLOB:$OUTCOME_LOG_KEEP" \
               "$POR_LOG_GLOB:$POR_LOG_KEEP" \
-              "$NFL_PRED_LOG_GLOB:$NFL_PRED_LOG_KEEP" "$NFL_OUTCOME_LOG_GLOB:$NFL_OUTCOME_LOG_KEEP"; do
+              "$NFL_PRED_LOG_GLOB:$NFL_PRED_LOG_KEEP" "$NFL_OUTCOME_LOG_GLOB:$NFL_OUTCOME_LOG_KEEP" \
+              "$NFL_ODDS_GLOB:$NFL_ODDS_KEEP"; do
     glob="${spec%:*}"; keep="${spec##*:}"
     n=$(find "$STAGE/public/data/current" -maxdepth 1 -type f -name "$glob" | wc -l)
     if [ "$n" -gt "$keep" ]; then

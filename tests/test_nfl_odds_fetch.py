@@ -67,10 +67,25 @@ def test_market_keys_use_the_documented_player_prop_convention():
             f"{model} -> {market} is an MLB batter_* key, not NFL")
 
 
+# B1 (2026-08-28 master plan): two of Donovan's named markets with no
+# nfl_scoring.MODELS entry (no graded bar exists for either yet) -- these
+# publish PRICE DATA ONLY via nfl_odds_latest.json, same as the seven scored
+# markets, but deliberately aren't required to have a MODELS counterpart.
+# Named explicitly here (not just "len() != 7") so a truly accidental third
+# addition still fails loudly instead of silently passing as "one more
+# price-only market, sure."
+PRICE_ONLY_MARKETS = {"FTD", "LONG_REC"}
+
+
 def test_markets_is_exactly_the_mapped_set():
     assert MARKETS == sorted(set(CATEGORY_MARKET.values()))
     # every one of the seven MODELS keys is represented, none forced/duplicated
-    assert len(CATEGORY_MARKET) == len(MODELS) == 7
+    scored = {k: v for k, v in CATEGORY_MARKET.items() if k not in PRICE_ONLY_MARKETS}
+    assert scored.keys() == MODELS.keys()
+    assert len(scored) == len(MODELS) == 7
+    # the only markets with no MODELS entry are the explicitly-allowed
+    # price-only ones -- an unexplained extra key here is a stray edit
+    assert set(CATEGORY_MARKET) - set(MODELS) == PRICE_ONLY_MARKETS
 
 
 def test_the_documented_mapping_matches_the_module_docstring_table():
@@ -87,6 +102,8 @@ def test_the_documented_mapping_matches_the_module_docstring_table():
         "RUSH_ATT": "player_rush_attempts",
         "PASS_YDS": "player_pass_yds",
         "KICK_PTS": "player_kicking_points",
+        "FTD": "player_1st_td",
+        "LONG_REC": "player_longest_reception",
     }
     assert CATEGORY_MARKET == expected
 

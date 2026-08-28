@@ -1,0 +1,113 @@
+name: NFL odds probe
+
+# 🔎 THE NFL ODDS PROBE — the-odds-api sibling of odds-probe.yml (2026-08-28,
+# B1 in the DASH Network master plan).
+#
+# Same reason odds-probe.yml exists, same reason it has to run here and not
+# from a Claude session or Donovan's Mac:
+#
+#   · Claude's sandbox cannot reach any odds host — confirmed again for this
+#     task (statsapi.mlb.com and api.theoddsapi.com both fail the same way:
+#     the sandbox's CONNECT tunnel refuses the host outright).
+#   · The keys are GitHub repo secrets only — never in a checkout, never on
+#     the Mac.
+#   · The Mac's own network intercepts TLS, so even with a key exported by
+#     hand it fails with "self-signed certificate in certificate chain."
+#
+# So this is the one place the NFL probe can run with a real key over a
+# network that isn't intercepting TLS: a GitHub runner, using the exact same
+# three secrets today.yml/nfl.yml already have wired in.
+#
+# WHAT THIS ANSWERS, and why B1 is gated on it: nfl_odds_fetch.py's
+# CATEGORY_MARKET has nine rows now — the original seven (all HIGH/MEDIUM
+# confidence, ported from documented the-odds-api market keys, never
+# verified live) plus two new ones this pass added for Donovan's market list
+# (FTD → player_1st_td, Longest Reception → player_longest_reception, both
+# UNCONFIRMED). This run is the first time ANY of the nine gets checked
+# against a real response. If FTD/Longest-Rec come back "NOT PRICED," that's
+# the answer the 2026-08-28 addendum says to wait for before deciding on a
+# paid-tier upgrade — not a bug in this workflow, an answer from the market.
+#
+# Manual-only (workflow_dispatch), read-only against the provider (--probe
+# makes no fetch that would touch nfl_odds_fetch.py's own request lock), and
+# leaves its answer on the data branch the same way odds-probe.yml does — a
+# run that changes no file is indistinguishable from a run that never
+# happened, and Donovan already hit that exact confusion once with the MLB
+# probe (see odds-probe.yml's own comment).
+#
+# NO --dump OPTION HERE, unlike odds-probe.yml. Checked before adding one:
+# nfl_odds_fetch.py's RAW_DUMP list is declared but never populated anywhere
+# in the file (api()/fetch_odds() don't append to it), and its own --probe
+# branch returns before _write_dump() is ever reached even in the main fetch
+# path -- so a `dump` checkbox here would silently do nothing, which is
+# exactly the "green but silent" failure this codebase's own culture flags
+# everywhere else (continue-on-error, pick_lock.json, ...). Not fixing that
+# in this pass — it's a pre-existing gap in the file, not something B1
+# touches — but not shipping a checkbox that lies about what it does either.
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install deps
+        run: pip install -r bots/requirements.txt
+
+      - name: Checkout the data branch, to leave the answer on it
+        uses: actions/checkout@v4
+        with:
+          ref: data
+          path: _data
+          fetch-depth: 1
+
+      - name: Probe NFL player-prop markets
+        env:
+          # Same three secrets nfl_odds_fetch.py already tries, in the same
+          # documented order (resolve_key()) — a green probe here means the
+          # scheduled nfl.yml fetch is configured correctly too.
+          ODDSAPI_IO_KEY: ${{ secrets.ODDSAPI_IO_KEY }}
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          ODDSPAPI_KEY: ${{ secrets.ODDSPAPI_KEY }}
+        run: |
+          echo "── which credentials are present (never their values) ──"
+          for k in ODDSAPI_IO_KEY ODDS_API_KEY ODDSPAPI_KEY; do
+            v="${!k}"
+            if [ -n "$v" ]; then echo "  $k: set (${#v} chars)"; else echo "  $k: NOT SET"; fi
+          done
+          echo
+          echo "── probe ──"
+          set -o pipefail
+          python bots/nfl/nfl_odds_fetch.py --probe 2>&1 | tee /tmp/nfl-probe.txt
+
+      - name: Leave the answer on the data branch
+        if: always()
+        run: |
+          mkdir -p _data/public/data/current
+          {
+            echo "nfl odds probe — $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+            echo "run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            echo
+            cat /tmp/nfl-probe.txt 2>/dev/null || echo "(the probe step produced no output)"
+          } > _data/public/data/current/nfl_odds_probe.txt
+          cd _data
+          git config user.name  "moonshot-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add public/data/current/nfl_odds_probe.txt
+          if git diff --cached --quiet; then
+            echo "probe output unchanged — nothing to commit"
+          else
+            git commit -m "nfl odds probe $(date -u +%F\ %H:%M) UTC"
+            git push
+          fi

@@ -136,6 +136,36 @@ SPORT = "americanfootball_nfl"
 #                                                points" scoring, which the
 #                                                first live probe should
 #                                                confirm rather than assume.
+#
+# ── B1 ADDITIONS (2026-08-28 master plan, Donovan's market list) ────────────
+# Two more of his named markets, NOT yet in nfl_scoring.MODELS -- there is no
+# graded bar for either one today, so these publish PRICE DATA ONLY (via
+# nfl_odds_latest.json's by_player_id/by_name maps, same as the seven above)
+# with nothing on the site to compare it against yet. That's the literal ask
+# ("make sure we can get data for that") and it's harmless to add: nothing
+# below keys off "exactly seven markets" (see CONFIDENCE note under each) --
+# fetch_odds/walk_outcomes/consensus/probe all just iterate whatever's in
+# MARKETS, and nfl_scoring.MODELS is never imported by this file, so a market
+# with no MODELS entry doesn't error, it just never gets scored (yet).
+#
+#   FTD       player_1st_td          UNCONFIRMED -- documented on
+#                                                the-odds-api's market list as
+#                                                a standard companion to
+#                                                player_anytime_td, but tier
+#                                                availability is exactly what
+#                                                this probe exists to answer
+#                                                -- unlike the seven above,
+#                                                this one hasn't shipped
+#                                                anywhere in this repo before,
+#                                                so there's no prior probe run
+#                                                to point to.
+#   LONG_REC  player_longest_reception  UNCONFIRMED -- same situation: a
+#                                                documented market key, no
+#                                                prior confirmation it prices
+#                                                for NFL games on this key's
+#                                                tier. "Longest Reception" is
+#                                                Donovan's own phrase for it
+#                                                (2026-08-28 notebook).
 CATEGORY_MARKET = {
     "TD":       "player_anytime_td",
     "REC_YDS":  "player_reception_yds",
@@ -144,6 +174,8 @@ CATEGORY_MARKET = {
     "RUSH_ATT": "player_rush_attempts",
     "PASS_YDS": "player_pass_yds",
     "KICK_PTS": "player_kicking_points",
+    "FTD":      "player_1st_td",
+    "LONG_REC": "player_longest_reception",
 }
 MARKETS = sorted(set(CATEGORY_MARKET.values()))
 
@@ -674,11 +706,61 @@ def main() -> int:
     dest.write_text(json.dumps(payload, separators=(",", ":")))
     print(f"wrote {dest} ({dest.stat().st_size / 1024:.0f} KB)")
 
+    # ── THE DATED SNAPSHOT (B1, 2026-08-28) — same reason odds_fetch.py keeps
+    # one: nfl_odds_latest.json is overwritten on ~12 firings/week and again
+    # next week, so a price once gone is gone. Direct port of MLB's slim
+    # shape (line/over/implied per market, no book names or game strings) --
+    # the one difference is the join key. MLB keys by slate_date because it
+    # grades one night at a time; NFL grades a whole WEEK
+    # (bots/nfl/nfl_results.py's outcomes()), so season/week ride along in the
+    # snapshot body for whatever eventually joins these into nfl_odds_history.json
+    # -- but the FILE is still named by the calendar date this fetch ran, not
+    # by week, matching append_nfl_outcome_log()'s own precedent in
+    # nfl_results.py (same file, same reasoning: NFL weeks span three-plus
+    # calendar dates, so there is no single "the week's file" to accumulate
+    # into the way MLB's one-file-per-night does). publish_data.sh's generic
+    # accumulate-and-cap loop sorts filenames lexically to mean chronologically
+    # -- an ISO date keeps that true; a week number would not sort the same
+    # way once a new season starts.
+    #
+    # NOTE: nfl_odds_history.json itself (the join against nfl_results.json's
+    # "lines" -- see that file's outcomes(), which already publishes exactly
+    # {player_id: {market: actual}} for every eligible player, no separate
+    # SETTLE table needed) is NOT built yet. Deliberately deferred: there is
+    # nothing to join against until a few weeks of these snapshots exist, and
+    # NFL's week-spans-multiple-dates shape needs its own grouping logic this
+    # pass didn't have real accumulated data to verify against. This snapshot
+    # writer is the prerequisite step; the joiner is the next one, once real
+    # snapshots exist to test it against.
+    slim: dict[str, dict] = {}
+    for pid, mkts in matched.items():
+        row = {m: [q.get("line"), q.get("over"), q.get("implied")]
+               for m, q in mkts.items()
+               if isinstance(q, dict) and q.get("over") is not None and q.get("line") is not None}
+        if row:
+            slim[pid] = row
+    date_str = now.date().isoformat()
+    snap = out / f"nfl_odds_{date_str}.json"
+    snap.write_text(json.dumps({
+        "date": date_str,
+        "season": season, "week": week,
+        "fetched_at": now.isoformat(),
+        "source": "theoddsapi",
+        "rows": slim,
+        "note": ("Snapshot kept for a future nfl_odds_history.py. Each row is "
+                 "{market: [line, over, implied]}. Keyed by NFL player_id only -- "
+                 "an unjoined name has no outcome to settle against, so it would "
+                 "never be usable here."),
+    }, separators=(",", ":")))
+    print(f"wrote {snap} — {len(slim)} players priced on {date_str} "
+          f"({snap.stat().st_size / 1024:.0f} KB)")
+
     write_status(out, state="ok",
                  reason=f"Fetched from theoddsapi; {len(matched)} of {len(board)} priced "
                         f"players joined to the slate.",
                  provider="theoddsapi", players=len(matched), priced=len(board),
-                 match_rate=payload["match_rate"], forensics=FORENSICS)
+                 match_rate=payload["match_rate"], snapshot_players=len(slim),
+                 forensics=FORENSICS)
     return 0
 
 
