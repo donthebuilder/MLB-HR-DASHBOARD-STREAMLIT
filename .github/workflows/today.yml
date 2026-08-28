@@ -2,40 +2,27 @@ name: MLB HR Bot — Today (data branch only)
 
 on:
   schedule:
-    # DAY ROLLOVER (2026-08-09, by request): "update for the next slate at a
-    # good time for America while still showing the slate for the other half
-    # of America."
+    # DAY ROLLOVER.
     #
-    # The site has no clock of its own -- it renders whatever today_slim.json
-    # holds -- so the moment the board becomes the new day IS the moment this
-    # workflow's first run of the day publishes. That was 12:00 UTC, which is
-    # 8am Eastern. An East-coast reader up at 6am got a board that had been
-    # dead since the last out.
+    # ORIGINAL 2026-08-09 VERSION (superseded 2026-08-28, kept for the
+    # record): rolled over at 10:30 UTC / 3:30am Phoenix, deliberately AFTER
+    # the latest West-coast last-out this data had ever produced (measured at
+    # the time: 08:45 UTC worst case for an 18-inning game), so the board
+    # never flipped to a new projected day while a live West-coast pick was
+    # still on the field. The trade-off that bought: an Arizona/Pacific
+    # reader got a board that had gone stale at midnight and didn't refresh
+    # for another 3.5 hours.
     #
-    # The constraint pulling the other way is the West coast: roll over too
-    # early and someone in California watching the end of a 10pm PT game loses
-    # tonight's board out from under them. So the honest question is how late
-    # baseball actually runs, and that is measurable rather than guessable.
-    # Across 34 graded nights the LATEST first pitch of any night was 02:15 UTC
-    # (7:15pm PT). Adding game length to that worst case:
-    #
-    #     a normal 3h00 game       last out ~05:15 UTC  (10:15pm PT)
-    #     3h30                             ~05:45 UTC  (10:45pm PT)
-    #     extras, ~4h15                    ~06:30 UTC  (11:30pm PT)
-    #     a 15-inning marathon             ~07:45 UTC  (12:45am PT)
-    #     18 innings                       ~08:45 UTC  ( 1:45am PT)
-    #
-    # 10:30 UTC clears even the 18-inning case by 105 minutes, and lands at
-    # 3:30am PT / 6:30am ET -- after the last possible West-coast out, before
-    # the East coast is awake. It also sits after the 10:00 UTC final grading
-    # sweep in results.yml, so last night is fully graded before the board
-    # turns over rather than during.
-    #
-    # This is a rollover, not a lineup build: at 3:30am nobody has posted a
-    # lineup, so the early slate is projected and the 12:00 UTC run and the
-    # whole 9am-2:30pm block still do the real work. The point is that the
-    # board shows the right DAY, not that it is final at 6:30am.
-    - cron: "30 10 * * *"   # 3:30am Phoenix/PT, 6:30am ET - the day rolls over
+    # CHANGED 2026-08-28 (Donovan, explicit): reset exactly at midnight
+    # Phoenix, so the site turns over the moment his day does, full stop --
+    # not after games clear. He was walked through the trade-off above
+    # (an extra-innings West-coast game can still be live at rollover; that
+    # night the board shows tomorrow's projected slate before last night's
+    # last pick is graded) and chose midnight anyway. results.yml already
+    # grades every hour on the hour +10 (`10 * * * *`), so last night keeps
+    # getting graded on its normal cadence after the rollover -- this only
+    # changes when the DISPLAY flips days, not whether grading continues.
+    - cron: "5 7 * * *"   # 12:05am Phoenix/PT (Phoenix is UTC-7, no DST) - the day rolls over
     #
     # UTC times = 5am, 8am, 11am, 1pm, 3pm, 4pm, 5pm, 6pm Phoenix (Phoenix is UTC-7 year-round)
     # Phoenix 5am, 8am, then hourly 9am-6pm. The 9am-2:30pm block is the

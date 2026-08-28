@@ -2,21 +2,25 @@ name: MLB HR Bot — Tomorrow (data branch only)
 
 on:
   schedule:
-    # MOVED 2026-08-09, from 07:05/09:05 UTC, to sit AFTER today.yml's new
-    # 10:30 rollover rather than before it.
+    # MOVED 2026-08-09, from 07:05/09:05 UTC, to sit AFTER today.yml's OLD
+    # 10:30 rollover rather than before it. The bug that fix avoided: at
+    # 07:05 UTC the Phoenix date had already ticked over, so this built the
+    # slate for the day AFTER the new one -- while today_slim still held the
+    # day BEFORE, because today.yml's first run back then wasn't until 12:00.
+    # For three and a half hours the site offered a Today of Aug 9 and a
+    # Tomorrow of Aug 11, with Aug 10 nowhere on it. The root cause was that
+    # GAP between the two workflows, not the two running close together.
     #
-    # The old timing opened a hole nobody would have reported as a bug but
-    # everybody would have felt. At 07:05 UTC the Phoenix date has already
-    # ticked over, so this built the slate for the day AFTER the new one --
-    # while today_slim still held the day BEFORE, because today.yml's first
-    # run wasn't until 12:00. For three and a half hours the site offered a
-    # Today of Aug 9 and a Tomorrow of Aug 11, with Aug 10 nowhere on it.
-    #
-    # 11:30 UTC produces the identical slate (the Phoenix date is the same at
-    # 00:05 and at 04:30) and lands an hour after the rollover, so the toggle
-    # always reads as consecutive days. Tomorrow is still up by 7:30am ET.
-    - cron: "30 11 * * *"   # 4:30am Phoenix — one hour after the rollover
-    - cron: "30 13 * * *"   # backup 2h later — runner-acquisition insurance
+    # MOVED AGAIN 2026-08-28: today.yml's rollover itself moved to 07:05 UTC
+    # (12:05am Phoenix, by request). Since the old bug was the multi-hour gap
+    # between this workflow and the rollover -- not simultaneity -- this now
+    # fires at the SAME 07:05 UTC as the rollover instead of an hour after
+    # it: closing that gap to (near) zero is strictly safer than the 1-hour
+    # version was, not a step back toward the 2026-08-09 bug. The two jobs
+    # aren't in the same concurrency group, so they run independently; a
+    # normal slate build finishes in a few minutes either way.
+    - cron: "5 7 * * *"    # 12:05am Phoenix — same moment as today.yml's rollover
+    - cron: "5 9 * * *"    # backup 2h later — runner-acquisition insurance
   workflow_dispatch: {}
 
 # One group PER WORKFLOW, not one shared across all of them.
