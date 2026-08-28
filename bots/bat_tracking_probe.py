@@ -63,6 +63,25 @@ CANDIDATES = [
      "https://baseballsavant.mlb.com/leaderboard/bat-tracking?type=batter&minSwings=q&csv=true"),
     ("season leaderboard, explicit season",
      "https://baseballsavant.mlb.com/leaderboard/bat-tracking?type=batter&year=2026&minSwings=q&csv=true"),
+    # THE CONTROL (added 2026-08-28). The first run of this probe (2026-08-23)
+    # compared the season leaderboard (minSwings=q) against the date-range
+    # call below (minSwings=1) and read the row-count difference (202 vs 637)
+    # as proof the date params work. That comparison changes TWO variables at
+    # once -- minSwings AND the date scope -- so the row-count gap could come
+    # entirely from minSwings=1 pulling in low-swing-count batters the season
+    # call's minSwings=q (a qualified-batter threshold) excludes, regardless
+    # of whether startDate/endDate did anything at all. Confirmed unresolved
+    # in moonshot-verification-status-2026-08-24.md: "needs a rerun with
+    # minSwings=1 and no date params... before trusting either conclusion."
+    # This candidate is that control -- same minSwings=1 as the date-range
+    # call below, no date restriction. If DATE RANGE returns a materially
+    # different row count/set than THIS one, the date param is real. If they
+    # match, minSwings alone explained the original 202-vs-637 gap and bat
+    # tracking is season-to-date only -- not backfillable, capture-forward
+    # only, exactly the "if it returned the same rows" branch this probe's
+    # own closing guidance already describes, just against the right baseline.
+    ("season leaderboard, minSwings=1 — the CONTROL for the date-range test",
+     "https://baseballsavant.mlb.com/leaderboard/bat-tracking?type=batter&minSwings=1&csv=true"),
     ("DATE RANGE — the question that matters",
      "https://baseballsavant.mlb.com/leaderboard/bat-tracking?type=batter&minSwings=1"
      "&startDate=2026-05-01&endDate=2026-05-31&csv=true"),
@@ -86,11 +105,16 @@ def fetch(url: str):
         return None, f"{type(ex).__name__}: {ex}".encode()
 
 
+CONTROL_LABEL = "season leaderboard, minSwings=1 — the CONTROL for the date-range test"
+DATE_RANGE_LABEL = "DATE RANGE — the question that matters"
+
+
 def main() -> int:
     print("=" * 78)
     print("BAT TRACKING PROBE — reading, not assuming")
     print("=" * 78)
     header_seen = None
+    id_sets: dict[str, frozenset] = {}
     for label, url in CANDIDATES:
         print(f"\n── {label}")
         print(f"   {url}")
@@ -105,7 +129,8 @@ def main() -> int:
             print(f"   NOT CSV — first 200 chars: {text[:200]!r}")
             continue
         cols = [c.strip().strip('"') for c in first.split(",")]
-        print(f"   CSV with {len(cols)} columns, {len(text.splitlines()) - 1} data rows")
+        data_lines = text.splitlines()[1:]
+        print(f"   CSV with {len(cols)} columns, {len(data_lines)} data rows")
         print("   HEADER, VERBATIM:")
         for i in range(0, len(cols), 6):
             print("      " + ", ".join(cols[i:i + 6]))
@@ -114,28 +139,55 @@ def main() -> int:
         for w, found in hits.items():
             mark = "✓" if found else "✗"
             print(f"      {mark} {w:14} {found if found else '(no column matches)'}")
-        rows = text.splitlines()[1:3]
-        for r in rows:
+        for r in data_lines[:2]:
             vals = r.split(",")
             print("   sample: " + ", ".join(f"{c}={v}" for c, v in list(zip(cols, vals))[:8]))
         if header_seen is None:
             header_seen = cols
         elif cols != header_seen:
             print("   ⚠ header DIFFERS from the first responding endpoint — note which one you fetch")
+        # First column is the id/name key on every candidate this endpoint has
+        # returned so far (id, name, ...) -- capture it for the CONTROL and
+        # DATE RANGE candidates specifically so the verdict below is a real
+        # set comparison, not an eyeballed row count (a matched row count
+        # could still hide a fully different set of players; an identical
+        # SET is the only thing that actually proves the date param did
+        # nothing).
+        if label in (CONTROL_LABEL, DATE_RANGE_LABEL) and cols:
+            id_sets[label] = frozenset(r.split(",", 1)[0] for r in data_lines if r)
     print("\n" + "=" * 78)
-    print("READ THIS BEFORE WRITING A FETCHER")
+    print("THE VERDICT — computed, not eyeballed")
     print("=" * 78)
+    if CONTROL_LABEL in id_sets and DATE_RANGE_LABEL in id_sets:
+        control, date_range = id_sets[CONTROL_LABEL], id_sets[DATE_RANGE_LABEL]
+        only_control = control - date_range
+        only_date_range = date_range - control
+        print(f"   CONTROL (minSwings=1, no date):     {len(control)} players")
+        print(f"   DATE RANGE (minSwings=1, May 2026):  {len(date_range)} players")
+        print(f"   only in CONTROL:    {len(only_control)}")
+        print(f"   only in DATE RANGE: {len(only_date_range)}")
+        if control == date_range:
+            print("""
+   IDENTICAL PLAYER SETS with minSwings matched between both calls.
+   The date parameter did NOTHING -- bat tracking is season-to-date only.
+   It CANNOT be backfilled. The four terms can only be captured one night
+   at a time from here forward: a nightly snapshot into the slate and the
+   archive, with the highlight rules unproven until ~30 nights accumulate.""")
+        else:
+            print("""
+   DIFFERENT player sets with minSwings matched between both calls -- the
+   date parameter is real. These metrics CAN be rebuilt as-of any past date,
+   and every highlight rule that uses them becomes backtestable over the
+   whole season. (The original 2026-08-23 run of this probe also saw a row-
+   count difference, but with minSwings unmatched between the two calls --
+   this is the same conclusion reached the right way, matched control
+   included.)""")
+    else:
+        print("""
+   Could not compute the verdict -- the CONTROL and/or DATE RANGE candidate
+   above did not return usable CSV. Read their individual sections above for
+   why (status code, non-CSV body, etc.) before re-running.""")
     print("""
-If the DATE RANGE candidate returned a different row set than the season
-leaderboard, these metrics can be rebuilt as-of any past date and every
-highlight rule that uses them becomes backtestable over the whole season.
-
-If it returned the same rows as the season call, the parameter was ignored:
-bat tracking is season-to-date only, it CANNOT be backfilled, and the four
-terms can only be captured one night at a time from here forward. In that case
-the right move is a nightly snapshot into the slate and the archive, and the
-rules stay unproven until ~30 nights accumulate.
-
 Either way: copy the header row above into the fetcher's docstring before
 writing it, the way bots/savant_feeds.py does.
 """)
