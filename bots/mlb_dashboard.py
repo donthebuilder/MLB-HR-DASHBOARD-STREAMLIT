@@ -10766,69 +10766,18 @@ def build_structured_pairs(
             0.10 * minmax_norm(r.season_iso, 0.08, 0.38)
         )
 
-    def shared_day_bonus(a: HitterRecord, b: HitterRecord) -> float:
-        """
-        Bonus when both players have the SAME reason to homer today.
-
-        VALIDATED, AND ONE THING NEARBY WAS NOT (2026-08-09). Sampling 186,000
-        same-night pairs out of 58 graded nights and measuring how often BOTH
-        halves actually homered, against a same-night random pair at 2.2%:
-
-            both TOP designated        5.3%   +3.1
-            both ISO >= .230           4.8%   +2.6
-            both L5 HR >= 1            3.6%   +1.4
-            both arm HR/9 >= 1.4       2.9%   +0.6
-            both weak-spot flagged     2.8%   +0.6
-            ----------------------------------------
-            opposing teams, same game  2.4%   +0.1
-            SAME GAME                  2.2%   -0.0
-            same TEAM                  2.0%   -0.2
-            same PARK, other game      1.9%   -0.3
-
-        Everything this function rewards is in the top half. Everything
-        SHARED-ENVIRONMENT is at or below random, which is why the bonus stays.
-
-        THE THING THAT DIED. Dividing observed by the independence expectation
-        (p1 x p2, using each night's own HR rate) gives the correlation ratio:
-        same game 1.05, same team 1.04 — that is 1.00 to within noise. Two
-        picks in the same ballpark are, as far as 58 nights can tell, two
-        independent coin flips. Meanwhile both-TOP runs 2.61 and both-big-ISO
-        1.93, and ALL of that comes from better legs rather than any
-        same-night togetherness.
-
-        So the honest construction of a pair is: take the two best individual
-        bats and stop. No same-game preference, no stacking a hot park. That
-        is not what a pair product usually claims and it is what the archive
-        says.
-        """
-        bonus = 0.0
-        # Both facing weak pitchers
-        if (a.pitcher_hr9 or 0) >= 1.20 and (b.pitcher_hr9 or 0) >= 1.20: bonus += 5.0
-        if (a.pitcher_hr9 or 0) >= 1.50 and (b.pitcher_hr9 or 0) >= 1.50: bonus += 3.0
-        # Both face HARD CONTACT pitchers
-        a_hard = 'HARD' in (a.pitcher_attack_tag or '')
-        b_hard = 'HARD' in (b.pitcher_attack_tag or '')
-        if a_hard and b_hard: bonus += 5.0
-        elif a_hard or b_hard: bonus += 2.0
-        # Both HRW windows open
-        if (a.hrw_score or 0) >= 65 and (b.hrw_score or 0) >= 65: bonus += 5.0
-        elif (a.hrw_score or 0) >= 55 and (b.hrw_score or 0) >= 55: bonus += 2.0
-        # Both in active form (L5 hits 6+)
-        if a.last5_hits >= 6 and b.last5_hits >= 6: bonus += 4.0
-        elif a.last5_hits >= 5 and b.last5_hits >= 5: bonus += 2.0
-        # Both recently homered (L7)
-        if (a.last7_hr or 0) >= 1 and (b.last7_hr or 0) >= 1: bonus += 3.0
-        # Both have strong XBH contact (L5)
-        if (a.last5_xbh or 0) >= 3 and (b.last5_xbh or 0) >= 3: bonus += 3.0
-        # Both weak side match
-        a_side = (a.bats == 'L' and a.pitcher_weak_side == 'LHB') or (a.bats == 'R' and a.pitcher_weak_side == 'RHB')
-        b_side = (b.bats == 'L' and b.pitcher_weak_side == 'LHB') or (b.bats == 'R' and b.pitcher_weak_side == 'RHB')
-        if a_side and b_side: bonus += 4.0
-        # Both high EV
-        ev_a = getattr(a, 'recent_ev', 88.5)
-        ev_b = getattr(b, 'recent_ev', 88.5)
-        if ev_a >= 91.0 and ev_b >= 91.0: bonus += 3.0
-        return min(bonus, 20.0)
+    # shared_day_bonus() removed (2026-08-28). It was fully built, fully
+    # documented with the real 186k-pair study, and never called anywhere in
+    # this file — pair_score() below already has its own comment explaining
+    # why: "Shared-context bonuses are intentionally not added... Adding them
+    # again double-counts them." Kept as dead code for a while as a record of
+    # the work; deleting it now that the same finding is independently
+    # confirmed and permanently documented in lib/pairEvidence.js on the site
+    # repo, which is the canonical writeup going forward. Removing this also
+    # closes out the matching site-side bug: PairBuilder.js's live Fit score
+    # was still weighting sameGame/days/since at 25%/10%/10% on the belief
+    # this docstring itself disproves — fixed same day, see that file's own
+    # 2026-08-28 comment on the `fit` calculation.
 
     def pair_score(a: HitterRecord, b: HitterRecord, mode: str) -> float:
         # Base: joint power ceiling + active form + timing
