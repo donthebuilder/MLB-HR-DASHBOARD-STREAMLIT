@@ -329,6 +329,27 @@ guard_slate_regression() {
         git show "$ref:public/data/current/$f" > "$STAGE/public/data/current/$f" 2>/dev/null \
           || rm -f "$STAGE/public/data/current/$f"
       done
+      # ── THE SLATE AND ITS DETAIL ARE ONE UNIT (2026-08-29) ──────────────
+      # This guard restored four slate FILES and left detail/<label> alone,
+      # so a run that lost the slate race still published its own detail
+      # beside the branch's older slate. That is how both detail directories
+      # ended up describing a night that was on neither slate file shipped
+      # with them -- 0 of 17 game_pks in common, 27 of 30 starters with no
+      # arsenal, and every recurring hitter's spray chart quietly showing
+      # another game. Whichever slate wins, its detail wins with it.
+      rm -rf "$STAGE/public/data/current/detail/${label}"
+      if git cat-file -e "$ref:public/data/current/detail/${label}/_manifest.json" 2>/dev/null; then
+        mkdir -p "$STAGE/public/data/current/detail"
+        rm -rf /tmp/detail-restore && mkdir -p /tmp/detail-restore
+        git archive "$ref" "public/data/current/detail/${label}" 2>/dev/null \
+          | tar -x -C /tmp/detail-restore 2>/dev/null || true
+        [ -d "/tmp/detail-restore/public/data/current/detail/${label}" ] \
+          && cp -r "/tmp/detail-restore/public/data/current/detail/${label}" \
+                   "$STAGE/public/data/current/detail/" || true
+        echo "Kept the branch's ${label} detail with its slate."
+      else
+        echo "::warning::the branch's ${label} slate has no stamped detail directory -- shipping the slate without one rather than pairing it with ours, which describes a different night."
+      fi
       echo "Kept the branch's ${label} slate (${remote_at}) over ours (${staged_at:-none})."
     fi
   done
@@ -435,6 +456,39 @@ carry_forward() {
     [ -d "$PREV/public/data/current/$sub" ] || continue
     mkdir -p "$STAGE/public/data/current/$sub"
     for slate_dir in "$PREV/public/data/current/$sub"/*; do
+      # ── DO NOT CARRY FORWARD ANOTHER NIGHT'S DETAIL (2026-08-29) ────────
+      # This loop is what kept the site's per-player layer alive through a
+      # grading run, and it is also what silently kept it alive for MONTHS
+      # past its slate. Measured on the live branch that morning: both
+      # detail/today and detail/tomorrow were coherent snapshots of a night
+      # that was on NEITHER slate file published beside them -- 0 of 17
+      # game_pks in common. 27 of 30 starters had no arsenal, and every
+      # hitter who plays most nights kept his player_id, so his stale
+      # batter_<id>.json was found and rendered as if it were tonight.
+      #
+      # make_slim.py now stamps each detail directory with a _manifest.json
+      # naming the slate it describes. If the manifest says a different day
+      # than the slate file we are shipping, carrying that directory forward
+      # is worse than dropping it: the site renders "no detail published",
+      # which is true, instead of another game's numbers, which is a lie.
+      #
+      # Only detail/ is checked. splits/, zones/ and social/ have no such
+      # stamp and are keyed differently; they keep the old behaviour.
+      if [ "$sub" = "detail" ] && [ -d "$slate_dir" ]; then
+        label="$(basename "$slate_dir")"
+        want=""
+        [ -f "$STAGE/public/data/current/${label}_run_meta.json" ] \
+          && want="$(sed -n 's/.*"slate_date"[[:space:]]*:[[:space:]]*"\([0-9-]*\)".*/\1/p' \
+               "$STAGE/public/data/current/${label}_run_meta.json" | head -1)"
+        have=""
+        [ -f "$slate_dir/_manifest.json" ] \
+          && have="$(sed -n 's/.*"slate_date"[[:space:]]*:[[:space:]]*"\([0-9-]*\)".*/\1/p' \
+               "$slate_dir/_manifest.json" | head -1)"
+        if [ -n "$want" ] && [ "$want" != "$have" ]; then
+          echo "::warning::dropping carried-forward detail/${label} -- it describes ${have:-an unstamped slate}, the ${label} slate being published is ${want}."
+          continue
+        fi
+      fi
       [ -e "$slate_dir" ] || continue
       base="$(basename "$slate_dir")"
       if [ -d "$slate_dir" ]; then
@@ -477,6 +531,36 @@ while [ "$attempt" -le "$MAX_ATTEMPTS" ]; do
     guard_slate_regression origin/data
     guard_results_regression origin/data
   fi
+
+  # ── LAST WORD ON THE DETAIL DIRECTORIES (2026-08-29) ───────────────────
+  # Every path above -- this run's own staging, carry_forward, and the slate
+  # regression guard -- can put a detail/<label> next to a <label>_run_meta
+  # that describes a different night. Rather than trust that all three now
+  # agree, check the thing that actually matters once, here, after all of
+  # them have run, and drop any directory that disagrees.
+  #
+  # Dropping is the right call over keeping: "no detail published" is a true
+  # sentence the site already renders honestly, and another night's arsenal
+  # rendered as tonight's is not. A directory with no manifest at all is a
+  # pre-2026-08-29 publish; it gets the same treatment, which is what heals
+  # the branch on the first run after this ships.
+  for label in today tomorrow; do
+    dir="$STAGE/public/data/current/detail/$label"
+    [ -d "$dir" ] || continue
+    meta="$STAGE/public/data/current/${label}_run_meta.json"
+    [ -f "$meta" ] || continue
+    want="$(sed -n 's/.*"slate_date"[[:space:]]*:[[:space:]]*"\([0-9-]\{10\}\)".*/\1/p' "$meta" 2>/dev/null | head -n 1 || true)"
+    [ -n "$want" ] || continue
+    have=""
+    [ -f "$dir/_manifest.json" ] \
+      && have="$(sed -n 's/.*"slate_date"[[:space:]]*:[[:space:]]*"\([0-9-]\{10\}\)".*/\1/p' "$dir/_manifest.json" 2>/dev/null | head -n 1 || true)"
+    if [ "$want" != "$have" ]; then
+      echo "::warning::detail/${label} describes ${have:-no stamped slate} but the ${label} slate is ${want} -- dropping it. The site will say no detail is published for this slate, which is true; it will not show another night's numbers as tonight's."
+      rm -rf "$dir"
+    else
+      echo "publish: detail/${label} matches its slate (${want})."
+    fi
+  done
 
   # Fresh orphan branch: no parent, so no history to inherit or grow.
   git checkout -q --orphan data-publish-$attempt

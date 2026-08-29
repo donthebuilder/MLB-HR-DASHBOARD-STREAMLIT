@@ -23,6 +23,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import json
 import os
 import sys
@@ -130,10 +131,48 @@ def write_detail_files(rows: List[Dict[str, Any]], out_dir: Path) -> int:
     profile) needs this data, but it's ~50 MB across a slate -- far too much
     to ship in the payload every page load. Splitting it per player means the
     app fetches ~40 KB on demand only when someone actually opens a player.
+
+    ── THE STALE-SLATE BUG (2026-08-29) ────────────────────────────────────
+    Donovan: "i dont see the pitch mix updates on mobile or desktop." The
+    chart was shipped and deployed; it never drew because the arsenal was
+    empty. Measured against the live branch that morning:
+
+        current/detail/today   -> 269 batter files across 15 game_pks,
+                                  ZERO of them on today_slim.json's 17 games
+        current/detail/tomorrow-> same story against tomorrow_slim.json
+        pitcher files          -> 30, matching 0 of the slate's 32 starters
+
+    Both detail directories were a coherent snapshot of some OTHER night,
+    carried forward by publish_data.sh run after run while the slate files
+    beside them stayed current. 27 of 30 starters on the live board had no
+    arsenal, no lineup-spot damage and no mix chart, and the modal honestly
+    said "no detail file published" -- for a file that was right there,
+    holding another night's numbers.
+
+    Worse than the blank: a hitter who plays most nights KEEPS his player_id,
+    so his stale batter_<id>.json was found and rendered. Spray charts and
+    contact logs were showing a different game silently.
+
+    Two defences here, and a third in publish_data.sh:
+
+      1. PRUNE. The directory is emptied of anything this slate did not
+         produce, so it can only ever describe one night. A carried-forward
+         directory can no longer masquerade as coverage.
+      2. STAMP. _manifest.json records the slate date, the game_pks and the
+         ids written. publish_data.sh refuses to publish a detail directory
+         whose manifest disagrees with the slate file it ships beside, and
+         the site can check the same thing per player.
+
+    Neither defence guesses at the root cause of the carry-forward. They make
+    the failure loud and bounded instead of silent and wrong, which is the
+    part that cost real nights.
     """
     out_dir.mkdir(parents=True, exist_ok=True)
     written = 0
     pitcher_acc: Dict[Any, Dict[str, Any]] = {}
+    kept: set = set()
+    game_pks: set = set()
+    batter_ids: List[Any] = []
 
     for row in rows:
         if not isinstance(row, dict):
@@ -149,6 +188,10 @@ def write_detail_files(rows: List[Dict[str, Any]], out_dir: Path) -> int:
                 (out_dir / f"batter_{pid}.json").write_text(
                     json.dumps(detail, separators=(",", ":")), encoding="utf-8"
                 )
+                kept.add(f"batter_{pid}.json")
+                batter_ids.append(pid)
+                if row.get("game_pk") is not None:
+                    game_pks.add(row.get("game_pk"))
                 written += 1
 
         # Pitcher payloads are merged across every batter facing him rather
@@ -166,14 +209,68 @@ def write_detail_files(rows: List[Dict[str, Any]], out_dir: Path) -> int:
                 if k not in existing and row.get(k):
                     existing[k] = row[k]
 
+    pitcher_ids: List[Any] = []
     for pitcher_id, pdetail in pitcher_acc.items():
         if len(pdetail) > 2:  # more than just the id/name stubs
             (out_dir / f"pitcher_{pitcher_id}.json").write_text(
                 json.dumps(pdetail, separators=(",", ":")), encoding="utf-8"
             )
+            kept.add(f"pitcher_{pitcher_id}.json")
+            pitcher_ids.append(pitcher_id)
             written += 1
 
+    # PRUNE, then STAMP -- see this function's docstring for what went wrong
+    # without them. Only ever removes files inside this one slate's own
+    # directory, and only when this run actually produced a slate to replace
+    # them with (`written` is non-zero), so a run that computed nothing can
+    # never blank the branch's last good detail set.
+    removed = 0
+    if written:
+        for existing in out_dir.glob("*.json"):
+            if existing.name == "_manifest.json" or existing.name in kept:
+                continue
+            existing.unlink()
+            removed += 1
+
+        manifest = {
+            "slate_date": _slate_date_of(rows),
+            "label": out_dir.name,
+            "written_at": dt.datetime.now(dt.timezone.utc).isoformat(),
+            "run_id": os.environ.get("GITHUB_RUN_ID") or None,
+            "game_pks": sorted(str(g) for g in game_pks),
+            "batter_count": len(batter_ids),
+            "pitcher_count": len(pitcher_ids),
+            "batter_ids": sorted(str(b) for b in batter_ids),
+            "pitcher_ids": sorted(str(p) for p in pitcher_ids),
+        }
+        (out_dir / "_manifest.json").write_text(
+            json.dumps(manifest, separators=(",", ":")), encoding="utf-8"
+        )
+        print(
+            f"detail[{out_dir.name}]: {len(batter_ids)} batters, {len(pitcher_ids)} pitchers, "
+            f"{len(game_pks)} games, slate {manifest['slate_date']}"
+            + (f", pruned {removed} stale file(s)" if removed else ""),
+            file=sys.stderr,
+        )
+
     return written
+
+
+def _slate_date_of(rows: List[Dict[str, Any]]) -> str:
+    """The slate's own date, taken from the rows rather than the clock.
+
+    A run that starts at 23:58 UTC and finishes at 00:01 would stamp the
+    wrong day off `date.today()`, and this stamp is the thing publish_data.sh
+    compares against the slate file -- a clock-derived value would make the
+    guard fire on a boundary it should not care about.
+    """
+    for key in ("game_date", "slate_date", "date"):
+        for row in rows:
+            if isinstance(row, dict) and row.get(key):
+                value = str(row[key])[:10]
+                if len(value) == 10 and value[4] == "-":
+                    return value
+    return ""
 
 
 # ── THE PUBLISH GUARD (2026-08-09) ──────────────────────────────────────────

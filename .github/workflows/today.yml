@@ -243,6 +243,43 @@ jobs:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         run: python bots/make_slim.py
 
+      # ── DID THE DETAIL ACTUALLY GET BUILT? (2026-08-29) ────────────────
+      # The per-player layer -- spray charts, contact logs, pitch profiles,
+      # pitcher arsenals and lineup-spot damage -- went stale on the live
+      # branch and nothing anywhere went red. Both detail directories held a
+      # coherent snapshot of a night that was on NEITHER slate file beside
+      # them, and the only visible symptom was a modal saying "no detail file
+      # published" for 27 of 30 starters.
+      #
+      # make_slim.py now stamps each directory it writes. This step asserts
+      # the stamp matches the slate this run just built. It is
+      # continue-on-error ON PURPOSE: a broken detail layer must be loud, but
+      # it must not cost the night its slate -- publish_data.sh drops a
+      # mismatched directory on its own, so the board still ships and the
+      # site honestly says the detail is missing.
+      - name: Verify the today detail directory matches this run's slate
+        continue-on-error: true
+        run: |
+          MAN="public/data/current/detail/today/_manifest.json"
+          META="public/data/current/today_run_meta.json"
+          if [ ! -f "$MAN" ]; then
+            echo "::error::make_slim wrote no detail manifest for the today slate -- the per-player layer was not rebuilt this run."
+            exit 1
+          fi
+          WANT="$(sed -n 's/.*"slate_date"[[:space:]]*:[[:space:]]*"\([0-9-]\{10\}\)".*/\1/p' "$META" 2>/dev/null | head -n 1)"
+          HAVE="$(sed -n 's/.*"slate_date"[[:space:]]*:[[:space:]]*"\([0-9-]\{10\}\)".*/\1/p' "$MAN" | head -n 1)"
+          PITCHERS="$(sed -n 's/.*"pitcher_count"[[:space:]]*:[[:space:]]*\([0-9]*\).*/\1/p' "$MAN" | head -n 1)"
+          BATTERS="$(sed -n 's/.*"batter_count"[[:space:]]*:[[:space:]]*\([0-9]*\).*/\1/p' "$MAN" | head -n 1)"
+          echo "detail/today: slate=$HAVE (run meta says $WANT), $BATTERS batters, $PITCHERS pitchers"
+          if [ -n "$WANT" ] && [ "$WANT" != "$HAVE" ]; then
+            echo "::error::detail/today is stamped $HAVE but this run built $WANT."
+            exit 1
+          fi
+          if [ "${PITCHERS:-0}" -lt 1 ]; then
+            echo "::error::detail/today has no pitcher files -- every arsenal and pitch-mix chart on the site will be blank for this slate."
+            exit 1
+          fi
+
       # Day/night, home/away, day-of-week and win/loss splits. The
       # scoring bot only carries vs-RHP/LHP, so these come from MLB's
       # gameLog endpoint -- one request per hitter, ~2 min for a slate.
