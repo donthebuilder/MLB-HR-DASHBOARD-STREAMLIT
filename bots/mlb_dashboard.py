@@ -96,6 +96,22 @@ except Exception as _config_fingerprint_exc:
     print(f"config_fingerprint import failed ({_config_fingerprint_exc}); "
           f"config_hash stamping is disabled for this run.", file=sys.stderr)
 
+# BALL FLIGHT, SERVER-SIDE (2026-08-29): bots/trajectory.py -- mirrors
+# lib/trajectory.js on the site so the nightly bot solves each batted ball's
+# arc ONCE (apex_ft, hang_time_s, traj_poly) instead of every browser
+# re-solving the same RK4 fit on every spray-chart render. Same defensive
+# pattern as MODEL_REGISTRY/CONFIG_FINGERPRINT above: a broken/missing module
+# must never take the scoring bot down. On failure, spray_chart rows simply
+# don't carry the three trajectory fields, and the site falls back to its own
+# client-side solveFlight() exactly as it did before this existed.
+try:
+    import trajectory as TRAJECTORY
+except Exception as _trajectory_exc:
+    TRAJECTORY = None
+    print(f"trajectory import failed ({_trajectory_exc}); "
+          f"spray_chart rows will not carry apex_ft/hang_time_s/traj_poly "
+          f"for this run.", file=sys.stderr)
+
 # SAVANT FEEDS (2026-08-23): the two league-wide tables StatsAPI does not carry
 # — catcher throwing and team Outs Above Average (bots/savant_feeds.py). Same
 # defensive-import pattern as the two above, and the reason is not theoretical:
@@ -4168,8 +4184,29 @@ def build_batter_statcast_profile(db: CacheDB, player_id: int, end_date: dt.date
                 pull_air = False
                 if hc_x is not None and traj in {"fly_ball", "line_drive", "popup"}:
                     pull_air = spray_side in {"pull", "pull_center"}
+                # 🪁 SOLVE ONCE, HERE, NOT IN EVERY BROWSER (2026-08-29).
+                # Guarded per-ball, same reasoning as the module import above:
+                # one bad row (a None ev/la/dist, a NaN, whatever) must lose
+                # only that row's three fields, never the whole nightly run.
+                # solve_flight() itself already declines (returns None) for a
+                # grounder/chopper with no honest launch angle -- this except
+                # is for anything that gets past that guard unexpectedly.
+                flight = None
+                if TRAJECTORY is not None:
+                    try:
+                        # NOT dist2 (hit_distance_sc/carry) -- the client plots
+                        # this dot at the hc_x/hc_y polar radius, and fitting
+                        # to carry would land the solved arc somewhere that
+                        # dot isn't. See trajectory.py's plotted_radius_ft().
+                        plotted_r = TRAJECTORY.plotted_radius_ft(hc_x, hc_y)
+                        flight = TRAJECTORY.solve_flight(ev2, la2, plotted_r)
+                    except Exception:
+                        flight = None
                 spray_points.append({
                     "date": str(bp.get("game_date", ""))[:10],
+                    "apex_ft": flight["apex_ft"] if flight else None,
+                    "hang_time_s": flight["hang_time_s"] if flight else None,
+                    "traj_poly": flight["traj_poly"] if flight else None,
                     "pitch_type": pitch_code,
                     "pitch_name": pitch_code,
                     "event": event,
