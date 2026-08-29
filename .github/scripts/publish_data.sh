@@ -367,6 +367,34 @@ SRC=/tmp/data-src
 rm -rf "$SRC" && mkdir -p "$SRC"
 [ -d public/data ] && cp -r public/data "$SRC/" || mkdir -p "$SRC/data"
 
+# ── THE LANDMINE GUARD (2026-08-29) ─────────────────────────────────────────
+#
+# This script's own comments said "public/data is untracked (gitignored on
+# main)". It was not: 1,535 stale files -- odds_latest.json from Aug 17,
+# odds_status.json from Aug 22, detail/, splits/ and zones/ from Aug 21 --
+# were TRACKED on main, so every fresh CI checkout started life holding a
+# week-old copy of the entire app-facing set. stage_local() cannot tell a
+# checkout leftover from this run's output, so every publisher that did not
+# itself run odds_fetch staged the Aug 17 board as if it had just built it --
+# and a staged file is exactly the file carry_forward() will NOT restore from
+# the branch. A successful 03:26 UTC odds fetch was clobbered 36 minutes
+# later by an NFL publish, every day, for twelve days. The slate guard and
+# the results guard above are both earlier symptoms of this same disease.
+#
+# The commit this ships in untracks public/data from main. This guard is the
+# belt to that suspenders: a file that is tracked in HEAD and UNMODIFIED in
+# this checkout is by definition a committed leftover, not something a bot
+# wrote this run -- drop it from the snapshot so carry_forward() takes the
+# branch's copy instead. If public/data is ever committed to main again (it
+# has happened twice now), this keeps the branch honest anyway.
+if git rev-parse --verify HEAD >/dev/null 2>&1; then
+  git ls-files -- public/data 2>/dev/null | while IFS= read -r f; do
+    if git diff --quiet HEAD -- "$f" 2>/dev/null; then
+      rm -f "$SRC/${f#public/}"
+    fi
+  done
+fi
+
 stage_local() {
   rm -rf "$STAGE"
   mkdir -p "$STAGE/public/data/current"
