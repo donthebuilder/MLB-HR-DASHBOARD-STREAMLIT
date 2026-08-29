@@ -1,0 +1,66 @@
+# 🧢 DASH Social — Player Card (2026-08-22).
+#
+# On-demand profile card for any hitter currently on today's slate. Pass
+# their exact name (as it appears on the site) via the Actions tab's "Run
+# workflow" form. workflow_dispatch only, no schedule. Same "never
+# auto-post" rule as every other social workflow.
+name: Social — Player Card
+
+on:
+  workflow_dispatch:
+    inputs:
+      name:
+        description: 'Exact player name as it appears on the site'
+        required: true
+      team:
+        description: 'Team abbreviation, only needed if two players share that name today'
+        required: false
+        default: ''
+      date:
+        description: 'Slate date YYYY-MM-DD (defaults to today, UTC)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+concurrency:
+  group: social-player-card
+  cancel-in-progress: false
+
+jobs:
+  player-card:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install deps
+        run: pip install -r bots/requirements.txt
+
+      - name: Build player card draft
+        run: |
+          args=(--name "${{ github.event.inputs.name }}")
+          if [ -n "${{ github.event.inputs.team }}" ]; then
+            args+=(--team "${{ github.event.inputs.team }}")
+          fi
+          if [ -n "${{ github.event.inputs.date }}" ]; then
+            args+=(--date "${{ github.event.inputs.date }}")
+          fi
+          python bots/social_player_card.py "${args[@]}"
+
+      - name: Publish to data branch
+        run: bash .github/scripts/publish_data.sh "Social player card"

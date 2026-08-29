@@ -1,0 +1,51 @@
+# 📋 DASH Social — Board Snapshot (2026-08-22).
+#
+# On-demand, wider capture (top 10) of the current Board — trigger any time
+# you want a fresh "here's the board right now" card, separate from the one
+# scheduled Daily Board post. workflow_dispatch only, no schedule. Same
+# "never auto-post" rule as every other social workflow.
+name: Social — Board Snapshot
+
+on:
+  workflow_dispatch:
+    inputs:
+      top_n:
+        description: 'How many picks to show (default 10)'
+        required: false
+        default: '10'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: social-board-snapshot
+  cancel-in-progress: false
+
+jobs:
+  board-snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install deps
+        run: pip install -r bots/requirements.txt
+
+      - name: Build board snapshot draft
+        run: python bots/social_board_snapshot.py --top-n "${{ github.event.inputs.top_n || '10' }}"
+
+      - name: Publish to data branch
+        run: bash .github/scripts/publish_data.sh "Social board snapshot"

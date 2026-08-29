@@ -35,6 +35,10 @@ CONTENT_TYPES = (
     "top_plays",      # 2026-08-22: top N results (hits/HR) of a graded night, leaderboard style
     "stacked_game",   # 2026-08-22: the single game carrying the most picks on the board
     "storyline",      # 2026-08-22: a pick's own model-written top_pick_reason, given a card
+    "track_record",   # 2026-08-22: pooled TOP/HIT/HRR proof numbers, on demand
+    "board_snapshot", # 2026-08-22: current board, wider than the automated daily post, on demand
+    "game_card",      # 2026-08-22: one matchup's picks (+ result once graded), on demand
+    "player_card",    # 2026-08-22: any slate player's profile card, on demand
 )
 
 PLATFORMS = ("x", "instagram", "discord")
