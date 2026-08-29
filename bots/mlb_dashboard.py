@@ -35,6 +35,7 @@ import io
 import json
 import os
 import platform
+import math
 import shutil
 import sqlite3
 import subprocess
