@@ -601,9 +601,9 @@ def rolling_window(included: list[dict], as_of: dt.date, days: int) -> dict:
 
 
 HR_OVERLAY_TIERS = [
-    ("verified_shape", "Verified Shape", "3/3: barrel, fly-ball rate and exit velocity"),
-    ("premium_power", "Premium Power", "Verified Shape + ISO ≥ .230 + HRW ≥ 60"),
-    ("elite_matchup", "Elite Matchup", "Premium Power + opposing pitcher HR/9 ≥ 1.40"),
+    ("hr_overlay", "HR Overlay", "Air% > 50 + Avg EV > 87"),
+    ("power_overlay", "Power Overlay", "HR Overlay + ISO ≥ .230"),
+    ("premium_power", "Premium Power", "Power Overlay + HRW ≥ 60"),
 ]
 
 
@@ -642,16 +642,24 @@ def hr_overlay_performance(included: list[dict], as_of: dt.date) -> dict:
         }
 
     return {
-        "version": "hr_overlay_v1",
+        "version": "hr_overlay_v2",
         "method": "locked pregame prediction-of-record only; no historical backfill",
         "eligible_schema_n": len(schema_rows),
         "legacy_without_overlay_n": overall_n - len(schema_rows),
         "overall": stats(included),
         "reference": {
-            "verified_shape": {
-                "hr_rate": 0.162, "n": 334, "baseline_hr_rate": 0.111,
-                "lift": 1.46, "label": "chronological held-out reference; separate from live locked record",
-            }
+            "hr_overlay": {
+                "hr_rate": 0.177, "n": 130, "baseline_hr_rate": 0.138,
+                "lift": 1.29, "label": "newest clean locked-slice reference; separate from live locked record",
+            },
+            "power_overlay": {
+                "hr_rate": 0.212, "n": 33, "baseline_hr_rate": 0.138,
+                "lift": 1.54, "label": "small-sample tracking reference; separate from live locked record",
+            },
+            "premium_power": {
+                "hr_rate": 0.250, "n": 20, "baseline_hr_rate": 0.138,
+                "lift": 1.81, "label": "small-sample tracking reference; separate from live locked record",
+            },
         },
         "tiers": tiers,
     }

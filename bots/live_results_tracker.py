@@ -1603,7 +1603,10 @@ SLOT_FIELDS = {
     # Frozen HR overlay: exact pregame tier membership and its screening
     # estimate. Never recomputed from the postgame/current slate.
     "hr_overlay", "hr_fit_passed", "hr_fit_total", "hr_tier", "hr_tiers",
-    "season_hr_game_probability", "recent_ev",
+    "season_hr_game_probability", "recent_ev", "l25pa_air_rate",
+    "recent_hard_hit_rate", "recent_pull_rate", "recent_pull_air_rate",
+    "recent_avg_distance", "recent_squared_up_rate", "recent_squared_up_sample",
+    "recent_blast_rate", "recent_sweet_spot_rate",
     # Walks data (2026-08-12, Donovan): batter BB% was already archived
     # (season_bb_rate, below) -- these two are the pitcher-side half.
     "pitcher_bb_pct", "pitcher_bb9",
