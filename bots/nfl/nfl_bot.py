@@ -34,6 +34,7 @@ from statistics import NormalDist
 import polars as pl
 
 import nfl_espn
+import nfl_pbp
 from nfl_splits import splits_for, SPLIT_PAIRS, SPLIT_LABELS
 import nfl_dvp
 import nfl_gamelog
@@ -361,6 +362,10 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
         seed = out_dir / "slate_seed.json"
         if not upcoming and seed.exists():
             upcoming = json.loads(seed.read_text()).get("games", [])
+        # REST DAYS (2026-08-28, B7). `games` here is already the WHOLE
+        # preseason schedule (no week filter above), so it's the right pool
+        # to compute a team's prior game from — no extra fetch needed.
+        upcoming = nfl_espn.attach_rest_days(games, upcoming)
         teams = {t for g in upcoming for t in (g["home"], g["away"])}
         slate, league = preseason_rows(season - 1, teams)
         tbl = _fill_missing(slate)
@@ -372,7 +377,29 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
         if week:
             tbl = tbl.filter(pl.col("week") == week)
         games = nfl_espn.fetch(seasontype=2, year=season, week=week)
-        upcoming = games
+        # REST DAYS (2026-08-28, B7). Unlike the preseason branch, `games`
+        # above is scoped to ONE week — a team's prior game lives in an
+        # earlier week, so this needs its own whole-season-schedule fetch
+        # (schedule-only, not per-player stats — cheap next to everything
+        # else this function already calls). Week 1 legitimately comes back
+        # with no prior game to measure from (rest_days=None, not a bug —
+        # there's nothing before Week 1 in this pool on purpose; the
+        # preseason-to-Week-1 turnaround isn't a comparable "short week" the
+        # way an in-season Thursday game is).
+        season_games = nfl_espn.fetch(seasontype=2, year=season)
+        upcoming = nfl_espn.attach_rest_days(season_games or games, games)
+        # PBP DRIVE STATE (2026-08-28). A second, independent drive-state
+        # source on top of nfl_espn.py's live (but unverified-shape) ESPN
+        # situation guess -- nflreadpy's play-by-play schema is well-
+        # established and already trusted elsewhere in this codebase
+        # (nfl_field.py). Not real-time (nflverse updates during and after
+        # game days, not play-by-play as it happens), so it's a same-day
+        # confirmation/backfill layer, not a live feed -- see nfl_pbp.py's
+        # module docstring. Fails soft to untouched rows on any error.
+        try:
+            upcoming = nfl_pbp.attach_pbp_state(upcoming, season, week)
+        except Exception as exc:
+            print(f"nfl_pbp unavailable ({type(exc).__name__}: {exc})")
         context_ok = True
         label = f"Week {week}"
         tbl = tbl.with_columns(pl.col("player_display_name").alias("name"))

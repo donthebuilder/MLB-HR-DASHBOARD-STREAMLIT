@@ -53,7 +53,7 @@ def fetch(seasontype: int = 1, week: int | None = None,
             sides = {c["homeAway"]: c for c in comp["competitors"]}
             home, away = sides["home"], sides["away"]
             status = ev.get("status", {}).get("type", {})
-            out.append({
+            row = {
                 "game_id": str(ev.get("id")),
                 "kickoff": ev.get("date"),
                 "home": _abbr(home["team"]["abbreviation"]),
@@ -70,9 +70,104 @@ def fetch(seasontype: int = 1, week: int | None = None,
                 "week": (payload.get("week") or {}).get("number"),
                 "season_type": seasontype,
                 "source": "espn",
-            })
+            }
+            # WEATHER (2026-08-28, B7). ESPN already ships this on the event
+            # itself (event.weather, a sibling of event.competitions — NOT
+            # nested under the competition), confirmed against a real live
+            # response: {"displayValue": "Intermittent clouds",
+            # "temperature": 82, ...}. Never fabricated, never a separate API
+            # call — just a field this parser wasn't reading before. Indoor
+            # games and games ESPN hasn't priced weather for simply carry no
+            # "weather" key; `.get()` leaves both fields None rather than
+            # guessing a fallback value.
+            wx = ev.get("weather") or {}
+            row["weather_temp_f"] = wx.get("temperature")
+            row["weather_condition"] = wx.get("displayValue")
+            # DRIVE STATE (2026-08-28, B7). ESPN's scoreboard competition
+            # object carries a "situation" block ONLY while a game is
+            # actually live (down/distance/possession) — confirmed absent on
+            # every pregame event checked directly. Best-effort and
+            # defensive on purpose: this field set is not in ESPN's public
+            # docs (there are none) and has not yet been observed on a real
+            # live game from this codebase, only inferred from the same
+            # publicly-documented shape other ESPN scoreboard integrations
+            # report. Every read is `.get()`, nothing here raises, and if
+            # the shape is wrong or missing this silently yields
+            # down_distance=None — Games.js already has its own honest
+            # fallback caveat for exactly that case, so a wrong guess here
+            # degrades to today's behavior, it doesn't break it. Treat the
+            # first live game of the season as the real verification step,
+            # not this comment.
+            situation = comp.get("situation") or {}
+            row["down_distance"] = situation.get("downDistanceText") or situation.get("shortDownDistanceText")
+            row["red_zone"] = bool(situation.get("isRedZone")) if situation else False
+            out.append(row)
         except Exception:
             continue
+    return out
+
+
+# REST DAYS / SHORT WEEK (2026-08-28, B7). "Tired defense" was asked for;
+# real snap-count/fatigue data doesn't exist anywhere in this codebase's NFL
+# layer (checked directly — no snap_count, days_rest, or fatigue field
+# anywhere in lib/nfl or bots/nfl). What DOES exist for free, with zero new
+# dependency and zero risk of being wrong, is the schedule itself: how many
+# days since a team's last game is pure date arithmetic over data already
+# fetched. This isn't the same signal DVP already covers (matchup softness,
+# not workload) — it's a real, if blunt, fatigue proxy: a short week
+# (Thursday off a Sunday, 4 days) is a genuinely different rest state than a
+# normal 7-day turnaround, independent of who's on defense.
+#
+# Call with the FULL season-type schedule (not just the current week's
+# slice) — rest days needs to see a team's PRIOR game, which a single-week
+# fetch doesn't carry.
+SHORT_WEEK_MAX_DAYS = 5
+
+
+def attach_rest_days(all_games: list[dict[str, Any]], target: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Annotate `target` games with home_rest_days/away_rest_days/
+    home_short_week/away_short_week, computed from the FULL `all_games`
+    schedule (which may be a superset of `target`, or the same list).
+    Returns new dicts; does not mutate the input games.
+    """
+    by_team: dict[str, list[dt.date]] = {}
+    for g in all_games:
+        raw = str(g.get("kickoff") or "")[:10]
+        if not raw:
+            continue
+        try:
+            day = dt.date.fromisoformat(raw)
+        except ValueError:
+            continue
+        for team in (g.get("home"), g.get("away")):
+            if team:
+                by_team.setdefault(team, []).append(day)
+    for team in by_team:
+        by_team[team] = sorted(set(by_team[team]))
+
+    def _rest(team: str | None, kickoff_day: dt.date | None) -> int | None:
+        if not team or kickoff_day is None or team not in by_team:
+            return None
+        prior = [d for d in by_team[team] if d < kickoff_day]
+        if not prior:
+            return None
+        return (kickoff_day - max(prior)).days
+
+    out = []
+    for g in target:
+        row = dict(g)
+        raw = str(g.get("kickoff") or "")[:10]
+        try:
+            kickoff_day = dt.date.fromisoformat(raw) if raw else None
+        except ValueError:
+            kickoff_day = None
+        home_rest = _rest(g.get("home"), kickoff_day)
+        away_rest = _rest(g.get("away"), kickoff_day)
+        row["home_rest_days"] = home_rest
+        row["away_rest_days"] = away_rest
+        row["home_short_week"] = home_rest is not None and home_rest <= SHORT_WEEK_MAX_DAYS
+        row["away_short_week"] = away_rest is not None and away_rest <= SHORT_WEEK_MAX_DAYS
+        out.append(row)
     return out
 
 
