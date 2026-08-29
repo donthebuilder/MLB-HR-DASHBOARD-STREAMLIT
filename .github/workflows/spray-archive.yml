@@ -1,0 +1,79 @@
+name: Spray Archive Bot
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Same reliability pattern spray-cache.yml already uses (Donovan,
+    # 2026-08-28: "have them run auto the spray archive like the spray
+    # cache"): a primary run, and a backup pass 2h later in case GitHub's
+    # hosted-runner pool doesn't acquire the first job ("not acquired by
+    # Runner of type hosted") -- a single daily cron loses the whole day to
+    # that hiccup. Offset from spray-cache.yml's own 13:00/15:00 UTC slots
+    # so the two bots aren't both starting cold at the same minute.
+    - cron: '0 9 * * *'
+    - cron: '0 11 * * *'
+
+# Same STREAMLIT MIGRATION note as spray-cache.yml: this never pushes to
+# main. The archive lives entirely on the `data` branch via publish_data.sh.
+permissions:
+  contents: write
+
+jobs:
+  build_spray_archive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 28
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r bots/requirements.txt
+
+      # WHY THIS CACHE MATTERS (see spray_archive.py's own docstring): a
+      # fresh checkout has no public/data at all (gitignored on main), so
+      # without restoring what previous runs already archived, this job
+      # would only ever cover MAX_FETCHES_PER_RUN hitters, forever, instead
+      # of accumulating. Same mechanism spray-cache.yml already uses for
+      # public/data/pitch and zone_cache.
+      - name: Restore spray archive cache
+        uses: actions/cache@v4
+        with:
+          path: public/data/current/detail/archive
+          key: spray-archive-${{ github.run_id }}
+          restore-keys: |
+            spray-archive-
+
+      # TWO PASSES IN ONE JOB, same reason spray-cache.yml runs spray_cache.py
+      # twice: pass 2 sees pass 1's on-disk output (this run's newly-written
+      # archive files) directly, so a cold cache day gets roughly double
+      # MAX_FETCHES_PER_RUN of real progress per scheduled trigger instead of
+      # needing twice as many scheduled runs to get there.
+      - name: Run spray_archive.py (pass 1)
+        run: python bots/spray_archive.py
+
+      - name: Run spray_archive.py (pass 2 — mop up any leftover cold-cache hitters)
+        run: python bots/spray_archive.py
+
+      - name: Save spray archive cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: public/data/current/detail/archive
+          key: spray-archive-${{ github.run_id }}
+
+      # publish_data.sh already copies current/detail/* as a whole
+      # (stage_local) and merges any subdirectory under it the current run
+      # didn't touch back in from the data branch (carry_forward's `for sub
+      # in detail splits zones social` loop) -- current/detail/archive/ is
+      # just one more subdirectory alongside today/ and tomorrow/ to it. No
+      # changes needed there.
+      - name: Publish to data branch
+        run: bash .github/scripts/publish_data.sh "Spray archive"
