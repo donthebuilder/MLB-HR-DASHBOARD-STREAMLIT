@@ -2240,6 +2240,64 @@ def build_tracking_slots(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return tracking
 
 
+def restore_pinched_slots(
+    tracking_slots: List[Dict[str, Any]],
+    dropped_locked_rows: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    """A1 FIX (2026-08-28, moonshot-a1-results-diagnosis-2026-08-28.md §3):
+    "players pinched don't show on Results/the Homerun Ledger." Root cause
+    traced to here -- a player dropped entirely from a rebuilt slate never
+    reaches build_tracking_slots() at all (it only ever sees the CURRENT
+    slate's `rows`), so he simply vanishes from graded_slots even though he
+    really played and the locked join in apply_locked_features() still
+    knows his stats (that's exactly what dropped_locked_rows is).
+
+    Restore him, but deliberately NOT as his original TOP/HR/HIT/HRR/
+    CONTACT designation: build_tracking_slots() just re-picked every one of
+    those roles from whoever IS still on the slate (that's what its
+    fallback pick_top() calls are for), so the role he held is very likely
+    already claimed by a live substitute this exact run. If this appended
+    his row under that same pick_type, every pick_type-filtered stat
+    downstream (build_summary_text()'s "HR Picks: X/Y", the site's
+    per-category board badges) would silently double-count that one game --
+    the substitute's slot AND his, both claiming to be THE HR pick,
+    corrupting the one number this product's accountability is built on.
+    That reclaim-the-badge question is real but bigger and separate (see
+    the diagnosis doc) -- this fix does not make it.
+
+    So: a new pick_type, "PINCHED", that no existing filter anywhere in
+    this file or the site matches (confirmed against lib/leaders.js's
+    ROLE_OF map too -- an unrecognised designation there already falls
+    through to null, "tracked but not designated," by the site's own
+    existing convention, not a new behavior this introduces). Restored
+    slots flow through the exact same game_cache/actual_by_pid grading
+    join every other slot goes through, so real actual_ab/got_hr/etc. get
+    attached the normal way -- the player shows up on Results/the Ledger
+    with what he actually did, carrying his original designation as plain
+    context (original_game_pick_role), without moving a single existing
+    pick-type count. Full-sheet stats that already iterate ALL of
+    graded_slots regardless of pick_type (e.g. "Base Hit Accuracy")
+    correctly grow to include him -- he really was on the slate.
+
+    Only restores players who actually held a designation at lock time
+    (game_pick_role non-empty). An undesignated dropped player was never a
+    "pick" whose disappearance is the reported symptom, and rebuilding his
+    TOP15 membership retroactively needs a live comparison this data
+    doesn't have -- out of scope here, not silently guessed at.
+    """
+    restored = list(tracking_slots)
+    for _drop in dropped_locked_rows:
+        _roles = [r.strip().upper() for r in str(_drop.get("game_pick_role") or "").split("/") if r.strip()]
+        if not _roles:
+            continue
+        restored.append({
+            **trim_row(_drop),
+            "pick_type": "PINCHED",
+            "original_game_pick_role": "/".join(_roles),
+        })
+    return restored
+
+
 # ── MODEL FOUNDATION: append-only outcome log (Task 5) ──────────────────────
 #
 # Separate from graded_slots/the site's Results payload on purpose: this is
@@ -3141,6 +3199,7 @@ def category_display(pick_type: str) -> str:
         "HRR": "🏁 HRR PICKS",
         "HIT": "💠 HIT PICKS",
         "CONTACT": "⚾ CONTACT PICKS",
+        "PINCHED": "🩹 RESTORED PICKS",
     }.get(pick_type, pick_type)
 
 
@@ -3495,12 +3554,14 @@ def main() -> int:
     # See apply_locked_features()'s own docstring above load_rows() for the
     # full mechanism. dropped_locked_rows are players the locked join knows
     # about that the currently-published slate no longer contains -- passed
-    # only to build_hr_capture_report() below (slate-membership counting),
-    # never merged into `rows`/tracking_slots (pick-selection needs the
-    # full slate-row shape these synthetic rows don't have).
+    # only to build_hr_capture_report() below (slate-membership counting).
+    # A1 FIX (2026-08-28) restores the designated ones into tracking_slots
+    # too, under a new non-colliding pick_type -- see the comment on that
+    # below. They still never join the full slate-row shape `rows` itself.
     rows, dropped_locked_rows = apply_locked_features(rows, date_str, OUT_DIR)
 
     tracking_slots = build_tracking_slots(rows)
+    tracking_slots = restore_pinched_slots(tracking_slots, dropped_locked_rows)
 
     game_cache: Dict[int, Dict[str, Any]] = {}
     game_status_by_pk: Dict[int, Dict[str, Any]] = {}
