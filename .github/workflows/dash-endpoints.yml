@@ -1,0 +1,109 @@
+name: DASH — scheduled site endpoints
+
+# WHY THIS LIVES IN THE BOT REPO AND NOT THE SITE (2026-08-28)
+#
+# The site repo is read-only by design and must never gain a
+# .github/workflows directory — lib/dataSource.js says so in its first
+# paragraph and every data file on the site depends on that staying true.
+# Scheduling has always lived here: today.yml publishes the slate, results.yml
+# grades it. This is the same arrangement for two endpoints the SITE exposes
+# but cannot schedule for itself.
+#
+# THE SHORT VERSION OF WHY IT ISN'T IN vercel.json: it was, for one day, and
+# nothing deployed for that whole day. Vercel's Hobby plan allows a cron that
+# fires ONCE PER DAY and rejects the entire deployment if it sees anything
+# more frequent. Both of these jobs are worthless once a day — a fantasy score
+# that updates tomorrow, an alert that arrives after the game. GitHub Actions
+# has no such limit and is already the scheduler for everything else here.
+#
+# WHAT IT CALLS
+#
+#   /api/fantasy/scoring    Franchise live scoring. Pulls the NFL feed,
+#                           refreshes every league's matchup scores. Without
+#                           this, fantasy matchups sit frozen during games.
+#   /api/dash/push/tick     The push-alert sender. Diffs the live feeds and
+#                           pushes homers and touchdowns to people who follow
+#                           that player and left that alert on. Answers
+#                           {"skipped":"vapid-not-configured"} until the VAPID
+#                           keys are set, which is a clean no-op, not an error.
+#
+# SECRETS THIS NEEDS (Settings → Secrets and variables → Actions):
+#
+#   DASH_SITE_URL      https://dashnetwork.vercel.app   (no trailing slash)
+#   DASH_CRON_SECRET   the same value as CRON_SECRET in the Vercel project
+#
+# Without them every run exits early and says so, rather than firing blind
+# requests at a URL it guessed.
+#
+# HONEST ABOUT THE CADENCE: GitHub's scheduler is best-effort. A run is often
+# a few minutes late and, at busy times of the hour, can be skipped entirely.
+# So "every ten minutes" is a target, not a guarantee — which is exactly what
+# the alerts panel on the site promises, and why nothing here pretends to be
+# instant. Both endpoints are safe to run late or twice: the scoring sync
+# throttles itself and the push sender records every event it has already sent.
+
+on:
+  schedule:
+    # Phoenix is UTC-7 year-round. 17:00–06:59 UTC is 10am–midnight Phoenix,
+    # which covers the MLB day slate through a West-coast extra-innings finish
+    # and every NFL window. Split in two because cron cannot wrap midnight.
+    - cron: '*/10 17-23 * * *'
+    - cron: '*/10 0-6 * * *'
+  workflow_dispatch:
+
+# One at a time. A late run overlapping the next one would have two scoring
+# syncs writing the same matchups.
+concurrency:
+  group: dash-endpoints
+  cancel-in-progress: false
+
+jobs:
+  call:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check the secrets are set
+        id: guard
+        env:
+          SITE: ${{ secrets.DASH_SITE_URL }}
+          SECRET: ${{ secrets.DASH_CRON_SECRET }}
+        run: |
+          if [ -z "$SITE" ] || [ -z "$SECRET" ]; then
+            echo "::warning::DASH_SITE_URL or DASH_CRON_SECRET is not set — skipping."
+            echo "ready=no" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=yes" >> "$GITHUB_OUTPUT"
+          fi
+
+      # continue-on-error on BOTH: these are independent jobs sharing a
+      # schedule, and a Franchise outage must not stop alerts going out (or
+      # the reverse). Each prints its own status so a red X is readable.
+      - name: Franchise live scoring
+        if: steps.guard.outputs.ready == 'yes'
+        continue-on-error: true
+        env:
+          SITE: ${{ secrets.DASH_SITE_URL }}
+          SECRET: ${{ secrets.DASH_CRON_SECRET }}
+        run: |
+          code=$(curl -sS -o /tmp/scoring.json -w '%{http_code}' \
+            --max-time 60 \
+            -H "authorization: Bearer $SECRET" \
+            "$SITE/api/fantasy/scoring")
+          echo "HTTP $code"
+          cat /tmp/scoring.json; echo
+          [ "$code" = "200" ]
+
+      - name: Push alerts
+        if: steps.guard.outputs.ready == 'yes'
+        continue-on-error: true
+        env:
+          SITE: ${{ secrets.DASH_SITE_URL }}
+          SECRET: ${{ secrets.DASH_CRON_SECRET }}
+        run: |
+          code=$(curl -sS -o /tmp/push.json -w '%{http_code}' \
+            --max-time 60 \
+            -H "authorization: Bearer $SECRET" \
+            "$SITE/api/dash/push/tick")
+          echo "HTTP $code"
+          cat /tmp/push.json; echo
+          [ "$code" = "200" ]
