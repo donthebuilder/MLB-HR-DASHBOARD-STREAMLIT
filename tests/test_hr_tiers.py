@@ -5,7 +5,8 @@ from bots.hr_tiers import build_hr_overlay
 
 
 def test_hr_overlay_tiers_are_nested():
-    elite = build_hr_overlay({
+    premium = build_hr_overlay({
+        "l25pa_air_rate": 0.62,
         "recent_barrel_rate": 0.05,
         "recent_fb_rate": 0.30,
         "recent_ev": 92,
@@ -14,19 +15,21 @@ def test_hr_overlay_tiers_are_nested():
         "pitcher_hr9": 1.55,
         "season_hr_game_probability": 18.2,
     })
-    assert elite["fit_passed"] == 3
-    assert elite["qualified_tiers"] == ["verified_shape", "premium_power", "elite_matchup"]
-    assert elite["primary_tier"] == "elite_matchup"
+    assert premium["fit_passed"] == 2
+    assert premium["qualified_tiers"] == ["hr_overlay", "power_overlay", "premium_power"]
+    assert premium["primary_tier"] == "premium_power"
+    assert premium["shape_reference"]["qualified"] is True
 
-    shape_only = build_hr_overlay({
+    core_only = build_hr_overlay({
+        "l25pa_air_rate": 50.1,  # percentage-form inputs normalize too
         "recent_barrel_rate": 3.1,  # percentage-form inputs normalize too
         "recent_fb_rate": 23.2,
-        "recent_ev": 89.9,
+        "recent_ev": 87.1,
         "season_iso": 0.200,
         "hrw_score": 80,
         "pitcher_hr9": 2.0,
     })
-    assert shape_only["qualified_tiers"] == ["verified_shape"]
+    assert core_only["qualified_tiers"] == ["hr_overlay"]
 
 
 def test_eval_uses_stored_membership_and_never_backfills():
@@ -34,7 +37,7 @@ def test_eval_uses_stored_membership_and_never_backfills():
         {
             "went_yard": True,
             "game_date_actual": "2026-08-27",
-            "row": {"hr_overlay": {"qualified_tiers": ["verified_shape", "premium_power"]}},
+            "row": {"hr_overlay": {"qualified_tiers": ["hr_overlay", "power_overlay"]}},
         },
         {
             "went_yard": False,
@@ -47,6 +50,6 @@ def test_eval_uses_stored_membership_and_never_backfills():
     report = hr_overlay_performance(included, dt.date(2026, 8, 27))
     assert report["eligible_schema_n"] == 1
     assert report["legacy_without_overlay_n"] == 1
-    assert report["tiers"]["verified_shape"]["all"]["n"] == 1
-    assert report["tiers"]["premium_power"]["all"]["hrs"] == 1
-    assert report["tiers"]["elite_matchup"]["all"]["n"] == 0
+    assert report["tiers"]["hr_overlay"]["all"]["n"] == 1
+    assert report["tiers"]["power_overlay"]["all"]["hrs"] == 1
+    assert report["tiers"]["premium_power"]["all"]["n"] == 0

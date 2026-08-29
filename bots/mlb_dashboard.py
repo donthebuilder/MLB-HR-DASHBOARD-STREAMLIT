@@ -28,8 +28,10 @@ Notes:
 from __future__ import annotations
 
 import argparse
+import csv
 import dataclasses
 import datetime as dt
+import io
 import json
 import os
 import platform
@@ -1667,7 +1669,14 @@ class HitterRecord:
     # Docket #19: true distance fields for the Longest board (site pre-wired).
     recent_400_num: int = 0
     recent_max_distance: float = 0.0
+    recent_avg_distance: float = 0.0
     recent_avg_hr_distance: float = 0.0
+    recent_pull_air_rate: float = 0.0
+    recent_squared_up_rate: Optional[float] = None
+    recent_squared_up_sample: int = 0
+    recent_blast_rate: Optional[float] = None
+    recent_bat_tracking_status: str = "missing"
+    recent_bat_tracking_window: str = ""
     season_max_distance: float = 0.0
     # Docket #20: expected HRs from contact + luck (actual − expected).
     season_xhr: float = 0.0
@@ -1788,6 +1797,54 @@ class CacheDB:
 
     def close(self) -> None:
         self.conn.close()
+
+
+def build_recent_bat_tracking_lookup(db: CacheDB, end_date: dt.date) -> Dict[str, Dict[str, Any]]:
+    """One official Savant bat-tracking pull shared by the entire slate.
+
+    Squared-Up is not present in pybaseball's pitch-level CSV, so deriving it
+    locally would require recreating Statcast's maximum-EV physics.  Savant's
+    own bat-tracking leaderboard publishes the exact recent rate.  Pull the
+    leaderboard once, cache it by window, and join by MLB player id.
+    """
+    start_date = end_date - dt.timedelta(days=14)
+    window = f"{start_date.isoformat()}..{end_date.isoformat()}"
+    key = f"bat_tracking_leaderboard_v1:{window}"
+    cached = db.get(key, max_age_days=1)
+    if isinstance(cached, dict) and isinstance(cached.get("players"), dict):
+        return cached["players"]
+
+    url = "https://baseballsavant.mlb.com/leaderboard/bat-tracking"
+    params = {
+        "seasonStart": end_date.year,
+        "seasonEnd": end_date.year,
+        "type": "batter",
+        "minSwings": 1,
+        "dateStart": start_date.isoformat(),
+        "dateEnd": end_date.isoformat(),
+        "csv": "true",
+    }
+    players: Dict[str, Dict[str, Any]] = {}
+    try:
+        resp = requests.get(url, params=params, timeout=TIMEOUT, headers={"User-Agent": "Mozilla/5.0"})
+        resp.raise_for_status()
+        reader = csv.DictReader(io.StringIO(resp.content.decode("utf-8-sig")))
+        for row in reader:
+            player_id = str(row.get("id") or "").strip()
+            if not player_id:
+                continue
+            players[player_id] = {
+                "squared_up_per_bat_contact": safe_float(row.get("squared_up_per_bat_contact"), 0.0),
+                "blast_per_bat_contact": safe_float(row.get("blast_per_bat_contact"), 0.0),
+                "contact": safe_int(row.get("contact"), 0),
+                "window": window,
+                "source": "baseball_savant_bat_tracking",
+            }
+        if players:
+            db.set(key, {"players": players, "window": window, "source": "baseball_savant_bat_tracking"})
+    except Exception as exc:
+        print(f"⚠️ Recent Savant bat-tracking pull failed ({type(exc).__name__}); Squared-Up will be unavailable.", file=sys.stderr)
+    return players
 
 
 class MLBClient:
@@ -3762,7 +3819,7 @@ def finalize_xhr_fields(rows: List["HitterRecord"], db: CacheDB) -> None:
 
 
 def build_batter_statcast_profile(db: CacheDB, player_id: int, end_date: dt.date) -> Dict[str, Any]:
-    key = f"batter_statcast_v9_hrshape:{SEASON}:{player_id}:{end_date.isoformat()}"
+    key = f"batter_statcast_v10_power_metrics:{SEASON}:{player_id}:{end_date.isoformat()}"
     out = {
         "recent_350_num": 0,
         "recent_350_den": 1,
@@ -3770,6 +3827,7 @@ def build_batter_statcast_profile(db: CacheDB, player_id: int, end_date: dt.date
         "recent_375_num": 0,
         "recent_400_num": 0,
         "recent_max_distance": 0.0,
+        "recent_avg_distance": 0.0,
         "recent_avg_hr_distance": 0.0,
         "season_max_distance": 0.0,
         "recent_ev": 88.5,
@@ -3783,6 +3841,12 @@ def build_batter_statcast_profile(db: CacheDB, player_id: int, end_date: dt.date
         "recent_barrel_rate": 0.0,
         "recent_xwoba": 0.320,
         "recent_pull_rate": 0.38,
+        "recent_pull_air_rate": 0.0,
+        "recent_squared_up_rate": None,
+        "recent_squared_up_sample": 0,
+        "recent_blast_rate": None,
+        "recent_bat_tracking_status": "missing",
+        "recent_bat_tracking_window": "",
         "l5_barrel_rate": 0.0,
         "l10_barrel_rate": 0.0,
         "l5_hard_hit_rate": 0.0,
@@ -3833,6 +3897,13 @@ def build_batter_statcast_profile(db: CacheDB, player_id: int, end_date: dt.date
         "personal_shape_status": "missing",
         "statcast_pull_status": "missing",
     }
+    bat_tracking = build_recent_bat_tracking_lookup(db, end_date).get(str(player_id))
+    if isinstance(bat_tracking, dict):
+        out["recent_squared_up_rate"] = safe_float(bat_tracking.get("squared_up_per_bat_contact"), 0.0)
+        out["recent_squared_up_sample"] = safe_int(bat_tracking.get("contact"), 0)
+        out["recent_blast_rate"] = safe_float(bat_tracking.get("blast_per_bat_contact"), 0.0)
+        out["recent_bat_tracking_status"] = "ok"
+        out["recent_bat_tracking_window"] = str(bat_tracking.get("window") or "")
     cached = db.get(key, max_age_days=1)
     if cached is not None:
         merged = dict(out)
@@ -3903,6 +3974,7 @@ def build_batter_statcast_profile(db: CacheDB, player_id: int, end_date: dt.date
         out["recent_400_num"] = int((bbe["hit_distance_sc"] >= 400).fillna(False).sum()) if len(bbe) else 0
         _rd = bbe.loc[bbe["hit_distance_sc"] > 0, "hit_distance_sc"] if len(bbe) else None
         out["recent_max_distance"] = float(_rd.max()) if _rd is not None and len(_rd) else 0.0
+        out["recent_avg_distance"] = round(float(_rd.mean()), 1) if _rd is not None and len(_rd) else 0.0
         _hd = bbe.loc[(bbe.get("events") == "home_run") & (bbe["hit_distance_sc"] > 0), "hit_distance_sc"] if len(bbe) else None
         out["recent_avg_hr_distance"] = round(float(_hd.mean()), 1) if _hd is not None and len(_hd) else 0.0
         _season_bbe = df[df["type"] == "X"] if "type" in df.columns else df
@@ -3942,19 +4014,32 @@ def build_batter_statcast_profile(db: CacheDB, player_id: int, end_date: dt.date
             xw = pd.to_numeric(recent["estimated_woba_using_speedangle"], errors="coerce").dropna()
             out["recent_xwoba"] = float(xw.mean()) if len(xw) else 0.320
 
+        def _pulled_mask(frame: pd.DataFrame) -> pd.Series:
+            if frame is None or len(frame) == 0 or "hc_x" not in frame.columns or "stand" not in frame.columns:
+                return pd.Series(False, index=frame.index if frame is not None else None, dtype=bool)
+            tmp = frame.copy()
+            tmp["hc_x"] = pd.to_numeric(tmp["hc_x"], errors="coerce")
+            return (
+                ((tmp["stand"] == "R") & (tmp["hc_x"] < 125.0)) |
+                ((tmp["stand"] == "L") & (tmp["hc_x"] > 125.0))
+            ).fillna(False)
+
         def _pull_rate(frame: pd.DataFrame) -> float:
             if frame is None or len(frame) == 0 or "hc_x" not in frame.columns or "stand" not in frame.columns:
                 return 0.38
-            tmp = frame.copy()
-            tmp["hc_x"] = pd.to_numeric(tmp["hc_x"], errors="coerce")
-            tmp = tmp[tmp["hc_x"].notna()]
-            if len(tmp) == 0:
+            tracked = frame[pd.to_numeric(frame["hc_x"], errors="coerce").notna()]
+            if len(tracked) == 0:
                 return 0.38
             # Savant spray approximation: RHB pulled toward LF has lower hc_x, LHB pulled toward RF has higher hc_x.
-            pulled = ((tmp["stand"] == "R") & (tmp["hc_x"] < 125.0)) | ((tmp["stand"] == "L") & (tmp["hc_x"] > 125.0))
-            return float(pulled.mean())
+            return float(_pulled_mask(tracked).mean())
 
         out["recent_pull_rate"] = _pull_rate(bbe)
+        if len(bbe) and "bb_type" in bbe.columns and "hc_x" in bbe.columns and "stand" in bbe.columns:
+            # PullAir% is a share of every BBE, matching the pitcher-side
+            # pullair_allowed_pct definition.  It is not the pull rate within
+            # air balls (that conditional rate remains in bbe_profile below).
+            in_air = bbe["bb_type"].isin(["fly_ball", "line_drive"])
+            out["recent_pull_air_rate"] = float((in_air & _pulled_mask(bbe)).sum() / len(bbe))
         out["statcast_pull_status"] = "ok" if len(bbe) and "hc_x" in bbe.columns else "missing_hc_x"
 
         # Full BBE profile + spray chart points for the website. Keep this inside the slate JSON,
@@ -3979,7 +4064,7 @@ def build_batter_statcast_profile(db: CacheDB, player_id: int, end_date: dt.date
         air_pull_rate = _pull_rate(air_bbe) if len(air_bbe) else 0.0
         xbh_count = _event_count(bbe, {"double", "triple", "home_run"})
         hr_count = _event_count(bbe, {"home_run"})
-        avg_distance = float(bbe["hit_distance_sc"].dropna().mean()) if len(bbe) and bbe["hit_distance_sc"].notna().any() else 0.0
+        avg_distance = safe_float(out.get("recent_avg_distance"), 0.0)
         max_distance = float(bbe["hit_distance_sc"].dropna().max()) if len(bbe) and bbe["hit_distance_sc"].notna().any() else 0.0
         max_ev = float(bbe["launch_speed"].dropna().max()) if len(bbe) and bbe["launch_speed"].notna().any() else 0.0
         avg_la = float(bbe["launch_angle"].dropna().mean()) if len(bbe) and bbe["launch_angle"].notna().any() else 0.0
@@ -4034,6 +4119,11 @@ def build_batter_statcast_profile(db: CacheDB, player_id: int, end_date: dt.date
             "pull_pct": round(float(out.get("recent_pull_rate", 0.0)) * 100, 1),
             "air_pull_rate": round(float(air_pull_rate), 3),
             "air_pull_pct": round(float(air_pull_rate) * 100, 1),
+            "pull_air_rate": round(float(out.get("recent_pull_air_rate", 0.0)), 3),
+            "pull_air_pct": round(float(out.get("recent_pull_air_rate", 0.0)) * 100, 1),
+            "squared_up_rate": out.get("recent_squared_up_rate"),
+            "squared_up_sample": int(out.get("recent_squared_up_sample", 0)),
+            "blast_rate": out.get("recent_blast_rate"),
             "dist_350_plus": int(out.get("recent_350_num", 0)),
             "dist_375_plus": int(out.get("recent_375_num", 0)),
             "dist_400_plus": int((bbe["hit_distance_sc"] >= 400).fillna(False).sum()) if len(bbe) else 0,
@@ -9593,7 +9683,14 @@ def build_hitter_records(client: MLBClient, db: CacheDB, game: Dict[str, Any], s
                 recent_375_num=sc["recent_375_num"],
                 recent_400_num=safe_int(sc.get("recent_400_num"), 0),
                 recent_max_distance=safe_float(sc.get("recent_max_distance"), 0.0),
+                recent_avg_distance=safe_float(sc.get("recent_avg_distance"), 0.0),
                 recent_avg_hr_distance=safe_float(sc.get("recent_avg_hr_distance"), 0.0),
+                recent_pull_air_rate=safe_float(sc.get("recent_pull_air_rate"), 0.0),
+                recent_squared_up_rate=sc.get("recent_squared_up_rate"),
+                recent_squared_up_sample=safe_int(sc.get("recent_squared_up_sample"), 0),
+                recent_blast_rate=sc.get("recent_blast_rate"),
+                recent_bat_tracking_status=str(sc.get("recent_bat_tracking_status") or "missing"),
+                recent_bat_tracking_window=str(sc.get("recent_bat_tracking_window") or ""),
                 season_max_distance=safe_float(sc.get("season_max_distance"), 0.0),
                 recent_ev=safe_float(sc.get("recent_ev"), 88.5),
                 recent_hard_hit_rate=sc["recent_hard_hit_rate"],
@@ -12103,7 +12200,12 @@ def _s2_player_dict(r: HitterRecord) -> Dict[str, Any]:
         "recent_350_den": r.recent_350_den, "recent_375_num": r.recent_375_num,
         "recent_400_num": getattr(r, "recent_400_num", 0),
         "recent_max_distance": getattr(r, "recent_max_distance", 0.0),
+        "recent_avg_distance": getattr(r, "recent_avg_distance", 0.0),
         "recent_avg_hr_distance": getattr(r, "recent_avg_hr_distance", 0.0),
+        "recent_pull_air_rate": getattr(r, "recent_pull_air_rate", 0.0),
+        "recent_squared_up_rate": getattr(r, "recent_squared_up_rate", None),
+        "recent_squared_up_sample": getattr(r, "recent_squared_up_sample", 0),
+        "recent_blast_rate": getattr(r, "recent_blast_rate", None),
         "season_max_distance": getattr(r, "season_max_distance", 0.0),
         "recent_ev": getattr(r, "recent_ev", None), "last5_hits": r.last5_hits,
         "last5_hr": r.last5_hr, "last5_xbh": r.last5_xbh, "last7_hr": r.last7_hr,
@@ -14074,6 +14176,13 @@ def build_prediction_log_lines(run_meta: Dict[str, Any], rows_payload: List[Dict
                 # to understand the tier schema.
                 "season_iso": row.get("season_iso"),
                 "recent_ev": row.get("recent_ev"),
+                "l25pa_air_rate": row.get("l25pa_air_rate"),
+                "recent_hard_hit_rate": row.get("recent_hard_hit_rate"),
+                "recent_pull_air_rate": row.get("recent_pull_air_rate"),
+                "recent_avg_distance": row.get("recent_avg_distance"),
+                "recent_squared_up_rate": row.get("recent_squared_up_rate"),
+                "recent_squared_up_sample": row.get("recent_squared_up_sample"),
+                "recent_blast_rate": row.get("recent_blast_rate"),
                 "season_hr_game_probability": row.get("season_hr_game_probability"),
             },
             # ── THE FULL PRE-GAME SNAPSHOT (2026-08-23) ─────────────────────
