@@ -232,8 +232,19 @@ def write_detail_files(rows: List[Dict[str, Any]], out_dir: Path) -> int:
             existing.unlink()
             removed += 1
 
+        slate_date = _slate_date_of(rows, out_dir.name)
+        if not slate_date:
+            # Loud, not silent. An unstamped directory is dropped by
+            # publish_data.sh on purpose, so the only bad outcome is one
+            # nobody notices -- which is what happened last time.
+            print(
+                f"::error::detail[{out_dir.name}]: could not determine this slate's date "
+                "from the rows, the run meta file or first pitch. The directory will be "
+                "stamped empty and dropped at publish, so no detail ships tonight.",
+                file=sys.stderr,
+            )
         manifest = {
-            "slate_date": _slate_date_of(rows),
+            "slate_date": slate_date,
             "label": out_dir.name,
             "written_at": dt.datetime.now(dt.timezone.utc).isoformat(),
             "run_id": os.environ.get("GITHUB_RUN_ID") or None,
@@ -248,7 +259,7 @@ def write_detail_files(rows: List[Dict[str, Any]], out_dir: Path) -> int:
         )
         print(
             f"detail[{out_dir.name}]: {len(batter_ids)} batters, {len(pitcher_ids)} pitchers, "
-            f"{len(game_pks)} games, slate {manifest['slate_date']}"
+            f"{len(game_pks)} games, slate {slate_date or 'UNKNOWN'}"
             + (f", pruned {removed} stale file(s)" if removed else ""),
             file=sys.stderr,
         )
@@ -256,20 +267,105 @@ def write_detail_files(rows: List[Dict[str, Any]], out_dir: Path) -> int:
     return written
 
 
-def _slate_date_of(rows: List[Dict[str, Any]]) -> str:
-    """The slate's own date, taken from the rows rather than the clock.
+def _valid_day(value: Any) -> str:
+    """`YYYY-MM-DD` or empty. One place to say what a slate date looks like,
+    matching the ten-character class the two shell guards grep for -- a value
+    those greps would reject must not be written as a stamp."""
+    text = str(value or "")[:10]
+    if len(text) == 10 and text[4] == "-" and text[7] == "-":
+        return text
+    return ""
+
+
+def _slate_date_of(rows: List[Dict[str, Any]], label: str = "") -> str:
+    """The slate's own date, taken from the run rather than the clock.
 
     A run that starts at 23:58 UTC and finishes at 00:01 would stamp the
     wrong day off `date.today()`, and this stamp is the thing publish_data.sh
     compares against the slate file -- a clock-derived value would make the
     guard fire on a boundary it should not care about.
+
+    ── WHY THIS HAS THREE SOURCES (2026-08-29, second pass) ────────────────
+    The first version read `game_date` / `slate_date` / `date` off the rows
+    and returned "" if it found none. Measured against the live branch after
+    the stamping shipped: NONE of those three keys exists on a slate row at
+    all. Not empty -- absent. 0 of 303 rows on today_slim.json carry any of
+    them, so every manifest was stamped `"slate_date": ""`, both shell
+    guards read that as a mismatch, and detail/today and detail/tomorrow
+    were deleted on publish. The stale-detail bug was fixed into a
+    no-detail bug, and the workflow's own assertion is what caught it
+    ("2 errors and 5 warnings" on run 584, green by design).
+
+    So there are three sources, and THE ORDER MATTERS -- every source that
+    comes from the rows being stamped is tried before any source that comes
+    from a separate file, because a separate file can be stale and the rows
+    cannot.
+
+      1. A date key on the rows. Free, and correct the day the bot writes one.
+      2. The EARLIEST `game_time` on the rows, shifted back 8 hours.
+         game_time is UTC (`2026-08-29T17:05:00Z`) and a 10:07pm ET first
+         pitch is ALREADY TOMORROW in UTC, so a late game's raw UTC date is
+         the wrong day. MLB's earliest start is around 15:35Z and its latest
+         around 02:10Z, so -8h maps 15:35Z to 07:35 the same day and can
+         never reach back into the previous one.
+      3. current/<label>_run_meta.json, last, and only when it can be proved
+         to belong to THIS run.
+
+    Why run_meta is last and fenced (found in the dry run of the fix, before
+    it shipped): `public/data` is committed on main. A fresh CI checkout
+    therefore starts with a today_run_meta.json stamped 2026-08-21 sitting
+    next to a detail/today from the same August night. If run_meta were
+    trusted ahead of the rows and the bot ever failed to rewrite it, this
+    function would stamp 2026-08-21 with total confidence, publish_data.sh
+    would compare that manifest against the SAME stale file, the two would
+    agree, and a five-day-old detail directory would publish as tonight's.
+    That is the original bug with a checkmark next to it -- strictly worse
+    than the empty stamp this commit exists to fix, because an empty stamp
+    gets dropped and a confidently wrong one does not.
+
+    So in CI the file is only believed when its run_id carries this job's
+    GITHUB_RUN_ID. Off CI there is no such id and no such landmine, so it is
+    read as written.
     """
     for key in ("game_date", "slate_date", "date"):
         for row in rows:
             if isinstance(row, dict) and row.get(key):
-                value = str(row[key])[:10]
-                if len(value) == 10 and value[4] == "-":
+                value = _valid_day(row[key])
+                if value:
                     return value
+
+    starts = sorted(
+        str(r.get("game_time")) for r in rows
+        if isinstance(r, dict) and r.get("game_time")
+    )
+    for start in starts:
+        try:
+            stamp = dt.datetime.fromisoformat(start.replace("Z", "+00:00"))
+        except Exception:
+            continue
+        if stamp.tzinfo is None:
+            stamp = stamp.replace(tzinfo=dt.timezone.utc)
+        return (stamp.astimezone(dt.timezone.utc) - dt.timedelta(hours=8)).date().isoformat()
+
+    if label:
+        try:
+            meta = json.loads((CURRENT_DIR / f"{label}_run_meta.json").read_text(encoding="utf-8"))
+        except Exception:
+            meta = None
+        if isinstance(meta, dict):
+            run_id = os.environ.get("GITHUB_RUN_ID") or ""
+            if run_id and run_id not in str(meta.get("run_id") or ""):
+                print(
+                    f"::warning::detail[{label}]: ignoring {label}_run_meta.json -- it is "
+                    f"stamped run {meta.get('run_id')!r}, not this one ({run_id}). It is the "
+                    "copy committed on main, not something this run wrote.",
+                    file=sys.stderr,
+                )
+            else:
+                value = _valid_day(meta.get("slate_date"))
+                if value:
+                    return value
+
     return ""
 
 
