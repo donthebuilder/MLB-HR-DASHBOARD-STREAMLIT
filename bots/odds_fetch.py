@@ -293,7 +293,21 @@ def implied(odds: int | None) -> float | None:
     return round(100 * p, 1)
 
 
-MOVE_HISTORY_LIMIT = 8
+# How many points of intraday price history each quote carries.
+#
+# 2026-08-30: 8 -> 16. Eight was sized for four fetches a day, when the trim
+# never fired. Raising the fetch cadence (ODDS_MIN_INTERVAL_MIN 90 -> 25,
+# ODDS_MAX_PER_SLATE 5 -> 20) makes it fire constantly, and the trim keeps
+# history[0] plus the most recent tail -- so at twenty fetches a day the
+# MIDDLE of the slate day is what silently disappears. Open plus the last
+# seven moves is the least useful sixteen-hour window you could choose: it
+# is exactly the afternoon drift that tells you whether a price is being
+# bet or just sitting there.
+#
+# Sixteen is a point roughly every 45 minutes across a slate day. Cost is
+# odds_latest.json growing from 2.31 MB toward ~7 MB at saturation, served
+# from raw.githubusercontent (static, free) rather than Vercel origin.
+MOVE_HISTORY_LIMIT = 16
 
 
 def _move_point(q: dict, stamp: str) -> dict | None:

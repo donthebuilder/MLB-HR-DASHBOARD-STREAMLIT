@@ -1137,8 +1137,18 @@ def get_player_batting_line(game_feed: Dict[str, Any], player_id: int) -> Dict[s
                         hit = ev["hitData"]
                         break
                 pitcher = ((play.get("matchup") or {}).get("pitcher") or {})
+                # end_time is the wall clock ON the homer -- the moment the
+                # ball leaves. It has been sitting unread in about.endTime
+                # since this block was written; without it there is no way to
+                # ask what the price was when a pick actually cashed, only
+                # what it was at first pitch. Kept raw (ISO-8601 UTC, as MLB
+                # sends it) so the site can align it against the odds
+                # movement history without guessing a timezone here.
+                about = play.get("about") or {}
                 hr_events.append({
-                    "inning": safe_int(play.get("about", {}).get("inning"), None),
+                    "inning": safe_int(about.get("inning"), None),
+                    "half_inning": str(about.get("halfInning") or ""),
+                    "end_time": str(about.get("endTime") or ""),
                     "pitcher_id": safe_int(pitcher.get("id"), None),
                     "pitcher_name": pitcher.get("fullName", ""),
                     "launch_speed": safe_float(hit.get("launchSpeed"), None) if hit.get("launchSpeed") is not None else None,
