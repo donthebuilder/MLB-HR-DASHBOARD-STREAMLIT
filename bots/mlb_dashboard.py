@@ -9537,7 +9537,18 @@ def build_hitter_records(client: MLBClient, db: CacheDB, game: Dict[str, Any], s
         pitcher = pitchers[opp_key]
         # The catcher THIS lineup is running against is the OPPOSING team's.
         _c = catchers_by_side.get(opp_key, {}) or {}
-        _cprof = _catchers.get(_c.get("id") or 0) or {}
+        # ID FIRST, THEN NAME (2026-08-31). savant_feeds now indexes the same
+        # catcher under both his MLB id and his normalised name, because a
+        # renamed id column in Savant's CSV silently emptied this map and
+        # stamped "unqualified" on all 28 catchers on the slate for weeks --
+        # Rutschman, Raleigh, Kirk, Murphy, Hedges included. The name key is
+        # the belt to the id's braces; it costs one dict lookup on a miss.
+        _cprof = (
+            _catchers.get(_c.get("id") or 0)
+            or (_catchers.get(SAVANT_FEEDS.norm_name(_c.get("name")))
+                if (SAVANT_FEEDS is not None and _c.get("name")) else None)
+            or {}
+        )
         _tdef = _team_def.get(team_ids.get(opp_key, 0)) or {}
         opp_bullpen = bullpens.get(opp_key, {})
         # Pull pitch mix scoped by hitter handedness — pitchers throw very different

@@ -139,6 +139,57 @@ def norm_name(s: Any) -> str:
     return " ".join(t.lower().split())
 
 
+# ── A FEED THAT PARSES AND JOINS NOTHING IS NOT "ok" (2026-08-31) ───────────
+#
+# Found by reading the published slate, not the logs. On 2026-08-30, every one
+# of the 251 rows carried opp_catcher_status="unqualified" with pop_time,
+# arm_strength and cs_rate all null and opp_catcher_sb_attempts=0 -- for all 28
+# catchers on the slate, Adley Rutschman, Cal Raleigh, Alejandro Kirk, Sean
+# Murphy and Austin Hedges among them. Those men are not unqualified. Nobody
+# is. The map was empty.
+#
+# And it was INVISIBLE, because of how the two statuses compose. _fetch_csv
+# already returns "empty" for zero rows, so a dead endpoint would have shown
+# up. This was worse: rows parsed fine, `status` came back "ok", and then every
+# row was skipped by `if not pid: continue`, leaving an empty dict wearing an
+# ok. mlb_dashboard's status ladder then reads "the feed is fine, so it must be
+# this catcher" and stamps "unqualified" on the entire league.
+#
+# team_defense -- same file, same fetcher, same host -- joined on all 251 rows
+# the same night (oaa -16, success_rate 78.0, status ok). So Savant is
+# reachable and CSV parsing works. The difference between the two functions is
+# the join key: team_defense keys on team_id and works; catcher_throwing keys
+# on player_id and produced nothing. A renamed or missing id column is the
+# whole failure, and Savant renames columns.
+#
+# Three defences, in order of how much they assume:
+#   1. Read the id from whichever column is actually there.
+#   2. Keep a BY-NAME index as well. name_key has been computed on every row
+#      since this feed was written and never used for anything; the caller can
+#      fall back to it when an id lookup misses.
+#   3. Never return "ok" for a map that came back empty. Whatever else breaks,
+#      it must never again take weeks of slates to notice.
+_ID_COLS = ("player_id", "entity_id", "catcher", "id", "player_id_mlb")
+
+
+def _row_id(r: dict) -> int:
+    """The MLB player id, from whichever column this CSV happens to use."""
+    for c in _ID_COLS:
+        v = _i(r.get(c), 0)
+        if v:
+            return v
+    return 0
+
+
+def _joined_status(status: str, rows: list, out: dict) -> str:
+    """Downgrade a fetch-level "ok" that produced nothing joinable."""
+    if status != "ok":
+        return status
+    if not out:
+        return f"error:NoJoinableRows({len(rows)}parsed)"
+    return "ok"
+
+
 def catcher_throwing(season: int) -> Tuple[Dict[int, dict], str]:
     """Every qualified catcher's throwing line, keyed by MLB player id.
 
@@ -164,7 +215,7 @@ def catcher_throwing(season: int) -> Tuple[Dict[int, dict], str]:
     out: Dict[int, dict] = {}
     MIN_ATTEMPTS = 10
     for r in rows:
-        pid = _i(r.get("player_id"), 0)
+        pid = _row_id(r)
         if not pid:
             continue
         att = _i(r.get("sb_attempts"), 0)
@@ -185,7 +236,14 @@ def catcher_throwing(season: int) -> Tuple[Dict[int, dict], str]:
             "arm_strength": _f(r.get("arm_strength")),
             "attempts_below_floor": att < MIN_ATTEMPTS,
         }
-    return out, status
+    # The by-name index rides along in the SAME dict under string keys, so no
+    # caller signature changes and an id lookup can never collide with it.
+    # mlb_dashboard falls back to it when the boxscore's id finds nothing.
+    for v in list(out.values()):
+        k = v.get("name_key")
+        if k and k not in out:
+            out[k] = v
+    return out, _joined_status(status, rows, out)
 
 
 def team_defense(season: int) -> Tuple[Dict[int, dict], str]:
@@ -229,7 +287,9 @@ def team_defense(season: int) -> Tuple[Dict[int, dict], str]:
             "success_rate_expected": _f(r.get("adj_estimated_success_rate_formatted")),
             "success_rate_diff": _f(r.get("diff_success_rate_formatted")),
         }
-    return out, status
+    # This one joins fine today; the guard is here so it cannot fail the same
+    # silent way tomorrow.
+    return out, _joined_status(status, rows, out)
 
 
 # ── ABS: the one that is NOT wired yet, and why ─────────────────────────────
