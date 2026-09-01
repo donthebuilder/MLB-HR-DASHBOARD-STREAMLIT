@@ -15,6 +15,7 @@ on ESPN being up.
 """
 from __future__ import annotations
 import datetime as dt
+import re
 from typing import Any
 
 import requests
@@ -24,6 +25,66 @@ TIMEOUT = 30
 
 # nflverse abbreviations differ from ESPN's in three places.
 FIX = {"WSH": "WAS", "LAR": "LA", "JAX": "JAX"}
+
+
+# ── IS THE BALL INSIDE THE TWENTY (2026-09-01) ──────────────────────────────
+#
+# This used to be one line -- bool(situation.get("isRedZone")) -- and it had
+# two problems, one of which was a guess and one of which was a bug.
+#
+# THE FIELD NAME WAS A GUESS. The comment in fetch() said so honestly: not
+# confirmed against a live game, only inferred. The site's own
+# lib/nfl/liveSlate.js had independently inferred the SAME name, which is two
+# guesses agreeing and not evidence.
+#
+# ESPN was read directly on 2026-09-01. No football was live anywhere, so the
+# live block still could not be seen -- but a COMPLETED game's drive data uses
+# the same naming family, and it confirms, spelled exactly this way:
+# downDistanceText, shortDownDistanceText, and yardsToEndzone.
+#
+# THE bool() WAS A REAL BUG. bool("false") is True in Python. So is bool("0")
+# and bool("no"). If ESPN ever sent that flag as a string, every drive of every
+# game would have been flagged a red zone -- the failure that is worse than not
+# firing, because it is loud and wrong rather than quiet and wrong.
+#
+# Three signals now, any one of which is enough:
+#   1. the flag, as an ALLOWLIST (still the inferred one)
+#   2. yardsToEndzone <= 20 -- the actual definition of the red zone, a number
+#      rather than somebody's boolean, and a confirmed field name
+#   3. the down-and-distance text saying "Goal"
+_GOAL_TO_GO = re.compile(r"(?:&|\band)\s*goal\b", re.I)
+
+
+def _yards_to_endzone(situation: dict) -> int | None:
+    """Yards to the end zone, or None when the feed did not say.
+
+    None and 0 are different answers and must not be conflated: 0 is the goal
+    line. bool is rejected explicitly because float(False) is 0.0, which would
+    otherwise arrive as a goal-line stand.
+    """
+    raw = situation.get("yardsToEndzone")
+    if raw is None or raw == "" or isinstance(raw, bool):
+        return None
+    try:
+        n = int(float(raw))
+    except (TypeError, ValueError):
+        return None
+    return n if 0 <= n <= 100 else None
+
+
+def _red_zone(situation: dict, down_distance: str | None) -> bool:
+    """True only when something actually says so. Never truthiness."""
+    if not situation:
+        return False
+    flag = situation.get("isRedZone")
+    if flag is None:
+        flag = situation.get("inRedZone")
+    if flag is True or flag == 1 or (isinstance(flag, str) and flag.strip().lower() == "true"):
+        return True
+    yards = _yards_to_endzone(situation)
+    if yards is not None and yards <= 20:
+        return True
+    return bool(down_distance and _GOAL_TO_GO.search(down_distance))
 
 
 def _abbr(x: str) -> str:
@@ -88,19 +149,22 @@ def fetch(seasontype: int = 1, week: int | None = None,
             # actually live (down/distance/possession) — confirmed absent on
             # every pregame event checked directly. Best-effort and
             # defensive on purpose: this field set is not in ESPN's public
-            # docs (there are none) and has not yet been observed on a real
-            # live game from this codebase, only inferred from the same
-            # publicly-documented shape other ESPN scoreboard integrations
-            # report. Every read is `.get()`, nothing here raises, and if
-            # the shape is wrong or missing this silently yields
-            # down_distance=None — Games.js already has its own honest
-            # fallback caveat for exactly that case, so a wrong guess here
-            # degrades to today's behavior, it doesn't break it. Treat the
-            # first live game of the season as the real verification step,
-            # not this comment.
+            # docs (there are none). The NAMES were originally inferred
+            # rather than seen; two of the three are now confirmed against a
+            # real ESPN football payload (a completed game's drive data, same
+            # naming family as the live block): downDistanceText,
+            # shortDownDistanceText and yardsToEndzone all exist and are
+            # spelled exactly this way. See _red_zone() above for why the
+            # red-zone call no longer rests on the one still inferred.
+            # Every read is `.get()`, nothing here raises, and a shape this
+            # does not recognise still yields down_distance=None and
+            # red_zone=False rather than a guess.
             situation = comp.get("situation") or {}
             row["down_distance"] = situation.get("downDistanceText") or situation.get("shortDownDistanceText")
-            row["red_zone"] = bool(situation.get("isRedZone")) if situation else False
+            # Published so the site can show it and so a future reader can see
+            # what the red-zone call was actually made on.
+            row["yards_to_endzone"] = _yards_to_endzone(situation)
+            row["red_zone"] = _red_zone(situation, row["down_distance"])
             out.append(row)
         except Exception:
             continue

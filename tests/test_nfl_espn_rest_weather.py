@@ -109,6 +109,69 @@ check("situation absent: down_distance is None, not a crash or a stale value", b
 check("situation absent: red_zone defaults False", by_id["4"]["red_zone"], False)
 
 
+# ── 2b: THE RED ZONE, AFTER 2026-09-01 ──────────────────────────────────────
+#
+# This used to be bool(situation.get("isRedZone")) on a field name nobody had
+# ever seen on a live game. Two things changed.
+#
+# ESPN was read directly. No football was live, so the live block still could
+# not be observed -- but a completed game's drive data uses the same naming
+# family and confirms downDistanceText, shortDownDistanceText and
+# yardsToEndzone, spelled exactly so. The red-zone call now rests on three
+# independent signals instead of the one that is still inferred.
+#
+# And bool() was a real bug, not a stylistic one: bool("false") is True in
+# Python. A feed sending that flag as a string would have marked every drive
+# of every game a red zone -- loud and wrong, which is worse than quiet and
+# wrong. The allowlist below is the point of the whole change, and the
+# "false"/"0"/"no" cases are the ones that must never regress.
+
+_rz = lambda sit: nfl_espn._red_zone(sit, sit.get("downDistanceText") or sit.get("shortDownDistanceText"))
+
+for _label, _sit in [
+    ("flag True", {"isRedZone": True}),
+    ("flag as the string 'true'", {"isRedZone": "true"}),
+    ("flag as 'TRUE ' with padding", {"isRedZone": "TRUE "}),
+    ("flag as 1", {"isRedZone": 1}),
+    ("the inRedZone spelling", {"inRedZone": True}),
+    ("no flag, 12 yards to the end zone", {"yardsToEndzone": 12}),
+    ("no flag, exactly 20", {"yardsToEndzone": 20}),
+    ("no flag, on the goal line (0)", {"yardsToEndzone": 0}),
+    ("no flag, yards as the string '15'", {"yardsToEndzone": "15"}),
+    ("no flag, 2nd & Goal", {"downDistanceText": "2nd & Goal"}),
+    ("no flag, 1st and Goal (short text)", {"shortDownDistanceText": "1st and Goal"}),
+    ("flag says False but the ball is on the 8", {"isRedZone": False, "yardsToEndzone": 8}),
+]:
+    check("red zone: " + _label, _rz(_sit), True)
+
+for _label, _sit in [
+    ("THE OLD BUG -- the string 'false'", {"isRedZone": "false"}),
+    ("the string '0'", {"isRedZone": "0"}),
+    ("the string 'no'", {"isRedZone": "no"}),
+    ("flag False", {"isRedZone": False}),
+    ("21 yards out", {"yardsToEndzone": 21}),
+    ("midfield down/distance text", {"downDistanceText": "1st & 10 at KC 45"}),
+    ("yardsToEndzone as an empty string", {"yardsToEndzone": ""}),
+    ("yardsToEndzone None", {"yardsToEndzone": None}),
+    ("yardsToEndzone False (float(False) is 0.0)", {"yardsToEndzone": False}),
+    ("negative yards", {"yardsToEndzone": -3}),
+    ("nonsense yards (400)", {"yardsToEndzone": 400}),
+    ("'goal' inside a place name", {"downDistanceText": "1st & 10 at GOALBURG 30"}),
+    ("an empty situation block", {}),
+]:
+    check("NOT red zone: " + _label, _rz(_sit), False)
+
+# yards_to_endzone is published alongside, and None and 0 are different
+# answers: 0 is the goal line, None is "the feed did not say".
+check("yards_to_endzone: 0 survives as 0, not None", nfl_espn._yards_to_endzone({"yardsToEndzone": 0}), 0)
+check("yards_to_endzone: '15' parses", nfl_espn._yards_to_endzone({"yardsToEndzone": "15"}), 15)
+check("yards_to_endzone: missing is None", nfl_espn._yards_to_endzone({}), None)
+check("yards_to_endzone: False is None, not 0", nfl_espn._yards_to_endzone({"yardsToEndzone": False}), None)
+
+# and it reaches the row fetch() builds, not just the helper
+check("row carries yards_to_endzone when absent", by_id["4"].get("yards_to_endzone"), None)
+
+
 # ── 3: attach_rest_days() ───────────────────────────────────────────────────
 
 season_games = [
