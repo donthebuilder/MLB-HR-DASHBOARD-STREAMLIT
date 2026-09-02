@@ -10927,6 +10927,44 @@ def build_pool(rows: List[HitterRecord], size: int, variant: str, used_players=N
 
 
 
+def _top_and_hr_slots(hitters: List[HitterRecord]) -> Tuple[HitterRecord, HitterRecord]:
+    """ONE definition of a game's TOP and HR, shared (2026-09-01).
+
+    Lifted verbatim out of build_game_pick_role_map so game_pick_type_map can
+    call the same thing. Nothing about the ranking changed in the move: TOP is
+    the ISO-led power rank over the PA/ISO-eligible pool, HR is raw hr_score
+    over the same pool excluding TOP's man (the 08-23 coverage design). See
+    the long notes in build_game_pick_role_map for why each is what it is.
+    """
+    def _shrunk_iso(h) -> float:
+        return shrink_to_league(safe_float(getattr(h, "season_iso", 0.0), 0.0),
+                                safe_float(getattr(h, "season_pa", 0.0), 0.0),
+                                LEAGUE_ISO)
+
+    def _power_rank(h) -> float:
+        return (100.0 * _shrunk_iso(h)
+                + 10.0 * safe_float(getattr(h, "last5_hr", 0.0), 0.0)
+                + 0.35 * safe_float(getattr(h, "hr_score", 0.0), 0.0))
+
+    def _pool(exclude: set) -> List[HitterRecord]:
+        pool = [h for h in hitters if h.player_id not in exclude and getattr(h, "season_pa", 0) >= 15]
+        if not pool:
+            pool = [h for h in hitters if h.player_id not in exclude] or list(hitters)
+        return pool
+
+    def _slot(exclude: set, key) -> HitterRecord:
+        pool = _pool(exclude)
+        for cond in (lambda h: _shrunk_iso(h) >= 0.180, lambda h: True):
+            tier = [h for h in pool if cond(h)]
+            if tier:
+                return sorted(tier, key=key, reverse=True)[0]
+        return pool[0]
+
+    top_pick = _slot(set(), _power_rank)
+    hr_pick = _slot({top_pick.player_id}, lambda h: safe_float(getattr(h, "hr_score", 0.0), 0.0))
+    return top_pick, hr_pick
+
+
 def build_game_pick_role_map(rows: List[HitterRecord]) -> Dict[Tuple[int, int], str]:
     by_game: Dict[int, List[HitterRecord]] = {}
     for r in rows:
@@ -10950,34 +10988,12 @@ def build_game_pick_role_map(rows: List[HitterRecord]) -> Dict[Tuple[int, int], 
         # the Veen bug). A 15-PA "ISO .500" reads ~.191 here and no longer
         # outranks a 435-PA .249; the PA >= 15 gate below stays as a hard
         # eligibility cut but the shrinkage now does the real work.
-        def _shrunk_iso(h) -> float:
-            return shrink_to_league(safe_float(getattr(h, "season_iso", 0.0), 0.0),
-                                    safe_float(getattr(h, "season_pa", 0.0), 0.0),
-                                    LEAGUE_ISO)
-
-        def _power_rank(h) -> float:
-            return (100.0 * _shrunk_iso(h)
-                    + 10.0 * safe_float(getattr(h, "last5_hr", 0.0), 0.0)
-                    + 0.35 * safe_float(getattr(h, "hr_score", 0.0), 0.0))
-
-        def _power_slot(exclude: set) -> HitterRecord:
-            pool = [h for h in hitters if h.player_id not in exclude and getattr(h, "season_pa", 0) >= 15]
-            if not pool:
-                pool = [h for h in hitters if h.player_id not in exclude] or hitters
-            # ISO floor first — the one filter the archive validated
-            for cond in (
-                lambda h: _shrunk_iso(h) >= 0.180,
-                lambda h: True,
-            ):
-                tier = [h for h in pool if cond(h)]
-                if tier:
-                    return sorted(tier, key=_power_rank, reverse=True)[0]
-            return pool[0]
-
-        top_pick = _power_slot(used) if hitters else None
+        # THE SLOTS THEMSELVES LIVE IN _top_and_hr_slots (2026-09-01) so the
+        # builder's game_pick_type_map ranks identically. The reasoning that
+        # used to sit here with the code is kept below, unchanged.
+        top_pick, hr_pick = _top_and_hr_slots(hitters)
         used.add(top_pick.player_id)
         role_map.setdefault((game_pk, top_pick.player_id), []).append("TOP")
-
         # TOP/HR DOUBLE-UP (2026-08-12). Was: HR = _power_slot(used), which
         # excluded TOP's own player and re-ranked the REMAINDER by the same
         # ISO-led power rank TOP uses -- so on any night TOP's pick was also
@@ -11010,20 +11026,6 @@ def build_game_pick_role_map(rows: List[HitterRecord]) -> Dict[Tuple[int, int], 
         # connects in >=50% of games that have a homer.
         # Ranked on hr_score with the shrunk-ISO floor -- same tiering as
         # TOP, different rank key, excluding TOP's player.
-        def _hr_slot(exclude: set) -> HitterRecord:
-            pool = [h for h in hitters if h.player_id not in exclude and getattr(h, "season_pa", 0) >= 15]
-            if not pool:
-                pool = [h for h in hitters if h.player_id not in exclude] or list(hitters)
-            for cond in (
-                lambda h: _shrunk_iso(h) >= 0.180,
-                lambda h: True,
-            ):
-                tier = [h for h in pool if cond(h)]
-                if tier:
-                    return sorted(tier, key=lambda h: safe_float(getattr(h, "hr_score", 0.0), 0.0), reverse=True)[0]
-            return pool[0]
-
-        hr_pick = _hr_slot(used) if hitters else top_pick
         used.add(hr_pick.player_id)
         role_map.setdefault((game_pk, hr_pick.player_id), []).append("HR")
 
@@ -11550,6 +11552,22 @@ def classify_pool_buckets(rows: List[HitterRecord]) -> Dict[str, List[HitterReco
 
 
 def game_pick_type_map(rows: List[HitterRecord]) -> Dict[int, str]:
+    """The pairs/pools builder's and the text report's own game-slot tags.
+
+    ── ALIGNED WITH THE BADGES (2026-09-01) ─────────────────────────────────
+    This ranked TOP by overall_score and HR by overall_score behind an ISO
+    floor with a trap_flag filter, while build_game_pick_role_map -- the one
+    the SITE reads, the one that wears the badge -- ranks TOP on the ISO-led
+    power rank and HR on raw hr_score with no trap filter, because the
+    38-day replay said so (overall_score 19.4% vs iso-led 22.9%; trap_flag
+    15.5% vs 15.3% as a selector, noise). So the pair the builder built
+    "around the HR pick" could be built around a man who was not wearing the
+    HR badge. Donovan, shown the two, chose to align them. Both now call the
+    same slot pickers, so they cannot disagree about who a game's TOP and HR
+    are. Still 2 for HIT/HRR and the CONTACT anchor -- this map feeds tickets,
+    which want a bench; the role map's one-per-category is the badge's rule,
+    not the builder's. The emoji set is unchanged.
+    """
     by_game: Dict[int, List[HitterRecord]] = {}
     for r in rows:
         by_game.setdefault(r.game_pk, []).append(r)
@@ -11557,42 +11575,12 @@ def game_pick_type_map(rows: List[HitterRecord]) -> Dict[int, str]:
     tag_map: Dict[int, str] = {}
     for _, hitters in by_game.items():
         used: set[int] = set()
-        top_pick = pick_top(hitters, "overall_score", 1)[0]
+        top_pick, hr_pick = _top_and_hr_slots(hitters)
         used.add(top_pick.player_id)
-        # 2026-08-12, on request ("distinguishable, different emojis and
-        # wording"): this pick_type tag set used to be near-identical to the
-        # site's game_pick_role badges (🏆/🧨/🏁/💠/⚾) -- same categories,
-        # almost the same icons, easy to mistake one list for the other even
-        # though they can disagree (pick_type has no TOP/HR double-up, picks
-        # 2 for HIT/HRR where game_pick_role picks 1+). New set shares zero
-        # icons with game_pick_role OR final_hr_role (best_bet_type).
         tag_map[top_pick.player_id] = "🥇TOP"
-
-        # Docket #14 + #17 (2026-08-05). Measured on 1,377 graded HR-type
-        # picks: sub-.18-ISO picks homered 11.5% vs 19.5% above; overall_score
-        # out-predicts hr_score on homers (+7.3 vs +4.7 quartile spread); and
-        # 24 hitters on one recent slate were simultaneously the HR pick and
-        # trap-flagged — a self-contradiction. So the HR slot now ranks by
-        # overall_score behind an ISO floor, skipping trapped bats while any
-        # alternative exists. The fallback chain guarantees a pick in every
-        # game however thin the slate.
-        def _hr_slot() -> HitterRecord:
-            pool = [h for h in hitters if h.player_id not in used and getattr(h, "season_pa", 0) >= 15]
-            if not pool:
-                pool = [h for h in hitters if h.player_id not in used] or [top_pick]
-            for cond in (
-                lambda h: getattr(h, "season_iso", 0.0) >= 0.180 and not getattr(h, "trap_flag", False),
-                lambda h: getattr(h, "season_iso", 0.0) >= 0.180,
-                lambda h: not getattr(h, "trap_flag", False),
-                lambda h: True,
-            ):
-                tier = [h for h in pool if cond(h)]
-                if tier:
-                    return sorted(tier, key=lambda h: getattr(h, "overall_score", 0.0), reverse=True)[0]
-            return top_pick
-        hr_pick = _hr_slot() if len(hitters) > 1 else top_pick
-        used.add(hr_pick.player_id)
-        tag_map[hr_pick.player_id] = "🎆HR"
+        if hr_pick.player_id != top_pick.player_id:
+            used.add(hr_pick.player_id)
+            tag_map[hr_pick.player_id] = "🎆HR"
 
         hit_picks = pick_top(hitters, "hit_score", 2, used)
         used.update(h.player_id for h in hit_picks)

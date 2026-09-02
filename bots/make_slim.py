@@ -78,6 +78,18 @@ DROP_KEYS = {
     "pitcher_lineup_zone_damage",
     "game_log",
     "pitcher_pitch_mix_debug",
+    # ── BOILERPLATE, NOT REASONS (2026-09-01) ────────────────────────────
+    # Measured on the 2026-09-01 slate: hit_reason has 2 distinct values
+    # across 268 hitters, hrr_reason 1, contact_reason 1, recency_note 1
+    # ("None"). A sentence that is the same for everybody decides nothing,
+    # and the site had already stopped reading them (lib/verdict.js). The
+    # bot still computes them; they just stop travelling. matchup_reason
+    # (221 distinct that night) stays -- the site now prints it on every
+    # props card.
+    "hit_reason",
+    "hrr_reason",
+    "contact_reason",
+    "recency_note",
 }
 
 # NOTE: bbe_profile is deliberately NOT dropped. It's only 0.19 MB, and it's

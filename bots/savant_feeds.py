@@ -87,7 +87,16 @@ def _fetch_csv(url: str, key: str) -> Tuple[list, str]:
     try:
         req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "text/csv,*/*"})
         with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
-            raw = r.read().decode("utf-8", "replace")
+            # utf-8-SIG (2026-09-01): Savant's leaderboard CSVs open with a
+            # byte-order mark. Decoded as plain utf-8 the BOM rides into the
+            # first header cell, so a quoted header `"player_id"` came through
+            # DictReader as the key '\ufeff"player_id"' -- not player_id, and
+            # not any of the five spellings _row_id tries. team_defense never
+            # noticed because it joins on team_id, the SECOND column. This is
+            # the whole "NoJoinableRows(70parsed)" the steal board has been
+            # printing since the 08-31 defences went in: seventy catchers
+            # parsed, zero joinable, because column one had a ghost in it.
+            raw = r.read().decode("utf-8-sig", "replace")
     except urllib.error.HTTPError as e:
         return [], f"error:HTTP{e.code}"
     except Exception as e:                                  # noqa: BLE001
@@ -97,10 +106,24 @@ def _fetch_csv(url: str, key: str) -> Tuple[list, str]:
     head = raw.lstrip()[:200].lower()
     if head.startswith("<!doctype") or head.startswith("<html"):
         return [], "error:HTMLNotCSV"
-    rows = [r for r in csv.DictReader(io.StringIO(raw)) if r]
+    rows = [_clean_keys(r) for r in csv.DictReader(io.StringIO(raw)) if r]
     status = "ok" if rows else "empty"
     _CACHE[key] = (time.time(), rows, status)
     return rows, status
+
+
+def _clean_keys(row: dict) -> dict:
+    """Header cells as bare names: no BOM, no stray quotes, no whitespace.
+
+    Belt to utf-8-sig's braces. A header that arrives as '\ufeff"player_id"'
+    (BOM plus a quoted cell that csv could not unquote because the BOM sat in
+    front of the quote) becomes 'player_id'. Values are untouched.
+    """
+    out = {}
+    for k, v in row.items():
+        kk = str(k or "").replace("\ufeff", "").strip().strip('"').strip("'").strip()
+        out[kk] = v
+    return out
 
 
 def _f(v, default=None):
