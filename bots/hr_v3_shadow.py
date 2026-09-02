@@ -152,6 +152,56 @@ def score_row(prof: dict) -> tuple[float, str]:
     return round(100.0 * total / used, 2), "ok"
 
 
+# ── SIGNAL CONVERGENCE, SHADOW-FIRST (2026-09-01) ────────────────────────────
+#
+# load-the-truck's "Aligned Plays" ranks by how many of its overlays agree on
+# a bat. The comparison note (moonshot-loadthetruck-comparison-2026-08-24)
+# recommended testing the same idea here as a TIE-BREAK beside hr_score_v3,
+# shadow-first, the way v3 itself was built -- never let it into the blend
+# without evidence. Donovan picked it 2026-09-01.
+#
+# Seven signals the slate already publishes, one per SOURCE so the count is a
+# count of independent-ish evidence and not the same fact seven times:
+#   pitch    pitch_type_match_flag     his damage pitch is what the arm throws
+#   spot     weak_spot_flag            the arm bleeds to his lineup spot
+#   mistake  pitcher_mistake_match     the arm's mistake pitch is his pitch
+#   pace     hr_pace_flag              real EV gap, HR-prone arm right now
+#   air      wind_boost>0.02 or park_hr_factor>=1.05   the environment helps
+#   form     last5_hr>=1               went deep in the last five
+#   power    power_watch_flag or high_confidence_hr_flag   the bot's own power tell
+#
+# The count is published on every v3 row and graded by TIER (0,1,2,3,4+) each
+# night, and top-15 by v3 is re-run with the count as tie-break, so in a few
+# weeks "do converged bats homer more, and does the tie-break help" is a
+# number and not an argument. Zero points anywhere else.
+SIGNALS = (
+    ("pitch",   lambda r: bool(r.get("pitch_type_match_flag"))),
+    ("spot",    lambda r: bool(r.get("weak_spot_flag"))),
+    ("mistake", lambda r: bool(r.get("pitcher_mistake_match"))),
+    ("pace",    lambda r: bool(r.get("hr_pace_flag"))),
+    ("air",     lambda r: (num(r.get("weather_wind_boost")) or 0.0) > 0.02
+                          or (num(r.get("park_hr_factor")) or 0.0) >= 1.05),
+    ("form",    lambda r: (num(r.get("last5_hr")) or 0.0) >= 1),
+    ("power",   lambda r: bool(r.get("power_watch_flag")) or bool(r.get("high_confidence_hr_flag"))),
+)
+
+
+def signals_of(row: dict) -> list[str]:
+    """Names of the signals firing on one slate row. Never raises."""
+    out = []
+    for name, fn in SIGNALS:
+        try:
+            if fn(row):
+                out.append(name)
+        except Exception:
+            continue
+    return out
+
+
+def tier_of(count: int) -> str:
+    return "4+" if count >= 4 else str(int(count))
+
+
 def load_features(date: str) -> dict[int, dict]:
     path = BBE / f"features_{date}.jsonl"
     if not path.exists():
@@ -190,7 +240,10 @@ def cmd_score(args) -> int:
         pid = int(r["player_id"])
         prof = feats.get(pid, {})
         v3, status = score_row(prof)
+        sigs = signals_of(r)
         out.append({
+            "signals": sigs,
+            "signal_count": len(sigs),
             "player_id": pid,
             "name": r.get("name"),
             "team": r.get("team"),
@@ -217,6 +270,7 @@ def cmd_score(args) -> int:
         "terms": [{"field": f, "weight": w, "league_low": lo, "league_high": hi}
                   for f, w, lo, hi in TERMS],
         "min_bbe": MIN_BBE,
+        "signals": [n for n, _ in SIGNALS],
         "rows": sorted(out, key=lambda r: -r["hr_score_v3"]),
     }
     dest = DATA / f"hr_v3_{date}.json"
@@ -281,6 +335,24 @@ def cmd_grade(args) -> int:
     # designation comparison, so the record can be read against the real board
     des = [r for r in rows if "TOP" in str(r.get("game_pick_role") or "").split("/")]
     rec["top_badge"] = [sum(1 for r in des if int(r["player_id"]) in homered), len(des)]
+    # ── convergence, graded (2026-09-01) ─────────────────────────────────
+    # HR rate by tier, and top-15 by v3 with the count as tie-break vs raw.
+    # Rows scored before the field existed carry no count and skip the tier.
+    tiers: dict[str, list[int]] = {}
+    for r in rows:
+        if r.get("signal_count") is None:
+            continue
+        t = tier_of(int(r["signal_count"]))
+        b = tiers.setdefault(t, [0, 0])
+        b[1] += 1
+        if int(r["player_id"]) in homered:
+            b[0] += 1
+    rec["sig_tiers"] = tiers
+    if any(r.get("signal_count") is not None for r in rows):
+        vals = [r for r in rows if r.get("hr_score_v3") is not None]
+        vals.sort(key=lambda r: (r["hr_score_v3"], int(r.get("signal_count") or 0)), reverse=True)
+        sel = vals[:15]
+        rec["v3_sig_top15"] = [sum(1 for r in sel if int(r["player_id"]) in homered), len(sel)]
 
     ledger = DATA / "hr_v3_record.jsonl"
     prior = []
@@ -304,6 +376,20 @@ def cmd_grade(args) -> int:
         print(f"  top {n:<3}   {a3:4}/{b3:<5} = {p3:5.1f}%   {al:4}/{bl:<5} = {pl:5.1f}%")
     tb = agg("top_badge")
     print(f"  TOP badge {tb[0]:4}/{tb[1]:<5} = {tb[2]:5.1f}%")
+    # convergence tiers, pooled across every night that carried the count
+    pooled: dict[str, list[int]] = {}
+    for p in prior:
+        for t, (h, n) in (p.get("sig_tiers") or {}).items():
+            b = pooled.setdefault(t, [0, 0]); b[0] += h; b[1] += n
+    if pooled:
+        print("\n  signals agreeing -> HR rate (shadow; zero points anywhere)")
+        for t in ("0", "1", "2", "3", "4+"):
+            if t in pooled:
+                h, n = pooled[t]
+                print(f"    {t:>2} signals  {h:4}/{n:<5} = {(100.0 * h / n if n else 0):5.1f}%")
+        a, b, pct = agg("v3_sig_top15")
+        a3, b3, p3 = agg("v3_top15")
+        print(f"    top-15 by v3, count as tie-break  {a:4}/{b:<5} = {pct:5.1f}%   (raw v3 top-15 {p3:5.1f}%)")
     print(f"\n  {len(prior)} night(s) on the record. It decides v3 at 9c, not before.")
     return 0
 
