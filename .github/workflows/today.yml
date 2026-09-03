@@ -227,6 +227,14 @@ jobs:
         run: python bots/playoff_odds.py --out public/data/current/playoff_odds.json
         continue-on-error: true
 
+      # 🔄 COMEBACK BOARD (2026-09-03). Line scores for the whole season, one
+      # request per month rather than one per game -- six or seven calls, not
+      # two and a half thousand. Same continue-on-error rule: a season-long
+      # curiosity must never be able to stop a slate publishing.
+      - name: Comeback wins and blown leads
+        run: python bots/comeback_board.py --out public/data/current/comeback_board.json
+        continue-on-error: true
+
       - name: Save SQLite cache
         uses: actions/cache/save@v4
         with:
