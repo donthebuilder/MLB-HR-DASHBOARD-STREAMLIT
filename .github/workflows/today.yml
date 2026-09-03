@@ -218,6 +218,15 @@ jobs:
         run: python bots/player_splits.py --slate public/data/current/today.json --label today
         continue-on-error: true
 
+      # 🏆 PLAYOFF ODDS + WORLD SERIES (2026-09-03). Ten thousand simulations of
+      # every remaining game, seeded and bracketed. It reads standings and the
+      # schedule and nothing this workflow produced, so it is independent of
+      # everything above it -- and continue-on-error because a slate must never
+      # fail to publish over a September novelty. ~10 KB out.
+      - name: Playoff and World Series odds
+        run: python bots/playoff_odds.py --out public/data/current/playoff_odds.json
+        continue-on-error: true
+
       - name: Save SQLite cache
         uses: actions/cache/save@v4
         with:
