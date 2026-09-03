@@ -235,6 +235,16 @@ jobs:
         run: python bots/comeback_board.py --out public/data/current/comeback_board.json
         continue-on-error: true
 
+      # 💰 MONEYLINE DISAGREEMENT LOG (2026-09-03). Runs AFTER make_slim, on
+      # purpose: it reads today_slim.json for the probable starters, so it has
+      # to come after the file exists. Needs ODDS_API_KEY -- the same key that
+      # 403s on player props and works fine on /odds/ game lines.
+      - name: Moneyline board
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+        run: python bots/moneyline_bot.py --out public/data/current/moneyline_board.json
+        continue-on-error: true
+
       - name: Save SQLite cache
         uses: actions/cache/save@v4
         with:
