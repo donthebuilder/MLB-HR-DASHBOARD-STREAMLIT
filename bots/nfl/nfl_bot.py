@@ -90,6 +90,20 @@ RESEARCH = [
     ("f_ngs_avg_yac_above_expectation", "YACOE", "YAC above expected (NGS)", 2, False),
     ("f_ngs_rush_yards_over_expected_per_att", "RYOE", "Rush yards over expected per attempt (NGS)", 2, False),
     ("f_passing_yards", "PAYD", "Passing yards per game", 1, False),
+    # PASSING TOUCHDOWNS (2026-09-03). `passing_tds` has been rolled into the
+    # feature table by PLAYER_FORM since the NFL bot was written; it was simply
+    # never published, because no market scores off it. That was fine while the
+    # only consumer was TUDDY's own boards.
+    #
+    # FRANCHISE is a second consumer and it broke on the gap. `td_actual` is
+    # `td_rec + td_rush` (nfl_features.usage) -- receiving plus rushing, never
+    # passing -- so the TD column is a QUARTERBACK'S RUSHING TDs and nothing
+    # else. FRANCHISE's fantasy projection reads these per-game stats, so every
+    # QB projection was low by roughly 6-8 points a game, on the draft board,
+    # the lineup page and the coach page alike. Publishing this one column
+    # closes all three at once, and it is additive with TD rather than
+    # overlapping it.
+    ("f_passing_tds", "PATD", "Passing touchdowns per game", 2, False),
     ("f_attempts", "ATT", "Pass attempts per game", 1, False),
     ("f_passing_cpoe", "CPOE", "Completion % over expected", 1, False),
     ("f_fg_made", "FGM", "Field goals made per game", 2, False),

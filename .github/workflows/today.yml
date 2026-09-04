@@ -287,6 +287,33 @@ jobs:
         run: python bots/player_splits.py --slate public/data/current/today.json --label today
         continue-on-error: true
 
+      # 🏆 PLAYOFF ODDS + WORLD SERIES (2026-09-03). Ten thousand simulations of
+      # every remaining game, seeded and bracketed. It reads standings and the
+      # schedule and nothing this workflow produced, so it is independent of
+      # everything above it -- and continue-on-error because a slate must never
+      # fail to publish over a September novelty. ~10 KB out.
+      - name: Playoff and World Series odds
+        run: python bots/playoff_odds.py --out public/data/current/playoff_odds.json
+        continue-on-error: true
+
+      # 🔄 COMEBACK BOARD (2026-09-03). Line scores for the whole season, one
+      # request per month rather than one per game -- six or seven calls, not
+      # two and a half thousand. Same continue-on-error rule: a season-long
+      # curiosity must never be able to stop a slate publishing.
+      - name: Comeback wins and blown leads
+        run: python bots/comeback_board.py --out public/data/current/comeback_board.json
+        continue-on-error: true
+
+      # 💰 MONEYLINE DISAGREEMENT LOG (2026-09-03). Runs AFTER make_slim, on
+      # purpose: it reads today_slim.json for the probable starters, so it has
+      # to come after the file exists. Needs ODDS_API_KEY -- the same key that
+      # 403s on player props and works fine on /odds/ game lines.
+      - name: Moneyline board
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+        run: python bots/moneyline_bot.py --out public/data/current/moneyline_board.json
+        continue-on-error: true
+
       - name: Save SQLite cache
         uses: actions/cache/save@v4
         with:

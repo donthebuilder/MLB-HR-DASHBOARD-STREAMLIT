@@ -52,6 +52,12 @@ PUBLISH_FILES=(
   context_pack_latest.json
   # fence-line contact board from spray_cache (2026-08-08)
   fence_board.json
+  # playoff + World Series odds (2026-09-03) -- ~10 KB, rebuilt daily
+  playoff_odds.json
+  # comeback wins / blown leads (2026-09-03) -- ~40 KB, rebuilt daily
+  comeback_board.json
+  # moneyline disagreement log + running grade (2026-09-03)
+  moneyline_board.json
   # ── pick_lock's LEDGER (added 2026-08-15) ──
   # This file was missing from this list from the day pick_lock.py shipped
   # (2026-08-09), and its absence made the whole feature a no-op.
