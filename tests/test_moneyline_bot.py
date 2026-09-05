@@ -179,8 +179,16 @@ def test_payload_still_admits_what_the_model_cannot_see():
     trying to prevent. So it pins the CURRENT limitation instead.
     """
     out = payload([], settle([_pick(+150)], {1: "HOM"}))
-    assert "blind" in out["method"]
+    # 2026-09-05: the base is OBP/SLG now, and the limitation moved with it --
+    # the model is no longer "blind", it is BEHIND: season rates cannot see
+    # tonight's lineup card. The method must still say so, and still name
+    # the bullpen and injuries it cannot see. And batting average must be
+    # named as NOT an input, because that is the whole Moneyball point.
+    assert "behind" in out["method"]
     assert "bullpen" in out["method"] and "injuries" in out["method"]
+    assert "Batting average is not an input" in out["method"]
+    assert out["team_model"]["out_of_sample"] is None      # nothing claimed until the harness runs
+    assert set(out["record_by_base"]) == {"obp/slg", "record"}
     assert out["starter_weight"] and out["starter_innings"]
     import json
     json.dumps(out)
@@ -404,3 +412,33 @@ def test_giving_the_model_eyes_reduces_both_the_picks_and_the_losses():
     assert seeing["graded"] < blind["graded"] * 0.6, (blind["graded"], seeing["graded"])
     # And better ones.
     assert seeing["roi"] > blind["roi"], (blind["roi"], seeing["roi"])
+
+
+# ── the OBP/SLG base (2026-09-05) ───────────────────────────────────────────
+
+def test_the_base_is_obp_slg_when_rates_are_known_and_the_record_when_not():
+    import moneyball as mb
+    good = mb.TeamRates(1, "H", .340, .440, .300, .380, games=100, runs=500, wins=60, losses=40)
+    bad = mb.TeamRates(2, "A", .300, .370, .330, .430, games=100, runs=400, wins=40, losses=60)
+    ln = Line(game_pk=1, date="d", home="H", away="A", home_price=-150, away_price=+130)
+    with_rates = make_picks([ln], {"H": .55, "A": .45}, {"H": good, "A": bad})
+    without = make_picks([ln], {"H": .55, "A": .45})
+    assert with_rates and with_rates[0].base == "obp/slg"
+    assert without and without[0].base == "record"
+    # Same lineups on paper, priced from what they DO, not what they went.
+    assert with_rates[0].model_p != without[0].model_p
+
+
+def test_a_side_with_too_few_games_falls_back_to_the_record_and_says_so():
+    import moneyball as mb
+    early = mb.TeamRates(1, "H", .400, .500, .250, .300, games=5, runs=30, wins=4, losses=1)
+    opp = mb.TeamRates(2, "A", .315, .400, .315, .400, games=100, runs=450, wins=50, losses=50)
+    ln = Line(game_pk=1, date="d", home="H", away="A", home_price=+150, away_price=-170)
+    picks = make_picks([ln], {"H": .60, "A": .45}, {"H": early, "A": opp})
+    assert picks and picks[0].base == "record"
+
+
+def test_old_history_rows_without_a_base_still_load():
+    row = _pick(+150).__dict__.copy()
+    row.pop("base")
+    assert Pick(**row).base == "record"

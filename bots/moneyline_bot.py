@@ -102,6 +102,21 @@ from dataclasses import dataclass, field
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from playoff_odds import Team, win_probability  # noqa: E402
+import moneyball  # noqa: E402
+
+# ── THE BASE IS OBP AND SLG NOW, NOT THE RECORD (2026-09-05) ─────────────────
+#
+# Donovan: "linear regression, OBP and SLG over BA, weighted — think Moneyball,
+# Oakland A's. And tell me how that does out of sample."
+#
+# bots/moneyball.py is that model and its own walk-forward harness. Here it
+# REPLACES win_probability as the team base whenever both sides have usable
+# rates (20+ games, sane numbers); the record-only log5 stays as the fallback
+# for the first weeks of a season and for a team the rates feed missed, and
+# every pick says which base priced it. The starters sit on top of either,
+# unchanged. The out-of-sample grade is published by `python bots/moneyball.py`
+# as moneyball_backtest.json and rendered beside this board -- the number is
+# the bot's to earn, not this comment's to claim.
 
 # A model that sees only records has no business acting on small disagreements.
 # Five points is wide: it is roughly the gap between a coin flip and a -120
@@ -196,11 +211,25 @@ def starter_shift(home_fip, away_fip, baseline: float) -> float:
     return (home_saved - away_saved) * RUNS_TO_WINS * STARTER_WEIGHT
 
 
+def team_base(home_strength: float, away_strength: float,
+              home_rates=None, away_rates=None, league=None,
+              coef: moneyball.Coef = moneyball.PRIOR) -> tuple[float, str]:
+    """P(home) before the starters, and the name of what produced it."""
+    if home_rates is not None and away_rates is not None and league is not None:
+        p = moneyball.game_probability(home_rates, away_rates, league, coef)
+        if p is not None:
+            return p, "obp/slg"
+    return win_probability(home_strength, away_strength), "record"
+
+
 def game_probability(home_strength: float, away_strength: float,
                      home_fip=None, away_fip=None,
-                     baseline: float = FALLBACK_LEAGUE_FIP) -> float:
-    """The model: a season team base, moved by tonight's starters."""
-    base = win_probability(home_strength, away_strength)
+                     baseline: float = FALLBACK_LEAGUE_FIP,
+                     home_rates=None, away_rates=None, league=None,
+                     coef: moneyball.Coef = moneyball.PRIOR) -> float:
+    """The model: a team base (OBP/SLG when known, else the record), moved
+    by tonight's starters."""
+    base, _ = team_base(home_strength, away_strength, home_rates, away_rates, league, coef)
     return min(0.95, max(0.05, base + starter_shift(home_fip, away_fip, baseline)))
 
 
@@ -251,6 +280,10 @@ class Pick:
     starter_shift: float = 0.0
     home_sp: str = ""
     away_sp: str = ""
+    # Which team model priced the base: "obp/slg" (moneyball.py) or "record"
+    # (log5 on the standings). Published per pick so the grade can be split
+    # by base once there are enough of each to split.
+    base: str = "record"
 
 
 @dataclass
@@ -270,21 +303,29 @@ class Line:
     away_sp: str = ""
 
 
-def make_picks(lines: list[Line], strength: dict[str, float]) -> list[Pick]:
+def make_picks(lines: list[Line], strength: dict[str, float],
+               rates: dict[str, "moneyball.TeamRates"] | None = None,
+               coef: moneyball.Coef = moneyball.PRIOR) -> list[Pick]:
     """One pick per game, or none. Pure: lines and strengths in, picks out.
 
     The slate's own starters set the baseline (see league_baseline), so this
-    takes the whole night at once rather than a game at a time.
+    takes the whole night at once rather than a game at a time. `rates` maps
+    the same keys as `strength` to moneyball.TeamRates; when absent for a
+    side, that game is priced from the record, and the pick says so.
     """
     baseline = league_baseline(
         [f for ln in lines for f in (ln.home_fip, ln.away_fip)])
+    rates = rates or {}
+    league = moneyball.league_of(list({id(t): t for t in rates.values()}.values())) if rates else None
     out: list[Pick] = []
     for ln in lines:
         sh, sa = strength.get(ln.home), strength.get(ln.away)
         if sh is None or sa is None:
             continue
         shift = starter_shift(ln.home_fip, ln.away_fip, baseline)
-        model_home = game_probability(sh, sa, ln.home_fip, ln.away_fip, baseline)
+        _, base_name = team_base(sh, sa, rates.get(ln.home), rates.get(ln.away), league, coef)
+        model_home = game_probability(sh, sa, ln.home_fip, ln.away_fip, baseline,
+                                      rates.get(ln.home), rates.get(ln.away), league, coef)
         home_fair, away_fair, hold = devig(ln.home_price, ln.away_price)
         if home_fair is None:
             continue
@@ -305,6 +346,7 @@ def make_picks(lines: list[Line], strength: dict[str, float]) -> list[Pick]:
             hold=round(hold, 4), book=ln.book,
             starter_shift=round(shift, 4),
             home_sp=ln.home_sp, away_sp=ln.away_sp,
+            base=base_name,
         ))
     return sorted(out, key=lambda p: -p.edge)
 
@@ -342,23 +384,39 @@ def record(picks: list[Pick]) -> dict:
     }
 
 
-def payload(today: list[Pick], history: list[Pick]) -> dict:
+def payload(today: list[Pick], history: list[Pick],
+            coef: moneyball.Coef | None = None, backtest: dict | None = None) -> dict:
+    by_base = {}
+    for name in ("obp/slg", "record"):
+        by_base[name] = record([p for p in history if getattr(p, "base", "record") == name])
     return {
         "built_at": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
         "edge_floor": EDGE_FLOOR,
         "worst_price": WORST_PRICE,
         "method": (
-            "A team base — log5 on records regressed toward .500, plus home "
-            "field, the same model the playoff odds use — moved by tonight's "
-            "probable starters, measured against the average starter on this "
-            "slate rather than a fixed league number, so the adjustment is "
-            "zero-sum across the night. It still cannot see bullpen usage, "
-            "injuries or travel, and the market can, so a large disagreement "
-            "may still be the model being blind rather than right. Prices are "
-            "de-vigged proportionally (the simple method; it shades favourites "
-            "slightly) with the book's raw hold published beside every line. "
+            "A team base from on-base and slugging, not the record: runs per "
+            "game by linear regression on OBP and SLG (OBP weighted heavier, "
+            "the Moneyball argument), each lineup against the staff it faces, "
+            "Pythagenpat to a win probability, home field as an odds "
+            "multiplier. Batting average is not an input. Before a team has "
+            "20 games the record-only log5 stands in, and each pick says which "
+            "priced it. Then tonight's probable starters move it, measured "
+            "against the average starter on this slate. It still cannot see "
+            "tonight's lineup card, the bullpen, injuries or travel, and the "
+            "market can, so a large disagreement may still be the model being "
+            "behind rather than right. Prices are de-vigged proportionally "
+            "(the simple method; it shades favourites slightly) with the book's "
+            "raw hold published beside every line. "
             f"Nothing is picked below a {int(EDGE_FLOOR * 100)}-point disagreement."
         ),
+        "team_model": {
+            "coef": ({"intercept": round(coef.intercept, 3), "obp": round(coef.obp, 2),
+                      "slg": round(coef.slg, 2), "obp_per_slg": round(coef.obp_per_slg, 2),
+                      "rows": coef.rows, "prior_share": coef.shrink} if coef else None),
+            # The walk-forward grade from bots/moneyball.py, if it has run.
+            "out_of_sample": backtest,
+        },
+        "record_by_base": by_base,
         "starter_weight": STARTER_WEIGHT,
         "starter_innings": STARTER_INNINGS,
         "record": record(history),
@@ -481,6 +539,7 @@ def main(argv=None):
     ap.add_argument("--season", type=int, default=dt.date.today().year)
     ap.add_argument("--out", default="public/data/current/moneyline_board.json")
     ap.add_argument("--history", default="public/data/current/moneyline_board.json")
+    ap.add_argument("--backtest", default="public/data/current/moneyball_backtest.json")
     args = ap.parse_args(argv)
 
     teams, _ = fetch_season(args.season)
@@ -493,6 +552,35 @@ def main(argv=None):
         with open(args.history) as fh:
             for row in (json.load(fh) or {}).get("history", []):
                 prior.append(Pick(**row))
+    except Exception:
+        pass
+
+    # The team rates, keyed the same two ways as `strength`; and the fitted
+    # regression plus the out-of-sample grade from moneyball.py's last run,
+    # so the base the bot prices with is the one the page reports on.
+    rates: dict[str, moneyball.TeamRates] = {}
+    coef = moneyball.PRIOR
+    backtest = None
+    try:
+        for tr in moneyball.fetch_rates(args.season):
+            rates[tr.abbr] = tr
+            for t in teams:
+                if t.team_id == tr.team_id and t.name:
+                    rates[t.name] = tr
+        coef = moneyball.fit_runs(moneyball.fit_rows_from(list({id(t): t for t in rates.values()}.values())))
+        print(f"  team rates for {len({id(t) for t in rates.values()})} team(s); "
+              f"OBP worth {coef.obp_per_slg:.2f}x SLG per point")
+    except Exception as e:  # the record-only base still prices the night
+        print(f"  team rates unavailable ({e}); pricing from records")
+    try:
+        with open(args.backtest) as fh:
+            bt = json.load(fh) or {}
+            backtest = {k: bt.get(k) for k in ("as_of", "games", "months", "moneyball", "records_only",
+                                                "home_always", "coin", "verdict", "limits", "calibration")}
+            if bt.get("coef"):
+                # Prefer the coefficients fitted on every monthly snapshot.
+                c = bt["coef"]
+                coef = moneyball.Coef(c["intercept"], c["obp"], c["slg"], c.get("rows", 0), c.get("prior_share", 0))
     except Exception:
         pass
 
@@ -517,10 +605,10 @@ def main(argv=None):
                     break
     known = sum(1 for ln in lines if ln.home_fip and ln.away_fip)
     print(f"  starters known for {known}/{len(lines)} game(s)")
-    today = make_picks(lines, strength)
+    today = make_picks(lines, strength, rates, coef)
     print(f"  {len(lines)} game line(s) → {len(today)} pick(s) over the edge floor")
 
-    out = payload(today, prior)
+    out = payload(today, prior, coef, backtest)
     with open(args.out, "w") as fh:
         json.dump(out, fh, separators=(",", ":"))
     print(f"wrote {args.out} — record {out['record']['wins']}-{out['record']['losses']}, "

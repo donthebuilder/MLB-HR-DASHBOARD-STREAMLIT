@@ -58,6 +58,8 @@ PUBLISH_FILES=(
   comeback_board.json
   # moneyline disagreement log + running grade (2026-09-03)
   moneyline_board.json
+  # the OBP/SLG team model's walk-forward grade (2026-09-05) -- ~5 KB
+  moneyball_backtest.json
   # ── pick_lock's LEDGER (added 2026-08-15) ──
   # This file was missing from this list from the day pick_lock.py shipped
   # (2026-08-09), and its absence made the whole feature a no-op.
