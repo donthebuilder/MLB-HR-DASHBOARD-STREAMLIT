@@ -308,6 +308,15 @@ jobs:
       # purpose: it reads today_slim.json for the probable starters, so it has
       # to come after the file exists. Needs ODDS_API_KEY -- the same key that
       # 403s on player props and works fine on /odds/ game lines.
+      # ⚾ MONEYBALL (2026-09-05). Fits runs/game on OBP+SLG from month-end
+      # snapshots and grades the team model walk-forward against the record-
+      # only one. ~35 statsapi calls. Runs BEFORE the moneyline board so the
+      # board prices tonight with the coefficients this just fitted and can
+      # print the out-of-sample grade beside its record.
+      - name: Moneyball team model, out of sample
+        run: python bots/moneyball.py --out public/data/current/moneyball_backtest.json
+        continue-on-error: true
+
       - name: Moneyline board
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}

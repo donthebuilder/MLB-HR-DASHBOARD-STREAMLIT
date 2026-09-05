@@ -98,6 +98,14 @@ class Team:
     division: str        # 'AL East', 'NL Central', ...
     wins: int = 0
     losses: int = 0
+    # The live race, straight from the standings feed (see fetch_season).
+    # Defaults keep every existing test and every synthetic season valid.
+    clinch: str = ""             # '', 'w', 'x', 'y', 'z'
+    eliminated: bool = False     # out of the division AND the wild card
+    division_rank: int = 0
+    wild_card_rank: int = 0
+    games_back: str = "-"
+    wild_card_games_back: str = "-"
 
     @property
     def played(self) -> int:
@@ -138,6 +146,7 @@ class Odds:
     win_league: float = 0.0
     win_world_series: float = 0.0
     seed_counts: dict = field(default_factory=dict)
+    race: dict = field(default_factory=dict)   # the live standings snapshot
 
 
 # ── the arithmetic ───────────────────────────────────────────────────────────
@@ -247,6 +256,9 @@ def simulate(teams: list[Team], remaining: list[Game], sims: int = DEFAULT_SIMS,
     tally = {t.team_id: Odds(
         team_id=t.team_id, abbr=t.abbr, name=t.name, league=t.league,
         division=t.division, wins=t.wins, losses=t.losses,
+        race={"clinch": t.clinch, "eliminated": t.eliminated,
+              "division_rank": t.division_rank, "wild_card_rank": t.wild_card_rank,
+              "games_back": t.games_back, "wild_card_games_back": t.wild_card_games_back},
         strength=round(t.strength, 4), seed_counts={},
     ) for t in teams}
 
@@ -308,10 +320,13 @@ def simulate(teams: list[Team], remaining: list[Game], sims: int = DEFAULT_SIMS,
     return sorted(tally.values(), key=lambda r: (-r.win_world_series, -r.make_playoffs, r.abbr))
 
 
-def payload(rows: list[Odds], sims: int, source_note: str = "") -> dict:
+def payload(rows: list[Odds], sims: int, source_note: str = "", season: int | None = None) -> dict:
     """The published shape. Percentages stay as 0-1 shares; the site formats."""
     return {
         "built_at": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
+        # The site reads live standings for this season beside the odds
+        # (PennantRace.js), so it needs to know which season this is.
+        "season": season or dt.date.today().year,
         "sims": sims,
         "regression_games": REGRESSION_GAMES,
         "home_win_rate": HOME_WIN_RATE,
@@ -332,6 +347,7 @@ def payload(rows: list[Odds], sims: int, source_note: str = "") -> dict:
             "wild_card": r.wild_card, "top_seed": r.top_seed,
             "win_league": r.win_league, "win_world_series": r.win_world_series,
             "seeds": r.seed_counts,
+            "race": r.race,
         } for r in rows],
     }
 
@@ -351,6 +367,7 @@ def fetch_season(season: int, on_date: str | None = None, timeout: int = 20):
     import requests  # local import: the pure half must import with no deps
 
     teams: list[Team] = []
+    abbrs = fetch_team_abbrs(timeout)
     r = requests.get(f"{STATS_API}/standings",
                      params={"leagueId": "103,104", "season": season,
                              "standingsTypes": "regularSeason"}, timeout=timeout)
@@ -361,14 +378,39 @@ def fetch_season(season: int, on_date: str | None = None, timeout: int = 20):
         league = "AL" if league_id == 103 else "NL"
         for tr in record.get("teamRecords", []):
             t = tr.get("team") or {}
+            tid = int(t.get("id") or 0)
+            name = str(t.get("name") or "")
+            # /teams first; the standings object as a fallback; and if both
+            # are empty, the nickname's first three letters rather than "",
+            # because a board that says nothing is worse than one that says
+            # "BRE".
+            ab = (abbrs.get(tid)
+                  or str(t.get("abbreviation") or "").upper()
+                  or (name.split()[-1][:3].upper() if name else ""))
+            # THE LIVE RACE, as the league itself scores it. clinchIndicator is
+            # the standings page's own letter: w wild card, x playoff berth,
+            # y division, z best record. eliminationNumber / wildCard... read
+            # "E" once a path is gone. Published raw so the site can lock a
+            # clinched team at 100% and an eliminated one at 0 instead of
+            # printing a simulated 99.6% for a team that has already popped
+            # the champagne.
+            clinch = str(tr.get("clinchIndicator") or "")
+            div_elim = str(tr.get("eliminationNumber") or "") == "E"
+            wc_elim = str(tr.get("wildCardEliminationNumber") or "") == "E"
             teams.append(Team(
-                team_id=int(t.get("id") or 0),
-                abbr=str(t.get("abbreviation") or t.get("teamName") or "")[:3].upper(),
-                name=str(t.get("name") or ""),
+                team_id=tid,
+                abbr=ab,
+                name=name,
                 league=league,
                 division=str(division or t.get("division", {}).get("id") or "?"),
                 wins=int(tr.get("wins") or 0),
                 losses=int(tr.get("losses") or 0),
+                clinch=clinch,
+                eliminated=div_elim and wc_elim,
+                division_rank=int(tr.get("divisionRank") or 0),
+                wild_card_rank=int(tr.get("wildCardRank") or 0),
+                games_back=str(tr.get("gamesBack") or "-"),
+                wild_card_games_back=str(tr.get("wildCardGamesBack") or "-"),
             ))
 
     # Division names read better than ids on a board, and the divisions
@@ -403,6 +445,32 @@ def fetch_season(season: int, on_date: str | None = None, timeout: int = 20):
     return teams, remaining
 
 
+def fetch_team_abbrs(timeout: int = 20) -> dict[int, str]:
+    """team id -> abbreviation, from /teams. One cheap call, used by three bots.
+
+    THE BUG THIS FIXES (2026-09-05). Neither /standings nor /schedule carries
+    `abbreviation` on its team objects -- they carry id, name and link -- so
+    `t.get("abbreviation") or t.get("teamName")` was silently "" for every
+    team. The playoff board rendered a division name and no team, and the
+    comeback board keyed every game on "?" and published one 2110-2110 row.
+    The only endpoint that reliably has the abbreviation is /teams, so it is
+    fetched once and joined on id.
+    """
+    import requests
+    out: dict[int, str] = {}
+    try:
+        r = requests.get(f"{STATS_API}/teams", params={"sportId": 1}, timeout=timeout)
+        if r.ok:
+            for t in (r.json() or {}).get("teams", []):
+                tid = int(t.get("id") or 0)
+                ab = str(t.get("abbreviation") or t.get("teamCode") or "").upper()
+                if tid and ab:
+                    out[tid] = ab
+    except Exception:
+        pass
+    return out
+
+
 def main(argv=None):
     import argparse
     ap = argparse.ArgumentParser(description="MLB playoff and World Series odds")
@@ -417,7 +485,7 @@ def main(argv=None):
         raise SystemExit("standings came back empty — refusing to publish an empty board")
     rows = simulate(teams, remaining, sims=args.sims, seed=args.seed)
     note = f"{len(remaining)} regular-season games left when this ran."
-    out = payload(rows, args.sims, note)
+    out = payload(rows, args.sims, note, season=args.season)
     with open(args.out, "w") as fh:
         json.dump(out, fh, separators=(",", ":"))
     top = rows[0]

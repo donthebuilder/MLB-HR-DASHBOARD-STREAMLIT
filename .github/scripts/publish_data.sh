@@ -58,6 +58,8 @@ PUBLISH_FILES=(
   comeback_board.json
   # moneyline disagreement log + running grade (2026-09-03)
   moneyline_board.json
+  # the OBP/SLG team model's walk-forward grade (2026-09-05) -- ~5 KB
+  moneyball_backtest.json
   # ── pick_lock's LEDGER (added 2026-08-15) ──
   # This file was missing from this list from the day pick_lock.py shipped
   # (2026-08-09), and its absence made the whole feature a no-op.
@@ -142,6 +144,13 @@ GRADED_KEEP=150
 # PUBLISH_FILES. ~50 KB a night, so 120 days is about 6 MB.
 ODDS_GLOB="odds_20*.json"
 ODDS_KEEP=120
+
+# Game moneylines, one file per slate date, written by bots/moneyline_bot.py
+# (2026-09-05). Same reason as ODDS_GLOB: a closing h2h price cannot be
+# re-fetched, and without these the team model's ROI against the market can
+# never be measured -- only its log loss against the outcome. ~3 KB a night.
+ML_PRICES_GLOB="moneyline_prices_20*.json"
+ML_PRICES_KEEP=200
 
 # MODEL FOUNDATION (2026-08-21, Tasks 4 & 5). Two append-only logs, same
 # accumulate-and-cap treatment as GRADED/ODDS above -- carry_forward()'s
@@ -422,6 +431,7 @@ stage_local() {
   for g in "$SRC"/data/$GRADED_GLOB "$SRC"/data/current/$GRADED_GLOB \
            "$SRC"/data/$GRADED_JSON_GLOB "$SRC"/data/current/$GRADED_JSON_GLOB \
            "$SRC"/data/$ODDS_GLOB "$SRC"/data/current/$ODDS_GLOB \
+           "$SRC"/data/$ML_PRICES_GLOB "$SRC"/data/current/$ML_PRICES_GLOB \
            "$SRC"/data/$PRED_LOG_GLOB "$SRC"/data/current/$PRED_LOG_GLOB \
            "$SRC"/data/$OUTCOME_LOG_GLOB "$SRC"/data/current/$OUTCOME_LOG_GLOB \
            "$SRC"/data/$POR_LOG_GLOB "$SRC"/data/current/$POR_LOG_GLOB \
@@ -471,6 +481,7 @@ carry_forward() {
   # glob matched nothing and the script died trying to count zero files.
   # find exits 0 on no matches.
   for spec in "$GRADED_GLOB:$GRADED_KEEP" "$GRADED_JSON_GLOB:$GRADED_KEEP" "$ODDS_GLOB:$ODDS_KEEP" \
+              "$ML_PRICES_GLOB:$ML_PRICES_KEEP" \
               "$PRED_LOG_GLOB:$PRED_LOG_KEEP" "$OUTCOME_LOG_GLOB:$OUTCOME_LOG_KEEP" \
               "$POR_LOG_GLOB:$POR_LOG_KEEP" \
               "$NFL_PRED_LOG_GLOB:$NFL_PRED_LOG_KEEP" "$NFL_OUTCOME_LOG_GLOB:$NFL_OUTCOME_LOG_KEEP" \

@@ -18,7 +18,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "bots"))
 from moneyline_bot import (  # noqa: E402
     EDGE_FLOOR, FALLBACK_LEAGUE_FIP, STARTER_INNINGS, STARTER_WEIGHT,
     WORST_PRICE, Line, Pick, devig, game_probability, implied, league_baseline,
-    make_picks, payout, payload, record, settle, starter_shift,
+    make_picks, payout, payload, record, settle, starter_for, starter_shift,
 )
 
 # Two teams, so a "model" is just a dict of strengths.
@@ -179,8 +179,16 @@ def test_payload_still_admits_what_the_model_cannot_see():
     trying to prevent. So it pins the CURRENT limitation instead.
     """
     out = payload([], settle([_pick(+150)], {1: "HOM"}))
-    assert "blind" in out["method"]
+    # 2026-09-05: the base is OBP/SLG now, and the limitation moved with it --
+    # the model is no longer "blind", it is BEHIND: season rates cannot see
+    # tonight's lineup card. The method must still say so, and still name
+    # the bullpen and injuries it cannot see. And batting average must be
+    # named as NOT an input, because that is the whole Moneyball point.
+    assert "behind" in out["method"]
     assert "bullpen" in out["method"] and "injuries" in out["method"]
+    assert "Batting average is not an input" in out["method"]
+    assert out["team_model"]["out_of_sample"] is None      # nothing claimed until the harness runs
+    assert set(out["record_by_base"]) == {"blend", "record"}
     assert out["starter_weight"] and out["starter_innings"]
     import json
     json.dumps(out)
@@ -404,3 +412,106 @@ def test_giving_the_model_eyes_reduces_both_the_picks_and_the_losses():
     assert seeing["graded"] < blind["graded"] * 0.6, (blind["graded"], seeing["graded"])
     # And better ones.
     assert seeing["roi"] > blind["roi"], (blind["roi"], seeing["roi"])
+
+
+# ── the OBP/SLG base (2026-09-05) ───────────────────────────────────────────
+
+def test_the_base_is_obp_slg_when_rates_are_known_and_the_record_when_not():
+    import moneyball as mb
+    good = mb.TeamRates(1, "H", .340, .440, .300, .380, games=100, runs=500, wins=60, losses=40)
+    bad = mb.TeamRates(2, "A", .300, .370, .330, .430, games=100, runs=400, wins=40, losses=60)
+    ln = Line(game_pk=1, date="d", home="H", away="A", home_price=-150, away_price=+130)
+    with_rates = make_picks([ln], {"H": .55, "A": .45}, {"H": good, "A": bad})
+    without = make_picks([ln], {"H": .55, "A": .45})
+    assert with_rates and with_rates[0].base.startswith("blend 50/50")
+    assert without and without[0].base == "record"
+    # Same lineups on paper, priced from what they DO, not what they went.
+    assert with_rates[0].model_p != without[0].model_p
+
+
+def test_a_side_with_too_few_games_falls_back_to_the_record_and_says_so():
+    import moneyball as mb
+    early = mb.TeamRates(1, "H", .400, .500, .250, .300, games=5, runs=30, wins=4, losses=1)
+    opp = mb.TeamRates(2, "A", .315, .400, .315, .400, games=100, runs=450, wins=50, losses=50)
+    ln = Line(game_pk=1, date="d", home="H", away="A", home_price=+150, away_price=-170)
+    picks = make_picks([ln], {"H": .60, "A": .45}, {"H": early, "A": opp})
+    assert picks and picks[0].base == "record"
+
+
+def test_old_history_rows_without_a_base_still_load():
+    row = _pick(+150).__dict__.copy()
+    row.pop("base")
+    assert Pick(**row).base == "record"
+
+
+def test_the_blend_weight_moves_the_base_between_rates_and_record():
+    import moneyball as mb
+    from moneyline_bot import team_base
+    good = mb.TeamRates(1, "H", .340, .440, .300, .380, games=100, runs=500, wins=60, losses=40)
+    bad = mb.TeamRates(2, "A", .300, .370, .330, .430, games=100, runs=400, wins=40, losses=60)
+    lg = mb.league_of([good, bad])
+    p_rec, name_rec = team_base(.50, .50, good, bad, lg, mb.PRIOR, blend_w=0.0)
+    p_all, name_all = team_base(.50, .50, good, bad, lg, mb.PRIOR, blend_w=1.0)
+    p_mid, name_mid = team_base(.50, .50, good, bad, lg, mb.PRIOR, blend_w=0.5)
+    assert name_rec == "blend 0/100" and name_all == "blend 100/0" and name_mid == "blend 50/50"
+    assert abs(p_mid - (p_rec + p_all) / 2) < 1e-9
+    assert p_all > p_rec          # equal records, unequal lineups: the rates see it
+
+
+def test_price_rows_keep_every_line_picked_or_not():
+    # No pytest fixtures: SHIP-BOT.sh runs these by calling each function bare.
+    import tempfile
+    from moneyline_bot import price_rows, write_prices
+    tmp_path = tempfile.mkdtemp()
+    lines = [Line(game_pk=1, date="2026-09-05", home="H", away="A", home_price=-110, away_price=-110),
+             Line(game_pk=2, date="2026-09-05", home="H", away="A", home_price=+150, away_price=-170)]
+    rows = price_rows(lines, {"H": .5, "A": .5})
+    assert len(rows) == 2 and all(r["hold"] and r["model_home"] for r in rows)
+    path = write_prices(lines, {"H": .5, "A": .5}, None, __import__("moneyball").PRIOR, 0.5, tmp_path)
+    assert path.endswith("moneyline_prices_2026-09-05.json")
+    import json
+    assert len(json.load(open(path))["lines"]) == 2
+
+
+def test_settle_matches_by_date_and_names_when_the_game_pk_is_a_hash():
+    p = Pick(game_pk=987654321, date="2026-09-05", home="New York Yankees", away="Boston Red Sox",
+             side="New York Yankees", price=-120, model_p=.6, market_p=.52, edge=.08, hold=.04)
+    settle([p], {("2026-09-04", "New York Yankees", "Boston Red Sox"): "New York Yankees"})
+    assert p.result == "win"
+    q = Pick(**{**p.__dict__, "result": "", "profit": 0.0, "side": "Boston Red Sox"})
+    settle([q], {("2026-09-05", "New York Yankees", "Boston Red Sox"): "New York Yankees"})
+    assert q.result == "loss" and q.profit == -1.0
+
+
+def test_settle_never_regrades_a_settled_pick():
+    p = Pick(game_pk=1, date="2026-09-05", home="H", away="A", side="H", price=-120,
+             model_p=.6, market_p=.52, edge=.08, hold=.04, result="win", profit=0.8333)
+    settle([p], {("2026-09-05", "H", "A"): "A"})
+    assert p.result == "win"
+
+
+def test_price_rows_carry_the_unmixed_parts():
+    import moneyball as mb
+    from moneyline_bot import price_rows
+    good = mb.TeamRates(1, "H", .340, .440, .300, .380, games=100, runs=500, wins=60, losses=40)
+    bad = mb.TeamRates(2, "A", .300, .370, .330, .430, games=100, runs=400, wins=40, losses=60)
+    ln = Line(game_pk=1, date="2026-09-05", home="H", away="A", home_price=-110, away_price=-110)
+    r = price_rows([ln], {"H": .5, "A": .5}, {"H": good, "A": bad})[0]
+    from playoff_odds import win_probability
+    assert r["p_rates"] and r["p_record"] == round(win_probability(.5, .5), 4) and r["starter_shift"] == 0.0
+    assert abs(r["model_home"] - mb.blend(r["p_rates"], r["p_record"], 0.5)) < 1e-3
+
+
+def test_doubleheader_join_picks_the_arm_for_this_first_pitch():
+    """Two games, same team, two starters -- the line's commence time decides."""
+    starters = {
+        (1, "CHC"): {"fip": 3.1, "name": "Early Arm", "time": "2026-09-05T17:20:00Z"},
+        (2, "CHC"): {"fip": 4.9, "name": "Late Arm", "time": "2026-09-05T23:05:00Z"},
+    }
+    early = starter_for(starters, "CHC", "2026-09-05T17:20:00Z")
+    late = starter_for(starters, "CHC", "2026-09-05T23:10:00Z")
+    assert early["name"] == "Early Arm"
+    assert late["name"] == "Late Arm"
+    # One candidate needs no time at all; no candidate is None, not a crash.
+    assert starter_for({(1, "CHC"): starters[(1, "CHC")]}, "CHC", "")["name"] == "Early Arm"
+    assert starter_for(starters, "NYY", "2026-09-05T17:20:00Z") is None

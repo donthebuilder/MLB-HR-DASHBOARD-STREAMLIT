@@ -191,6 +191,18 @@ def fetch_season(season: int, timeout: int = 30) -> list[GameLine]:
     thousand.
     """
     import requests  # local: the counting half must import with no deps
+    # /schedule team objects carry id + name only -- no abbreviation -- which
+    # is how every game landed on one "?" row (2026-09-05). Join on id.
+    import os, sys
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from playoff_odds import fetch_team_abbrs
+    abbrs = fetch_team_abbrs(timeout)
+
+    def abbr_of(t: dict) -> str:
+        tid = int(t.get("id") or 0)
+        name = str(t.get("name") or "")
+        return (abbrs.get(tid) or str(t.get("abbreviation") or "").upper()
+                or (name.split()[-1][:3].upper() if name else "?"))
 
     out: list[GameLine] = []
     for month in range(3, 11):
@@ -217,8 +229,8 @@ def fetch_season(season: int, timeout: int = 30) -> list[GameLine]:
                     out.append(GameLine(
                         game_pk=int(g.get("gamePk") or 0),
                         date=str(g.get("officialDate") or day.get("date") or ""),
-                        home=str(home.get("abbreviation") or home.get("teamName") or "?"),
-                        away=str(away.get("abbreviation") or away.get("teamName") or "?"),
+                        home=abbr_of(home),
+                        away=abbr_of(away),
                         away_innings=[int((i.get("away") or {}).get("runs") or 0) for i in innings],
                         home_innings=[int((i.get("home") or {}).get("runs") or 0)
                                       for i in innings if (i.get("home") or {}).get("runs") is not None],
