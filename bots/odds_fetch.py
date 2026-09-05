@@ -591,6 +591,36 @@ def walk_outcomes(events: list) -> list[dict]:
     return rows
 
 
+def _by_book(rs: list[dict]) -> dict:
+    """{book: {line, over, under}} -- one entry per book, at the line that
+    book posts most (a book rarely posts two lines for one market; when it
+    does, the one seen most wins, same rule as the consensus line)."""
+    out: dict[str, dict] = {}
+    per: dict[str, list[dict]] = {}
+    for r in rs:
+        if r.get("book"):
+            per.setdefault(str(r["book"]), []).append(r)
+    for book, rows in per.items():
+        counts: dict[float, int] = {}
+        for r in rows:
+            try:
+                pt = float(r["point"]) if r["point"] is not None else 0.5
+            except (TypeError, ValueError):
+                continue
+            counts[pt] = counts.get(pt, 0) + 1
+        if not counts:
+            continue
+        line = max(counts.items(), key=lambda kv: (kv[1], -abs(kv[0])))[0]
+        at = [r for r in rows if (r["point"] is None and line == 0.5)
+              or (r["point"] is not None and float(r["point"]) == line)]
+        over = [r["price"] for r in at if r["side"] == "over" and r["price"]]
+        under = [r["price"] for r in at if r["side"] == "under" and r["price"]]
+        out[book] = {"line": line,
+                     "over": max(over) if over else None,
+                     "under": max(under) if under else None}
+    return out
+
+
 def consensus(rows: list[dict]) -> dict:
     """{norm_name: {market: {line, over, under, best_over, best_book, books}}}
 
@@ -637,6 +667,14 @@ def consensus(rows: list[dict]) -> dict:
                 # that it happened is nearly free and stops a 0.5-vs-1.5 split
                 # from reading as settled fact.
                 "lines_seen": len(counts),
+                # EVERY BOOK'S OWN QUOTE (2026-09-05). With two books the
+                # median above IS the better price, so best_over == over on
+                # every two-book quote and the site could never show where
+                # the books disagree -- which is the one thing a line
+                # shopper opens an odds page for. Each book at its OWN line
+                # (a 0.5-vs-1.5 split is the disagreement, not noise), over
+                # and under both. ~60 bytes a book a quote.
+                "by_book": _by_book(rs),
                 "name": rs[0]["name"],
                 "game": f'{rs[0].get("away") or "?"} @ {rs[0].get("home") or "?"}',
                 # FIRST PITCH RIDES WITH THE QUOTE. Without it the freeze

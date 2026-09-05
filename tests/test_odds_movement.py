@@ -70,3 +70,22 @@ class OddsMovementTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def test_by_book_carries_each_books_own_quote():
+    """Two books, two prices: the median IS the better one, so only by_book
+    can show the disagreement. A book on a different line keeps its line."""
+    import odds_fetch as of
+    rows = [
+        dict(norm="x", market="batter_home_runs", name="X", book="DraftKings", point=0.5, side="over", price=310, away="A", home="B", commence="t"),
+        dict(norm="x", market="batter_home_runs", name="X", book="Fanatics", point=0.5, side="over", price=360, away="A", home="B", commence="t"),
+        dict(norm="y", market="batter_hits", name="Y", book="DraftKings", point=1.5, side="over", price=120, away="A", home="B", commence="t"),
+        dict(norm="y", market="batter_hits", name="Y", book="Fanatics", point=0.5, side="over", price=-250, away="A", home="B", commence="t"),
+    ]
+    c = of.consensus(rows)
+    x = c["x"]["batter_home_runs"]
+    assert x["over"] == x["best_over"] == 360          # the thing by_book exists to get around
+    assert x["by_book"]["DraftKings"]["over"] == 310
+    assert x["by_book"]["Fanatics"]["over"] == 360
+    y = c["y"]["batter_hits"]
+    assert y["by_book"]["DraftKings"]["line"] == 1.5 and y["by_book"]["Fanatics"]["line"] == 0.5
