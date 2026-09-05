@@ -97,6 +97,14 @@ PAPI = "https://api.oddspapi.io/v4"
 # mismatch is obvious on the first run instead of looking like "no odds today".
 OAIO = "https://api.odds-api.io/v3"
 OAIO_BOOKS = "fanatics,draftkings"
+# THE SHOP BOOKS (2026-09-05). Asked for in the SAME request -- `bookmakers`
+# takes up to thirty, so two more cost zero calls on the free tier -- but
+# they never touch the consensus: the median, best_over and the break-even
+# the site grades against stay computed over HIS books, for the reason above.
+# They exist only in each quote's `by_book`, which is what the site's Line
+# shop reads, so he can see where his two books are worse than the market.
+# Donovan: "if possible for free then do it."
+OAIO_SHOP_BOOKS = "fanduel,betmgm"
 OAIO_BOOKS_FALLBACK = ("fanatics,draftkings,fanduel,bet365,betmgm,caesars,"
                        "pointsbet,betrivers,unibet,williamhill,pinnacle,bovada")
 
@@ -621,8 +629,18 @@ def _by_book(rs: list[dict]) -> dict:
     return out
 
 
-def consensus(rows: list[dict]) -> dict:
+def _bookkey(b) -> str:
+    return str(b or "").lower().replace(" ", "")
+
+
+def consensus(rows: list[dict], primary: "set[str] | None" = None) -> dict:
     """{norm_name: {market: {line, over, under, best_over, best_book, books}}}
+
+    `primary`: the books the consensus is computed over (lower-cased, no
+    spaces). Rows from any other book still land in by_book -- the shop books
+    -- but never in the median, best_over or the book count. None = every
+    book is primary, the pre-2026-09-05 behaviour and what the other two
+    providers get.
 
     The MAIN line is the one the most books agree on — not the first one seen.
     Books disagree on where to set a hits line and taking whichever arrived
@@ -634,7 +652,12 @@ def consensus(rows: list[dict]) -> dict:
 
     out: dict[str, dict] = {}
     for norm, mkts in by.items():
-        for market, rs in mkts.items():
+        for market, all_rs in mkts.items():
+            rs = [r for r in all_rs if primary is None or _bookkey(r.get("book")) in primary]
+            if not rs:
+                # Only a shop book has it. Not bettable at his books, so no
+                # consensus to publish -- and nothing to line-shop against.
+                continue
             counts: dict[float, int] = {}
             for r in rs:
                 try:
@@ -674,7 +697,7 @@ def consensus(rows: list[dict]) -> dict:
                 # shopper opens an odds page for. Each book at its OWN line
                 # (a 0.5-vs-1.5 split is the disagreement, not noise), over
                 # and under both. ~60 bytes a book a quote.
-                "by_book": _by_book(rs),
+                "by_book": _by_book(all_rs),
                 "name": rs[0]["name"],
                 "game": f'{rs[0].get("away") or "?"} @ {rs[0].get("home") or "?"}',
                 # FIRST PITCH RIDES WITH THE QUOTE. Without it the freeze
@@ -1716,6 +1739,10 @@ def main() -> int:
 
     oaio_key = os.environ.get("ODDSAPI_IO_KEY", "").strip()
     books = os.environ.get("ODDSAPI_IO_BOOKMAKERS", "").strip() or OAIO_BOOKS
+    shop = os.environ.get("ODDSAPI_IO_SHOP_BOOKMAKERS", OAIO_SHOP_BOOKS).strip()
+    primary_books = {b.strip().lower().replace(" ", "") for b in books.split(",") if b.strip()}
+    if shop:
+        books = ",".join(dict.fromkeys([*books.split(","), *shop.split(",")]))
 
     available = {
         "oddsapiio": (oaio_key, lambda: fetch_oddsapiio(oaio_key, books)),
@@ -1777,7 +1804,8 @@ def main() -> int:
     print(f"using {source} · {len(rows)} quote(s)")
     _write_dump(a.dump)
 
-    board = consensus(rows)
+    # Consensus over his books only; every book requested lands in by_book.
+    board = consensus(rows, primary=primary_books if source == "oddsapiio" else None)
 
     # ── join to the slate, and REPORT the miss rate ────────────────────────
     matched, unmatched = {}, []
