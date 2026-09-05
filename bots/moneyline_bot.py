@@ -634,7 +634,38 @@ def write_prices(lines, strength, rates, coef, blend_w, out_dir: str) -> str:
     with open(path, "w") as fh:
         json.dump(body, fh, separators=(",", ":"))
     print(f"  kept {len(lines)} game line(s) in {path}")
+    write_price_index(out_dir, date)
     return path
+
+
+INDEX_NAME = "moneyline_prices_index.json"
+INDEX_CAP = 200   # matches publish_data.sh's ML_PRICES_KEEP
+
+
+def write_price_index(out_dir: str, date: str) -> str:
+    """THE INDEX (2026-09-05). moneyball.fetch_price_files() used to ask the
+    data branch for 120 dated files one by one, most of them 404s, every run.
+    This is one small file naming every date that has prices, read from the
+    branch (the runner is a clean checkout -- see fetch_published), extended
+    with tonight, capped like the files themselves. Best-effort: a failure
+    here must never block the prices file that was just written."""
+    try:
+        try:
+            from moneyball import fetch_published
+            prev = fetch_published(INDEX_NAME, timeout=8) or {}
+        except Exception:
+            prev = {}
+        dates = set(d for d in (prev.get("dates") or []) if isinstance(d, str))
+        dates.add(date)
+        keep = sorted(dates)[-INDEX_CAP:]
+        path = os.path.join(out_dir, INDEX_NAME)
+        with open(path, "w") as fh:
+            json.dump({"updated_at": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
+                       "dates": keep}, fh, separators=(",", ":"))
+        return path
+    except Exception as exc:
+        print(f"  price index not written ({type(exc).__name__}: {exc})", file=sys.stderr)
+        return ""
 
 
 def strengths_from_standings(teams: list[Team]) -> dict[str, float]:

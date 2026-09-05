@@ -672,11 +672,23 @@ def fetch_published(name: str, timeout: int = 15):
 
 def fetch_price_files(days: int = 120, today: dt.date | None = None) -> list[dict]:
     """Every published moneyline_prices_<date>.json in the window, flattened
-    to rows. One small request per day; a missing day is a fast 404."""
+    to rows.
+
+    Reads moneyline_prices_index.json first (written by
+    moneyline_bot.write_price_index) and asks only for the dates it names --
+    one request per real file instead of 120 mostly-404 probes a run. The
+    day-by-day scan stays as the fallback for a branch with no index yet."""
     today = today or dt.date.today()
     rows: list[dict] = []
-    for i in range(days):
-        d = (today - dt.timedelta(days=i)).isoformat()
+    floor = (today - dt.timedelta(days=days - 1)).isoformat()
+    index = fetch_published("moneyline_prices_index.json", timeout=8)
+    listed = [d for d in (index or {}).get("dates", []) if isinstance(d, str) and d >= floor]
+    if listed:
+        dates = sorted(set(listed), reverse=True)
+        print(f"  price index: {len(dates)} dated file(s) to read")
+    else:
+        dates = [(today - dt.timedelta(days=i)).isoformat() for i in range(days)]
+    for d in dates:
         j = fetch_published(f"moneyline_prices_{d}.json", timeout=8)
         if j and isinstance(j.get("lines"), list):
             for ln in j["lines"]:

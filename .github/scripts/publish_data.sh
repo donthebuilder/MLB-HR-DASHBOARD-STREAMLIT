@@ -60,6 +60,9 @@ PUBLISH_FILES=(
   moneyline_board.json
   # the OBP/SLG team model's walk-forward grade (2026-09-05) -- ~5 KB
   moneyball_backtest.json
+  # which dates have a moneyline_prices file (2026-09-05) -- replaces a
+  # 120-request scan of the branch with one read; see moneyline_bot.py
+  moneyline_prices_index.json
   # ── pick_lock's LEDGER (added 2026-08-15) ──
   # This file was missing from this list from the day pick_lock.py shipped
   # (2026-08-09), and its absence made the whole feature a no-op.

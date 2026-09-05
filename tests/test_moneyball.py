@@ -287,3 +287,28 @@ def test_the_backtest_lets_roi_overrule_log_loss_only_when_eligible():
     assert rep["blend"]["chooser"] == "roi" and rep["blend"]["weight"] <= 0.5
     rep2 = backtest(games, snaps, price_rows=rows[:10])
     assert rep2["blend"]["chooser"] == "log_loss" and rep2["blend"]["weight"] >= 0.5
+
+
+def test_price_files_read_the_index_when_there_is_one(monkeypatch=None):
+    """With an index the scan asks only for listed dates inside the window;
+    without one it falls back to the day-by-day probe."""
+    import datetime as dt
+    import moneyball as mb
+    asked = []
+    published = {
+        "moneyline_prices_index.json": {"dates": ["2026-09-01", "2026-09-04", "2026-01-01"]},
+        "moneyline_prices_2026-09-04.json": {"lines": [{"home": "A", "away": "B"}]},
+        "moneyline_prices_2026-09-01.json": {"lines": [{"home": "C", "away": "D"}]},
+    }
+    real = mb.fetch_published
+    mb.fetch_published = lambda name, timeout=15: (asked.append(name), published.get(name))[1]
+    try:
+        rows = mb.fetch_price_files(days=30, today=dt.date(2026, 9, 5))
+        assert [r["date"] for r in rows] == ["2026-09-04", "2026-09-01"]
+        assert "moneyline_prices_2026-01-01.json" not in asked          # outside the window
+        assert len([a for a in asked if a.startswith("moneyline_prices_2")]) == 2
+        asked.clear(); published.pop("moneyline_prices_index.json")
+        mb.fetch_price_files(days=5, today=dt.date(2026, 9, 5))
+        assert len([a for a in asked if a.startswith("moneyline_prices_2")]) == 5   # the old scan
+    finally:
+        mb.fetch_published = real
