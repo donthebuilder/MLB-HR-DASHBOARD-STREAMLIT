@@ -216,3 +216,21 @@ def test_the_model_half_imports_with_no_third_party_packages():
     head = src.split("def fetch_rates")[0]
     for banned in ("import requests", "import numpy", "import pandas", "import sklearn"):
         assert banned not in head, f"{banned} leaked into the pure half"
+
+
+def test_the_blend_sweep_lands_on_the_rates_when_the_world_runs_on_them():
+    from moneyball import blend_sweep
+    games, snaps = synthetic_season()
+    rep = backtest(games, snaps)
+    assert rep["blend"]["weight"] >= 0.5
+    assert rep["blend"]["score"]["log_loss"] <= min(rep["moneyball"]["log_loss"], rep["records_only"]["log_loss"]) + 1e-9
+    assert "The live base is" in rep["verdict"]
+
+
+def test_the_blend_sweep_lands_on_the_record_when_the_rates_are_noise():
+    from moneyball import blend_sweep
+    rng = random.Random(5)
+    truth = [rng.random() < 0.6 for _ in range(600)]
+    record = [(0.6, w) for w in truth]
+    noise = [(rng.uniform(0.2, 0.8), w) for w in truth]
+    assert blend_sweep(noise, record)["best"] == 0.0

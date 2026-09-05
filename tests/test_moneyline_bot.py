@@ -188,7 +188,7 @@ def test_payload_still_admits_what_the_model_cannot_see():
     assert "bullpen" in out["method"] and "injuries" in out["method"]
     assert "Batting average is not an input" in out["method"]
     assert out["team_model"]["out_of_sample"] is None      # nothing claimed until the harness runs
-    assert set(out["record_by_base"]) == {"obp/slg", "record"}
+    assert set(out["record_by_base"]) == {"blend", "record"}
     assert out["starter_weight"] and out["starter_innings"]
     import json
     json.dumps(out)
@@ -423,7 +423,7 @@ def test_the_base_is_obp_slg_when_rates_are_known_and_the_record_when_not():
     ln = Line(game_pk=1, date="d", home="H", away="A", home_price=-150, away_price=+130)
     with_rates = make_picks([ln], {"H": .55, "A": .45}, {"H": good, "A": bad})
     without = make_picks([ln], {"H": .55, "A": .45})
-    assert with_rates and with_rates[0].base == "obp/slg"
+    assert with_rates and with_rates[0].base.startswith("blend 50/50")
     assert without and without[0].base == "record"
     # Same lineups on paper, priced from what they DO, not what they went.
     assert with_rates[0].model_p != without[0].model_p
@@ -442,3 +442,29 @@ def test_old_history_rows_without_a_base_still_load():
     row = _pick(+150).__dict__.copy()
     row.pop("base")
     assert Pick(**row).base == "record"
+
+
+def test_the_blend_weight_moves_the_base_between_rates_and_record():
+    import moneyball as mb
+    from moneyline_bot import team_base
+    good = mb.TeamRates(1, "H", .340, .440, .300, .380, games=100, runs=500, wins=60, losses=40)
+    bad = mb.TeamRates(2, "A", .300, .370, .330, .430, games=100, runs=400, wins=40, losses=60)
+    lg = mb.league_of([good, bad])
+    p_rec, name_rec = team_base(.50, .50, good, bad, lg, mb.PRIOR, blend_w=0.0)
+    p_all, name_all = team_base(.50, .50, good, bad, lg, mb.PRIOR, blend_w=1.0)
+    p_mid, name_mid = team_base(.50, .50, good, bad, lg, mb.PRIOR, blend_w=0.5)
+    assert name_rec == "blend 0/100" and name_all == "blend 100/0" and name_mid == "blend 50/50"
+    assert abs(p_mid - (p_rec + p_all) / 2) < 1e-9
+    assert p_all > p_rec          # equal records, unequal lineups: the rates see it
+
+
+def test_price_rows_keep_every_line_picked_or_not(tmp_path):
+    from moneyline_bot import price_rows, write_prices
+    lines = [Line(game_pk=1, date="2026-09-05", home="H", away="A", home_price=-110, away_price=-110),
+             Line(game_pk=2, date="2026-09-05", home="H", away="A", home_price=+150, away_price=-170)]
+    rows = price_rows(lines, {"H": .5, "A": .5})
+    assert len(rows) == 2 and all(r["hold"] and r["model_home"] for r in rows)
+    path = write_prices(lines, {"H": .5, "A": .5}, None, __import__("moneyball").PRIOR, 0.5, str(tmp_path))
+    assert path.endswith("moneyline_prices_2026-09-05.json")
+    import json
+    assert len(json.load(open(path))["lines"]) == 2

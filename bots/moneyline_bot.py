@@ -213,23 +213,33 @@ def starter_shift(home_fip, away_fip, baseline: float) -> float:
 
 def team_base(home_strength: float, away_strength: float,
               home_rates=None, away_rates=None, league=None,
-              coef: moneyball.Coef = moneyball.PRIOR) -> tuple[float, str]:
-    """P(home) before the starters, and the name of what produced it."""
+              coef: moneyball.Coef = moneyball.PRIOR,
+              blend_w: float = moneyball.DEFAULT_BLEND) -> tuple[float, str]:
+    """P(home) before the starters, and the name of what produced it.
+
+    "Merge the good findings" (Donovan, 2026-09-05): when both sides have
+    usable rates the base is the BLEND of OBP/SLG and the record at the
+    weight the walk-forward chose (moneyball.blend_sweep). Only when a side
+    has no usable rates does the record stand alone, and the pick says so.
+    """
+    p_rec = win_probability(home_strength, away_strength)
     if home_rates is not None and away_rates is not None and league is not None:
         p = moneyball.game_probability(home_rates, away_rates, league, coef)
         if p is not None:
-            return p, "obp/slg"
-    return win_probability(home_strength, away_strength), "record"
+            w = min(1.0, max(0.0, float(blend_w)))
+            return moneyball.blend(p, p_rec, w), f"blend {int(round(w * 100))}/{int(round((1 - w) * 100))}"
+    return p_rec, "record"
 
 
 def game_probability(home_strength: float, away_strength: float,
                      home_fip=None, away_fip=None,
                      baseline: float = FALLBACK_LEAGUE_FIP,
                      home_rates=None, away_rates=None, league=None,
-                     coef: moneyball.Coef = moneyball.PRIOR) -> float:
-    """The model: a team base (OBP/SLG when known, else the record), moved
-    by tonight's starters."""
-    base, _ = team_base(home_strength, away_strength, home_rates, away_rates, league, coef)
+                     coef: moneyball.Coef = moneyball.PRIOR,
+                     blend_w: float = moneyball.DEFAULT_BLEND) -> float:
+    """The model: a team base (OBP/SLG blended with the record when known,
+    else the record), moved by tonight's starters."""
+    base, _ = team_base(home_strength, away_strength, home_rates, away_rates, league, coef, blend_w)
     return min(0.95, max(0.05, base + starter_shift(home_fip, away_fip, baseline)))
 
 
@@ -280,9 +290,10 @@ class Pick:
     starter_shift: float = 0.0
     home_sp: str = ""
     away_sp: str = ""
-    # Which team model priced the base: "obp/slg" (moneyball.py) or "record"
-    # (log5 on the standings). Published per pick so the grade can be split
-    # by base once there are enough of each to split.
+    # Which team model priced the base: "blend 60/40" (OBP/SLG merged with
+    # the record at the walk-forward's weight) or "record" (log5 on the
+    # standings, a side had no usable rates). Published per pick so the grade
+    # can be split by base once there are enough of each to split.
     base: str = "record"
 
 
@@ -305,7 +316,8 @@ class Line:
 
 def make_picks(lines: list[Line], strength: dict[str, float],
                rates: dict[str, "moneyball.TeamRates"] | None = None,
-               coef: moneyball.Coef = moneyball.PRIOR) -> list[Pick]:
+               coef: moneyball.Coef = moneyball.PRIOR,
+               blend_w: float = moneyball.DEFAULT_BLEND) -> list[Pick]:
     """One pick per game, or none. Pure: lines and strengths in, picks out.
 
     The slate's own starters set the baseline (see league_baseline), so this
@@ -323,9 +335,9 @@ def make_picks(lines: list[Line], strength: dict[str, float],
         if sh is None or sa is None:
             continue
         shift = starter_shift(ln.home_fip, ln.away_fip, baseline)
-        _, base_name = team_base(sh, sa, rates.get(ln.home), rates.get(ln.away), league, coef)
+        _, base_name = team_base(sh, sa, rates.get(ln.home), rates.get(ln.away), league, coef, blend_w)
         model_home = game_probability(sh, sa, ln.home_fip, ln.away_fip, baseline,
-                                      rates.get(ln.home), rates.get(ln.away), league, coef)
+                                      rates.get(ln.home), rates.get(ln.away), league, coef, blend_w)
         home_fair, away_fair, hold = devig(ln.home_price, ln.away_price)
         if home_fair is None:
             continue
@@ -385,10 +397,13 @@ def record(picks: list[Pick]) -> dict:
 
 
 def payload(today: list[Pick], history: list[Pick],
-            coef: moneyball.Coef | None = None, backtest: dict | None = None) -> dict:
-    by_base = {}
-    for name in ("obp/slg", "record"):
-        by_base[name] = record([p for p in history if getattr(p, "base", "record") == name])
+            coef: moneyball.Coef | None = None, backtest: dict | None = None,
+            blend_w: float = moneyball.DEFAULT_BLEND) -> dict:
+    by_base = {
+        "blend": record([p for p in history if getattr(p, "base", "record").startswith("blend")
+                         or getattr(p, "base", "") == "obp/slg"]),
+        "record": record([p for p in history if getattr(p, "base", "record") == "record"]),
+    }
     return {
         "built_at": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
         "edge_floor": EDGE_FLOOR,
@@ -398,9 +413,10 @@ def payload(today: list[Pick], history: list[Pick],
             "game by linear regression on OBP and SLG (OBP weighted heavier, "
             "the Moneyball argument), each lineup against the staff it faces, "
             "Pythagenpat to a win probability, home field as an odds "
-            "multiplier. Batting average is not an input. Before a team has "
-            "20 games the record-only log5 stands in, and each pick says which "
-            "priced it. Then tonight's probable starters move it, measured "
+            "multiplier. Batting average is not an input. That is merged with "
+            "the record-only log5 at the weight the walk-forward backtest found "
+            "best; before a team has 20 games the record stands alone, and each "
+            "pick says which priced it. Then tonight's probable starters move it, measured "
             "against the average starter on this slate. It still cannot see "
             "tonight's lineup card, the bullpen, injuries or travel, and the "
             "market can, so a large disagreement may still be the model being "
@@ -415,6 +431,7 @@ def payload(today: list[Pick], history: list[Pick],
                       "rows": coef.rows, "prior_share": coef.shrink} if coef else None),
             # The walk-forward grade from bots/moneyball.py, if it has run.
             "out_of_sample": backtest,
+            "blend_weight": blend_w,
         },
         "record_by_base": by_base,
         "starter_weight": STARTER_WEIGHT,
@@ -517,6 +534,53 @@ def fetch_starters(slate_url: str = "") -> dict:
     return out
 
 
+def price_rows(lines: list[Line], strength: dict[str, float], rates=None,
+               coef: moneyball.Coef = moneyball.PRIOR,
+               blend_w: float = moneyball.DEFAULT_BLEND) -> list[dict]:
+    """Every game line the book offered tonight, with the model beside it --
+    picked or not. Pure. This is the file that makes a real ROI backtest
+    possible later: a closing price is not re-fetchable, so the night it is
+    not kept is a night that can never be in the history (2026-09-05)."""
+    rates = rates or {}
+    league = moneyball.league_of(list({id(t): t for t in rates.values()}.values())) if rates else None
+    baseline = league_baseline([f for ln in lines for f in (ln.home_fip, ln.away_fip)])
+    out = []
+    for ln in lines:
+        hf, af, hold = devig(ln.home_price, ln.away_price)
+        sh, sa = strength.get(ln.home), strength.get(ln.away)
+        model = base_name = None
+        if sh is not None and sa is not None:
+            _, base_name = team_base(sh, sa, rates.get(ln.home), rates.get(ln.away), league, coef, blend_w)
+            model = round(game_probability(sh, sa, ln.home_fip, ln.away_fip, baseline,
+                                           rates.get(ln.home), rates.get(ln.away), league, coef, blend_w), 4)
+        out.append({
+            "game_pk": ln.game_pk, "date": ln.date, "home": ln.home, "away": ln.away,
+            "home_price": ln.home_price, "away_price": ln.away_price, "book": ln.book,
+            "home_fair": None if hf is None else round(hf, 4),
+            "away_fair": None if af is None else round(af, 4),
+            "hold": None if hold is None else round(hold, 4),
+            "model_home": model, "base": base_name,
+            "home_sp": ln.home_sp, "away_sp": ln.away_sp,
+            "home_fip": ln.home_fip, "away_fip": ln.away_fip,
+        })
+    return out
+
+
+def write_prices(lines, strength, rates, coef, blend_w, out_dir: str) -> str:
+    """One file per slate date, moneyline_prices_YYYY-MM-DD.json; re-running
+    the same night overwrites with the later (closer to close) prices."""
+    if not lines:
+        return ""
+    date = max((ln.date for ln in lines if ln.date), default=dt.date.today().isoformat())
+    path = os.path.join(out_dir, f"moneyline_prices_{date}.json")
+    body = {"built_at": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
+            "date": date, "blend_weight": blend_w, "lines": price_rows(lines, strength, rates, coef, blend_w)}
+    with open(path, "w") as fh:
+        json.dump(body, fh, separators=(",", ":"))
+    print(f"  kept {len(lines)} game line(s) in {path}")
+    return path
+
+
 def strengths_from_standings(teams: list[Team]) -> dict[str, float]:
     """Team name → regressed winning percentage, keyed both ways.
 
@@ -561,6 +625,7 @@ def main(argv=None):
     rates: dict[str, moneyball.TeamRates] = {}
     coef = moneyball.PRIOR
     backtest = None
+    blend_w = moneyball.DEFAULT_BLEND
     try:
         for tr in moneyball.fetch_rates(args.season):
             rates[tr.abbr] = tr
@@ -576,7 +641,9 @@ def main(argv=None):
         with open(args.backtest) as fh:
             bt = json.load(fh) or {}
             backtest = {k: bt.get(k) for k in ("as_of", "games", "months", "moneyball", "records_only",
-                                                "home_always", "coin", "verdict", "limits", "calibration")}
+                                                "home_always", "coin", "blend", "verdict", "limits", "calibration")}
+            if isinstance(bt.get("blend"), dict) and bt["blend"].get("weight") is not None:
+                blend_w = float(bt["blend"]["weight"])
             if bt.get("coef"):
                 # Prefer the coefficients fitted on every monthly snapshot.
                 c = bt["coef"]
@@ -605,10 +672,11 @@ def main(argv=None):
                     break
     known = sum(1 for ln in lines if ln.home_fip and ln.away_fip)
     print(f"  starters known for {known}/{len(lines)} game(s)")
-    today = make_picks(lines, strength, rates, coef)
+    today = make_picks(lines, strength, rates, coef, blend_w)
+    write_prices(lines, strength, rates, coef, blend_w, os.path.dirname(args.out) or ".")
     print(f"  {len(lines)} game line(s) → {len(today)} pick(s) over the edge floor")
 
-    out = payload(today, prior, coef, backtest)
+    out = payload(today, prior, coef, backtest, blend_w)
     with open(args.out, "w") as fh:
         json.dump(out, fh, separators=(",", ":"))
     print(f"wrote {args.out} — record {out['record']['wins']}-{out['record']['losses']}, "

@@ -297,6 +297,41 @@ def _clip(p: float) -> float:
     return min(0.99, max(0.01, p))
 
 
+# ── THE MERGE (2026-09-05) ──────────────────────────────────────────────────
+#
+# Donovan, asked what to do if OBP/SLG does not beat the record out of sample:
+# "merge the good findings." So the base is not either/or. It is
+#     p = w · p_obp_slg + (1 − w) · p_record
+# and w is CHOSEN BY THE WALK-FORWARD, not by hand: the harness scores every
+# tenth from 0 (all record) to 1 (all OBP/SLG) on the same games and publishes
+# the one with the lowest log loss. A team's record carries things its rates
+# do not -- one-run luck, the bullpen, how it actually closes games -- and the
+# rates carry what the record has not caught up to yet. If either is worthless
+# the sweep says so by landing on 0 or 1; anything in between is the merge.
+# The live bot reads the published weight; before the harness has run it uses
+# DEFAULT_BLEND, which is the honest prior of "half each".
+BLEND_STEPS = [round(i / 10, 1) for i in range(11)]
+DEFAULT_BLEND = 0.5
+
+
+def blend(p_rates: float, p_record: float, w: float = DEFAULT_BLEND) -> float:
+    w = min(1.0, max(0.0, float(w)))
+    return w * p_rates + (1.0 - w) * p_record
+
+
+def blend_sweep(pairs_rates: list[tuple[float, bool]], pairs_record: list[tuple[float, bool]]) -> dict:
+    """Log loss at every weight, and the best one. Both lists are aligned by
+    construction (backtest appends to them in the same loop)."""
+    if not pairs_rates or len(pairs_rates) != len(pairs_record):
+        return {"weights": [], "best": DEFAULT_BLEND}
+    rows = []
+    for w in BLEND_STEPS:
+        mixed = [(blend(pr, pc, w), won) for (pr, won), (pc, _) in zip(pairs_rates, pairs_record)]
+        rows.append({"w": w, **score(mixed)})
+    best = min(rows, key=lambda r: (r["log_loss"], abs(r["w"] - DEFAULT_BLEND)))
+    return {"weights": rows, "best": best["w"], "best_log_loss": best["log_loss"]}
+
+
 def score(pairs: list[tuple[float, bool]]) -> dict:
     """Log loss, Brier, and how often the side above .500 won. `pairs` is
     (P(home), home_won)."""
@@ -366,6 +401,8 @@ def backtest(games: list[FinishedGame], snapshots: dict[int, list[TeamRates]],
             "records": score(month_pairs["records"]),
             "home": score(month_pairs["home"]),
         })
+    sweep = blend_sweep(mb, rec)
+    merged = [(blend(pr, pc, sweep["best"]), won) for (pr, won), (pc, _) in zip(mb, rec)]
     return {
         "games": len(mb),
         "months": months,
@@ -373,9 +410,10 @@ def backtest(games: list[FinishedGame], snapshots: dict[int, list[TeamRates]],
         "records_only": score(rec),
         "home_always": score(home),
         "coin": score(coin),
-        "calibration": calibration(mb),
+        "blend": {"weight": sweep["best"], "score": score(merged), "sweep": sweep.get("weights", [])},
+        "calibration": calibration(merged),
         "per_month": per_month,
-        "verdict": verdict(score(mb), score(rec), score(home)),
+        "verdict": verdict(score(mb), score(rec), score(home), sweep["best"]),
         "limits": (
             "Walk-forward: every game is priced with rates and a regression "
             "from before its month began. Beating records-only is the claim; "
@@ -385,20 +423,23 @@ def backtest(games: list[FinishedGame], snapshots: dict[int, list[TeamRates]],
     }
 
 
-def verdict(mb: dict, rec: dict, home: dict) -> str:
-    """One sentence, in the direction the numbers actually point."""
+def verdict(mb: dict, rec: dict, home: dict, w: float = DEFAULT_BLEND) -> str:
+    """One sentence, in the direction the numbers actually point, ending with
+    what the live bot will do about it."""
     if not mb.get("n"):
         return "Not enough games to say anything."
     a, b, c = mb["log_loss"], rec["log_loss"], home["log_loss"]
+    mix = (f"The live base is {int(round(w * 100))}% OBP/SLG, {int(round((1 - w) * 100))}% record "
+           f"-- the mix with the lowest out-of-sample log loss.")
     if a < b and a < c:
         return (f"Out of sample, OBP/SLG beats the record-only model "
-                f"(log loss {a:.4f} vs {b:.4f}) and home-always ({c:.4f}) over {mb['n']} games.")
+                f"(log loss {a:.4f} vs {b:.4f}) and home-always ({c:.4f}) over {mb['n']} games. {mix}")
     if a < c:
         return (f"Out of sample, OBP/SLG beats home-always ({a:.4f} vs {c:.4f}) but "
                 f"not the record-only model ({b:.4f}) over {mb['n']} games -- the "
-                f"components did not add information the record lacked.")
+                f"components did not add information the record lacked on their own. {mix}")
     return (f"Out of sample, OBP/SLG ({a:.4f}) did not beat home-always ({c:.4f}) "
-            f"over {mb['n']} games. That is a real negative result; do not ship it as a base.")
+            f"over {mb['n']} games. That is a real negative result. {mix}")
 
 
 def payload(report: dict, coef: Coef, season: int, as_of: str) -> dict:
