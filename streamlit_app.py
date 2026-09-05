@@ -30,7 +30,6 @@ Run locally:  streamlit run streamlit_app.py
 from __future__ import annotations
 
 import datetime as dt
-import datetime as dt
 import json
 import math
 import re
@@ -55,7 +54,10 @@ st.set_page_config(
     page_title="MLB HR Dashboard",
     page_icon="⚾",
     layout="wide",
-    initial_sidebar_state="expanded",
+    # "auto": open on desktop, closed on phones. "expanded" forced the sidebar
+    # open as an overlay on mobile, so the first screen was the filter panel
+    # covering the slate.
+    initial_sidebar_state="auto",
 )
 
 
@@ -130,24 +132,45 @@ def ink_for(bg: str) -> str:
 st.markdown(
     f"""
     <style>
-      .block-container {{padding-top: 1.2rem; padding-bottom: 3rem; max-width: 1400px;}}
+      /* Top padding must clear Streamlit's 60px header bar; the h1 below
+         has its own default padding stripped, so the container carries it. */
+      .block-container {{padding-top: 3.6rem; padding-bottom: 2.5rem; max-width: 1400px;}}
+
+      /* Tighter vertical rhythm: Streamlit's default 1rem gap between every
+         element made a 17-tab page read as a long list of islands. */
+      [data-testid="stVerticalBlock"] {{gap: .7rem;}}
+      [data-testid="stMain"] hr {{margin: .7rem 0;}}
+      [data-testid="stCaptionContainer"] {{line-height: 1.35;}}
 
       /* Numbers in a mono face, as on the old site — keeps score columns
          aligned and stops digits from wobbling between rows. */
       [data-testid="stMetricValue"], .num {{
-        font-family: {NUM_FONT}; font-size: 1.35rem; letter-spacing: -.02em;
+        font-family: {NUM_FONT}; font-size: 1.3rem; letter-spacing: -.02em;
+        line-height: 1.2;
       }}
+      [data-testid="stMetricValue"] > div {{overflow: hidden; text-overflow: ellipsis;}}
       [data-testid="stMetricLabel"] {{
         text-transform: uppercase; letter-spacing: .06em;
-        font-size: .68rem; color: {C['text3']};
+        font-size: .66rem; color: {C['text3']};
       }}
+      [data-testid="stMetricLabel"] p {{
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      }}
+      [data-testid="stMetricDelta"] {{font-size: .72rem; font-family: {NUM_FONT};}}
       [data-testid="stMetric"] {{
         background: {C['bg2']}; border: 1px solid {C['border']};
-        border-radius: 12px; padding: .6rem .8rem;
+        border-radius: 10px; padding: .5rem .7rem; min-width: 0;
       }}
 
-      h1 {{letter-spacing: -.02em; font-weight: 800;}}
-      h4 {{color: {C['text2']}; font-size: .95rem; letter-spacing: .01em;}}
+      /* Type scale. Streamlit's 2.75rem h1 is a landing-page size; on a
+         data page it pushed the numbers below the fold on a phone. */
+      h1 {{letter-spacing: -.02em; font-weight: 800; font-size: 1.9rem !important;
+          padding-top: 0 !important; padding-bottom: .2rem !important;}}
+      h2 {{font-size: 1.35rem !important; padding-top: .4rem !important;}}
+      h3 {{font-size: 1.12rem !important; padding-top: .3rem !important;
+          padding-bottom: .3rem !important;}}
+      h4 {{color: {C['text2']}; font-size: .95rem !important; letter-spacing: .01em;
+          padding-top: .4rem !important; padding-bottom: .2rem !important;}}
 
       .pick-card {{
         border: 1px solid {C['border']}; border-radius: 12px;
@@ -161,17 +184,83 @@ st.markdown(
       .muted {{color: {C['text3']}; font-size: .82rem;}}
       .grade {{font-weight:800; font-size:1.05rem; font-family: {NUM_FONT};}}
 
-      /* Tabs: understated until active, then an orange underline. */
-      .stTabs [data-baseweb="tab-list"] {{gap: 2px; border-bottom: 1px solid {C['border']};}}
-      .stTabs [data-baseweb="tab"] {{
-        height: 40px; padding: 0 14px; background: transparent;
-        color: {C['text3']}; font-size: .86rem; font-weight: 600;
+      /* Tabs: understated until active, then an orange underline.
+         The strip WRAPS instead of scrolling: with 17 tabs the baseweb
+         scroller hid the tail behind a chevron on anything narrower than
+         ~1500px, and on a phone Spray/Results/Guide were unreachable
+         without noticing it. The baseweb highlight/border elements are
+         hidden because they assume a single row. */
+      .stTabs [data-baseweb="tab-list"], .stTabs [role="tablist"] {{
+        gap: 2px 0; border-bottom: 1px solid {C['border']};
+        flex-wrap: wrap; overflow: visible !important;
       }}
-      .stTabs [aria-selected="true"] {{color: {C['text']}; border-bottom: 2px solid {C['orange']};}}
+      .stTabs [data-baseweb="tab-highlight"],
+      .stTabs [data-baseweb="tab-border"],
+      .stTabs .react-aria-SelectionIndicator,
+      [data-testid="stTabsScrollLeft"], [data-testid="stTabsScrollRight"] {{
+        display: none !important;
+      }}
+      .stTabs [data-baseweb="tab"], .stTabs [data-testid="stTab"] {{
+        height: 34px; padding: 0 11px; background: transparent;
+        color: {C['text3']}; font-size: .84rem; font-weight: 600;
+        border-bottom: 2px solid transparent; border-radius: 0;
+        display: flex; align-items: center;
+      }}
+      .stTabs [data-testid="stTab"] p {{font-size: .84rem; font-weight: 600; white-space: nowrap;}}
+      .stTabs [data-baseweb="tab"]:hover,
+      .stTabs [data-testid="stTab"]:hover {{color: {C['text2']}; background: {C['glass']};}}
+      .stTabs [aria-selected="true"] {{
+        color: {C['text']}; border-bottom: 2px solid {C['orange']};
+      }}
+      .stTabs [data-baseweb="tab-panel"], .stTabs [data-testid="stTabPanel"] {{padding-top: .6rem;}}
 
-      .stDataFrame {{border: 1px solid {C['border']}; border-radius: 12px;}}
+      .stDataFrame {{border: 1px solid {C['border']}; border-radius: 10px;}}
       section[data-testid="stSidebar"] {{background: {C['bg2']}; border-right: 1px solid {C['border']};}}
-      .stExpander {{border: 1px solid {C['border']} !important; border-radius: 12px !important;}}
+      .stExpander {{border: 1px solid {C['border']} !important; border-radius: 10px !important;}}
+      [data-testid="stExpander"] details {{border: none !important;}}
+      [data-testid="stExpander"] summary {{padding: .45rem .8rem;}}
+      [data-testid="stExpander"] summary p {{font-size: .88rem; font-weight: 600;}}
+
+      /* Nothing wide may push the page sideways: charts and raw HTML
+         tables scroll inside their own box instead. */
+      [data-testid="stPlotlyChart"], [data-testid="stMarkdownContainer"] {{
+        max-width: 100%; overflow-x: auto;
+      }}
+      [data-testid="stHorizontalBlock"] {{min-width: 0;}}
+      [data-testid="stColumn"] {{min-width: 0;}}
+      .stButton button {{min-height: 2.15rem; font-size: .84rem;}}
+
+      /* Phones. Streamlit stacks every st.columns() into one column under
+         640px, which turned a six-metric header into six full-width cards
+         and 15 game cards into a 4000px scroll. Blocks that hold metrics or
+         game cards keep a grid; everything else still stacks. */
+      @media (max-width: 640px) {{
+        .block-container {{padding: 3.4rem .7rem 2rem;}}
+        h1 {{font-size: 1.55rem !important;}}
+        [data-testid="stHorizontalBlock"]:has([data-testid="stMetric"]),
+        [data-testid="stHorizontalBlock"]:has(.gcard) {{
+          flex-direction: row !important; flex-wrap: wrap !important;
+          gap: .4rem !important;
+        }}
+        [data-testid="stHorizontalBlock"]:has([data-testid="stMetric"]) > [data-testid="stColumn"] {{
+          flex: 1 1 calc(33.333% - .4rem) !important;
+          width: calc(33.333% - .4rem) !important;
+          min-width: calc(33.333% - .4rem) !important;
+        }}
+        [data-testid="stHorizontalBlock"]:has(.gcard) > [data-testid="stColumn"] {{
+          flex: 1 1 calc(50% - .4rem) !important;
+          width: calc(50% - .4rem) !important;
+          min-width: calc(50% - .4rem) !important;
+        }}
+        [data-testid="stMetric"] {{padding: .4rem .55rem;}}
+        [data-testid="stMetricValue"], .num {{font-size: 1.1rem;}}
+        [data-testid="stMetricLabel"] {{font-size: .6rem;}}
+        [data-testid="stMetricDelta"] {{font-size: .66rem;}}
+        .stTabs [data-baseweb="tab"], .stTabs [data-testid="stTab"] {{height: 30px; padding: 0 8px;}}
+        .stTabs [data-testid="stTab"] p {{font-size: .78rem;}}
+        .gcard {{min-height: 88px; padding: .45rem .55rem .4rem;}}
+        .gcard .gm {{font-size: .9rem;}}
+      }}
 
       /* Game selector strip. Cards, not a stack of closed expanders --
          a closed expander told you nothing about whether to open it. */
@@ -302,6 +391,39 @@ def load_detail(kind: str, ident: Any, slate_label: str = "today") -> Dict[str, 
     return (load_json(f"public/data/current/detail/{slate_label}/{kind}_{ident}.json")
             or load_json(f"public/data/current/detail/{kind}_{ident}.json")
             or {})
+
+
+def _prefetch(jobs: List[tuple]) -> None:
+    """Warm several st.cache_data loaders at once.
+
+    `jobs` is a list of (cached_fn, *args). Each call is made on a worker
+    thread carrying the script-run context, so the result lands in the same
+    cache entry the main thread reads a moment later. Errors are swallowed:
+    the caller's own (sequential) call will surface a missing file the
+    normal way. On a warm cache this is a handful of cheap hits.
+    """
+    if not jobs:
+        return
+    try:
+        import threading
+        from concurrent.futures import ThreadPoolExecutor
+        from streamlit.runtime.scriptrunner import (add_script_run_ctx,
+                                                    get_script_run_ctx)
+        _ctx = get_script_run_ctx()
+
+        def _attach() -> None:
+            add_script_run_ctx(threading.current_thread(), _ctx)
+
+        with ThreadPoolExecutor(max_workers=min(8, len(jobs)),
+                                initializer=_attach) as ex:
+            futs = [ex.submit(job[0], *job[1:]) for job in jobs]
+            for f in futs:
+                try:
+                    f.result()
+                except Exception:
+                    pass
+    except Exception:
+        pass
 
 
 # ── FIELD ACCESSORS (port of lib/player.js) ─────────────────────────────────
@@ -459,13 +581,6 @@ _JUNK_RE = re.compile(
     re.I,
 )
 
-_JUNK_RE = re.compile(
-    r"^\s*(?:\d+[.)]|[-*\u2022\u2023\u25aa\u2043])\s*"   # 1.  1)  -  *  bullets
-    r"|\s*\((?:[A-Z]{2,3})\)\s*$"                            # trailing (NYY)
-    r"|\s*[+-]\d{2,5}\s*$"                                    # trailing odds +450 / -110
-    r"|\s+(?:vs\.?|@)\s+.*$",                                 # "Judge vs Cole"
-    re.I,
-)
 
 def norm_name(s: Any) -> str:
     """Normalise a player name for matching.
@@ -847,7 +962,7 @@ def render_spot_answer(a: Dict[str, Any], pitcher_name: str, spot: int) -> None:
     k = st.columns(4)
     k[0].metric("Damage in spot", f"{a['damage']:.1f}",
                 f"{a['vs_own']:+.1f} vs his other spots")
-    k[1].metric("vs slate median", f"{a['league']:.1f}", f"{a['vs_league']:+.1f}")
+    k[1].metric("vs tonight's median", f"{a['league']:.1f}", f"{a['vs_league']:+.1f}")
     k[2].metric("SLG / ISO allowed", f"{a['slg']:.3f}", f"ISO {a['iso']:.3f}")
     k[3].metric("HR / hard-hit", f"{a['hr']} HR", f"HH {a['hard_hit'] * 100:.0f}%")
     if a["reason"]:
@@ -1267,6 +1382,13 @@ def local_time(rows: List[Dict[str, Any]]) -> str:
     return (base - dt.timedelta(hours=7)).strftime("%-I:%M %p")
 
 
+def _yesterday_slate_date() -> str:
+    """ISO date of yesterday's slate, in Phoenix time -- the calendar the bot
+    names its graded_results_<date>.json files by."""
+    today = dt.datetime.now(ZoneInfo("America/Phoenix")).date()
+    return (today - dt.timedelta(days=1)).isoformat()
+
+
 # Streamlit derives a chart's element id from its CONTENT, so two charts that
 # happen to hold identical numbers collide -- which is what killed the
 # tomorrow slate: two pitchers with no data both rendered an all-zero
@@ -1680,6 +1802,14 @@ def player_detail(p: Dict[str, Any], kp: str = "pl",
             persist_watch()
             st.rerun()
 
+    # The three per-player files this view needs (batter log, opposing
+    # pitcher log, splits) are independent, so fetch them together rather
+    # than one after another.
+    _prefetch([
+        (load_detail, "batter", p.get("player_id"), slate),
+        (load_detail, "pitcher", p.get("pitcher_id"), slate),
+        (load_splits, p.get("player_id"), slate),
+    ])
     detail = load_detail("batter", p.get("player_id"), slate)
     # spray_chart is the canonical batted-ball list; contact_log and
     # batted_ball_log were byte-identical copies, so they're aliases here.
@@ -1713,7 +1843,7 @@ def player_detail(p: Dict[str, Any], kp: str = "pl",
         else:
             delta = f"{mine - med([fn(x) for x in players]):+.1f} vs med"
         pr[i].metric(lbl, f"{mine:.1f}", delta=delta, delta_color="normal",
-                     help=f"{pct_:.0f}th percentile on tonight's slate.")
+                     help=f"{pct_:.0f}th percentile among tonight's hitters.")
 
     if cmp_p is not None:
         radar(
@@ -1816,8 +1946,8 @@ def player_detail(p: Dict[str, Any], kp: str = "pl",
             float(pd.Series([pmix_score(x) for x in players]).median()),
             float(pd.Series([nn(x, "damage_conversion_score") for x in players]).median()),
         ]
-        radar(axes, mine, role_color, "Model score profile vs slate median",
-              height=360, second=("Slate median", slate_med, C["text3"]))
+        radar(axes, mine, role_color, "Model score profile vs tonight's median",
+              height=360, second=("Tonight's median", slate_med, C["text3"]))
 
         for label, key in (("Why this HR score", "hr_reason"),
                            ("Pitch fit", "pitch_fit_summary"),
@@ -2904,17 +3034,51 @@ def persist_watch() -> None:
 
 with st.sidebar:
     st.markdown("### ⚾ MLB HR Dashboard")
-    slate = st.radio("Slate", ["today", "tomorrow"], horizontal=True, key="slate")
+    st.caption("Model-ranked home run picks, graded every night.")
+    # Values stay "today"/"tomorrow" -- they're file-name keys downstream.
+    # Only the displayed text changes.
+    slate = st.radio(
+        "Which day's games", ["today", "tomorrow"], horizontal=True, key="slate",
+        format_func=lambda s: s.capitalize(),
+        help="Today's games are re-scored through the afternoon as lineups "
+             "confirm. Tomorrow's games are a first pass built overnight.",
+    )
     if st.button("🔄 Refresh data", width="stretch"):
         st.cache_data.clear()
         st.rerun()
     st.divider()
 
+def _warm_cache(slate_label: str) -> None:
+    """Fetch every slate-wide file this page needs in parallel.
+
+    A cold visit used to make ~10 HTTPS round-trips to raw.githubusercontent
+    one after another (slate, results, pair builder, pair history, backtest,
+    text report ...), each ~0.5-1 s. Firing them together fills the same
+    st.cache_data entries the tabs read from, so on a cold cache the first
+    render waits for the slowest fetch instead of the sum of all of them.
+    Runs once per browser session and slate; after that the per-file caches
+    (5-min TTL) do the work on their own.
+    """
+    flag = f"_warmed_{slate_label}"
+    if st.session_state.get(flag):
+        return
+    _prefetch([
+        (load_slate, slate_label),
+        (load_json, "public/data/current/results_live.json"),
+        (load_json, "public/data/current/pair_builder_latest.json"),
+        (load_json, "public/data/current/pair_history_summary.json"),
+        (load_json, "public/data/current/backtest_summary.json"),
+        (load_text, f"public/data/current/{slate_label}.txt"),
+    ])
+    st.session_state[flag] = True
+
+
+_warm_cache(slate)
 players = load_slate(slate)
 
 if not players:
     st.error(
-        f"No slate data found for **{slate}**.\n\n"
+        f"No games data found for **{slate}**.\n\n"
         f"Looked for `public/data/current/{slate}_slim.json` locally, then on the "
         f"`{DATA_BRANCH}` branch of `{GITHUB_REPO}`. If the bot hasn't published yet, "
         "check the **MLB HR Bot — Today** workflow in GitHub Actions."
@@ -2926,17 +3090,36 @@ with st.sidebar:
     # Explicit keys so the "Reset filters" button below can clear them all in
     # one go -- without keys Streamlit auto-generates names that can't be
     # popped from session_state.
-    team_pick = st.multiselect("Team", teams, key="f_team")
-    query = st.text_input("Search player / pitcher", "", key="f_query")
-    lane_label = st.selectbox("Lane", [lbl for _, lbl in LANES], key="f_lane")
+    st.markdown("**Filters** — apply to every tab")
+    team_pick = st.multiselect("Team", teams, key="f_team",
+                               help="Show only hitters on these teams.")
+    query = st.text_input("Search player / pitcher", "", key="f_query",
+                          help="Matches hitter, team, opponent or opposing pitcher.")
+    lane_label = st.selectbox(
+        "Angle", [lbl for _, lbl in LANES], key="f_lane",
+        help="Narrow the board to one kind of play. Strong HR = the model's "
+             "best power bets. Value = cheaper names with real HR signals. "
+             "Due = power that hasn't converted lately. Hot = homered or "
+             "hit for extra bases in the last week. Weak Pitcher = facing a "
+             "homer-prone starter. Weather/Park = friendly conditions. "
+             "Pitch Matchup = his swing fits what this pitcher throws. "
+             "🧩 Aligned = several of those stack on one hitter. "
+             "Avoid HR = the model says stay away.",
+    )
     lane_key = next(k for k, lbl in LANES if lbl == lane_label)
-    min_hr = st.slider("Min HR score", 0, 100, 0, step=5, key="f_minhr")
-    confirmed_only = st.checkbox("Confirmed lineups only", key="f_conf")
-    aligned_only = st.checkbox("🧩 Aligned only", key="f_aligned")
+    min_hr = st.slider("Min HR score", 0, 100, 0, step=5, key="f_minhr",
+                       help="Hide hitters below this HR score (0–100).")
+    confirmed_only = st.checkbox("Confirmed lineups only", key="f_conf",
+                                 help="Hide hitters whose team hasn't posted a lineup yet.")
+    aligned_only = st.checkbox("🧩 Aligned only", key="f_aligned",
+                               help="Only hitters where a weak pitcher spot, a pitch-type "
+                                    "match and real recent contact all line up.")
     # The bot flags a hitter whose lineup spot this pitcher has been beaten in
     # ("allowed 2 HR to the #1 spot in 32 PA, .679 SLG"). ~50 of 215 on a
     # typical slate, so it's a real cut rather than a rounding error.
-    weakspot_only = st.checkbox("⭐ Weak spot starts only", key="f_weak")
+    weakspot_only = st.checkbox("⭐ Weak spot starts only", key="f_weak",
+                                help="Only hitters whose lineup spot tonight's starter "
+                                     "has already given up homers to this season.")
     st.divider()
 
     # Auto-refresh. The old site polled every 45s while games were live and
@@ -2965,7 +3148,7 @@ with st.sidebar:
             unsafe_allow_javascript=True,
         )
 
-    st.caption(f"{len(players)} players · cache {CACHE_TTL // 60} min")
+    st.caption(f"{len(players)} hitters loaded · data refreshes every {CACHE_TTL // 60} min")
 
 
 def apply_filters(pool: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -3044,7 +3227,7 @@ _active_filters = [
         ("Confirmed lineups only", bool(confirmed_only)),
         ("Aligned only", bool(aligned_only)),
         ("Weak spot starts only", bool(weakspot_only)),
-        (f"Lane: {lane_key}", lane_key != "all"),
+        (f"Angle: {lane_key}", lane_key != "all"),
     ) if on
 ]
 if _active_filters:
@@ -3061,12 +3244,14 @@ if _active_filters:
 # a two-column split with it, and because st.title is so much taller than a
 # metric, the numbers rendered level with the top of the page and got clipped
 # by the header bar -- every screenshot showed "HR 80+" cut in half.
-st.title(f"{slate.capitalize()}'s Slate")
+st.title(f"{slate.capitalize()}'s Games")
 games = len({p.get("game_pk") for p in players})
 filtered_out = len(players) - len(view)
 st.caption(
+    "**MLB home run picks, ranked by a model and graded every night.** "
     f"{games} games · {len(players)} hitters"
-    + (f" · **{filtered_out} hidden by filters**" if filtered_out else "")
+    + (f" · **{filtered_out} hidden by sidebar filters**" if filtered_out else "")
+    + "  ·  New here? Open the **📖 Guide** tab."
 )
 
 hrs = [hr_score(p) for p in players]
@@ -3094,24 +3279,27 @@ m[2].metric(
     "HR projected", f"{_proj_hr:.1f}",
     delta=(f"{_slate_hr - _proj_hr:+.1f} vs actual" if _slate_hr else None),
     delta_color="normal",
-    help=f"The bot's slate projection — printed in the report as "
+    help=f"The model's projection for all of tonight's games — printed in the report as "
          f"\"projected HRs {_proj['low']}\u2013{_proj['high']}\", shown here to "
          f"one decimal. Power grade: {_proj['grade']}. "
          f"{_proj['top_profiles']} top HR profiles, {_proj['weak_games']} weak "
-         "pitcher spots. Delta compares to the real slate total once games start.",
+         "pitcher spots. Delta compares to the real total once games start."
 )
 m[3].metric(
     "HR actual", f"{_slate_hr:.1f}" if _slate_hr else "—",
     delta=(f"{_actual_hr} on the board" if _actual_hr else None),
     delta_color="off",
-    help="Home runs hit on this slate so far, and how many were by someone "
-         "the model had on the board.",
+    help="Home runs hit across tonight's games so far, and how many were by "
+         "someone the model had on the board.",
 )
-m[4].metric("🧩 Aligned", sum(1 for p in players if is_aligned(p)))
+m[4].metric("🧩 Aligned", sum(1 for p in players if is_aligned(p)),
+            help="Hitters where a weak pitcher spot, a pitch-type match and real "
+                 "recent contact all stack — the model's strongest combination.")
 m[5].metric(
     "✅ Confirmed", sum(1 for p in players if p.get("lineup_confirmed")),
     delta=(f"{len(_settled_now)} picks settled" if _settled_now else None),
     delta_color="off",
+    help="Hitters in a posted lineup. Picks on unconfirmed hitters can vanish.",
 )
 # ── SLATE LEAN ─────────────────────────────────────────────────────────────
 # Which way tonight actually tilts. Comparing the boards' raw medians would be
@@ -3164,10 +3352,10 @@ if _lean_z:
     else:
         _lean_txt = f"leans **{_best}**"
     _overall = sum(_lean_z.values()) / len(_lean_z)
-    _lean_txt += (" · whole slate **quiet**" if _overall < -0.75
-                  else " · whole slate **live**" if _overall > 0.75 else "")
+    _lean_txt += (" · overall **quiet**" if _overall < -0.75
+                  else " · overall **live**" if _overall > 0.75 else "")
     st.caption(
-        f"Slate {_lean_txt}  ·  "
+        f"Tonight {_lean_txt}  ·  "
         + " · ".join(f"{k} {_lean_z[k]:+.1f}sd" for k in ("HR", "hits", "bases")
                      if k in _lean_z)
         + "  — each board against its own 34-day normal. HR swings widest "
@@ -3196,23 +3384,39 @@ st.divider()
 (tab_games, tab_board, tab_long, tab_due, tab_hitshrr, tab_pitchers, tab_pairs,
  tab_bot, tab_pools, tab_pairhist, tab_scoreboard, tab_leaders, tab_player,
  tab_watch, tab_spray, tab_results, tab_guide) = st.tabs([
-    "🗓️ Games", "🏆 HR", "🚀 Longest", "💣 Due", "💥 Hits",
-    "⚾ Pitchers", "🎯 Pairs", "🤖 Bot", "🧩 Pools", "🧬 History",
-    "📊 Board", "🥇 Leaders", "🔍 Player", "⭐ Watch", "💦 Spray",
+    "🗓️ Games", "🏆 HR Picks", "🚀 Longest", "💣 Overdue", "💥 Hits",
+    "⚾ Pitchers", "🎯 Pairs", "🤖 Report", "🧩 Pools", "🧬 Past Pairs",
+    "📊 All Bats", "🥇 Leaders", "🔍 Player", "⭐ Watch", "💦 Spray",
     "✅ Results", "📖 Guide",
 ])
 
 # ── BOARD ───────────────────────────────────────────────────────────────────
 with tab_board:
+    st.subheader("🏆 HR Picks")
+    st.caption(
+        "Tonight's hitters ranked by the model's home run score. Start at the "
+        "top; open a card to see *why* he's there. Switch the ranking below "
+        "to rank by a different score."
+    )
     c1, c2, c3 = st.columns([2, 1, 2])
+    # Option strings are dict keys below -- change both together.
     kind_label = c1.selectbox(
-        "Board type",
-        ["HR", "DC (damage)", "Longest (distance)", "Cross (all-round)",
-         "HRR", "Hit", "TB (Base)"])
-    kind = {"HR": "hr", "DC (damage)": "dc", "Longest (distance)": "longest",
-            "Cross (all-round)": "cross", "HRR": "hrr", "Hit": "hit",
-            "TB (Base)": "tb"}[kind_label]
-    top_n = c2.number_input("Show top", 5, 200, 25, step=5)
+        "Rank by",
+        ["HR (home run)", "DC (damage)", "Longest (distance)", "Cross (all-round)",
+         "HRR (hits+runs+RBI)", "Hit (1+ hit)", "TB (total bases)"],
+        help="HR = chance he homers tonight (the main board). "
+             "DC = damage conversion: how often his contact does real harm. "
+             "Longest = who hits the farthest ball. "
+             "Cross = balanced across every score. "
+             "HRR = hits + runs + RBI production. "
+             "Hit = chance of at least one base hit. "
+             "TB = total bases / extra-base-hit profile.",
+    )
+    kind = {"HR (home run)": "hr", "DC (damage)": "dc", "Longest (distance)": "longest",
+            "Cross (all-round)": "cross", "HRR (hits+runs+RBI)": "hrr",
+            "Hit (1+ hit)": "hit", "TB (total bases)": "tb"}[kind_label]
+    top_n = c2.number_input("Show top", 5, 200, 25, step=5,
+                            help="How many hitters to rank.")
     with c3:
         hr_pool = board_search(view, "hr_board_q")
 
@@ -3237,16 +3441,18 @@ with tab_board:
                 "Barrel": barrel_rate(p) * 100,
                 "P HR/9": nn(p, "pitcher_hr9") * 30,
             } for p in ranked[:15]]).set_index("Player")
-            heatmap(hm_hr, f"Top 15 by {kind_label} score — full profile",
+            heatmap(hm_hr, f"Top 15 by {kind_label.split(' (')[0]} score — what's driving each",
                     height=max(360, 26 * min(15, len(ranked)) + 120))
             st.caption(
                 "Each column is scaled independently, so a bright cell means "
-                "*high for this slate* on that input — not that the numbers "
-                "are comparable across columns. P HR/9 is ×30 to fit the scale."
+                "*high for tonight* on that input — not that the numbers "
+                "are comparable across columns. HRW = HR timing window, "
+                "DC = damage conversion, PMix = pitch-type matchup fit, "
+                "P HR/9 = homers the opposing pitcher allows per 9 innings (×30 to fit)."
             )
 
-        with st.expander("Score distribution — whole slate"):
-            st.markdown("**Score distribution — whole slate**")
+        with st.expander("Score distribution — every hitter tonight"):
+            st.markdown("**Score distribution — every hitter tonight**")
             # Binned with pandas rather than st.plotly_chart: plotly isn't in
             # requirements.txt and pulling it in would slow every cold boot on
             # Streamlit Cloud just to draw one histogram.
@@ -3284,20 +3490,27 @@ with tab_games:
     # Deliberately collapsed. Someone who already knows the board never opens
     # it; someone who doesn't would otherwise be looking at "Med HRW 41.5"
     # with no idea what any of it means or where to start.
-    with st.expander("🆕 New here? Start with this", expanded=False):
+    st.subheader("🗓️ Games — start here")
+    st.caption(
+        "Every game on tonight's schedule, in first-pitch order. Pick a game "
+        "to see both starting pitchers and the model's picks for it. "
+        "Use the sidebar to switch between today and tomorrow."
+    )
+    with st.expander("🆕 New here? Read this first (30 seconds)", expanded=False):
         st.markdown(
-            "**What this site does.** Every morning a bot scores each hitter "
-            "on today's slate for how likely he is to homer, get a hit, or do "
-            "damage. Everything you see is built from that.\n\n"
-            "**How to use this page in 30 seconds:**\n\n"
-            "1. The chart below ranks today's games. Longer, lighter bars are "
-            "better games for hitters.\n"
-            "2. Open the top game. You'll get both starting pitchers and five "
-            "picks — the best home-run bet, the safest hit, and so on.\n"
-            "3. Click **Details** on anyone to see why the bot likes him.\n\n"
+            "**What this site does.** Every morning a model scores each hitter "
+            "playing today for how likely he is to homer, get a hit, or do "
+            "damage. Everything you see is built from those scores.\n\n"
+            "**How to use this page:**\n\n"
+            "1. The cards below are tonight's games. A higher **GS** (game "
+            "score) means a lineup the model likes more.\n"
+            "2. Open a game. You'll get both starting pitchers and five "
+            "picks — the best home run bet, the safest hit, and so on.\n"
+            "3. Click **Details** on any hitter to see why the model likes him.\n\n"
             "**The only rule that matters:** a great-looking rate on a tiny "
             "sample isn't real. Wherever the site shows a rate, it shows the "
-            "number of plate appearances behind it. Check that first."
+            "number of plate appearances behind it. Check that first.\n\n"
+            "The **📖 Guide** tab explains every board, badge and score."
         )
         st.markdown(GLOSSARY_MD)
 
@@ -3338,89 +3551,97 @@ with tab_games:
     # Peaks (top HR / top HRR) say "is there a play here"; the averages across
     # every batter in the game say "is the whole lineup live or is it one guy",
     # which is what separates a real spot from a single outlier.
+    # Collapsed by default. This strip (a second set of metrics plus a 15x9
+    # grid of numbers) used to render ABOVE the game cards, so the first
+    # thing anyone saw on entry was a wall of figures and the games were a
+    # screen and a half down -- three screens on a phone. Numbers are
+    # unchanged; they just sit behind one click now.
     if order:
-        st.markdown("#### Slate at a glance")
+        with st.expander("Tonight at a glance", expanded=False):
 
 
-        def player_score(p: Dict[str, Any]) -> float:
-            """One number per hitter: the median of his four HR-relevant scores.
+            def player_score(p: Dict[str, Any]) -> float:
+                """One number per hitter: the median of his four HR-relevant scores.
 
-            Median rather than mean on purpose -- a hitter with three strong
-            marks and one weak one still reads strong, and a single inflated
-            score can't drag the whole thing up on its own.
-            """
-            return med([
-                hr_score(p), prod_score(p),
-                nn(p, "hrw_score"), nn(p, "damage_conversion_score"),
-            ])
+                Median rather than mean on purpose -- a hitter with three strong
+                marks and one weak one still reads strong, and a single inflated
+                score can't drag the whole thing up on its own.
+                """
+                return med([
+                    hr_score(p), prod_score(p),
+                    nn(p, "hrw_score"), nn(p, "damage_conversion_score"),
+                ])
 
-        glance = []
-        for _, gp in order:
-            head = max(gp, key=hr_score)
-            glance.append({
-                "Game": f"{team_of(head)} vs {opp_of(head)}",
-                # Median of every hitter's composite = the game's HR-chance
-                # score. Reads "how live is this lineup", not "who's the one guy".
-                "Game Score": round(med([player_score(x) for x in gp]), 1),
-                "Batters": len(gp),
-                "Top HR": round(max(hr_score(x) for x in gp), 1),
-                "Top HRR": round(max(prod_score(x) for x in gp), 1),
-                "Med HR": round(med([hr_score(x) for x in gp]), 1),
-                "Med HRR": round(med([prod_score(x) for x in gp]), 1),
-                "Med HRW": round(med([nn(x, "hrw_score") for x in gp]), 1),
-                "Med DC": round(med([nn(x, "damage_conversion_score") for x in gp]), 1),
-                "Med Hit": round(med([hit_score(x) for x in gp]), 1),
-                "Med TB": round(med([tb_score(x) for x in gp]), 1),
-                "Pitcher": txt(head, "pitcher_name"),
-                "P HR/9": round(nn(head, "pitcher_hr9"), 2),
-                "Park HR": round(nn(head, "park_hr_factor", default=1.0), 2),
-            })
-        gdf = pd.DataFrame(glance).sort_values("Game Score", ascending=False)
+            glance = []
+            for _, gp in order:
+                head = max(gp, key=hr_score)
+                glance.append({
+                    "Game": f"{team_of(head)} vs {opp_of(head)}",
+                    # Median of every hitter's composite = the game's HR-chance
+                    # score. Reads "how live is this lineup", not "who's the one guy".
+                    "Game Score": round(med([player_score(x) for x in gp]), 1),
+                    "Batters": len(gp),
+                    "Top HR": round(max(hr_score(x) for x in gp), 1),
+                    "Top HRR": round(max(prod_score(x) for x in gp), 1),
+                    "Med HR": round(med([hr_score(x) for x in gp]), 1),
+                    "Med HRR": round(med([prod_score(x) for x in gp]), 1),
+                    "Med HRW": round(med([nn(x, "hrw_score") for x in gp]), 1),
+                    "Med DC": round(med([nn(x, "damage_conversion_score") for x in gp]), 1),
+                    "Med Hit": round(med([hit_score(x) for x in gp]), 1),
+                    "Med TB": round(med([tb_score(x) for x in gp]), 1),
+                    "Pitcher": txt(head, "pitcher_name"),
+                    "P HR/9": round(nn(head, "pitcher_hr9"), 2),
+                    "Park HR": round(nn(head, "park_hr_factor", default=1.0), 2),
+                })
+            gdf = pd.DataFrame(glance).sort_values("Game Score", ascending=False)
 
-        # Slate at a glance. "Best game score 61.2" told you a number on a
-        # scale nobody knows. These answer questions instead: how much power
-        # is on tonight, WHICH game is the one, how much of the slate is
-        # actually confirmed, and where the exploitable spots are.
-        # gdf is already sorted by Game Score descending, so the best game is
-        # simply the first row. (This previously used gdf.iloc[idxmax()],
-        # mixing a label from idxmax with positional .iloc indexing -- after
-        # the sort those disagree, so it reported the wrong game entirely.)
-        _best_g = gdf.iloc[0] if len(gdf) else None
-        _conf = sum(1 for p in view if p.get("lineup_confirmed"))
-        _hot = sum(1 for p in view if hr_score(p) >= 70)
-        s = st.columns(6)
-        s[0].metric("Games", len(gdf))
-        s[1].metric("Projected HRs", f"{_proj_hr:.1f}",
-                    f"{_proj['low']}–{_proj['high']} range", delta_color="off")
-        s[2].metric("Best game",
-                    str(_best_g["Game"]) if _best_g is not None else "—",
-                    f"score {_best_g['Game Score']:.1f}" if _best_g is not None else None,
-                    delta_color="off")
-        s[3].metric("Hitters 70+", _hot,
-                    f"{100 * _hot / max(1, len(view)):.0f}% of slate", delta_color="off")
-        s[4].metric("Lineups confirmed",
-                    f"{100 * _conf / max(1, len(view)):.0f}%",
-                    f"{_conf} of {len(view)}", delta_color="off")
-        s[5].metric("⭐ Weak spots",
-                    sum(1 for p in view if p.get("weak_spot_flag")))
+            # Slate at a glance. "Best game score 61.2" told you a number on a
+            # scale nobody knows. These answer questions instead: how much power
+            # is on tonight, WHICH game is the one, how much of the slate is
+            # actually confirmed, and where the exploitable spots are.
+            # gdf is already sorted by Game Score descending, so the best game is
+            # simply the first row. (This previously used gdf.iloc[idxmax()],
+            # mixing a label from idxmax with positional .iloc indexing -- after
+            # the sort those disagree, so it reported the wrong game entirely.)
+            _best_g = gdf.iloc[0] if len(gdf) else None
+            _conf = sum(1 for p in view if p.get("lineup_confirmed"))
+            _hot = sum(1 for p in view if hr_score(p) >= 70)
+            s = st.columns(6)
+            s[0].metric("Games", len(gdf))
+            s[1].metric("Projected HRs", f"{_proj_hr:.1f}",
+                        f"{_proj['low']}–{_proj['high']} range", delta_color="off")
+            s[2].metric("Best game",
+                        str(_best_g["Game"]) if _best_g is not None else "—",
+                        f"score {_best_g['Game Score']:.1f}" if _best_g is not None else None,
+                        delta_color="off")
+            s[3].metric("Hitters 70+", _hot,
+                        f"{100 * _hot / max(1, len(view)):.0f}% of tonight", delta_color="off",
+                        help="Hitters with an HR score of 70 or better.")
+            s[4].metric("Lineups confirmed",
+                        f"{100 * _conf / max(1, len(view)):.0f}%",
+                        f"{_conf} of {len(view)}", delta_color="off")
+            s[5].metric("⭐ Weak spots",
+                        sum(1 for p in view if p.get("weak_spot_flag")),
+                        help="Hitters whose lineup spot tonight's starter has "
+                             "already given up homers to this season.")
 
-        # The heatmap and the table below are supporting material, so they
-        # get one fixed ordering instead of a control -- every column is on
-        # the heatmap anyway, and it sorts on click.
-        ranked_games = gdf.sort_values("Game Score", ascending=False)
+            # The heatmap and the table below are supporting material, so they
+            # get one fixed ordering instead of a control -- every column is on
+            # the heatmap anyway, and it sorts on click.
+            ranked_games = gdf.sort_values("Game Score", ascending=False)
 
-        # The "Games ranked by" chart is gone -- the sorted table and the
-        # per-metric heatmap directly below say the same thing with more
-        # detail, so it was a third rendering of one ordering.
-        # Radar removed per request -- the per-metric heatmap directly
-        # below answers the same "what shape is this game" question in a
-        # form that reads at a glance and matches the rest of the site.
-        hm = ranked_games.set_index("Game")[
-            ["Game Score", "Med HR", "Med HRR", "Med HRW", "Med DC", "Med Hit",
-             "Med TB", "Top HR", "Top HRR"]
-        ]
-        heatmap(hm, "Game x metric — hotter is better for hitters",
-                height=max(280, 26 * len(hm) + 90), fmt="{:.0f}")
+            # The "Games ranked by" chart is gone -- the sorted table and the
+            # per-metric heatmap directly below say the same thing with more
+            # detail, so it was a third rendering of one ordering.
+            # Radar removed per request -- the per-metric heatmap directly
+            # below answers the same "what shape is this game" question in a
+            # form that reads at a glance and matches the rest of the site.
+            hm = ranked_games.set_index("Game")[
+                ["Game Score", "Med HR", "Med HRR", "Med HRW", "Med DC", "Med Hit",
+                 "Med TB", "Top HR", "Top HRR"]
+            ]
+            heatmap(hm, "Game x metric — hotter is better for hitters",
+                    height=max(280, 26 * len(hm) + 90), fmt="{:.0f}")
 
 
     st.divider()
@@ -3458,7 +3679,7 @@ with tab_games:
             "a single board from looking live; the outer one stops one big bat "
             "from carrying a dead lineup. So GS answers **is this whole lineup "
             "dangerous**, not *is there one guy here*.\n\n"
-            "**▲ / ▽** — above or below the slate's own median GS.\n\n"
+            "**▲ / ▽** — above or below tonight's median GS.\n\n"
             "**Med HRW** — median HR-window score: how much of this lineup the "
             "model reads as being in a hot window right now.\n\n"
             "**⭐ n** — hitters whose lineup spot this starter has already been "
@@ -3494,7 +3715,7 @@ with tab_games:
         st.session_state[_sel_key] = _pks[0] if _pks else None
 
     if _pks:
-        st.markdown("#### Games")
+        st.markdown("#### Pick a game")
         _PER_ROW = 5
         for _i in range(0, len(order), _PER_ROW):
             _cols = st.columns(_PER_ROW)
@@ -3521,9 +3742,10 @@ with tab_games:
                         st.session_state[_sel_key] = _pk
                         st.rerun()
         st.caption(
-            "Cards are in first-pitch order — you read a slate "
-            "chronologically. GS is the game's median hitter score; "
-            "▲/▽ is against the slate median."
+            "Cards are in first-pitch order. ✅ = lineups posted. "
+            "GS = game score, the median hitter score in that game; "
+            "▲/▽ = above/below tonight's median. HRW = HR timing window. "
+            "⭐ n = hitters in a weak spot vs this starter."
         )
 
     for gpk, gp in [(_p, _r) for _p, _r in order
@@ -3580,8 +3802,8 @@ with tab_games:
             heatmap(hm_g5, "Top 5 bats in this game — what each one is for",
                     height=max(240, 30 * len(hm_g5) + 110), fmt="{:.0f}")
             st.caption(
-                "Columns scale independently, so bright means high *for this "
-                "slate*. A bright HR row with a dark Hit row is a swing-hard "
+                "Columns scale independently, so bright means high *for "
+                "tonight*. A bright HR row with a dark Hit row is a swing-hard "
                 "bat; the reverse is a table-setter. P HR/9 is ×30 to fit."
             )
 
@@ -3627,7 +3849,7 @@ with tab_games:
                 ["— listed starter —"] + arm_names,
                 index=wi_default, key=f"whatif_{gpk}",
                 help="Estimates the HR-score shift from swapping the pitcher. "
-                     "Only starters on today's slate are available -- bullpen "
+                     "Only starters pitching today are available -- bullpen "
                      "arms aren't in the published data.",
             )
             if wi != "— listed starter —" and wi != cur_arm:
@@ -3883,9 +4105,9 @@ with tab_games:
 
 # ── SCOREBOARD ──────────────────────────────────────────────────────────────
 with tab_scoreboard:
-    st.subheader("Scoreboard")
+    st.subheader("📊 All Bats")
     st.caption(
-        f"Every one of the {len(view)} hitters on the slate, all scores in one "
+        f"Every one of the {len(view)} hitters playing tonight, all scores in one "
         "grid. Sort by several columns at once with the controls below the "
         "trackers — clicking a header only ever sorts by one."
     )
@@ -3934,7 +4156,7 @@ with tab_scoreboard:
                 "the board."
             )
         elif _res_rows:
-            st.caption("Nobody on the slate has gone deep yet.")
+            st.caption("Nobody has gone deep yet tonight.")
         else:
             st.caption("Results load once the first games are underway.")
     with _sb_b:
@@ -3968,7 +4190,7 @@ with tab_scoreboard:
                 "Sorted hardest first."
             )
         else:
-            st.caption("No weak spots flagged on this slate.")
+            st.caption("No weak spots flagged tonight.")
 
     st.divider()
 
@@ -4079,11 +4301,23 @@ LEADER_STATS = {
 }
 
 with tab_leaders:
+    st.subheader("🥇 Leaders")
+    st.caption("Tonight's hitters ranked on any single stat — raw Statcast "
+               "numbers as well as model scores.")
     l1, l2, l3, l4 = st.columns([2, 1, 1, 1])
-    stat = l1.selectbox("Rank by", list(LEADER_STATS))
-    min_pull = l2.number_input("Min Pull %", 0, 100, 0, step=5)
-    min_la = l3.number_input("Min Launch°", 0, 45, 0, step=1)
-    min_375 = l4.number_input("Min 375+", 0, 20, 0, step=1)
+    stat = l1.selectbox(
+        "Rank by", list(LEADER_STATS),
+        help="Model scores (HR, HRR, Hit, TB, Pitch Mix, Damage Conversion) are "
+             "0–100. The rest are measured stats: 375+/400+ = recent batted balls "
+             "hit that far; Ideal HR% = share of contact at homer speed and angle; "
+             "Barrel % = share of contact hit hard at a good angle.",
+    )
+    min_pull = l2.number_input("Min Pull %", 0, 100, 0, step=5,
+                               help="Only hitters who pull the ball at least this often.")
+    min_la = l3.number_input("Min Launch°", 0, 45, 0, step=1,
+                             help="Minimum average launch angle in degrees.")
+    min_375 = l4.number_input("Min 375+", 0, 20, 0, step=1,
+                              help="Minimum number of recent batted balls hit 375 ft or farther.")
 
     getter, fmt = LEADER_STATS[stat]
     pool = [p for p in view
@@ -4117,6 +4351,9 @@ with tab_leaders:
 
 # ── PITCHERS ────────────────────────────────────────────────────────────────
 with tab_pitchers:
+    st.subheader("⚾ Pitchers")
+    st.caption("Tonight's starting pitchers, ranked by how easy they are to "
+               "take deep. Open one to see which hitters he's most vulnerable to.")
     pitchers = group_pitchers(view)
     if not pitchers:
         st.info("No pitcher data found yet.")
@@ -4125,6 +4362,11 @@ with tab_pitchers:
             "Sort by",
             ["Most weak spots", "Highest HR/9", "Highest WHIP", "Most hittable (attack)",
              "Worst barrel rate", "Game time"],
+            help="Weak spots = lineup positions he's already given up homers to. "
+                 "HR/9 = homers allowed per 9 innings (1.2 is average; higher is "
+                 "worse for him). WHIP = baserunners allowed per inning. "
+                 "Attack = the model's overall 'how hittable is he tonight' score. "
+                 "Barrel rate = how often hitters square him up.",
         )
         if sort_by == "Highest HR/9":
             pitchers.sort(key=lambda e: -e["hr9"])
@@ -4154,15 +4396,30 @@ with tab_pitchers:
                 height=max(280, 26 * len(pdf) + 90))
 
         st.caption(f"{len(pitchers)} starters · expand for the full profile")
-        for e in pitchers:
+
+        # Only ONE full profile is built per run. Every starter's profile is
+        # a radar, a pie, two or three heatmaps, a dataframe and a detail
+        # fetch; rendering all ~30 at once was ~120 Plotly figures, 30
+        # sequential HTTP round-trips and three-quarters of the page's DOM
+        # on every rerun -- the single biggest reason first load took 20s+.
+        # The header line carries the same at-a-glance numbers the expander
+        # title did, so the sort order above is still readable in the list.
+        def _pitcher_header(e: Dict[str, Any]) -> str:
             r = e["row"]
-            star = f" · ⭐ {e['weak_spots']} weak spot{'s' if e['weak_spots'] != 1 else ''}" if e["weak_spots"] else ""
+            star = (f" · ⭐ {e['weak_spots']} weak spot"
+                    f"{'s' if e['weak_spots'] != 1 else ''}") if e["weak_spots"] else ""
             tag = txt(r, "pitcher_attack_tag")
-            with st.expander(
-                f"{e['pitcher_name']} ({e['throws']}HP) · {e['team']} vs {e['facing']} · "
-                f"HR/9 {e['hr9']:.2f} · WHIP {e['whip']:.2f} · Attack "
-                f"{nn(r, 'pitcher_attack_score'):.0f}{star}  {tag}"
-            ):
+            return (f"{e['pitcher_name']} ({e['throws']}HP) · {e['team']} vs {e['facing']} · "
+                    f"HR/9 {e['hr9']:.2f} · WHIP {e['whip']:.2f} · Attack "
+                    f"{nn(r, 'pitcher_attack_score'):.0f}{star}  {tag}")
+
+        _p_headers = [_pitcher_header(e) for e in pitchers]
+        _p_pick = st.selectbox("Pitcher profile", _p_headers, key="pitcher_profile_pick")
+        for e, _hdr in zip(pitchers, _p_headers):
+            if _hdr != _p_pick:
+                continue
+            r = e["row"]
+            with st.expander(_hdr, expanded=True):
                 m = st.columns(6)
                 m[0].metric("ERA", f"{e['era']:.2f}", f"L3 {nn(r, 'pitcher_l3_era'):.2f}")
                 m[1].metric("HR/9", f"{e['hr9']:.2f}", f"L3 {nn(r, 'pitcher_l3_hr9'):.2f}")
@@ -4389,8 +4646,11 @@ with tab_long:
 
     lc1, lc2, lc3 = st.columns([2, 1, 2])
     use_carry = lc1.radio("Rank by", ["Adjusted for park + air", "Raw score"],
-                          horizontal=True, key="long_mode")
-    long_n = lc2.number_input("Show top", 5, 100, 25, step=5, key="long_n")
+                          horizontal=True, key="long_mode",
+                          help="Adjusted = the hitter's distance score scaled for "
+                               "tonight's ballpark and weather. Raw = the hitter alone.")
+    long_n = lc2.number_input("Show top", 5, 100, 25, step=5, key="long_n",
+                              help="How many hitters to rank.")
     with lc3:
         long_pool = board_search(view, "long_q")
 
@@ -4409,7 +4669,7 @@ with tab_long:
     else:
         m = st.columns(4)
         m[0].metric("Top score", f"{keyfn(ranked_long[0]):.1f}")
-        m[1].metric("Slate median",
+        m[1].metric("Tonight's median",
                     f"{med([longest_score(p) for p in players]):.1f}")
         m[2].metric("Best carry",
                     f"{max(carry_factor(p) for p in ranked_long):.2f}×",
@@ -4431,8 +4691,8 @@ with tab_long:
         heatmap(hm_long, "Distance profile (scaled)",
                 height=max(280, 30 * len(hm_long) + 90))
         st.caption(
-            "Columns are scaled independently, so bright means *high for this "
-            "slate* on that input. 400+/375+/Carry are multiplied only to sit "
+            "Columns are scaled independently, so bright means *high for "
+            "tonight* on that input. 400+/375+/Carry are multiplied only to sit "
             "on a comparable scale — the real values are in the table above."
         )
 
@@ -4502,18 +4762,27 @@ with tab_long:
 # hr_due_tag come straight from the model; games_since_last_hr and the
 # expected-vs-actual HR gap over the recent PA window supply the evidence.
 with tab_due:
+    st.subheader("💣 Overdue")
     st.caption(
-        "Hitters the model says are overdue — real power that hasn't converted "
-        "recently. Drought alone isn't a signal, so this pairs it with the bot's "
-        "due score and the gap between expected and actual HRs."
+        "Hitters the model says are overdue for a homer — real power that "
+        "hasn't converted lately. A drought alone means nothing, so this pairs "
+        "it with the model's due score and the gap between the homers his "
+        "contact *should* have produced and the ones he actually hit."
     )
 
     d1, d2, d3, d4 = st.columns(4)
-    min_due = d1.slider("Min due score", 0, 100, 0, step=5)
-    min_drought = d2.number_input("Min games since HR", 0, 60, 0, step=1)
+    min_due = d1.slider("Min due score", 0, 100, 0, step=5,
+                        help="The model's 0–100 'overdue' score. Higher = more "
+                             "power going unrewarded.")
+    min_drought = d2.number_input("Min games since HR", 0, 60, 0, step=1,
+                                  help="Only hitters who have gone at least this "
+                                       "many games without a homer.")
     tag_opts = ["All"] + sorted({txt(p, "hr_due_tag") for p in players if txt(p, "hr_due_tag")})
-    tag_pick = d3.selectbox("Due tag", tag_opts)
-    due_n = d4.number_input("Show", 5, 200, 30, step=5, key="duen")
+    tag_pick = d3.selectbox("Due tag", tag_opts,
+                            help="The model's label for *why* he's overdue, "
+                                 "as written in the bot report.")
+    due_n = d4.number_input("Show", 5, 200, 30, step=5, key="duen",
+                            help="How many hitters to rank.")
 
     def due_gap(p: Dict[str, Any]) -> float:
         """Expected minus actual HRs over the recent window: positive means the
@@ -4589,17 +4858,23 @@ with tab_due:
 
 # ── HITS / HRR ──────────────────────────────────────────────────────────────
 with tab_hitshrr:
-    st.subheader("Hits & HRR")
+    st.subheader("💥 Hits, RBI & Total Bases")
     st.caption(
-        "The non-homer plays: base-hit floor, total bases, and HRR "
-        "(runs + RBI). Use this when the HR board is thin."
+        "The non-homer plays: who gets a hit, who drives in or scores runs, "
+        "and who hits for extra bases. Use this when the HR board is thin or "
+        "you want a safer prop."
     )
 
     hh1, hh2, hh3 = st.columns([2, 1, 2])
+    # Option strings are dict keys below -- change both together.
     hh_kind = hh1.radio(
-        "Type", ["HRR (runs + RBI)", "Hit (base-hit floor)", "Base / XBH"],
-        horizontal=True)
-    hh_n = hh2.number_input("Show", 5, 100, 30, step=5, key="hhn")
+        "Prop type", ["HRR (runs + RBI)", "Hit (base-hit floor)", "Base / XBH"],
+        horizontal=True,
+        help="HRR = hits + runs + RBI combined (graded as 2+). "
+             "Hit = at least one base hit, the safest prop. "
+             "Base / XBH = total bases and extra-base hits (graded as 2+ TB or an XBH).")
+    hh_n = hh2.number_input("Show", 5, 100, 30, step=5, key="hhn",
+                            help="How many hitters to rank.")
     k = {"HRR (runs + RBI)": "hrr", "Hit (base-hit floor)": "hit",
          "Base / XBH": "tb"}[hh_kind]
     with hh3:
@@ -4610,15 +4885,16 @@ with tab_hitshrr:
     # you. These two filters are the difference between a good bat and a good
     # SPOT, which is what an HRR play actually is.
     f1, f2, f3 = st.columns(3)
-    top_slot = f1.checkbox("Top 5 in the order only", key="hh_top5")
+    top_slot = f1.checkbox("Top 5 in the order only", key="hh_top5",
+                           help="Hitters batting 1st–5th get the most plate appearances.")
     min_preob = f2.slider("Min on-base ahead of him", 0.0, 0.50, 0.0, 0.05,
                           key="hh_preob",
-                          help="lineup_pre_onbase — chance someone is on when "
-                               "he bats. Drives RBI.")
+                          help="How often someone is on base when he comes up. "
+                               "Drives RBI chances.")
     min_post = f3.slider("Min conversion behind him", 0.0, 0.60, 0.0, 0.05,
                          key="hh_post",
-                         help="lineup_post_convert — chance the bats after him "
-                              "bring him around. Drives runs scored.")
+                         help="How often the hitters behind him bring him "
+                              "around. Drives runs scored.")
     if top_slot:
         hh_pool = [p for p in hh_pool if nn(p, "lineup_spot", default=99) <= 5]
     hh_pool = [p for p in hh_pool
@@ -4633,7 +4909,7 @@ with tab_hitshrr:
         slate_med = med([score_for(p, k) for p in players])
         m = st.columns(4)
         m[0].metric(f"Top {hh_kind.split(' ')[0]}", f"{score_for(hh[0], k):.1f}")
-        m[1].metric("Slate median", f"{slate_med:.1f}")
+        m[1].metric("Tonight's median", f"{slate_med:.1f}")
         m[2].metric("Grade A or better",
                     sum(1 for p in hh if grade_for(p, k) in ("A+", "A")))
         m[3].metric("Top-5 spots", sum(1 for p in hh
@@ -4800,9 +5076,12 @@ def combo_card(title: str, subtitle: str, score: float, risk: Any,
 
 
 with tab_pairs:
+    st.subheader("🎯 Pairs")
+    st.caption("Two-hitter combinations the model likes together tonight — "
+               "built for 'both to homer' parlays. 💥 = already homered tonight.")
     pairs = pair_payload.get("recommended_pairs") or []
     if not pairs:
-        st.info("No pair builder output published yet for this slate.")
+        st.info("No pairs published yet for these games. Check back after the morning run.")
     else:
         live_hr = homered_today()
 
@@ -4845,10 +5124,13 @@ with tab_pairs:
                        _members(p), C["green"] if nd else C["purple"])
 
 with tab_pools:
+    st.subheader("🧩 Pools")
+    st.caption("Groups of 4 or 6 hitters the model bundles together — for "
+               "'any one of these homers' or pool-style plays.")
     p4 = pair_payload.get("pools_4man") or []
     p6 = pair_payload.get("pools_6man") or []
     if not p4 and not p6:
-        st.info("No pools published yet for this slate.")
+        st.info("No pools published yet for these games. Check back after the morning run.")
     else:
         live_hr = homered_today()
 
@@ -4860,7 +5142,7 @@ with tab_pools:
         total_deep = sum(pool_deep(x) for x in p4 + p6)
         if total_deep:
             st.caption(
-                f"💥 marks a hitter who has already homered on this slate. "
+                f"💥 marks a hitter who has already homered tonight. "
                 f"Pools are ordered by how many are already in."
             )
 
@@ -4889,10 +5171,11 @@ with tab_pools:
 # schedule since the migration, but nothing in the app ever read it -- there
 # was no tab, so the whole dataset was invisible. This is the search over it.
 with tab_pairhist:
-    st.subheader("Pair History")
+    st.subheader("🧬 Past Pairs")
     st.caption(
         "Which two hitters have actually gone deep on the SAME DAY this "
-        "season — built from real HR events, not projections."
+        "season — built from real home runs, not projections. Filtered to "
+        "pairs where both are playing today."
     )
     hist = load_json("public/data/current/pair_history_summary.json") or {}
     top_pairs = hist.get("top_pairs") or []
@@ -4925,12 +5208,13 @@ with tab_pairhist:
             key="phq",
             help="Matches either player in the pair. Leave blank to see them all.",
         )
-        min_hits = s2.slider("Min same-day HRs", 1, 10, 2, key="phmin")
+        min_hits = s2.slider("Min same-day HRs", 1, 10, 2, key="phmin",
+                             help="How many times this season both have homered on the same day.")
         same_game_only = s3.checkbox("Same game only", key="phsg",
                                      help="Both HRs hit in the same ballgame.")
         playing_only = s4.checkbox(
             "Both playing today", value=True, key="phtoday",
-            help="Only pairs where both hitters are in a lineup on this slate.",
+            help="Only pairs where both hitters are in a lineup today.",
         )
 
         # The live link: pair history is a season table until you cross it
@@ -5029,7 +5313,7 @@ with tab_pairhist:
                          "Today's average HR score — live pairs", fmt="{:.1f}")
                 else:
                     st.caption(
-                        "No pairs currently have both hitters on the slate, so "
+                        "No pairs currently have both hitters playing today, so "
                         "there's nothing to score for today."
                     )
 
@@ -5158,12 +5442,25 @@ with tab_results:
     # always the same slate, and "final" just means the in-progress games were
     # skipped. Today reads the rolling live file (which settles as games end);
     # yesterday reads the dated graded file the nightly publish carries over.
-    which = st.radio("Results view", ["Today", "Yesterday"], horizontal=True)
+    st.subheader("✅ Results — the track record")
+    st.caption(
+        "Every pick the model published, graded against what actually "
+        "happened. Nothing here is edited after the fact: the grader scores "
+        "the published picks as games go final."
+    )
+    which = st.radio("Results view", ["Today", "Yesterday"], horizontal=True,
+                     help="Today updates live as games finish. Yesterday is the "
+                          "final graded file from the overnight run.")
     if which == "Today":
         res = (load_json("public/data/current/results_live.json")
                or load_json("public/data/current/results_final.json") or {})
     else:
-        y = (dt.date.today() - dt.timedelta(days=1)).isoformat()
+        # Slate dates are Phoenix dates (the grader, the .txt header and
+        # every game time on this page use America/Phoenix). dt.date.today()
+        # is the SERVER's date -- UTC on Streamlit Cloud -- which rolls over
+        # at 5pm Phoenix, so from late afternoon until midnight "Yesterday"
+        # asked for TODAY's file, found nothing, and reported no graded file.
+        y = _yesterday_slate_date()
         res = load_json(f"public/data/current/graded_results_{y}.json") or {}
         # The grader also writes the date into the payload; if the file is
         # stale or missing entirely, say which day we looked for.
@@ -5173,7 +5470,7 @@ with tab_results:
 
     if not rrows:
         if which == "Yesterday":
-            y = (dt.date.today() - dt.timedelta(days=1)).isoformat()
+            y = _yesterday_slate_date()
             st.info(
                 f"No graded file published for **{y}** yet. Yesterday's view "
                 "reads `graded_results_<date>.json`, which the nightly grading "
@@ -5231,10 +5528,11 @@ with tab_results:
         if cap:
             st.markdown("#### HR capture")
             cc = st.columns(4)
-            cc[0].metric("Slate HRs", cap.get("total_hrs_on_slate", 0))
+            cc[0].metric("HRs tonight", cap.get("total_hrs_on_slate", 0),
+                         help="Every home run hit across tonight's games, by anyone.")
             cc[1].metric("On the sheet", cap.get("caught_hrs_on_sheet", 0))
             cc[2].metric("Capture rate", f"{nn(cap, 'hr_capture_pct'):.1f}%",
-                         help="Share of the slate's homers hit by someone the model had on the board at all.")
+                         help="Share of tonight's homers hit by someone the model had on the board at all.")
             cc[3].metric("Missed entirely", cap.get("missed_hrs_not_on_sheet", 0),
                          help="Homers by players who were never on the sheet.")
 
@@ -5493,10 +5791,16 @@ with tab_results:
         show_only = f1.radio(
             "Show", ["All", "Settled only", "Hit a HR", "Pending"],
             horizontal=True, key="resfilter",
+            help="Settled = the game is final. Pending = still in progress or not started.",
         )
         type_opts = ["All types"] + [PICK_LABEL[k] for k in PICK_ORDER
                                      if k in set(rdf["pick_type"].astype(str).str.upper())]
-        type_pick = f2.selectbox("Pick type", type_opts, key="restype")
+        type_pick = f2.selectbox(
+            "Pick type", type_opts, key="restype",
+            help="Top 15 Board = the model's top 15 HR scores overall. Top Picks = "
+                 "the single best bat in each game. HR / HRR / Hit / Contact Picks = "
+                 "the per-game pick for that prop type.",
+        )
 
         v = rdf
         if show_only == "Settled only":
@@ -5512,6 +5816,19 @@ with tab_results:
         if v.empty:
             st.caption("Nothing matches that filter yet.")
         else:
+            # Materialise the full sheet ONCE. This used to call
+            # rdf.to_dict("records") twice per displayed row (for "All roles"
+            # and "Job"), and each results row drags a whole base_row dict
+            # along with it -- on a 90-pick sheet that was ~180 conversions
+            # of a 2 MB frame and 4-6 s of pure CPU on every rerun.
+            _all_recs = rdf.to_dict("records")
+            _roles_by_pid: Dict[Any, set] = {}
+            _recs_by_game: Dict[Any, List[Dict[str, Any]]] = {}
+            for _o in _all_recs:
+                _roles_by_pid.setdefault(_o.get("player_id"), set()).add(
+                    PICK_LABEL.get(str(_o.get("pick_type", "")).upper(),
+                                   str(_o.get("pick_type"))))
+                _recs_by_game.setdefault(_o.get("game_pk"), []).append(_o)
             disp = pd.DataFrame([{
                 "": PICK_EMOJI.get(str(r.get("pick_type", "")).upper(), "•"),
                 "Player": r.get("name"), "Team": r.get("team"),
@@ -5521,11 +5838,8 @@ with tab_results:
                 # rank at the same time -- they're selected by different
                 # passes. Showing every role he holds stops it looking like
                 # the pick "changed" after he homered.
-                "All roles": " + ".join(sorted({
-                    PICK_LABEL.get(str(o.get("pick_type", "")).upper(),
-                                   str(o.get("pick_type")))
-                    for o in rdf.to_dict("records")
-                    if o.get("player_id") == r.get("player_id")})),
+                "All roles": " + ".join(sorted(
+                    _roles_by_pid.get(r.get("player_id"), set()))),
                 # The model's own conviction tier, independent of whether he
                 # was picked for a game sheet. A 💎 HR Bet who never made a
                 # sheet still tells you the model liked him.
@@ -5539,8 +5853,7 @@ with tab_results:
                 "R": int(nn(r, "actual_runs")),
                 "Grade": r.get("grade"),
                 "Job": ({1: "✓", 0: "✗"}.get(
-                    designed_hit(r, [g for g in rdf.to_dict("records")
-                                     if g.get("game_pk") == r.get("game_pk")]), "")),
+                    designed_hit(r, _recs_by_game.get(r.get("game_pk"), [])), "")),
                 "Line": r.get("outcome_text"),
             } for r in v.to_dict("records")])
             st.dataframe(disp, width="stretch", hide_index=True, height=480)
@@ -5624,13 +5937,16 @@ with tab_player:
         opts = sorted(view, key=hr_score, reverse=True)
         labels = [f"{name_of(p)} ({team_of(p)}) — HR {hr_score(p):.0f}" for p in opts]
         idx = pc1.selectbox("Player", range(len(opts)),
-                            format_func=lambda i: labels[i], key="pl_pick")
+                            format_func=lambda i: labels[i], key="pl_pick",
+                            help="Sorted by HR score. Sidebar filters apply.")
         p = opts[idx]
         # Head-to-head. Reading one player's numbers tells you nothing without
         # something to read them against.
-        cmp_names = ["— slate median —"] + [name_of(x) for x in opts
+        cmp_names = ["— tonight's median —"] + [name_of(x) for x in opts
                                             if name_of(x) != name_of(p)]
-        cmp_pick = pc2.selectbox("Compare with", cmp_names, key="pl_cmp")
+        cmp_pick = pc2.selectbox("Compare with", cmp_names, key="pl_cmp",
+                                 help="Overlay a second hitter, or tonight's median, "
+                                      "so his numbers have something to read against.")
         cmp_p = next((x for x in opts if name_of(x) == cmp_pick), None)
 
         player_detail(p, kp="pl", cmp_p=cmp_p)
@@ -5705,6 +6021,10 @@ with tab_watch:
     # ── CROSS-REFERENCE ────────────────────────────────────────────────────
     # Paste a list from anywhere -- someone else's picks, a DFS slate, a
     # group chat -- and see what the model says about those exact names.
+    st.subheader("⭐ Watchlist")
+    st.caption("Star hitters anywhere on the site and they collect here. Or paste "
+               "a list of names — a tout's picks, a DFS lineup — and see what the "
+               "model says about each one.")
     with st.expander("📋 Cross-reference a list of players", expanded=not st.session_state.watch):
         st.caption(
             "Paste names one per line or comma-separated. Ranking numbers, "
@@ -5751,7 +6071,7 @@ with tab_watch:
                 x1.metric("Best HR score", f"{max(hr_score(p) for _, p, _ in hits):.1f}")
                 x2.metric("Median HR score",
                           f"{median([hr_score(p) for _, p, _ in hits]):.1f}",
-                          help="Slate median is "
+                          help="Tonight's median is "
                                f"{median([hr_score(p) for p in players]):.1f}.")
                 x3.metric("Confirmed",
                           f"{sum(1 for _, p, _ in hits if p.get('lineup_confirmed'))}/{len(hits)}")
@@ -5789,7 +6109,7 @@ with tab_watch:
 
             if misses:
                 st.info(
-                    "**Not on this slate:** " + ", ".join(misses) +
+                    "**Not playing today:** " + ", ".join(misses) +
                     "  \nUsually means they're not in a confirmed lineup, not "
                     "playing today, or the spelling is too far off to match."
                 )
@@ -5818,9 +6138,10 @@ with tab_watch:
             "First pitch": lambda x: game_start([x]),
         }
         hdr_l, hdr_s, hdr_x, hdr_r = st.columns([2, 1, 1, 1])
-        hdr_l.markdown(f"### Watchlist\n{len(watched_all)} on the slate"
+        hdr_l.markdown(f"### Watchlist\n{len(watched_all)} playing today"
                        + (f" · {len(off_slate)} not playing" if off_slate else ""))
-        wl_sort = hdr_s.selectbox("Sort by", list(SORTS), key="wl_sort")
+        wl_sort = hdr_s.selectbox("Sort by", list(SORTS), key="wl_sort",
+                                  help="Which score to order the watchlist by.")
         watched = sorted(watched_all, key=SORTS[wl_sort], reverse=True)
         # Doubleheaders put the same hitter on the slate twice, under two
         # game_pks. Two identical cards is confusing and, because the card key
@@ -5841,7 +6162,7 @@ with tab_watch:
             wm = st.columns(4)
             wm[0].metric("Best HR", f"{max(hr_score(x) for x in watched):.1f}")
             wm[1].metric("Median HR", f"{med([hr_score(x) for x in watched]):.1f}",
-                         delta=f"{med([hr_score(x) for x in watched]) - med([hr_score(x) for x in players]):+.1f} vs slate",
+                         delta=f"{med([hr_score(x) for x in watched]) - med([hr_score(x) for x in players]):+.1f} vs tonight's median",
                          delta_color="normal")
             wm[2].metric("Confirmed",
                          f"{sum(1 for x in watched if x.get('lineup_confirmed'))}/{len(watched)}")
@@ -5854,12 +6175,12 @@ with tab_watch:
                  [round(SORTS[wl_sort](x), 1) for x in watched],
                  f"Watchlist by {wl_sort}",
                  ref=float(med([SORTS[wl_sort](x) for x in players])),
-                 ref_label="slate median")
+                 ref_label="tonight's median")
 
         if watched:
             open_player_picker(watched, "watchlist")
         if off_slate:
-            st.caption("Not on this slate: " + ", ".join(off_slate))
+            st.caption("Not playing today: " + ", ".join(off_slate))
 
         # Name / HR / emojis, in board order. Two shapes because they get used
         # two ways: CSV for a spreadsheet, plain text for pasting into a post.
@@ -5922,9 +6243,12 @@ with tab_watch:
 
 # ── BOT REPORT ──────────────────────────────────────────────────────────────
 with tab_bot:
+    st.subheader("🤖 Model Report")
+    st.caption("The full plain-text report the model writes each run — every "
+               "pick with its reasons, plus a legend at the end. Searchable.")
     txt_report = load_text(f"public/data/current/{slate}.txt") or load_text(f"public/data/{slate}.txt")
     if not txt_report:
-        st.info("No text report published for this slate yet.")
+        st.info("No text report published for these games yet.")
     else:
         st.download_button("⬇️ Download report (.txt)", txt_report.encode(),
                            file_name=f"mlb_{slate}_report.txt", mime="text/plain")
@@ -5937,8 +6261,9 @@ with tab_bot:
 
 # ── SPRAY (full slate) ──────────────────────────────────────────────────────
 with tab_spray:
+    st.subheader("💦 Spray Charts")
     st.caption(
-        "Batted-ball spray across the slate. Detail is fetched per player "
+        "Where each hitter's batted balls land. Detail is fetched per player "
         "(~82 KB each), so pick a handful rather than loading everyone."
     )
     top_pool = sorted(view, key=hr_score, reverse=True)[:40]
@@ -5987,31 +6312,164 @@ with tab_spray:
 
 # ── GUIDE ───────────────────────────────────────────────────────────────────
 with tab_guide:
-    # The bot already writes a full legend at the end of every report, so this
-    # stays in sync with the model automatically instead of drifting out of
-    # date the way a hardcoded copy in the front end would.
+    st.subheader("📖 Guide")
+    st.caption("Everything you need to read this site, in about two minutes.")
+
+    # ── PUBLIC PITCH ────────────────────────────────────────────────────
+    # Aimed at someone arriving from Twitter. No hit rates are quoted here on
+    # purpose -- the Results tab is the record, and it speaks for itself.
+    st.markdown(
+        "### What this is\n"
+        "A daily **MLB home run prop model**. Every morning it scores every "
+        "hitter on that day's schedule, picks the best home run bets in each "
+        "game, and publishes them here. Every night a grader scores those "
+        "same published picks against what actually happened.\n\n"
+        "- **The picks are public and time-stamped.** The grader scores "
+        "exactly what was published — no editing after the fact.\n"
+        "- **The track record lives in the ✅ Results tab.** Today, yesterday, "
+        "and the all-time backtest by pick type. Judge the model there, not "
+        "on any one night.\n"
+        "- **How to use it:** open 🗓️ Games, pick a game, read the five picks "
+        "and *why* the model likes each one, then check ✅ Results to see "
+        "how those pick types have actually done."
+    )
+
+    st.markdown("### Start here (60 seconds)")
+    st.markdown(
+        "1. **🗓️ Games** — tonight's schedule. Open a game for both starters "
+        "and the model's picks.\n"
+        "2. **🏆 HR Picks** — every hitter ranked by home run score. The top of "
+        "this list is the headline board.\n"
+        "3. **✅ Results** — how yesterday's and today's picks graded out.\n\n"
+        "The sidebar switches between **Today** and **Tomorrow** and filters "
+        "every tab at once."
+    )
+
+    st.markdown("### What the model does")
+    st.markdown(
+        "It combines a hitter's recent contact quality (exit velocity, "
+        "barrels, how far he's been hitting the ball), how his swing matches "
+        "what tonight's pitcher throws, that pitcher's own home run history, "
+        "the ballpark, and the weather. Out of that comes a set of **0–100 "
+        "scores** — higher is better — and a handful of picks per game. "
+        "It re-runs through the afternoon as lineups are confirmed."
+    )
+
+    # ── SCORES ──────────────────────────────────────────────────────────
+    st.markdown("### The scores")
+    st.markdown(
+        "| Score | What it means |\n|---|---|\n"
+        "| **HR** | Chance he homers tonight. The main number on the site. |\n"
+        "| **Hit** | Chance of at least one base hit. The safest score. |\n"
+        "| **HRR** | Hits + runs + RBI production. |\n"
+        "| **TB** | Total bases / extra-base-hit profile. |\n"
+        "| **DC (Damage)** | When he makes contact, how often it does real harm. |\n"
+        "| **HRW** | HR Window — is his timing hot *right now*? |\n"
+        "| **PMix** | Does his swing fit what this pitcher throws? |\n"
+        "| **Due** | Real power that hasn't turned into homers lately. |\n"
+        "| **GS** | Game score — the median hitter score in a game's lineup. |\n\n"
+        "**Grades** are the same score in letters: A+ 78 · A 70 · A- 62 · "
+        "B+ 54 · B 46 · C+ below that.\n\n"
+        "Supporting numbers you'll see: **375+ / 400+** = recent batted balls "
+        "hit that far. **IHR** = share of his contact at homer speed *and* "
+        "angle. **HR/9** = homers the pitcher allows per 9 innings (1.2 is "
+        "average; higher is better for hitters). **K%** = strikeout rate — "
+        "the one where higher is worse."
+    )
+
+    # ── BADGES ──────────────────────────────────────────────────────────
+    st.markdown("### Badges and emoji")
+    b1, b2 = st.columns(2)
+    b1.markdown(
+        "**Conviction tier** — how strongly the model likes the hitter\n\n"
+        "- 💎 **HR Bet** — strongest home run conviction\n"
+        "- 📈 **HR Lean** — likes him, one notch down\n"
+        "- 🧲 **HRR / XBH** — production play, not a homer play\n"
+        "- 🧭 **Contact** — hit or total-bases play\n"
+        "- 🔭 **Power Watch** — real power, not enough else\n"
+        "- ⛔ **True Avoid** — stay away for a homer\n\n"
+        "**Pick type** — what he was picked *for* in his game\n\n"
+        "- 🔥 **Top** — best overall bat in the game\n"
+        "- 🧨 **HR** — the home run pick\n"
+        "- 💠 **Hit** — the 1+ hit pick\n"
+        "- 🏁 **HRR** — the hits + runs + RBI pick\n"
+        "- ⚾ **TB** — the total-bases pick\n"
+        "- 🏆 **Top 15** — one of the 15 best HR scores tonight"
+    )
+    b2.markdown(
+        "**HR Window (timing)**\n\n"
+        "- 🌋 **Volatile** 80+ — red hot, but the model dampens it\n"
+        "- 🚀 **Strong** 70–79\n"
+        "- ⚡ **Sweet spot** 60–69\n"
+        "- 🌤️ **Building** 50–59\n"
+        "- 🧊 **Cold** under 50\n\n"
+        "**Flags**\n\n"
+        "- 🧩 **Aligned** — weak pitcher spot + pitch match + real recent "
+        "contact all on one hitter. The model's strongest combination.\n"
+        "- ⭐ **Weak spot** — this pitcher has already given up homers to "
+        "his lineup spot this season\n"
+        "- ✅ **Confirmed** — he's in a posted lineup\n"
+        "- 💥 **Went deep** — already homered tonight\n"
+        "- ▲ / ▽ — above / below tonight's median\n\n"
+        "**Colours** — light green is good, dark green is weak. Same scale "
+        "on every chart and table."
+    )
+
+    # ── TABS ────────────────────────────────────────────────────────────
+    st.markdown("### The tabs")
+    st.markdown(
+        "| Tab | What's there |\n|---|---|\n"
+        "| 🗓️ **Games** | Start here. Every game with both starters and five picks. |\n"
+        "| 🏆 **HR Picks** | All hitters ranked by HR score (or any other score). |\n"
+        "| 🚀 **Longest** | Who hits the *farthest* ball — distance, not probability. |\n"
+        "| 💣 **Overdue** | Power that hasn't converted lately. |\n"
+        "| 💥 **Hits** | Hit, HRR and total-bases props — the safer plays. |\n"
+        "| ⚾ **Pitchers** | Tonight's starters ranked by how hittable they are. |\n"
+        "| 🎯 **Pairs** / 🧩 **Pools** | Two-, four- and six-hitter combos for parlays and pools. |\n"
+        "| 🤖 **Report** | The model's full written report, searchable. |\n"
+        "| 🧬 **Past Pairs** | Pairs who have actually homered on the same day this season. |\n"
+        "| 📊 **All Bats** | Every hitter, every score, one grid — plus the live HR tracker. |\n"
+        "| 🥇 **Leaders** | Rank hitters on any single stat. |\n"
+        "| 🔍 **Player** | Deep dive on one hitter, with a head-to-head compare. |\n"
+        "| ⭐ **Watch** | Your starred hitters, or paste any list of names to cross-check. |\n"
+        "| 💦 **Spray** | Where each hitter's batted balls land. |\n"
+        "| ✅ **Results** | The graded track record. |"
+    )
+
+    # ── GRADING ─────────────────────────────────────────────────────────
+    st.markdown("### How picks are graded")
+    st.markdown(
+        "Each pick is graded on the **one thing it was picked to do**. A "
+        "pick counts as a hit only if that happened:\n\n"
+        "| Pick | Counts as a hit when… |\n|---|---|\n"
+        "| 🏆 Top 15 / 🧨 HR | he homers |\n"
+        "| 💠 Hit | he gets at least one hit |\n"
+        "| 🏁 HRR | hits + runs + RBI add up to 2 or more |\n"
+        "| ⚾ TB | 2+ total bases, or any extra-base hit |\n"
+        "| 🔥 Top | he out-produces the other picks in his game |\n\n"
+        "The grader scores the picks exactly as published. "
+        "The **Yesterday** view and the all-time table in ✅ Results are the "
+        "numbers to trust; one night is too few picks to mean anything."
+    )
+
+    # ── CAVEAT ──────────────────────────────────────────────────────────
+    st.markdown("### The honest part")
+    st.markdown(
+        "This is a **model, not a guarantee**. Home runs are rare events: "
+        "even the best hitter on the best night homers well under half the "
+        "time, so a high HR score means *better odds than the field*, not "
+        "*likely*. Expect losing nights. What the model is built for is being "
+        "right more often than a coin flip over a full season, on the record, "
+        "in public.\n\n"
+        "Two habits that matter: **check the sample size** behind any rate "
+        "(9 plate appearances is noise, 200 is a player), and **check the "
+        "lineup is confirmed** before betting. Bet what you can afford to lose."
+    )
+
+    # The bot writes a full legend at the end of every report; it stays in
+    # sync with the model automatically, so it's kept here as the reference
+    # copy rather than being retyped.
     report = load_text(f"public/data/current/{slate}.txt") or ""
     if "LEGEND" in report:
-        st.code(report[report.index("LEGEND"):], language="text")
-    else:
-        st.markdown("""
-**Score keys**
-
-- **HR** — home run score / power ceiling
-- **HRR** — hits + runs + RBI production profile
-- **Hit** — base-hit floor
-- **TB** — total bases / XBH contact profile
-- **PMix** — pitch-type matchup fit vs today's starter
-- **HRW** — Home Run Window; timing score for today specifically
-- **IHR** — ideal HR contact rate
-- **Damage** — damage conversion score, the strongest single validated HR predictor
-- **375+ / 400+** — recent tracked balls hit that far
-
-**Lanes** filter the board to a specific angle: Strong HR, Value, Due,
-Hot, Weak Pitcher, Weather/Park, Pitch Matchup, 🧩 Aligned, Avoid HR.
-
-**🧩 Aligned** means weak-spot + pitch-match + real recent contact quality
-all stack on the same hitter — the strongest validated combination.
-
-Grades are the raw score banded: A+ 78 · A 70 · A- 62 · B+ 54 · B 46 · C+ below.
-""")
+        with st.expander("Full legend from the model report (reference)"):
+            st.code(report[report.index("LEGEND"):], language="text")
