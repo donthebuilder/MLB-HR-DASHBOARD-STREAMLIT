@@ -222,13 +222,23 @@ def team_base(home_strength: float, away_strength: float,
     weight the walk-forward chose (moneyball.blend_sweep). Only when a side
     has no usable rates does the record stand alone, and the pick says so.
     """
-    p_rec = win_probability(home_strength, away_strength)
-    if home_rates is not None and away_rates is not None and league is not None:
-        p = moneyball.game_probability(home_rates, away_rates, league, coef)
-        if p is not None:
-            w = min(1.0, max(0.0, float(blend_w)))
-            return moneyball.blend(p, p_rec, w), f"blend {int(round(w * 100))}/{int(round((1 - w) * 100))}"
+    p_rates, p_rec = base_parts(home_strength, away_strength, home_rates, away_rates, league, coef)
+    if p_rates is not None:
+        w = min(1.0, max(0.0, float(blend_w)))
+        return moneyball.blend(p_rates, p_rec, w), f"blend {int(round(w * 100))}/{int(round((1 - w) * 100))}"
     return p_rec, "record"
+
+
+def base_parts(home_strength: float, away_strength: float,
+               home_rates=None, away_rates=None, league=None,
+               coef: moneyball.Coef = moneyball.PRIOR) -> tuple[float | None, float]:
+    """The two ingredients of the base, unmixed -- kept in the price file so
+    the blend can be replayed at any weight later (moneyball.roi_sweep)."""
+    p_rec = win_probability(home_strength, away_strength)
+    p_rates = None
+    if home_rates is not None and away_rates is not None and league is not None:
+        p_rates = moneyball.game_probability(home_rates, away_rates, league, coef)
+    return p_rates, p_rec
 
 
 def game_probability(home_strength: float, away_strength: float,
@@ -363,10 +373,21 @@ def make_picks(lines: list[Line], strength: dict[str, float],
     return sorted(out, key=lambda p: -p.edge)
 
 
-def settle(picks: list[Pick], winners: dict[int, str]) -> list[Pick]:
-    """Attach results. `winners` maps game_pk to the winning team's abbr."""
+def settle(picks: list[Pick], winners: dict) -> list[Pick]:
+    """Attach results. `winners` maps game_pk -- or (date, home, away), which
+    is what the live bot uses, because the odds feed's "game_pk" is a hash of
+    the provider's event id and not MLB's -- to the winning team's name."""
     for p in picks:
-        w = winners.get(p.game_pk)
+        if p.result:
+            continue
+        w = winners.get(p.game_pk) or winners.get((p.date, p.home, p.away))
+        if not w:
+            # A late West Coast game commences the next UTC day.
+            try:
+                prev = (dt.date.fromisoformat(p.date) - dt.timedelta(days=1)).isoformat()
+                w = winners.get((prev, p.home, p.away))
+            except ValueError:
+                w = None
         if not w:
             continue
         if w == p.side:
@@ -548,9 +569,13 @@ def price_rows(lines: list[Line], strength: dict[str, float], rates=None,
     for ln in lines:
         hf, af, hold = devig(ln.home_price, ln.away_price)
         sh, sa = strength.get(ln.home), strength.get(ln.away)
-        model = base_name = None
+        model = base_name = p_rates = p_rec = None
+        shift = starter_shift(ln.home_fip, ln.away_fip, baseline)
         if sh is not None and sa is not None:
             _, base_name = team_base(sh, sa, rates.get(ln.home), rates.get(ln.away), league, coef, blend_w)
+            p_rates, p_rec = base_parts(sh, sa, rates.get(ln.home), rates.get(ln.away), league, coef)
+            p_rates = None if p_rates is None else round(p_rates, 4)
+            p_rec = round(p_rec, 4)
             model = round(game_probability(sh, sa, ln.home_fip, ln.away_fip, baseline,
                                            rates.get(ln.home), rates.get(ln.away), league, coef, blend_w), 4)
         out.append({
@@ -560,6 +585,8 @@ def price_rows(lines: list[Line], strength: dict[str, float], rates=None,
             "away_fair": None if af is None else round(af, 4),
             "hold": None if hold is None else round(hold, 4),
             "model_home": model, "base": base_name,
+            # The unmixed parts, so the blend can be replayed at any weight.
+            "p_rates": p_rates, "p_record": p_rec, "starter_shift": round(shift, 4),
             "home_sp": ln.home_sp, "away_sp": ln.away_sp,
             "home_fip": ln.home_fip, "away_fip": ln.away_fip,
         })
@@ -611,13 +638,50 @@ def main(argv=None):
         raise SystemExit("standings empty — refusing to publish")
     strength = strengths_from_standings(teams)
 
+    # THE RECORD, AND WHY IT WAS 0-0 FOREVER (2026-09-05). This read the last
+    # board from a local path, on a runner that starts from a clean checkout:
+    # nothing was ever there, so the history was empty every run -- and even
+    # when it wasn't, nothing here ever called settle(). The last board comes
+    # off the data branch now, yesterday's "today" picks are folded into the
+    # history, and every unsettled pick is graded against the finished games.
     prior: list[Pick] = []
+    seen = set()
+
+    def add(row):
+        try:
+            p = Pick(**{k: v for k, v in row.items() if k in Pick.__dataclass_fields__})
+        except Exception:
+            return
+        key = (p.date, p.home, p.away, p.side)
+        if key in seen:
+            return
+        seen.add(key)
+        prior.append(p)
+
+    last = moneyball.fetch_published("moneyline_board.json")
+    if not last:
+        try:
+            with open(args.history) as fh:
+                last = json.load(fh) or {}
+        except Exception:
+            last = {}
+    for row in (last or {}).get("history", []) or []:
+        add(row)
+    for row in (last or {}).get("today", []) or []:
+        add(row)
     try:
-        with open(args.history) as fh:
-            for row in (json.load(fh) or {}).get("history", []):
-                prior.append(Pick(**row))
-    except Exception:
-        pass
+        finished = moneyball.fetch_finished(args.season)
+        by_id = {t.team_id: t.name for t in teams}
+        winners = {}
+        for g in finished:
+            h, a = by_id.get(g.home_id), by_id.get(g.away_id)
+            if h and a:
+                winners[(g.date, h, a)] = h if g.home_won else a
+        before = sum(1 for p in prior if p.result)
+        settle(prior, winners)
+        print(f"  history {len(prior)} pick(s); settled {sum(1 for p in prior if p.result) - before} new")
+    except Exception as e:
+        print(f"  could not settle ({e}); record carried forward as is")
 
     # The team rates, keyed the same two ways as `strength`; and the fitted
     # regression plus the out-of-sample grade from moneyball.py's last run,

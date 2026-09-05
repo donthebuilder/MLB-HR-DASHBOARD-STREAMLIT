@@ -234,3 +234,56 @@ def test_the_blend_sweep_lands_on_the_record_when_the_rates_are_noise():
     record = [(0.6, w) for w in truth]
     noise = [(rng.uniform(0.2, 0.8), w) for w in truth]
     assert blend_sweep(noise, record)["best"] == 0.0
+
+
+# ── choosing the weight by ROI, once prices exist (2026-09-05) ──────────────
+
+def price_row(p_rates, p_record, home_fair, away_fair, home_won, home_price=-110, away_price=-110, shift=0.0):
+    return {"p_rates": p_rates, "p_record": p_record, "starter_shift": shift,
+            "home_fair": home_fair, "away_fair": away_fair,
+            "home_price": home_price, "away_price": away_price, "home_won": home_won}
+
+
+def test_roi_replays_the_bet_rule_at_the_price_offered():
+    from moneyball import roi_at
+    rows = [price_row(0.70, 0.70, 0.52, 0.48, True, home_price=-110),   # 18pt edge, won: +0.909
+            price_row(0.70, 0.70, 0.52, 0.48, False, home_price=-110),  # lost: -1
+            price_row(0.52, 0.52, 0.52, 0.48, True)]                    # no edge: no bet
+    r = roi_at(rows, 0.5)
+    assert r["bets"] == 2 and r["wins"] == 1 and abs(r["units"] - (0.909 - 1.0)) < 1e-3
+
+
+def test_roi_does_not_choose_until_there_are_enough_settled_lines():
+    from moneyball import roi_sweep, MIN_ROI_LINES
+    few = [price_row(0.70, 0.40, 0.52, 0.48, True) for _ in range(MIN_ROI_LINES - 1)]
+    assert roi_sweep(few)["eligible"] is False and roi_sweep(few)["best"] is None
+    enough = few + [price_row(0.70, 0.40, 0.52, 0.48, True)]
+    sw = roi_sweep(enough)
+    # rates found the winners, record faded them: every weight that follows the
+    # rates ties on ROI, and the tie goes to the one nearest half-and-half.
+    assert sw["eligible"] is True and sw["best"] >= 0.5 and sw["best_roi"] > 0
+
+
+def test_unsettled_rows_never_count():
+    from moneyball import roi_sweep
+    rows = [dict(price_row(0.70, 0.40, 0.52, 0.48, True), home_won=None) for _ in range(500)]
+    assert roi_sweep(rows)["settled"] == 0
+
+
+def test_settle_rows_matches_on_the_official_date_or_the_utc_day_before():
+    from moneyball import settle_rows
+    fin = [FinishedGame(1, "2026-09-04", 147, 111, 5, 3)]
+    rows = [{"date": "2026-09-05", "home": "New York Yankees", "away": "Boston Red Sox"},
+            {"date": "2026-09-04", "home": "New York Yankees", "away": "Boston Red Sox"},
+            {"date": "2026-09-04", "home": "Nobody", "away": "Boston Red Sox"}]
+    settle_rows(rows, fin, {"New York Yankees": 147, "Boston Red Sox": 111})
+    assert rows[0]["home_won"] is True and rows[1]["home_won"] is True and "home_won" not in rows[2]
+
+
+def test_the_backtest_lets_roi_overrule_log_loss_only_when_eligible():
+    games, snaps = synthetic_season()
+    rows = [price_row(0.30, 0.70, 0.52, 0.48, True) for _ in range(200)]   # the record wins money here
+    rep = backtest(games, snaps, price_rows=rows)
+    assert rep["blend"]["chooser"] == "roi" and rep["blend"]["weight"] <= 0.5
+    rep2 = backtest(games, snaps, price_rows=rows[:10])
+    assert rep2["blend"]["chooser"] == "log_loss" and rep2["blend"]["weight"] >= 0.5

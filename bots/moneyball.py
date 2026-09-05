@@ -319,6 +319,92 @@ def blend(p_rates: float, p_record: float, w: float = DEFAULT_BLEND) -> float:
     return w * p_rates + (1.0 - w) * p_record
 
 
+# ── CHOOSING w BY ROI, NOT LOG LOSS, ONCE THERE ARE PRICES (2026-09-05) ─────
+#
+# Donovan: "yes, if plausible before the playoffs start." Log loss grades the
+# model against the outcome; ROI grades it against THE BOOK, which is the only
+# number that pays. The bot keeps every night's lines now, so once enough of
+# them have settled the weight is chosen by replaying the bet rule at every w
+# against the prices actually offered. Until then log loss chooses, and the
+# payload says which chooser ran. The bar is real: below MIN_ROI_LINES the
+# best-ROI weight is the luckiest weight, which finding #45 already taught.
+MIN_ROI_LINES = 150       # settled priced games before ROI is allowed to choose
+MIN_ROI_BETS = 30         # and the winning w must have made at least this many
+
+
+def american_payout(price: float) -> float:
+    price = float(price)
+    return price / 100.0 if price > 0 else 100.0 / abs(price)
+
+
+def roi_at(rows: list[dict], w: float, floor: float = 0.05, worst: float = -250) -> dict:
+    """Replay the pick rule at weight w over settled price rows. Each row:
+    p_rates (or None), p_record, starter_shift, home_fair, away_fair,
+    home_price, away_price, home_won. Flat one unit, at the price offered."""
+    bets = wins = 0
+    units = 0.0
+    for r in rows:
+        if r.get("home_won") is None or r.get("home_fair") is None:
+            continue
+        pr, pc = r.get("p_rates"), r.get("p_record")
+        if pc is None:
+            continue
+        base = blend(pr, pc, w) if pr is not None else pc
+        p = _clip(base + float(r.get("starter_shift") or 0.0))
+        he, ae = p - r["home_fair"], (1 - p) - r["away_fair"]
+        if he >= ae:
+            side_home, price, edge = True, r["home_price"], he
+        else:
+            side_home, price, edge = False, r["away_price"], ae
+        if edge < floor or price < worst:
+            continue
+        bets += 1
+        won = bool(r["home_won"]) == side_home
+        wins += won
+        units += american_payout(price) if won else -1.0
+    return {"w": w, "bets": bets, "wins": wins, "units": round(units, 3),
+            "roi": round(units / bets, 4) if bets else 0.0}
+
+
+def roi_sweep(rows: list[dict], floor: float = 0.05, worst: float = -250) -> dict:
+    settled = [r for r in rows if r.get("home_won") is not None and r.get("p_record") is not None]
+    out = [roi_at(settled, w, floor, worst) for w in BLEND_STEPS]
+    eligible = len(settled) >= MIN_ROI_LINES
+    best = None
+    if eligible:
+        cands = [r for r in out if r["bets"] >= MIN_ROI_BETS]
+        if cands:
+            best = max(cands, key=lambda r: (r["roi"], -abs(r["w"] - DEFAULT_BLEND)))
+    return {"settled": len(settled), "eligible": bool(best), "weights": out,
+            "best": best["w"] if best else None, "best_roi": best["roi"] if best else None,
+            "needed": MIN_ROI_LINES}
+
+
+def settle_rows(rows: list[dict], finished: list["FinishedGame"], name_to_id: dict[str, int]) -> list[dict]:
+    """Attach home_won to price rows by (date, home, away). The odds feed's
+    date is the UTC commence day, which is one ahead of the official date
+    for a late West Coast game, so the day before is tried too."""
+    by_key = {}
+    for g in finished:
+        by_key[(g.date, g.home_id, g.away_id)] = g.home_won
+    for r in rows:
+        if r.get("home_won") is not None:
+            continue
+        h, a = name_to_id.get(r.get("home", "")), name_to_id.get(r.get("away", ""))
+        if not h or not a or not r.get("date"):
+            continue
+        d = r["date"]
+        try:
+            prev = (dt.date.fromisoformat(d) - dt.timedelta(days=1)).isoformat()
+        except ValueError:
+            prev = d
+        for key in ((d, h, a), (prev, h, a)):
+            if key in by_key:
+                r["home_won"] = by_key[key]
+                break
+    return rows
+
+
 def blend_sweep(pairs_rates: list[tuple[float, bool]], pairs_record: list[tuple[float, bool]]) -> dict:
     """Log loss at every weight, and the best one. Both lists are aligned by
     construction (backtest appends to them in the same loop)."""
@@ -366,7 +452,7 @@ def calibration(pairs: list[tuple[float, bool]], width: float = 0.1) -> list[dic
 
 
 def backtest(games: list[FinishedGame], snapshots: dict[int, list[TeamRates]],
-             first_month: int | None = None) -> dict:
+             first_month: int | None = None, price_rows: list[dict] | None = None) -> dict:
     """Walk-forward. snapshots[m] = every team's rates THROUGH THE END OF
     MONTH m. A game in month M is priced with snapshots[M-1] and a regression
     fitted on snapshots[..M-1]. Pure: games and snapshots in, a report out."""
@@ -402,6 +488,12 @@ def backtest(games: list[FinishedGame], snapshots: dict[int, list[TeamRates]],
             "home": score(month_pairs["home"]),
         })
     sweep = blend_sweep(mb, rec)
+    # Prices, when there are enough settled ones, overrule log loss: the
+    # weight that made money at the book's numbers is the one the bot uses.
+    roi = roi_sweep(price_rows or [])
+    chooser = "roi" if roi["eligible"] else "log_loss"
+    if roi["eligible"]:
+        sweep["best"] = roi["best"]
     merged = [(blend(pr, pc, sweep["best"]), won) for (pr, won), (pc, _) in zip(mb, rec)]
     return {
         "games": len(mb),
@@ -410,7 +502,8 @@ def backtest(games: list[FinishedGame], snapshots: dict[int, list[TeamRates]],
         "records_only": score(rec),
         "home_always": score(home),
         "coin": score(coin),
-        "blend": {"weight": sweep["best"], "score": score(merged), "sweep": sweep.get("weights", [])},
+        "blend": {"weight": sweep["best"], "chooser": chooser, "score": score(merged),
+                  "sweep": sweep.get("weights", []), "roi": roi},
         "calibration": calibration(merged),
         "per_month": per_month,
         "verdict": verdict(score(mb), score(rec), score(home), sweep["best"]),
@@ -558,6 +651,40 @@ def fetch_finished(season: int, timeout: int = 30) -> list[FinishedGame]:
     return out
 
 
+DATA_RAW = ("https://raw.githubusercontent.com/donthebuilder/"
+            "MLB-HR-DASHBOARD-STREAMLIT/data/public/data/current/")
+
+
+def fetch_published(name: str, timeout: int = 15):
+    """A file from the data branch, or None. THE BUG THIS EXISTS FOR
+    (2026-09-05): the Actions runner starts from a clean checkout, so any bot
+    that reads its own last output from a local path reads nothing -- the
+    moneyline record had been 0-0 every single run and could never grow."""
+    import requests
+    try:
+        r = requests.get(DATA_RAW + name, timeout=timeout)
+        if r.ok:
+            return r.json()
+    except Exception:
+        pass
+    return None
+
+
+def fetch_price_files(days: int = 120, today: dt.date | None = None) -> list[dict]:
+    """Every published moneyline_prices_<date>.json in the window, flattened
+    to rows. One small request per day; a missing day is a fast 404."""
+    today = today or dt.date.today()
+    rows: list[dict] = []
+    for i in range(days):
+        d = (today - dt.timedelta(days=i)).isoformat()
+        j = fetch_published(f"moneyline_prices_{d}.json", timeout=8)
+        if j and isinstance(j.get("lines"), list):
+            for ln in j["lines"]:
+                ln.setdefault("date", d)
+                rows.append(ln)
+    return rows
+
+
 def month_end(season: int, month: int) -> str:
     return (dt.date(season + (month == 12), month % 12 + 1, 1) - dt.timedelta(days=1)).isoformat()
 
@@ -581,7 +708,19 @@ def main(argv=None):
         if len(snap) >= 25:
             snapshots[m] = snap
         print(f"  through {month_end(args.season, m)}: {len(snap)} teams")
-    report = backtest(games, snapshots, first_month=args.first_month)
+    # Settled prices for the ROI chooser. Names come from the standings, the
+    # same feed the moneyline bot keys on.
+    price_rows: list[dict] = []
+    try:
+        from playoff_odds import fetch_season
+        teams, _ = fetch_season(args.season)
+        name_to_id = {t.name: t.team_id for t in teams if t.name}
+        price_rows = settle_rows(fetch_price_files(), games, name_to_id)
+        n_settled = sum(1 for r in price_rows if r.get("home_won") is not None)
+        print(f"  {len(price_rows)} priced game(s) on file, {n_settled} settled")
+    except Exception as e:
+        print(f"  prices unavailable ({e}); log loss chooses the blend")
+    report = backtest(games, snapshots, first_month=args.first_month, price_rows=price_rows)
 
     # The coefficients the LIVE bot should use tonight: everything so far.
     now = fetch_rates(args.season)

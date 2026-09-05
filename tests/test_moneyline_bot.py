@@ -468,3 +468,32 @@ def test_price_rows_keep_every_line_picked_or_not(tmp_path):
     assert path.endswith("moneyline_prices_2026-09-05.json")
     import json
     assert len(json.load(open(path))["lines"]) == 2
+
+
+def test_settle_matches_by_date_and_names_when_the_game_pk_is_a_hash():
+    p = Pick(game_pk=987654321, date="2026-09-05", home="New York Yankees", away="Boston Red Sox",
+             side="New York Yankees", price=-120, model_p=.6, market_p=.52, edge=.08, hold=.04)
+    settle([p], {("2026-09-04", "New York Yankees", "Boston Red Sox"): "New York Yankees"})
+    assert p.result == "win"
+    q = Pick(**{**p.__dict__, "result": "", "profit": 0.0, "side": "Boston Red Sox"})
+    settle([q], {("2026-09-05", "New York Yankees", "Boston Red Sox"): "New York Yankees"})
+    assert q.result == "loss" and q.profit == -1.0
+
+
+def test_settle_never_regrades_a_settled_pick():
+    p = Pick(game_pk=1, date="2026-09-05", home="H", away="A", side="H", price=-120,
+             model_p=.6, market_p=.52, edge=.08, hold=.04, result="win", profit=0.8333)
+    settle([p], {("2026-09-05", "H", "A"): "A"})
+    assert p.result == "win"
+
+
+def test_price_rows_carry_the_unmixed_parts():
+    import moneyball as mb
+    from moneyline_bot import price_rows
+    good = mb.TeamRates(1, "H", .340, .440, .300, .380, games=100, runs=500, wins=60, losses=40)
+    bad = mb.TeamRates(2, "A", .300, .370, .330, .430, games=100, runs=400, wins=40, losses=60)
+    ln = Line(game_pk=1, date="2026-09-05", home="H", away="A", home_price=-110, away_price=-110)
+    r = price_rows([ln], {"H": .5, "A": .5}, {"H": good, "A": bad})[0]
+    from playoff_odds import win_probability
+    assert r["p_rates"] and r["p_record"] == round(win_probability(.5, .5), 4) and r["starter_shift"] == 0.0
+    assert abs(r["model_home"] - mb.blend(r["p_rates"], r["p_record"], 0.5)) < 1e-3
