@@ -458,13 +458,16 @@ def test_the_blend_weight_moves_the_base_between_rates_and_record():
     assert p_all > p_rec          # equal records, unequal lineups: the rates see it
 
 
-def test_price_rows_keep_every_line_picked_or_not(tmp_path):
+def test_price_rows_keep_every_line_picked_or_not():
+    # No pytest fixtures: SHIP-BOT.sh runs these by calling each function bare.
+    import tempfile
     from moneyline_bot import price_rows, write_prices
+    tmp_path = tempfile.mkdtemp()
     lines = [Line(game_pk=1, date="2026-09-05", home="H", away="A", home_price=-110, away_price=-110),
              Line(game_pk=2, date="2026-09-05", home="H", away="A", home_price=+150, away_price=-170)]
     rows = price_rows(lines, {"H": .5, "A": .5})
     assert len(rows) == 2 and all(r["hold"] and r["model_home"] for r in rows)
-    path = write_prices(lines, {"H": .5, "A": .5}, None, __import__("moneyball").PRIOR, 0.5, str(tmp_path))
+    path = write_prices(lines, {"H": .5, "A": .5}, None, __import__("moneyball").PRIOR, 0.5, tmp_path)
     assert path.endswith("moneyline_prices_2026-09-05.json")
     import json
     assert len(json.load(open(path))["lines"]) == 2
