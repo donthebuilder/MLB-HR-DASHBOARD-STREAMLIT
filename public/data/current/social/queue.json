@@ -1,0 +1,4596 @@
+{
+  "updated_at": "2026-09-05T00:07:31Z",
+  "posts": [
+    {
+      "id": "moonshot-mlb-2026-09-05-watchlist",
+      "created_at": "2026-09-05T00:07:30Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "watchlist",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-09-05",
+        "threshold": "2+ HR in last 5 games",
+        "count": 33,
+        "names": [
+          {
+            "name": "Alex Bregman",
+            "team": "CHC",
+            "opponent": "MIA",
+            "last5_hr": 4,
+            "last7_hr": 5
+          },
+          {
+            "name": "Carter Jensen",
+            "team": "KC",
+            "opponent": "TOR",
+            "last5_hr": 3,
+            "last7_hr": 5
+          },
+          {
+            "name": "Mickey Gasper",
+            "team": "BOS",
+            "opponent": "BAL",
+            "last5_hr": 3,
+            "last7_hr": 3
+          },
+          {
+            "name": "Rafael Devers",
+            "team": "SF",
+            "opponent": "NYM",
+            "last5_hr": 3,
+            "last7_hr": 3
+          },
+          {
+            "name": "Ryan Jeffers",
+            "team": "MIN",
+            "opponent": "CWS",
+            "last5_hr": 3,
+            "last7_hr": 3
+          },
+          {
+            "name": "Thomas Saggese",
+            "team": "STL",
+            "opponent": "COL",
+            "last5_hr": 3,
+            "last7_hr": 3
+          }
+        ]
+      },
+      "assets": {
+        "square": "social/assets/2026-09-05/moonshot-mlb-2026-09-05-watchlist-square.png",
+        "story": "social/assets/2026-09-05/moonshot-mlb-2026-09-05-watchlist-story.png",
+        "landscape": "social/assets/2026-09-05/moonshot-mlb-2026-09-05-watchlist-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-09-05|watchlist|WATCHLIST|x",
+        "instagram": "MLB|moonshot|2026-09-05|watchlist|WATCHLIST|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-09-05T00:07:30Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-09-04-storyline-pete-crow-armstrong",
+      "created_at": "2026-09-04T23:39:22Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "storyline",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-09-04",
+        "name": "Pete Crow-Armstrong",
+        "team": "CHC",
+        "opponent": "MIA",
+        "role": "TOP",
+        "tag": "\ud83d\udc8e HR Bet",
+        "reasons": [
+          "\ud83e\udde9 Aligned Signals",
+          "PMix Elite",
+          "L5 HR 3+",
+          "375+ Contact"
+        ],
+        "score": 86.4
+      },
+      "assets": {
+        "square": "social/assets/2026-09-04/moonshot-mlb-2026-09-04-storyline-pete-crow-armstrong-square.png",
+        "story": "social/assets/2026-09-04/moonshot-mlb-2026-09-04-storyline-pete-crow-armstrong-story.png",
+        "landscape": "social/assets/2026-09-04/moonshot-mlb-2026-09-04-storyline-pete-crow-armstrong-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-09-04|storyline|Pete_Crow-Armstrong|x",
+        "instagram": "MLB|moonshot|2026-09-04|storyline|Pete_Crow-Armstrong|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-09-04T23:39:22Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-09-04-stacked-game",
+      "created_at": "2026-09-04T23:39:22Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "stacked_game",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-09-04",
+        "game_pk": 824424,
+        "team": "DET",
+        "opponent": "CLE",
+        "game_time": "2026-09-04T18:10:00Z",
+        "pick_count": 5,
+        "picks": [
+          {
+            "name": "Spencer Torkelson",
+            "team": "DET",
+            "role": "TOP",
+            "score": 61.0
+          },
+          {
+            "name": "Nathaniel Lowe",
+            "team": "CLE",
+            "role": "HR",
+            "score": 52.9
+          },
+          {
+            "name": "Jos\u00e9 Ram\u00edrez",
+            "team": "CLE",
+            "role": "HRR",
+            "score": 47.6
+          },
+          {
+            "name": "Chase DeLauter",
+            "team": "CLE",
+            "role": "HIT",
+            "score": 44.6
+          },
+          {
+            "name": "Max Clark",
+            "team": "DET",
+            "role": "CONTACT",
+            "score": 38.0
+          }
+        ]
+      },
+      "assets": {
+        "square": "social/assets/2026-09-04/moonshot-mlb-2026-09-04-stacked-game-square.png",
+        "story": "social/assets/2026-09-04/moonshot-mlb-2026-09-04-stacked-game-story.png",
+        "landscape": "social/assets/2026-09-04/moonshot-mlb-2026-09-04-stacked-game-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-09-04|stacked_game|STACKED_GAME|x",
+        "instagram": "MLB|moonshot|2026-09-04|stacked_game|STACKED_GAME|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-09-04T23:39:22Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-09-04-daily-board",
+      "created_at": "2026-09-04T23:39:20Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "daily_board",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-09-04",
+        "games": 16,
+        "hitters": 284,
+        "board_size": 68,
+        "board": [
+          {
+            "name": "Pete Crow-Armstrong",
+            "team": "CHC",
+            "opponent": "MIA",
+            "role": "TOP",
+            "score": 86.4
+          },
+          {
+            "name": "Rafael Devers",
+            "team": "SF",
+            "opponent": "NYM",
+            "role": "TOP/CONTACT",
+            "score": 79.3
+          },
+          {
+            "name": "Kody Clemens",
+            "team": "MIN",
+            "opponent": "CWS",
+            "role": "HR",
+            "score": 79.1
+          },
+          {
+            "name": "Ryan Jeffers",
+            "team": "MIN",
+            "opponent": "CWS",
+            "role": "TOP/CONTACT",
+            "score": 78.1
+          },
+          {
+            "name": "Carter Jensen",
+            "team": "KC",
+            "opponent": "TOR",
+            "role": "TOP/CONTACT",
+            "score": 76.5
+          }
+        ]
+      },
+      "assets": {
+        "square": "social/assets/2026-09-04/moonshot-mlb-2026-09-04-daily-board-square.png",
+        "story": "social/assets/2026-09-04/moonshot-mlb-2026-09-04-daily-board-story.png",
+        "landscape": "social/assets/2026-09-04/moonshot-mlb-2026-09-04-daily-board-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-09-04|daily_board|BOARD|x",
+        "instagram": "MLB|moonshot|2026-09-04|daily_board|BOARD|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-09-04T23:39:20Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-09-03-storyline-rafael-devers",
+      "created_at": "2026-09-03T23:45:24Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "storyline",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-09-03",
+        "name": "Rafael Devers",
+        "team": "SF",
+        "opponent": "PIT",
+        "role": "TOP",
+        "tag": "\ud83d\udc8e HR Bet",
+        "reasons": [
+          "PMix Elite",
+          "L5 HR 3+",
+          "375+ Contact",
+          "HR/PA Strong"
+        ],
+        "score": 79.7
+      },
+      "assets": {
+        "square": "social/assets/2026-09-03/moonshot-mlb-2026-09-03-storyline-rafael-devers-square.png",
+        "story": "social/assets/2026-09-03/moonshot-mlb-2026-09-03-storyline-rafael-devers-story.png",
+        "landscape": "social/assets/2026-09-03/moonshot-mlb-2026-09-03-storyline-rafael-devers-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-09-03|storyline|Rafael_Devers|x",
+        "instagram": "MLB|moonshot|2026-09-03|storyline|Rafael_Devers|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-09-03T23:45:24Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-09-03-stacked-game",
+      "created_at": "2026-09-03T23:45:24Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "stacked_game",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-09-03",
+        "game_pk": 824388,
+        "team": "CLE",
+        "opponent": "TOR",
+        "game_time": "2026-09-03T17:10:00Z",
+        "pick_count": 5,
+        "picks": [
+          {
+            "name": "Nathaniel Lowe",
+            "team": "CLE",
+            "role": "TOP",
+            "score": 52.8
+          },
+          {
+            "name": "Jos\u00e9 Ram\u00edrez",
+            "team": "CLE",
+            "role": "CONTACT/WATCH",
+            "score": 51.0
+          },
+          {
+            "name": "Chase DeLauter",
+            "team": "CLE",
+            "role": "HIT",
+            "score": 41.8
+          },
+          {
+            "name": "Nathan Lukes",
+            "team": "TOR",
+            "role": "HR",
+            "score": 41.0
+          },
+          {
+            "name": "Vladimir Guerrero Jr.",
+            "team": "TOR",
+            "role": "HRR",
+            "score": 30.7
+          }
+        ]
+      },
+      "assets": {
+        "square": "social/assets/2026-09-03/moonshot-mlb-2026-09-03-stacked-game-square.png",
+        "story": "social/assets/2026-09-03/moonshot-mlb-2026-09-03-stacked-game-story.png",
+        "landscape": "social/assets/2026-09-03/moonshot-mlb-2026-09-03-stacked-game-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-09-03|stacked_game|STACKED_GAME|x",
+        "instagram": "MLB|moonshot|2026-09-03|stacked_game|STACKED_GAME|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-09-03T23:45:24Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-09-03-daily-board",
+      "created_at": "2026-09-03T23:45:22Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "daily_board",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-09-03",
+        "games": 9,
+        "hitters": 161,
+        "board_size": 39,
+        "board": [
+          {
+            "name": "Rafael Devers",
+            "team": "SF",
+            "opponent": "PIT",
+            "role": "TOP",
+            "score": 79.7
+          },
+          {
+            "name": "Kyle Stowers",
+            "team": "MIA",
+            "opponent": "KC",
+            "role": "HR",
+            "score": 79.2
+          },
+          {
+            "name": "Pete Crow-Armstrong",
+            "team": "CHC",
+            "opponent": "MIL",
+            "role": "TOP/CONTACT",
+            "score": 78.8
+          },
+          {
+            "name": "Justin Foscue",
+            "team": "TEX",
+            "opponent": "TB",
+            "role": "TOP",
+            "score": 76.0
+          },
+          {
+            "name": "Mickey Gasper",
+            "team": "BOS",
+            "opponent": "BAL",
+            "role": "TOP",
+            "score": 74.8
+          }
+        ]
+      },
+      "assets": {
+        "square": "social/assets/2026-09-03/moonshot-mlb-2026-09-03-daily-board-square.png",
+        "story": "social/assets/2026-09-03/moonshot-mlb-2026-09-03-daily-board-story.png",
+        "landscape": "social/assets/2026-09-03/moonshot-mlb-2026-09-03-daily-board-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-09-03|daily_board|BOARD|x",
+        "instagram": "MLB|moonshot|2026-09-03|daily_board|BOARD|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-09-03T23:45:22Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-09-03-watchlist",
+      "created_at": "2026-09-03T00:17:00Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "watchlist",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-09-03",
+        "threshold": "2+ HR in last 5 games",
+        "count": 31,
+        "names": [
+          {
+            "name": "Pete Crow-Armstrong",
+            "team": "CHC",
+            "opponent": "MIL",
+            "last5_hr": 5,
+            "last7_hr": 5
+          },
+          {
+            "name": "Alex Bregman",
+            "team": "CHC",
+            "opponent": "MIL",
+            "last5_hr": 4,
+            "last7_hr": 4
+          },
+          {
+            "name": "Sean Murphy",
+            "team": "ATL",
+            "opponent": "WSH",
+            "last5_hr": 3,
+            "last7_hr": 3
+          },
+          {
+            "name": "Rafael Devers",
+            "team": "SF",
+            "opponent": "PIT",
+            "last5_hr": 3,
+            "last7_hr": 3
+          },
+          {
+            "name": "Kody Clemens",
+            "team": "MIN",
+            "opponent": "DET",
+            "last5_hr": 3,
+            "last7_hr": 3
+          },
+          {
+            "name": "Ryan Jeffers",
+            "team": "MIN",
+            "opponent": "DET",
+            "last5_hr": 3,
+            "last7_hr": 3
+          }
+        ]
+      },
+      "assets": {
+        "square": "social/assets/2026-09-03/moonshot-mlb-2026-09-03-watchlist-square.png",
+        "story": "social/assets/2026-09-03/moonshot-mlb-2026-09-03-watchlist-story.png",
+        "landscape": "social/assets/2026-09-03/moonshot-mlb-2026-09-03-watchlist-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-09-03|watchlist|WATCHLIST|x",
+        "instagram": "MLB|moonshot|2026-09-03|watchlist|WATCHLIST|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-09-03T00:17:00Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-09-02-storyline-kody-clemens",
+      "created_at": "2026-09-02T23:48:15Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "storyline",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-09-02",
+        "name": "Kody Clemens",
+        "team": "MIN",
+        "opponent": "DET",
+        "role": "TOP",
+        "tag": "\ud83d\udc8e HR Bet",
+        "reasons": [
+          "PMix Elite",
+          "L5 HR 3+",
+          "375+ Contact",
+          "HR/PA Strong"
+        ],
+        "score": 80.6
+      },
+      "assets": {
+        "square": "social/assets/2026-09-02/moonshot-mlb-2026-09-02-storyline-kody-clemens-square.png",
+        "story": "social/assets/2026-09-02/moonshot-mlb-2026-09-02-storyline-kody-clemens-story.png",
+        "landscape": "social/assets/2026-09-02/moonshot-mlb-2026-09-02-storyline-kody-clemens-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-09-02|storyline|Kody_Clemens|x",
+        "instagram": "MLB|moonshot|2026-09-02|storyline|Kody_Clemens|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-09-02T23:48:15Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-09-02-stacked-game",
+      "created_at": "2026-09-02T23:48:14Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "stacked_game",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-09-02",
+        "game_pk": 824717,
+        "team": "BOS",
+        "opponent": "SEA",
+        "game_time": "2026-09-02T20:10:00Z",
+        "pick_count": 5,
+        "picks": [
+          {
+            "name": "Mickey Gasper",
+            "team": "BOS",
+            "role": "TOP",
+            "score": 72.7
+          },
+          {
+            "name": "Randy Arozarena",
+            "team": "SEA",
+            "role": "HR",
+            "score": 61.3
+          },
+          {
+            "name": "Dominic Canzone",
+            "team": "SEA",
+            "role": "HIT/WATCH",
+            "score": 47.0
+          },
+          {
+            "name": "Nick Sogard",
+            "team": "BOS",
+            "role": "HRR",
+            "score": 44.0
+          },
+          {
+            "name": "Roman Anthony",
+            "team": "BOS",
+            "role": "CONTACT",
+            "score": 40.6
+          }
+        ]
+      },
+      "assets": {
+        "square": "social/assets/2026-09-02/moonshot-mlb-2026-09-02-stacked-game-square.png",
+        "story": "social/assets/2026-09-02/moonshot-mlb-2026-09-02-stacked-game-story.png",
+        "landscape": "social/assets/2026-09-02/moonshot-mlb-2026-09-02-stacked-game-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-09-02|stacked_game|STACKED_GAME|x",
+        "instagram": "MLB|moonshot|2026-09-02|stacked_game|STACKED_GAME|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-09-02T23:48:14Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-09-02-daily-board",
+      "created_at": "2026-09-02T23:48:12Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "daily_board",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-09-02",
+        "games": 15,
+        "hitters": 264,
+        "board_size": 60,
+        "board": [
+          {
+            "name": "Kody Clemens",
+            "team": "MIN",
+            "opponent": "DET",
+            "role": "TOP",
+            "score": 80.6
+          },
+          {
+            "name": "Daylen Lile",
+            "team": "WSH",
+            "opponent": "ATL",
+            "role": "HRR/WATCH",
+            "score": 80.4
+          },
+          {
+            "name": "Rafael Devers",
+            "team": "SF",
+            "opponent": "PIT",
+            "role": "TOP/CONTACT",
+            "score": 79.4
+          },
+          {
+            "name": "Pete Crow-Armstrong",
+            "team": "CHC",
+            "opponent": "MIL",
+            "role": "TOP/CONTACT",
+            "score": 78.8
+          },
+          {
+            "name": "Kazuma Okamoto",
+            "team": "TOR",
+            "opponent": "CLE",
+            "role": "TOP",
+            "score": 76.5
+          }
+        ]
+      },
+      "assets": {
+        "square": "social/assets/2026-09-02/moonshot-mlb-2026-09-02-daily-board-square.png",
+        "story": "social/assets/2026-09-02/moonshot-mlb-2026-09-02-daily-board-story.png",
+        "landscape": "social/assets/2026-09-02/moonshot-mlb-2026-09-02-daily-board-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-09-02|daily_board|BOARD|x",
+        "instagram": "MLB|moonshot|2026-09-02|daily_board|BOARD|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-09-02T23:48:12Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-09-02-top-plays",
+      "created_at": "2026-09-02T13:44:40Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "top_plays",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-09-02",
+        "count": 10,
+        "plays": [
+          {
+            "name": "Thomas Saggese",
+            "team": "STL",
+            "hr": 2,
+            "hits": 2,
+            "ab": 3,
+            "tb": 8
+          },
+          {
+            "name": "Brandon Lowe",
+            "team": "PIT",
+            "hr": 1,
+            "hits": 4,
+            "ab": 6,
+            "tb": 7
+          },
+          {
+            "name": "Royce Lewis",
+            "team": "MIN",
+            "hr": 1,
+            "hits": 3,
+            "ab": 4,
+            "tb": 7
+          },
+          {
+            "name": "Jordan Walker",
+            "team": "STL",
+            "hr": 1,
+            "hits": 3,
+            "ab": 5,
+            "tb": 7
+          },
+          {
+            "name": "Yandy D\u00edaz",
+            "team": "TB",
+            "hr": 1,
+            "hits": 2,
+            "ab": 4,
+            "tb": 6
+          },
+          {
+            "name": "Jeff McNeil",
+            "team": "ATH",
+            "hr": 1,
+            "hits": 2,
+            "ab": 4,
+            "tb": 5
+          },
+          {
+            "name": "Rafael Devers",
+            "team": "SF",
+            "hr": 1,
+            "hits": 1,
+            "ab": 4,
+            "tb": 4
+          },
+          {
+            "name": "Michael Harris II",
+            "team": "ATL",
+            "hr": 1,
+            "hits": 1,
+            "ab": 4,
+            "tb": 4
+          },
+          {
+            "name": "TJ Rumfield",
+            "team": "COL",
+            "hr": 1,
+            "hits": 1,
+            "ab": 3,
+            "tb": 4
+          },
+          {
+            "name": "Brandon Nimmo",
+            "team": "TEX",
+            "hr": 0,
+            "hits": 4,
+            "ab": 5,
+            "tb": 5
+          }
+        ]
+      },
+      "assets": {
+        "square": "social/assets/2026-09-02/moonshot-mlb-2026-09-02-top-plays-square.png",
+        "story": "social/assets/2026-09-02/moonshot-mlb-2026-09-02-top-plays-story.png",
+        "landscape": "social/assets/2026-09-02/moonshot-mlb-2026-09-02-top-plays-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-09-02|top_plays|TOP_PLAYS|x",
+        "instagram": "MLB|moonshot|2026-09-02|top_plays|TOP_PLAYS|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-09-02T13:44:40Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-09-02-player-spotlight-rafael-devers",
+      "created_at": "2026-09-02T13:44:40Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "player_spotlight",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-09-02",
+        "name": "Rafael Devers",
+        "team": "SF",
+        "opponent": "PIT",
+        "pick_type": "TOP15",
+        "hr_score": 64.9,
+        "longest_hr_feet": 415,
+        "multi_hr": 4
+      },
+      "assets": {
+        "square": "social/assets/2026-09-02/moonshot-mlb-2026-09-02-player-spotlight-rafael-devers-square.png",
+        "story": "social/assets/2026-09-02/moonshot-mlb-2026-09-02-player-spotlight-rafael-devers-story.png",
+        "landscape": "social/assets/2026-09-02/moonshot-mlb-2026-09-02-player-spotlight-rafael-devers-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-09-02|player_spotlight|Rafael_Devers|x",
+        "instagram": "MLB|moonshot|2026-09-02|player_spotlight|Rafael_Devers|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-09-02T13:44:40Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-09-02-night-recap",
+      "created_at": "2026-09-02T13:44:37Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "night_recap",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-09-02",
+        "board_record": "3/15",
+        "board_hit_rate": 20.0,
+        "hr_pick_record": "3/15",
+        "hr_pick_hit_rate": 20.0,
+        "hr_scorers": 9,
+        "slate_hr_coverage": "29/38",
+        "slate_hr_coverage_pct": 76.3,
+        "top_cashes": [
+          "Rafael Devers",
+          "Michael Harris II",
+          "Brandon Lowe",
+          "Thomas Saggese",
+          "Jordan Walker"
+        ],
+        "longest_hr": {
+          "name": "Royce Lewis",
+          "feet": 427
+        }
+      },
+      "assets": {
+        "square": "social/assets/2026-09-02/moonshot-mlb-2026-09-02-night-recap-square.png",
+        "story": "social/assets/2026-09-02/moonshot-mlb-2026-09-02-night-recap-story.png",
+        "landscape": "social/assets/2026-09-02/moonshot-mlb-2026-09-02-night-recap-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-09-02|night_recap|RECAP|x",
+        "instagram": "MLB|moonshot|2026-09-02|night_recap|RECAP|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-09-02T13:44:37Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-09-02-watchlist",
+      "created_at": "2026-09-02T00:15:50Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "watchlist",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-09-02",
+        "threshold": "2+ HR in last 5 games",
+        "count": 31,
+        "names": [
+          {
+            "name": "Pete Crow-Armstrong",
+            "team": "CHC",
+            "opponent": "MIL",
+            "last5_hr": 5,
+            "last7_hr": 5
+          },
+          {
+            "name": "Alex Bregman",
+            "team": "CHC",
+            "opponent": "MIL",
+            "last5_hr": 4,
+            "last7_hr": 4
+          },
+          {
+            "name": "Sal Stewart",
+            "team": "CIN",
+            "opponent": "SD",
+            "last5_hr": 3,
+            "last7_hr": 4
+          },
+          {
+            "name": "Jackson Chourio",
+            "team": "MIL",
+            "opponent": "CHC",
+            "last5_hr": 3,
+            "last7_hr": 3
+          },
+          {
+            "name": "Carson Kelly",
+            "team": "CHC",
+            "opponent": "MIL",
+            "last5_hr": 3,
+            "last7_hr": 3
+          },
+          {
+            "name": "Mickey Gasper",
+            "team": "BOS",
+            "opponent": "SEA",
+            "last5_hr": 2,
+            "last7_hr": 4
+          }
+        ]
+      },
+      "assets": {
+        "square": "social/assets/2026-09-02/moonshot-mlb-2026-09-02-watchlist-square.png",
+        "story": "social/assets/2026-09-02/moonshot-mlb-2026-09-02-watchlist-story.png",
+        "landscape": "social/assets/2026-09-02/moonshot-mlb-2026-09-02-watchlist-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-09-02|watchlist|WATCHLIST|x",
+        "instagram": "MLB|moonshot|2026-09-02|watchlist|WATCHLIST|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-09-02T00:15:50Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-09-01-storyline-sal-stewart",
+      "created_at": "2026-09-01T23:44:41Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "storyline",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-09-01",
+        "name": "Sal Stewart",
+        "team": "CIN",
+        "opponent": "SD",
+        "role": "TOP/CONTACT",
+        "tag": "\ud83d\udcc8 HR Lean",
+        "reasons": [
+          "PMix Elite",
+          "L5 HR 3+",
+          "375+ Contact",
+          "HR/PA Strong"
+        ],
+        "score": 78.4
+      },
+      "assets": {
+        "square": "social/assets/2026-09-01/moonshot-mlb-2026-09-01-storyline-sal-stewart-square.png",
+        "story": "social/assets/2026-09-01/moonshot-mlb-2026-09-01-storyline-sal-stewart-story.png",
+        "landscape": "social/assets/2026-09-01/moonshot-mlb-2026-09-01-storyline-sal-stewart-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-09-01|storyline|Sal_Stewart|x",
+        "instagram": "MLB|moonshot|2026-09-01|storyline|Sal_Stewart|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-09-01T23:44:41Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-09-01-watchlist",
+      "created_at": "2026-09-01T01:18:55Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "watchlist",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-09-01",
+        "threshold": "2+ HR in last 5 games",
+        "count": 24,
+        "names": [
+          {
+            "name": "Pete Crow-Armstrong",
+            "team": "CHC",
+            "opponent": "MIL",
+            "last5_hr": 5,
+            "last7_hr": 5
+          },
+          {
+            "name": "Sal Stewart",
+            "team": "CIN",
+            "opponent": "SD",
+            "last5_hr": 3,
+            "last7_hr": 4
+          },
+          {
+            "name": "H\u00e9ctor Rodr\u00edguez",
+            "team": "CIN",
+            "opponent": "SD",
+            "last5_hr": 3,
+            "last7_hr": 3
+          },
+          {
+            "name": "Mickey Gasper",
+            "team": "BOS",
+            "opponent": "SEA",
+            "last5_hr": 3,
+            "last7_hr": 3
+          },
+          {
+            "name": "Jackson Chourio",
+            "team": "MIL",
+            "opponent": "CHC",
+            "last5_hr": 3,
+            "last7_hr": 3
+          },
+          {
+            "name": "Heriberto Hern\u00e1ndez",
+            "team": "MIA",
+            "opponent": "WSH",
+            "last5_hr": 2,
+            "last7_hr": 3
+          }
+        ]
+      },
+      "assets": {
+        "square": "social/assets/2026-09-01/moonshot-mlb-2026-09-01-watchlist-square.png",
+        "story": "social/assets/2026-09-01/moonshot-mlb-2026-09-01-watchlist-story.png",
+        "landscape": "social/assets/2026-09-01/moonshot-mlb-2026-09-01-watchlist-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-09-01|watchlist|WATCHLIST|x",
+        "instagram": "MLB|moonshot|2026-09-01|watchlist|WATCHLIST|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-09-01T01:18:55Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-09-01-storyline-pete-crow-armstrong",
+      "created_at": "2026-09-01T00:57:34Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "storyline",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-09-01",
+        "name": "Pete Crow-Armstrong",
+        "team": "CHC",
+        "opponent": "MIL",
+        "role": "TOP/CONTACT",
+        "tag": "\ud83d\udc8e HR Bet",
+        "reasons": [
+          "PMix Pass",
+          "L5 HR 3+",
+          "375+ Contact",
+          "HR/PA Elite"
+        ],
+        "score": 80.0
+      },
+      "assets": {
+        "square": "social/assets/2026-09-01/moonshot-mlb-2026-09-01-storyline-pete-crow-armstrong-square.png",
+        "story": "social/assets/2026-09-01/moonshot-mlb-2026-09-01-storyline-pete-crow-armstrong-story.png",
+        "landscape": "social/assets/2026-09-01/moonshot-mlb-2026-09-01-storyline-pete-crow-armstrong-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-09-01|storyline|Pete_Crow-Armstrong|x",
+        "instagram": "MLB|moonshot|2026-09-01|storyline|Pete_Crow-Armstrong|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-09-01T00:57:34Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-09-01-stacked-game",
+      "created_at": "2026-09-01T00:57:32Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "stacked_game",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-09-01",
+        "game_pk": 824911,
+        "team": "SF",
+        "opponent": "ATL",
+        "game_time": "2026-08-31T22:05:00Z",
+        "pick_count": 5,
+        "picks": [
+          {
+            "name": "Rafael Devers",
+            "team": "SF",
+            "role": "HR",
+            "score": 76.5
+          },
+          {
+            "name": "Matt Olson",
+            "team": "ATL",
+            "role": "TOP",
+            "score": 69.7
+          },
+          {
+            "name": "Bryce Eldridge",
+            "team": "SF",
+            "role": "HIT/WATCH",
+            "score": 61.9
+          },
+          {
+            "name": "Michael Harris II",
+            "team": "ATL",
+            "role": "CONTACT/WATCH",
+            "score": 57.1
+          },
+          {
+            "name": "Jung Hoo Lee",
+            "team": "SF",
+            "role": "HRR",
+            "score": 36.1
+          }
+        ]
+      },
+      "assets": {
+        "square": "social/assets/2026-09-01/moonshot-mlb-2026-09-01-stacked-game-square.png",
+        "story": "social/assets/2026-09-01/moonshot-mlb-2026-09-01-stacked-game-story.png",
+        "landscape": "social/assets/2026-09-01/moonshot-mlb-2026-09-01-stacked-game-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-09-01|stacked_game|STACKED_GAME|x",
+        "instagram": "MLB|moonshot|2026-09-01|stacked_game|STACKED_GAME|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-09-01T00:57:32Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-09-01-daily-board",
+      "created_at": "2026-09-01T00:57:30Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "daily_board",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-09-01",
+        "games": 12,
+        "hitters": 215,
+        "board_size": 51,
+        "board": [
+          {
+            "name": "Pete Crow-Armstrong",
+            "team": "CHC",
+            "opponent": "MIL",
+            "role": "TOP/CONTACT",
+            "score": 80.0
+          },
+          {
+            "name": "Jake Burger",
+            "team": "TEX",
+            "opponent": "ATH",
+            "role": "TOP",
+            "score": 78.5
+          },
+          {
+            "name": "Kody Clemens",
+            "team": "MIN",
+            "opponent": "DET",
+            "role": "HR",
+            "score": 77.2
+          },
+          {
+            "name": "Rafael Devers",
+            "team": "SF",
+            "opponent": "ATL",
+            "role": "HR",
+            "score": 76.5
+          },
+          {
+            "name": "Zach Neto",
+            "team": "LAA",
+            "opponent": "NYY",
+            "role": "HR/CONTACT",
+            "score": 76.1
+          }
+        ]
+      },
+      "assets": {
+        "square": "social/assets/2026-09-01/moonshot-mlb-2026-09-01-daily-board-square.png",
+        "story": "social/assets/2026-09-01/moonshot-mlb-2026-09-01-daily-board-story.png",
+        "landscape": "social/assets/2026-09-01/moonshot-mlb-2026-09-01-daily-board-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-09-01|daily_board|BOARD|x",
+        "instagram": "MLB|moonshot|2026-09-01|daily_board|BOARD|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-09-01T00:57:30Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-08-31-watchlist",
+      "created_at": "2026-08-31T00:37:43Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "watchlist",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-08-31",
+        "threshold": "2+ HR in last 5 games",
+        "count": 26,
+        "names": [
+          {
+            "name": "Pete Crow-Armstrong",
+            "team": "CHC",
+            "opponent": "CIN",
+            "last5_hr": 3,
+            "last7_hr": 4
+          },
+          {
+            "name": "Heriberto Hern\u00e1ndez",
+            "team": "MIA",
+            "opponent": "WSH",
+            "last5_hr": 3,
+            "last7_hr": 3
+          },
+          {
+            "name": "Jackson Chourio",
+            "team": "MIL",
+            "opponent": "TEX",
+            "last5_hr": 3,
+            "last7_hr": 3
+          },
+          {
+            "name": "Sal Stewart",
+            "team": "CIN",
+            "opponent": "CHC",
+            "last5_hr": 3,
+            "last7_hr": 3
+          },
+          {
+            "name": "Cal Raleigh",
+            "team": "SEA",
+            "opponent": "TOR",
+            "last5_hr": 2,
+            "last7_hr": 5
+          },
+          {
+            "name": "Tristan Peters",
+            "team": "CWS",
+            "opponent": "MIN",
+            "last5_hr": 2,
+            "last7_hr": 4
+          }
+        ]
+      },
+      "assets": {
+        "square": "social/assets/2026-08-31/moonshot-mlb-2026-08-31-watchlist-square.png",
+        "story": "social/assets/2026-08-31/moonshot-mlb-2026-08-31-watchlist-story.png",
+        "landscape": "social/assets/2026-08-31/moonshot-mlb-2026-08-31-watchlist-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-08-31|watchlist|WATCHLIST|x",
+        "instagram": "MLB|moonshot|2026-08-31|watchlist|WATCHLIST|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-08-31T00:37:43Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-08-31-storyline-coby-mayo",
+      "created_at": "2026-08-31T00:09:56Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "storyline",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-08-31",
+        "name": "Coby Mayo",
+        "team": "BAL",
+        "opponent": "ATH",
+        "role": "HR",
+        "tag": "\ud83d\udc8e HR Bet",
+        "reasons": [
+          "\ud83e\udde9 Aligned Signals",
+          "PMix Elite",
+          "L5 HR 2+",
+          "375+ Contact"
+        ],
+        "score": 85.5
+      },
+      "assets": {
+        "square": "social/assets/2026-08-31/moonshot-mlb-2026-08-31-storyline-coby-mayo-square.png",
+        "story": "social/assets/2026-08-31/moonshot-mlb-2026-08-31-storyline-coby-mayo-story.png",
+        "landscape": "social/assets/2026-08-31/moonshot-mlb-2026-08-31-storyline-coby-mayo-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-08-31|storyline|Coby_Mayo|x",
+        "instagram": "MLB|moonshot|2026-08-31|storyline|Coby_Mayo|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-08-31T00:09:56Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-08-31-stacked-game",
+      "created_at": "2026-08-31T00:09:55Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "stacked_game",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-08-31",
+        "game_pk": 822766,
+        "team": "TOR",
+        "opponent": "SEA",
+        "game_time": "2026-08-30T17:37:00Z",
+        "pick_count": 5,
+        "picks": [
+          {
+            "name": "Kazuma Okamoto",
+            "team": "TOR",
+            "role": "TOP",
+            "score": 74.5
+          },
+          {
+            "name": "Cal Raleigh",
+            "team": "SEA",
+            "role": "CONTACT/WATCH",
+            "score": 66.0
+          },
+          {
+            "name": "George Springer",
+            "team": "TOR",
+            "role": "HRR/WATCH",
+            "score": 64.9
+          },
+          {
+            "name": "Dominic Canzone",
+            "team": "SEA",
+            "role": "HR",
+            "score": 59.8
+          },
+          {
+            "name": "Josh Naylor",
+            "team": "SEA",
+            "role": "HIT",
+            "score": 23.8
+          }
+        ]
+      },
+      "assets": {
+        "square": "social/assets/2026-08-31/moonshot-mlb-2026-08-31-stacked-game-square.png",
+        "story": "social/assets/2026-08-31/moonshot-mlb-2026-08-31-stacked-game-story.png",
+        "landscape": "social/assets/2026-08-31/moonshot-mlb-2026-08-31-stacked-game-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-08-31|stacked_game|STACKED_GAME|x",
+        "instagram": "MLB|moonshot|2026-08-31|stacked_game|STACKED_GAME|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-08-31T00:09:55Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-08-31-daily-board",
+      "created_at": "2026-08-31T00:09:54Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "daily_board",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-08-31",
+        "games": 14,
+        "hitters": 250,
+        "board_size": 49,
+        "board": [
+          {
+            "name": "Coby Mayo",
+            "team": "BAL",
+            "opponent": "ATH",
+            "role": "HR",
+            "score": 85.5
+          },
+          {
+            "name": "Tristan Peters",
+            "team": "CWS",
+            "opponent": "MIN",
+            "role": "TOP/CONTACT",
+            "score": 78.9
+          },
+          {
+            "name": "Jake Burger",
+            "team": "TEX",
+            "opponent": "MIL",
+            "role": "HR",
+            "score": 74.8
+          },
+          {
+            "name": "Hunter Goodman",
+            "team": "COL",
+            "opponent": "ATL",
+            "role": "TOP",
+            "score": 74.8
+          },
+          {
+            "name": "Kazuma Okamoto",
+            "team": "TOR",
+            "opponent": "SEA",
+            "role": "TOP",
+            "score": 74.5
+          }
+        ]
+      },
+      "assets": {
+        "square": "social/assets/2026-08-31/moonshot-mlb-2026-08-31-daily-board-square.png",
+        "story": "social/assets/2026-08-31/moonshot-mlb-2026-08-31-daily-board-story.png",
+        "landscape": "social/assets/2026-08-31/moonshot-mlb-2026-08-31-daily-board-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-08-31|daily_board|BOARD|x",
+        "instagram": "MLB|moonshot|2026-08-31|daily_board|BOARD|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-08-31T00:09:54Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-08-30-watchlist",
+      "created_at": "2026-08-30T00:21:23Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "watchlist",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-08-30",
+        "threshold": "2+ HR in last 5 games",
+        "count": 26,
+        "names": [
+          {
+            "name": "Cal Raleigh",
+            "team": "SEA",
+            "opponent": "TOR",
+            "last5_hr": 5,
+            "last7_hr": 5
+          },
+          {
+            "name": "Tristan Peters",
+            "team": "CWS",
+            "opponent": "MIN",
+            "last5_hr": 3,
+            "last7_hr": 5
+          },
+          {
+            "name": "Heriberto Hern\u00e1ndez",
+            "team": "MIA",
+            "opponent": "WSH",
+            "last5_hr": 3,
+            "last7_hr": 4
+          },
+          {
+            "name": "Sal Stewart",
+            "team": "CIN",
+            "opponent": "CHC",
+            "last5_hr": 3,
+            "last7_hr": 3
+          },
+          {
+            "name": "Brooks Lee",
+            "team": "MIN",
+            "opponent": "CWS",
+            "last5_hr": 2,
+            "last7_hr": 4
+          },
+          {
+            "name": "H\u00e9ctor Rodr\u00edguez",
+            "team": "CIN",
+            "opponent": "CHC",
+            "last5_hr": 2,
+            "last7_hr": 3
+          }
+        ]
+      },
+      "assets": {
+        "square": "social/assets/2026-08-30/moonshot-mlb-2026-08-30-watchlist-square.png",
+        "story": "social/assets/2026-08-30/moonshot-mlb-2026-08-30-watchlist-story.png",
+        "landscape": "social/assets/2026-08-30/moonshot-mlb-2026-08-30-watchlist-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-08-30|watchlist|WATCHLIST|x",
+        "instagram": "MLB|moonshot|2026-08-30|watchlist|WATCHLIST|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-08-30T00:21:23Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-08-29-storyline-justin-foscue",
+      "created_at": "2026-08-29T23:51:06Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "storyline",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-08-29",
+        "name": "Justin Foscue",
+        "team": "TEX",
+        "opponent": "MIL",
+        "role": "HR",
+        "tag": "\ud83d\udcc8 HR Lean",
+        "reasons": [
+          "PMix Elite",
+          "375+ Contact",
+          "HR/PA Strong",
+          "HRW Sweet Spot"
+        ],
+        "score": 77.7
+      },
+      "assets": {
+        "square": "social/assets/2026-08-29/moonshot-mlb-2026-08-29-storyline-justin-foscue-square.png",
+        "story": "social/assets/2026-08-29/moonshot-mlb-2026-08-29-storyline-justin-foscue-story.png",
+        "landscape": "social/assets/2026-08-29/moonshot-mlb-2026-08-29-storyline-justin-foscue-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-08-29|storyline|Justin_Foscue|x",
+        "instagram": "MLB|moonshot|2026-08-29|storyline|Justin_Foscue|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-08-29T23:51:06Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-08-29-watchlist",
+      "created_at": "2026-08-29T03:43:27Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "watchlist",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-08-29",
+        "threshold": "2+ HR in last 5 games",
+        "count": 24,
+        "names": [
+          {
+            "name": "Cal Raleigh",
+            "team": "SEA",
+            "opponent": "TOR",
+            "last5_hr": 4,
+            "last7_hr": 5
+          },
+          {
+            "name": "Tristan Peters",
+            "team": "CWS",
+            "opponent": "MIN",
+            "last5_hr": 4,
+            "last7_hr": 5
+          },
+          {
+            "name": "Nathan Lukes",
+            "team": "TOR",
+            "opponent": "SEA",
+            "last5_hr": 3,
+            "last7_hr": 4
+          },
+          {
+            "name": "Brooks Lee",
+            "team": "MIN",
+            "opponent": "CWS",
+            "last5_hr": 3,
+            "last7_hr": 4
+          },
+          {
+            "name": "Daylen Lile",
+            "team": "WSH",
+            "opponent": "MIA",
+            "last5_hr": 3,
+            "last7_hr": 3
+          },
+          {
+            "name": "Rafael Devers",
+            "team": "SF",
+            "opponent": "ARI",
+            "last5_hr": 3,
+            "last7_hr": 3
+          }
+        ]
+      },
+      "assets": {
+        "square": "social/assets/2026-08-29/moonshot-mlb-2026-08-29-watchlist-square.png",
+        "story": "social/assets/2026-08-29/moonshot-mlb-2026-08-29-watchlist-story.png",
+        "landscape": "social/assets/2026-08-29/moonshot-mlb-2026-08-29-watchlist-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-08-29|watchlist|WATCHLIST|x",
+        "instagram": "MLB|moonshot|2026-08-29|watchlist|WATCHLIST|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-08-29T03:43:27Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-08-29-storyline-hunter-goodman",
+      "created_at": "2026-08-29T03:28:12Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "storyline",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-08-29",
+        "name": "Hunter Goodman",
+        "team": "COL",
+        "opponent": "ATL",
+        "role": "TOP",
+        "tag": "\ud83d\udc8e HR Bet",
+        "reasons": [
+          "PMix Elite",
+          "L5 HR 2+",
+          "375+ Contact",
+          "HR/PA Elite"
+        ],
+        "score": 83.1
+      },
+      "assets": {
+        "square": "social/assets/2026-08-29/moonshot-mlb-2026-08-29-storyline-hunter-goodman-square.png",
+        "story": "social/assets/2026-08-29/moonshot-mlb-2026-08-29-storyline-hunter-goodman-story.png",
+        "landscape": "social/assets/2026-08-29/moonshot-mlb-2026-08-29-storyline-hunter-goodman-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-08-29|storyline|Hunter_Goodman|x",
+        "instagram": "MLB|moonshot|2026-08-29|storyline|Hunter_Goodman|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-08-29T03:28:12Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-08-29-stacked-game",
+      "created_at": "2026-08-29T03:28:11Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "stacked_game",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-08-29",
+        "game_pk": 822691,
+        "team": "WSH",
+        "opponent": "MIA",
+        "game_time": "2026-08-28T22:45:00Z",
+        "pick_count": 5,
+        "picks": [
+          {
+            "name": "Daylen Lile",
+            "team": "WSH",
+            "role": "CONTACT/WATCH",
+            "score": 64.8
+          },
+          {
+            "name": "Andr\u00e9s Chaparro",
+            "team": "WSH",
+            "role": "HR",
+            "score": 64.8
+          },
+          {
+            "name": "Heriberto Hern\u00e1ndez",
+            "team": "MIA",
+            "role": "TOP",
+            "score": 59.9
+          },
+          {
+            "name": "Otto Lopez",
+            "team": "MIA",
+            "role": "HIT",
+            "score": 40.5
+          },
+          {
+            "name": "Xavier Edwards",
+            "team": "MIA",
+            "role": "HRR",
+            "score": 25.3
+          }
+        ]
+      },
+      "assets": {
+        "square": "social/assets/2026-08-29/moonshot-mlb-2026-08-29-stacked-game-square.png",
+        "story": "social/assets/2026-08-29/moonshot-mlb-2026-08-29-stacked-game-story.png",
+        "landscape": "social/assets/2026-08-29/moonshot-mlb-2026-08-29-stacked-game-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-08-29|stacked_game|STACKED_GAME|x",
+        "instagram": "MLB|moonshot|2026-08-29|stacked_game|STACKED_GAME|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-08-29T03:28:11Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-08-29-daily-board",
+      "created_at": "2026-08-29T03:28:10Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "daily_board",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-08-29",
+        "games": 15,
+        "hitters": 269,
+        "board_size": 67,
+        "board": [
+          {
+            "name": "Hunter Goodman",
+            "team": "COL",
+            "opponent": "ATL",
+            "role": "TOP",
+            "score": 83.1
+          },
+          {
+            "name": "Coby Mayo",
+            "team": "BAL",
+            "opponent": "ATH",
+            "role": "HR",
+            "score": 77.8
+          },
+          {
+            "name": "Rafael Devers",
+            "team": "SF",
+            "opponent": "ARI",
+            "role": "TOP/CONTACT",
+            "score": 75.8
+          },
+          {
+            "name": "Pete Alonso",
+            "team": "BAL",
+            "opponent": "ATH",
+            "role": "TOP",
+            "score": 75.7
+          },
+          {
+            "name": "Ian Happ",
+            "team": "CHC",
+            "opponent": "CIN",
+            "role": "TOP",
+            "score": 75.7
+          }
+        ]
+      },
+      "assets": {
+        "square": "social/assets/2026-08-29/moonshot-mlb-2026-08-29-daily-board-square.png",
+        "story": "social/assets/2026-08-29/moonshot-mlb-2026-08-29-daily-board-story.png",
+        "landscape": "social/assets/2026-08-29/moonshot-mlb-2026-08-29-daily-board-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-08-29|daily_board|BOARD|x",
+        "instagram": "MLB|moonshot|2026-08-29|daily_board|BOARD|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-08-29T03:28:10Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-08-28-watchlist",
+      "created_at": "2026-08-28T06:07:59Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "watchlist",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-08-28",
+        "threshold": "2+ HR in last 5 games",
+        "count": 14,
+        "names": [
+          {
+            "name": "Luis Garc\u00eda Jr.",
+            "team": "NYY",
+            "opponent": "HOU",
+            "last5_hr": 3,
+            "last7_hr": 4
+          },
+          {
+            "name": "Rafael Devers",
+            "team": "SF",
+            "opponent": "ARI",
+            "last5_hr": 3,
+            "last7_hr": 4
+          },
+          {
+            "name": "Daylen Lile",
+            "team": "WSH",
+            "opponent": "COL",
+            "last5_hr": 3,
+            "last7_hr": 3
+          },
+          {
+            "name": "Luis Robert Jr.",
+            "team": "NYM",
+            "opponent": "MIL",
+            "last5_hr": 3,
+            "last7_hr": 3
+          },
+          {
+            "name": "Hunter Goodman",
+            "team": "COL",
+            "opponent": "WSH",
+            "last5_hr": 2,
+            "last7_hr": 3
+          },
+          {
+            "name": "Pete Alonso",
+            "team": "BAL",
+            "opponent": "STL",
+            "last5_hr": 2,
+            "last7_hr": 3
+          }
+        ]
+      },
+      "assets": {
+        "square": "social/assets/2026-08-28/moonshot-mlb-2026-08-28-watchlist-square.png",
+        "story": "social/assets/2026-08-28/moonshot-mlb-2026-08-28-watchlist-story.png",
+        "landscape": "social/assets/2026-08-28/moonshot-mlb-2026-08-28-watchlist-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-08-28|watchlist|WATCHLIST|x",
+        "instagram": "MLB|moonshot|2026-08-28|watchlist|WATCHLIST|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-08-28T06:07:59Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-08-28-storyline-rafael-devers",
+      "created_at": "2026-08-28T05:55:27Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "storyline",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-08-28",
+        "name": "Rafael Devers",
+        "team": "SF",
+        "opponent": "ARI",
+        "role": "TOP/CONTACT",
+        "tag": "\ud83d\udc8e HR Bet",
+        "reasons": [
+          "\ud83e\udde9 Aligned Signals",
+          "PMix Elite",
+          "L5 HR 3+",
+          "375+ Contact"
+        ],
+        "score": 79.6
+      },
+      "assets": {
+        "square": "social/assets/2026-08-28/moonshot-mlb-2026-08-28-storyline-rafael-devers-square.png",
+        "story": "social/assets/2026-08-28/moonshot-mlb-2026-08-28-storyline-rafael-devers-story.png",
+        "landscape": "social/assets/2026-08-28/moonshot-mlb-2026-08-28-storyline-rafael-devers-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-08-28|storyline|Rafael_Devers|x",
+        "instagram": "MLB|moonshot|2026-08-28|storyline|Rafael_Devers|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-08-28T05:55:27Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-08-28-stacked-game",
+      "created_at": "2026-08-28T05:55:26Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "stacked_game",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-08-28",
+        "game_pk": 824879,
+        "team": "LAD",
+        "opponent": "ATL",
+        "game_time": "2026-08-27T23:15:00Z",
+        "pick_count": 5,
+        "picks": [
+          {
+            "name": "Shohei Ohtani",
+            "team": "LAD",
+            "role": "HR",
+            "score": 63.5
+          },
+          {
+            "name": "Drake Baldwin",
+            "team": "ATL",
+            "role": "CONTACT/WATCH",
+            "score": 57.8
+          },
+          {
+            "name": "Tommy Edman",
+            "team": "LAD",
+            "role": "HRR/WATCH",
+            "score": 46.8
+          },
+          {
+            "name": "Matt Olson",
+            "team": "ATL",
+            "role": "TOP",
+            "score": 39.9
+          },
+          {
+            "name": "Mauricio Dub\u00f3n",
+            "team": "ATL",
+            "role": "HIT",
+            "score": 22.1
+          }
+        ]
+      },
+      "assets": {
+        "square": "social/assets/2026-08-28/moonshot-mlb-2026-08-28-stacked-game-square.png",
+        "story": "social/assets/2026-08-28/moonshot-mlb-2026-08-28-stacked-game-story.png",
+        "landscape": "social/assets/2026-08-28/moonshot-mlb-2026-08-28-stacked-game-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-08-28|stacked_game|STACKED_GAME|x",
+        "instagram": "MLB|moonshot|2026-08-28|stacked_game|STACKED_GAME|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-08-28T05:55:26Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-08-28-daily-board",
+      "created_at": "2026-08-28T05:55:25Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "daily_board",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-08-28",
+        "games": 7,
+        "hitters": 123,
+        "board_size": 27,
+        "board": [
+          {
+            "name": "Rafael Devers",
+            "team": "SF",
+            "opponent": "ARI",
+            "role": "TOP/CONTACT",
+            "score": 79.6
+          },
+          {
+            "name": "Hunter Goodman",
+            "team": "COL",
+            "opponent": "WSH",
+            "role": "TOP/CONTACT",
+            "score": 76.1
+          },
+          {
+            "name": "Shay Whitcomb",
+            "team": "SF",
+            "opponent": "ARI",
+            "role": "HR",
+            "score": 72.4
+          },
+          {
+            "name": "Luis Garc\u00eda Jr.",
+            "team": "NYY",
+            "opponent": "HOU",
+            "role": "TOP/CONTACT",
+            "score": 72.1
+          },
+          {
+            "name": "Daylen Lile",
+            "team": "WSH",
+            "opponent": "COL",
+            "role": "HIT/WATCH",
+            "score": 70.4
+          }
+        ]
+      },
+      "assets": {
+        "square": "social/assets/2026-08-28/moonshot-mlb-2026-08-28-daily-board-square.png",
+        "story": "social/assets/2026-08-28/moonshot-mlb-2026-08-28-daily-board-story.png",
+        "landscape": "social/assets/2026-08-28/moonshot-mlb-2026-08-28-daily-board-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-08-28|daily_board|BOARD|x",
+        "instagram": "MLB|moonshot|2026-08-28|daily_board|BOARD|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-08-28T05:55:25Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-08-27-watchlist",
+      "created_at": "2026-08-27T03:19:42Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "watchlist",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-08-27",
+        "threshold": "2+ HR in last 5 games",
+        "count": 25,
+        "names": [
+          {
+            "name": "Tristan Peters",
+            "team": "CWS",
+            "opponent": "TEX",
+            "last5_hr": 5,
+            "last7_hr": 5
+          },
+          {
+            "name": "Cal Raleigh",
+            "team": "SEA",
+            "opponent": "PHI",
+            "last5_hr": 4,
+            "last7_hr": 5
+          },
+          {
+            "name": "Rafael Devers",
+            "team": "SF",
+            "opponent": "CIN",
+            "last5_hr": 3,
+            "last7_hr": 4
+          },
+          {
+            "name": "Luis Garc\u00eda Jr.",
+            "team": "NYY",
+            "opponent": "HOU",
+            "last5_hr": 3,
+            "last7_hr": 4
+          },
+          {
+            "name": "Luis Robert Jr.",
+            "team": "NYM",
+            "opponent": "MIL",
+            "last5_hr": 3,
+            "last7_hr": 4
+          },
+          {
+            "name": "Pete Alonso",
+            "team": "BAL",
+            "opponent": "STL",
+            "last5_hr": 3,
+            "last7_hr": 4
+          }
+        ]
+      },
+      "assets": {
+        "square": "social/assets/2026-08-27/moonshot-mlb-2026-08-27-watchlist-square.png",
+        "story": "social/assets/2026-08-27/moonshot-mlb-2026-08-27-watchlist-story.png",
+        "landscape": "social/assets/2026-08-27/moonshot-mlb-2026-08-27-watchlist-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-08-27|watchlist|WATCHLIST|x",
+        "instagram": "MLB|moonshot|2026-08-27|watchlist|WATCHLIST|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-08-27T03:19:42Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-08-27-storyline-randal-grichuk",
+      "created_at": "2026-08-27T02:50:16Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "storyline",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-08-27",
+        "name": "Randal Grichuk",
+        "team": "CWS",
+        "opponent": "TEX",
+        "role": "TOP",
+        "tag": "\ud83d\udcc8 HR Lean",
+        "reasons": [
+          "PMix Elite",
+          "375+ Contact",
+          "HR/PA Strong",
+          "HRW Sweet Spot"
+        ],
+        "score": 77.7
+      },
+      "assets": {
+        "square": "social/assets/2026-08-27/moonshot-mlb-2026-08-27-storyline-randal-grichuk-square.png",
+        "story": "social/assets/2026-08-27/moonshot-mlb-2026-08-27-storyline-randal-grichuk-story.png",
+        "landscape": "social/assets/2026-08-27/moonshot-mlb-2026-08-27-storyline-randal-grichuk-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-08-27|storyline|Randal_Grichuk|x",
+        "instagram": "MLB|moonshot|2026-08-27|storyline|Randal_Grichuk|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-08-27T02:50:16Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-08-27-stacked-game",
+      "created_at": "2026-08-27T02:50:15Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "stacked_game",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-08-27",
+        "game_pk": 825039,
+        "team": "ARI",
+        "opponent": "CHC",
+        "game_time": "2026-08-26T19:40:00Z",
+        "pick_count": 5,
+        "picks": [
+          {
+            "name": "Tim Tawa",
+            "team": "ARI",
+            "role": "HIT/WATCH",
+            "score": 70.8
+          },
+          {
+            "name": "Michael Busch",
+            "team": "CHC",
+            "role": "CONTACT/WATCH",
+            "score": 68.7
+          },
+          {
+            "name": "Pete Crow-Armstrong",
+            "team": "CHC",
+            "role": "TOP",
+            "score": 68.2
+          },
+          {
+            "name": "Alex Bregman",
+            "team": "CHC",
+            "role": "HRR/WATCH",
+            "score": 62.1
+          },
+          {
+            "name": "Nolan Arenado",
+            "team": "ARI",
+            "role": "HR",
+            "score": 61.4
+          }
+        ]
+      },
+      "assets": {
+        "square": "social/assets/2026-08-27/moonshot-mlb-2026-08-27-stacked-game-square.png",
+        "story": "social/assets/2026-08-27/moonshot-mlb-2026-08-27-stacked-game-story.png",
+        "landscape": "social/assets/2026-08-27/moonshot-mlb-2026-08-27-stacked-game-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-08-27|stacked_game|STACKED_GAME|x",
+        "instagram": "MLB|moonshot|2026-08-27|stacked_game|STACKED_GAME|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-08-27T02:50:15Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-08-27-daily-board",
+      "created_at": "2026-08-27T02:50:11Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "daily_board",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-08-27",
+        "games": 15,
+        "hitters": 270,
+        "board_size": 62,
+        "board": [
+          {
+            "name": "Randal Grichuk",
+            "team": "CWS",
+            "opponent": "TEX",
+            "role": "TOP",
+            "score": 77.7
+          },
+          {
+            "name": "Justin Foscue",
+            "team": "TEX",
+            "opponent": "CWS",
+            "role": "HR",
+            "score": 77.4
+          },
+          {
+            "name": "Hunter Goodman",
+            "team": "COL",
+            "opponent": "WSH",
+            "role": "TOP",
+            "score": 76.9
+          },
+          {
+            "name": "Rafael Devers",
+            "team": "SF",
+            "opponent": "CIN",
+            "role": "TOP/CONTACT",
+            "score": 76.1
+          },
+          {
+            "name": "Cal Raleigh",
+            "team": "SEA",
+            "opponent": "PHI",
+            "role": "CONTACT/WATCH",
+            "score": 73.7
+          }
+        ]
+      },
+      "assets": {
+        "square": "social/assets/2026-08-27/moonshot-mlb-2026-08-27-daily-board-square.png",
+        "story": "social/assets/2026-08-27/moonshot-mlb-2026-08-27-daily-board-story.png",
+        "landscape": "social/assets/2026-08-27/moonshot-mlb-2026-08-27-daily-board-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-08-27|daily_board|BOARD|x",
+        "instagram": "MLB|moonshot|2026-08-27|daily_board|BOARD|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-08-27T02:50:11Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-08-26-top-plays",
+      "created_at": "2026-08-26T10:02:15Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "top_plays",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-08-26",
+        "count": 10,
+        "plays": [
+          {
+            "name": "Luis Garc\u00eda Jr.",
+            "team": "NYY",
+            "hr": 1,
+            "hits": 4,
+            "ab": 5,
+            "tb": 8
+          },
+          {
+            "name": "Tristan Peters",
+            "team": "CWS",
+            "hr": 1,
+            "hits": 3,
+            "ab": 3,
+            "tb": 7
+          },
+          {
+            "name": "Luis Robert Jr.",
+            "team": "NYM",
+            "hr": 1,
+            "hits": 2,
+            "ab": 4,
+            "tb": 5
+          },
+          {
+            "name": "Daylen Lile",
+            "team": "WSH",
+            "hr": 1,
+            "hits": 2,
+            "ab": 3,
+            "tb": 5
+          },
+          {
+            "name": "Justin Foscue",
+            "team": "TEX",
+            "hr": 1,
+            "hits": 2,
+            "ab": 4,
+            "tb": 6
+          },
+          {
+            "name": "Christian Encarnacion-Strand",
+            "team": "BAL",
+            "hr": 1,
+            "hits": 2,
+            "ab": 5,
+            "tb": 5
+          },
+          {
+            "name": "Cal Raleigh",
+            "team": "SEA",
+            "hr": 1,
+            "hits": 1,
+            "ab": 2,
+            "tb": 4
+          },
+          {
+            "name": "Rafael Devers",
+            "team": "SF",
+            "hr": 1,
+            "hits": 1,
+            "ab": 3,
+            "tb": 4
+          },
+          {
+            "name": "Ian Happ",
+            "team": "CHC",
+            "hr": 1,
+            "hits": 1,
+            "ab": 4,
+            "tb": 4
+          },
+          {
+            "name": "Hunter Goodman",
+            "team": "COL",
+            "hr": 1,
+            "hits": 1,
+            "ab": 4,
+            "tb": 4
+          }
+        ]
+      },
+      "assets": {
+        "square": "social/assets/2026-08-26/moonshot-mlb-2026-08-26-top-plays-square.png",
+        "story": "social/assets/2026-08-26/moonshot-mlb-2026-08-26-top-plays-story.png",
+        "landscape": "social/assets/2026-08-26/moonshot-mlb-2026-08-26-top-plays-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-08-26|top_plays|TOP_PLAYS|x",
+        "instagram": "MLB|moonshot|2026-08-26|top_plays|TOP_PLAYS|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-08-26T10:02:15Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-08-26-player-spotlight-luis-robert-jr",
+      "created_at": "2026-08-26T10:02:14Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "player_spotlight",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-08-26",
+        "name": "Luis Robert Jr.",
+        "team": "NYM",
+        "opponent": "MIL",
+        "pick_type": "TOP15",
+        "hr_score": 72.7,
+        "longest_hr_feet": 390,
+        "multi_hr": 3
+      },
+      "assets": {
+        "square": "social/assets/2026-08-26/moonshot-mlb-2026-08-26-player-spotlight-luis-robert-jr-square.png",
+        "story": "social/assets/2026-08-26/moonshot-mlb-2026-08-26-player-spotlight-luis-robert-jr-story.png",
+        "landscape": "social/assets/2026-08-26/moonshot-mlb-2026-08-26-player-spotlight-luis-robert-jr-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-08-26|player_spotlight|Luis_Robert_Jr|x",
+        "instagram": "MLB|moonshot|2026-08-26|player_spotlight|Luis_Robert_Jr|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-08-26T10:02:14Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-08-26-night-recap",
+      "created_at": "2026-08-26T10:02:13Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "night_recap",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-08-26",
+        "board_record": "7/15",
+        "board_hit_rate": 46.7,
+        "hr_pick_record": "7/15",
+        "hr_pick_hit_rate": 46.7,
+        "hr_scorers": 13,
+        "slate_hr_coverage": "27/31",
+        "slate_hr_coverage_pct": 87.1,
+        "top_cashes": [
+          "Luis Robert Jr.",
+          "Cal Raleigh",
+          "Rafael Devers",
+          "Ian Happ",
+          "Luis Garc\u00eda Jr."
+        ],
+        "longest_hr": {
+          "name": "Christian Encarnacion-Strand",
+          "feet": 450
+        }
+      },
+      "assets": {
+        "square": "social/assets/2026-08-26/moonshot-mlb-2026-08-26-night-recap-square.png",
+        "story": "social/assets/2026-08-26/moonshot-mlb-2026-08-26-night-recap-story.png",
+        "landscape": "social/assets/2026-08-26/moonshot-mlb-2026-08-26-night-recap-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-08-26|night_recap|RECAP|x",
+        "instagram": "MLB|moonshot|2026-08-26|night_recap|RECAP|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-08-26T10:02:13Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-08-25-watchlist",
+      "created_at": "2026-08-25T22:46:21Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "watchlist",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-08-25",
+        "threshold": "2+ HR in last 5 games",
+        "count": 30,
+        "names": [
+          {
+            "name": "Cal Raleigh",
+            "team": "SEA",
+            "opponent": "PHI",
+            "last5_hr": 4,
+            "last7_hr": 4
+          },
+          {
+            "name": "Luis Torrens",
+            "team": "NYM",
+            "opponent": "MIL",
+            "last5_hr": 3,
+            "last7_hr": 4
+          },
+          {
+            "name": "Luis Robert Jr.",
+            "team": "NYM",
+            "opponent": "MIL",
+            "last5_hr": 3,
+            "last7_hr": 3
+          },
+          {
+            "name": "Tristan Peters",
+            "team": "CWS",
+            "opponent": "TEX",
+            "last5_hr": 3,
+            "last7_hr": 3
+          },
+          {
+            "name": "Dylan Beavers",
+            "team": "BAL",
+            "opponent": "STL",
+            "last5_hr": 3,
+            "last7_hr": 3
+          },
+          {
+            "name": "Jordan Walker",
+            "team": "STL",
+            "opponent": "BAL",
+            "last5_hr": 3,
+            "last7_hr": 3
+          }
+        ]
+      },
+      "assets": {
+        "square": "social/assets/2026-08-25/moonshot-mlb-2026-08-25-watchlist-square.png",
+        "story": "social/assets/2026-08-25/moonshot-mlb-2026-08-25-watchlist-story.png",
+        "landscape": "social/assets/2026-08-25/moonshot-mlb-2026-08-25-watchlist-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-08-25|watchlist|WATCHLIST|x",
+        "instagram": "MLB|moonshot|2026-08-25|watchlist|WATCHLIST|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-08-25T22:46:21Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-08-25-storyline-pete-crow-armstrong",
+      "created_at": "2026-08-25T22:21:46Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "storyline",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-08-25",
+        "name": "Pete Crow-Armstrong",
+        "team": "CHC",
+        "opponent": "ARI",
+        "role": "TOP/CONTACT",
+        "tag": "\ud83d\udc8e HR Bet",
+        "reasons": [
+          "\ud83e\udde9 Aligned Signals",
+          "PMix Elite",
+          "L5 HR 2+",
+          "375+ Contact"
+        ],
+        "score": 83.2
+      },
+      "assets": {
+        "square": "social/assets/2026-08-25/moonshot-mlb-2026-08-25-storyline-pete-crow-armstrong-square.png",
+        "story": "social/assets/2026-08-25/moonshot-mlb-2026-08-25-storyline-pete-crow-armstrong-story.png",
+        "landscape": "social/assets/2026-08-25/moonshot-mlb-2026-08-25-storyline-pete-crow-armstrong-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-08-25|storyline|Pete_Crow-Armstrong|x",
+        "instagram": "MLB|moonshot|2026-08-25|storyline|Pete_Crow-Armstrong|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-08-25T22:21:46Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-08-25-stacked-game",
+      "created_at": "2026-08-25T22:21:45Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "stacked_game",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-08-25",
+        "game_pk": 822693,
+        "team": "COL",
+        "opponent": "WSH",
+        "game_time": "2026-08-25T22:45:00Z",
+        "pick_count": 5,
+        "picks": [
+          {
+            "name": "Hunter Goodman",
+            "team": "COL",
+            "role": "HR",
+            "score": 69.0
+          },
+          {
+            "name": "Mickey Moniak",
+            "team": "COL",
+            "role": "TOP",
+            "score": 61.8
+          },
+          {
+            "name": "Connor Norby",
+            "team": "COL",
+            "role": "CONTACT/WATCH",
+            "score": 52.0
+          },
+          {
+            "name": "Jake McCarthy",
+            "team": "COL",
+            "role": "HIT",
+            "score": 34.2
+          },
+          {
+            "name": "TJ Rumfield",
+            "team": "COL",
+            "role": "HRR",
+            "score": 32.2
+          }
+        ]
+      },
+      "assets": {
+        "square": "social/assets/2026-08-25/moonshot-mlb-2026-08-25-stacked-game-square.png",
+        "story": "social/assets/2026-08-25/moonshot-mlb-2026-08-25-stacked-game-story.png",
+        "landscape": "social/assets/2026-08-25/moonshot-mlb-2026-08-25-stacked-game-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-08-25|stacked_game|STACKED_GAME|x",
+        "instagram": "MLB|moonshot|2026-08-25|stacked_game|STACKED_GAME|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-08-25T22:21:45Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-08-25-daily-board",
+      "created_at": "2026-08-25T22:21:44Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "daily_board",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-08-25",
+        "games": 15,
+        "hitters": 268,
+        "board_size": 63,
+        "board": [
+          {
+            "name": "Pete Crow-Armstrong",
+            "team": "CHC",
+            "opponent": "ARI",
+            "role": "TOP/CONTACT",
+            "score": 83.2
+          },
+          {
+            "name": "Max Muncy",
+            "team": "LAD",
+            "opponent": "ATL",
+            "role": "TOP/CONTACT",
+            "score": 80.3
+          },
+          {
+            "name": "Miguel Vargas",
+            "team": "CWS",
+            "opponent": "TEX",
+            "role": "TOP",
+            "score": 77.3
+          },
+          {
+            "name": "Zach Neto",
+            "team": "LAA",
+            "opponent": "CLE",
+            "role": "TOP/CONTACT",
+            "score": 74.3
+          },
+          {
+            "name": "Cal Raleigh",
+            "team": "SEA",
+            "opponent": "PHI",
+            "role": "CONTACT/WATCH",
+            "score": 74.2
+          }
+        ]
+      },
+      "assets": {
+        "square": "social/assets/2026-08-25/moonshot-mlb-2026-08-25-daily-board-square.png",
+        "story": "social/assets/2026-08-25/moonshot-mlb-2026-08-25-daily-board-story.png",
+        "landscape": "social/assets/2026-08-25/moonshot-mlb-2026-08-25-daily-board-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-08-25|daily_board|BOARD|x",
+        "instagram": "MLB|moonshot|2026-08-25|daily_board|BOARD|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-08-25T22:21:44Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-08-24-watchlist",
+      "created_at": "2026-08-24T22:45:32Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "watchlist",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-08-24",
+        "threshold": "2+ HR in last 5 games",
+        "count": 20,
+        "names": [
+          {
+            "name": "Fernando Tatis Jr.",
+            "team": "SD",
+            "opponent": "PIT",
+            "last5_hr": 4,
+            "last7_hr": 4
+          },
+          {
+            "name": "Pete Crow-Armstrong",
+            "team": "CHC",
+            "opponent": "ARI",
+            "last5_hr": 3,
+            "last7_hr": 6
+          },
+          {
+            "name": "Randy Arozarena",
+            "team": "SEA",
+            "opponent": "PHI",
+            "last5_hr": 3,
+            "last7_hr": 4
+          },
+          {
+            "name": "Alex Bregman",
+            "team": "CHC",
+            "opponent": "ARI",
+            "last5_hr": 3,
+            "last7_hr": 3
+          },
+          {
+            "name": "Mickey Gasper",
+            "team": "BOS",
+            "opponent": "MIA",
+            "last5_hr": 2,
+            "last7_hr": 3
+          },
+          {
+            "name": "Brooks Lee",
+            "team": "MIN",
+            "opponent": "ATH",
+            "last5_hr": 2,
+            "last7_hr": 3
+          }
+        ]
+      },
+      "assets": {
+        "square": "social/assets/2026-08-24/moonshot-mlb-2026-08-24-watchlist-square.png",
+        "story": "social/assets/2026-08-24/moonshot-mlb-2026-08-24-watchlist-story.png",
+        "landscape": "social/assets/2026-08-24/moonshot-mlb-2026-08-24-watchlist-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-08-24|watchlist|WATCHLIST|x",
+        "instagram": "MLB|moonshot|2026-08-24|watchlist|WATCHLIST|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-08-24T22:45:32Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-08-24-storyline-pete-crow-armstrong",
+      "created_at": "2026-08-24T22:21:08Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "storyline",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-08-24",
+        "name": "Pete Crow-Armstrong",
+        "team": "CHC",
+        "opponent": "ARI",
+        "role": "TOP/CONTACT",
+        "tag": "\ud83d\udc8e HR Bet",
+        "reasons": [
+          "\ud83e\udde9 Aligned Signals",
+          "PMix Elite",
+          "L5 HR 3+",
+          "375+ Contact"
+        ],
+        "score": 84.1
+      },
+      "assets": {
+        "square": "social/assets/2026-08-24/moonshot-mlb-2026-08-24-storyline-pete-crow-armstrong-square.png",
+        "story": "social/assets/2026-08-24/moonshot-mlb-2026-08-24-storyline-pete-crow-armstrong-story.png",
+        "landscape": "social/assets/2026-08-24/moonshot-mlb-2026-08-24-storyline-pete-crow-armstrong-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-08-24|storyline|Pete_Crow-Armstrong|x",
+        "instagram": "MLB|moonshot|2026-08-24|storyline|Pete_Crow-Armstrong|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-08-24T22:21:08Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-08-24-stacked-game",
+      "created_at": "2026-08-24T22:21:07Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "stacked_game",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-08-24",
+        "game_pk": 822695,
+        "team": "COL",
+        "opponent": "WSH",
+        "game_time": "2026-08-24T22:45:00Z",
+        "pick_count": 5,
+        "picks": [
+          {
+            "name": "Mickey Moniak",
+            "team": "COL",
+            "role": "TOP",
+            "score": 70.7
+          },
+          {
+            "name": "Abimelec Ortiz",
+            "team": "WSH",
+            "role": "HR",
+            "score": 65.4
+          },
+          {
+            "name": "Keibert Ruiz",
+            "team": "WSH",
+            "role": "HIT",
+            "score": 54.0
+          },
+          {
+            "name": "Connor Norby",
+            "team": "COL",
+            "role": "CONTACT",
+            "score": 50.0
+          },
+          {
+            "name": "Troy Johnston",
+            "team": "COL",
+            "role": "HRR",
+            "score": 40.8
+          }
+        ]
+      },
+      "assets": {
+        "square": "social/assets/2026-08-24/moonshot-mlb-2026-08-24-stacked-game-square.png",
+        "story": "social/assets/2026-08-24/moonshot-mlb-2026-08-24-stacked-game-story.png",
+        "landscape": "social/assets/2026-08-24/moonshot-mlb-2026-08-24-stacked-game-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-08-24|stacked_game|STACKED_GAME|x",
+        "instagram": "MLB|moonshot|2026-08-24|stacked_game|STACKED_GAME|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-08-24T22:21:07Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-08-24-daily-board",
+      "created_at": "2026-08-24T22:21:05Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "daily_board",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-08-24",
+        "games": 10,
+        "hitters": 178,
+        "board_size": 41,
+        "board": [
+          {
+            "name": "Pete Crow-Armstrong",
+            "team": "CHC",
+            "opponent": "ARI",
+            "role": "TOP/CONTACT",
+            "score": 84.1
+          },
+          {
+            "name": "Miguel Vargas",
+            "team": "CWS",
+            "opponent": "TEX",
+            "role": "TOP/CONTACT",
+            "score": 77.1
+          },
+          {
+            "name": "Kody Clemens",
+            "team": "MIN",
+            "opponent": "ATH",
+            "role": "HR",
+            "score": 75.4
+          },
+          {
+            "name": "Colson Montgomery",
+            "team": "CWS",
+            "opponent": "TEX",
+            "role": "HR",
+            "score": 73.4
+          },
+          {
+            "name": "Kyle Schwarber",
+            "team": "PHI",
+            "opponent": "SEA",
+            "role": "TOP",
+            "score": 73.2
+          }
+        ]
+      },
+      "assets": {
+        "square": "social/assets/2026-08-24/moonshot-mlb-2026-08-24-daily-board-square.png",
+        "story": "social/assets/2026-08-24/moonshot-mlb-2026-08-24-daily-board-story.png",
+        "landscape": "social/assets/2026-08-24/moonshot-mlb-2026-08-24-daily-board-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-08-24|daily_board|BOARD|x",
+        "instagram": "MLB|moonshot|2026-08-24|daily_board|BOARD|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-08-24T22:21:05Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-08-23-watchlist",
+      "created_at": "2026-08-23T22:38:43Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "watchlist",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-08-23",
+        "threshold": "2+ HR in last 5 games",
+        "count": 31,
+        "names": [
+          {
+            "name": "Luis Torrens",
+            "team": "NYM",
+            "opponent": "CWS",
+            "last5_hr": 3,
+            "last7_hr": 4
+          },
+          {
+            "name": "Randy Arozarena",
+            "team": "SEA",
+            "opponent": "CHC",
+            "last5_hr": 3,
+            "last7_hr": 4
+          },
+          {
+            "name": "Dylan Beavers",
+            "team": "BAL",
+            "opponent": "TB",
+            "last5_hr": 3,
+            "last7_hr": 3
+          },
+          {
+            "name": "Jordan Walker",
+            "team": "STL",
+            "opponent": "PHI",
+            "last5_hr": 3,
+            "last7_hr": 3
+          },
+          {
+            "name": "Luis Robert Jr.",
+            "team": "NYM",
+            "opponent": "CWS",
+            "last5_hr": 3,
+            "last7_hr": 3
+          },
+          {
+            "name": "Alex Bregman",
+            "team": "CHC",
+            "opponent": "SEA",
+            "last5_hr": 3,
+            "last7_hr": 3
+          }
+        ]
+      },
+      "assets": {
+        "square": "social/assets/2026-08-23/moonshot-mlb-2026-08-23-watchlist-square.png",
+        "story": "social/assets/2026-08-23/moonshot-mlb-2026-08-23-watchlist-story.png",
+        "landscape": "social/assets/2026-08-23/moonshot-mlb-2026-08-23-watchlist-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-08-23|watchlist|WATCHLIST|x",
+        "instagram": "MLB|moonshot|2026-08-23|watchlist|WATCHLIST|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-08-23T22:38:43Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-08-23-storyline-max-muncy",
+      "created_at": "2026-08-23T22:17:02Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "storyline",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-08-23",
+        "name": "Max Muncy",
+        "team": "LAD",
+        "opponent": "PIT",
+        "role": "HR/CONTACT",
+        "tag": "\ud83d\udc8e HR Bet",
+        "reasons": [
+          "\ud83e\udde9 Aligned Signals",
+          "PMix Elite",
+          "375+ Contact",
+          "HR/PA Strong"
+        ],
+        "score": 84.6
+      },
+      "assets": {
+        "square": "social/assets/2026-08-23/moonshot-mlb-2026-08-23-storyline-max-muncy-square.png",
+        "story": "social/assets/2026-08-23/moonshot-mlb-2026-08-23-storyline-max-muncy-story.png",
+        "landscape": "social/assets/2026-08-23/moonshot-mlb-2026-08-23-storyline-max-muncy-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-08-23|storyline|Max_Muncy|x",
+        "instagram": "MLB|moonshot|2026-08-23|storyline|Max_Muncy|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-08-23T22:17:02Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-08-23-stacked-game",
+      "created_at": "2026-08-23T22:17:02Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "stacked_game",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-08-23",
+        "game_pk": 823745,
+        "team": "MIL",
+        "opponent": "ATL",
+        "game_time": "2026-08-23T23:10:00Z",
+        "pick_count": 5,
+        "picks": [
+          {
+            "name": "Jake Bauers",
+            "team": "MIL",
+            "role": "TOP",
+            "score": 78.7
+          },
+          {
+            "name": "Matt Olson",
+            "team": "ATL",
+            "role": "HR",
+            "score": 71.9
+          },
+          {
+            "name": "William Contreras",
+            "team": "MIL",
+            "role": "HIT",
+            "score": 65.3
+          },
+          {
+            "name": "Michael Harris II",
+            "team": "ATL",
+            "role": "CONTACT",
+            "score": 44.9
+          },
+          {
+            "name": "Andrew Vaughn",
+            "team": "MIL",
+            "role": "HRR",
+            "score": 38.2
+          }
+        ]
+      },
+      "assets": {
+        "square": "social/assets/2026-08-23/moonshot-mlb-2026-08-23-stacked-game-square.png",
+        "story": "social/assets/2026-08-23/moonshot-mlb-2026-08-23-stacked-game-story.png",
+        "landscape": "social/assets/2026-08-23/moonshot-mlb-2026-08-23-stacked-game-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-08-23|stacked_game|STACKED_GAME|x",
+        "instagram": "MLB|moonshot|2026-08-23|stacked_game|STACKED_GAME|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-08-23T22:17:02Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-08-23-daily-board",
+      "created_at": "2026-08-23T22:17:00Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "daily_board",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-08-23",
+        "games": 15,
+        "hitters": 267,
+        "board_size": 59,
+        "board": [
+          {
+            "name": "Max Muncy",
+            "team": "LAD",
+            "opponent": "PIT",
+            "role": "HR/CONTACT",
+            "score": 84.6
+          },
+          {
+            "name": "Pete Crow-Armstrong",
+            "team": "CHC",
+            "opponent": "SEA",
+            "role": "TOP/CONTACT",
+            "score": 80.9
+          },
+          {
+            "name": "Coby Mayo",
+            "team": "BAL",
+            "opponent": "TB",
+            "role": "TOP/CONTACT",
+            "score": 80.6
+          },
+          {
+            "name": "Jake Bauers",
+            "team": "MIL",
+            "opponent": "ATL",
+            "role": "TOP",
+            "score": 78.7
+          },
+          {
+            "name": "Kazuma Okamoto",
+            "team": "TOR",
+            "opponent": "NYY",
+            "role": "HR/CONTACT",
+            "score": 77.8
+          }
+        ]
+      },
+      "assets": {
+        "square": "social/assets/2026-08-23/moonshot-mlb-2026-08-23-daily-board-square.png",
+        "story": "social/assets/2026-08-23/moonshot-mlb-2026-08-23-daily-board-story.png",
+        "landscape": "social/assets/2026-08-23/moonshot-mlb-2026-08-23-daily-board-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-08-23|daily_board|BOARD|x",
+        "instagram": "MLB|moonshot|2026-08-23|daily_board|BOARD|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-08-23T22:17:00Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-08-23-top-plays",
+      "created_at": "2026-08-23T09:48:32Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "top_plays",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-08-23",
+        "count": 10,
+        "plays": [
+          {
+            "name": "Luis Robert Jr.",
+            "team": "NYM",
+            "hr": 2,
+            "hits": 2,
+            "ab": 5,
+            "tb": 8
+          },
+          {
+            "name": "Carson Benge",
+            "team": "NYM",
+            "hr": 1,
+            "hits": 3,
+            "ab": 5,
+            "tb": 6
+          },
+          {
+            "name": "JJ Wetherholt",
+            "team": "STL",
+            "hr": 1,
+            "hits": 2,
+            "ab": 4,
+            "tb": 5
+          },
+          {
+            "name": "Bo Bichette",
+            "team": "NYM",
+            "hr": 1,
+            "hits": 2,
+            "ab": 5,
+            "tb": 5
+          },
+          {
+            "name": "Jo Adell",
+            "team": "CLE",
+            "hr": 1,
+            "hits": 2,
+            "ab": 4,
+            "tb": 5
+          },
+          {
+            "name": "Luis Torrens",
+            "team": "NYM",
+            "hr": 1,
+            "hits": 1,
+            "ab": 1,
+            "tb": 4
+          },
+          {
+            "name": "Mickey Moniak",
+            "team": "COL",
+            "hr": 1,
+            "hits": 1,
+            "ab": 4,
+            "tb": 4
+          },
+          {
+            "name": "Jake Bauers",
+            "team": "MIL",
+            "hr": 1,
+            "hits": 1,
+            "ab": 3,
+            "tb": 4
+          },
+          {
+            "name": "Alex Bregman",
+            "team": "CHC",
+            "hr": 1,
+            "hits": 1,
+            "ab": 4,
+            "tb": 4
+          },
+          {
+            "name": "Nolan Arenado",
+            "team": "ARI",
+            "hr": 1,
+            "hits": 1,
+            "ab": 3,
+            "tb": 4
+          }
+        ]
+      },
+      "assets": {
+        "square": "social/assets/2026-08-23/moonshot-mlb-2026-08-23-top-plays-square.png",
+        "story": "social/assets/2026-08-23/moonshot-mlb-2026-08-23-top-plays-story.png",
+        "landscape": "social/assets/2026-08-23/moonshot-mlb-2026-08-23-top-plays-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-08-23|top_plays|TOP_PLAYS|x",
+        "instagram": "MLB|moonshot|2026-08-23|top_plays|TOP_PLAYS|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-08-23T09:48:32Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-08-23-player-spotlight-luis-robert-jr",
+      "created_at": "2026-08-23T09:48:31Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "player_spotlight",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-08-23",
+        "name": "Luis Robert Jr.",
+        "team": "NYM",
+        "opponent": "CWS",
+        "pick_type": "TOP15",
+        "hr_score": 64.6,
+        "longest_hr_feet": 417
+      },
+      "assets": {
+        "square": "social/assets/2026-08-23/moonshot-mlb-2026-08-23-player-spotlight-luis-robert-jr-square.png",
+        "story": "social/assets/2026-08-23/moonshot-mlb-2026-08-23-player-spotlight-luis-robert-jr-story.png",
+        "landscape": "social/assets/2026-08-23/moonshot-mlb-2026-08-23-player-spotlight-luis-robert-jr-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-08-23|player_spotlight|Luis_Robert_Jr|x",
+        "instagram": "MLB|moonshot|2026-08-23|player_spotlight|Luis_Robert_Jr|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-08-23T09:48:31Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-08-23-night-recap",
+      "created_at": "2026-08-23T09:48:30Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "night_recap",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-08-23",
+        "board_record": "3/15",
+        "board_hit_rate": 20.0,
+        "hr_pick_record": "0/15",
+        "hr_pick_hit_rate": 0.0,
+        "hr_scorers": 10,
+        "slate_hr_coverage": "39/41",
+        "slate_hr_coverage_pct": 95.1,
+        "top_cashes": [
+          "Luis Robert Jr.",
+          "Luis Torrens",
+          "Mickey Moniak",
+          "Jo Adell",
+          "Nolan Arenado"
+        ],
+        "longest_hr": {
+          "name": "Jo Adell",
+          "feet": 450
+        }
+      },
+      "assets": {
+        "square": "social/assets/2026-08-23/moonshot-mlb-2026-08-23-night-recap-square.png",
+        "story": "social/assets/2026-08-23/moonshot-mlb-2026-08-23-night-recap-story.png",
+        "landscape": "social/assets/2026-08-23/moonshot-mlb-2026-08-23-night-recap-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-08-23|night_recap|RECAP|x",
+        "instagram": "MLB|moonshot|2026-08-23|night_recap|RECAP|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-08-23T09:48:30Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-08-22-watchlist",
+      "created_at": "2026-08-22T22:39:36Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "watchlist",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-08-22",
+        "threshold": "2+ HR in last 5 games",
+        "count": 26,
+        "names": [
+          {
+            "name": "Pete Crow-Armstrong",
+            "team": "CHC",
+            "opponent": "SEA",
+            "last5_hr": 5,
+            "last7_hr": 5
+          },
+          {
+            "name": "Pete Alonso",
+            "team": "BAL",
+            "opponent": "TB",
+            "last5_hr": 3,
+            "last7_hr": 4
+          },
+          {
+            "name": "Jordan Walker",
+            "team": "STL",
+            "opponent": "PHI",
+            "last5_hr": 3,
+            "last7_hr": 3
+          },
+          {
+            "name": "Shohei Ohtani",
+            "team": "LAD",
+            "opponent": "PIT",
+            "last5_hr": 3,
+            "last7_hr": 3
+          },
+          {
+            "name": "Max Muncy",
+            "team": "LAD",
+            "opponent": "PIT",
+            "last5_hr": 3,
+            "last7_hr": 3
+          },
+          {
+            "name": "Mickey Gasper",
+            "team": "BOS",
+            "opponent": "SF",
+            "last5_hr": 3,
+            "last7_hr": 3
+          }
+        ]
+      },
+      "assets": {
+        "square": "social/assets/2026-08-22/moonshot-mlb-2026-08-22-watchlist-square.png",
+        "story": "social/assets/2026-08-22/moonshot-mlb-2026-08-22-watchlist-story.png",
+        "landscape": "social/assets/2026-08-22/moonshot-mlb-2026-08-22-watchlist-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-08-22|watchlist|WATCHLIST|x",
+        "instagram": "MLB|moonshot|2026-08-22|watchlist|WATCHLIST|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-08-22T22:39:36Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-08-22-storyline-max-muncy",
+      "created_at": "2026-08-22T22:17:24Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "storyline",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-08-22",
+        "name": "Max Muncy",
+        "team": "LAD",
+        "opponent": "PIT",
+        "role": "TOP/HR",
+        "tag": "\ud83d\udc8e HR Bet",
+        "reasons": [
+          "\ud83e\udde9 Aligned Signals",
+          "PMix Elite",
+          "L5 HR 3+",
+          "375+ Contact"
+        ],
+        "score": 89.0
+      },
+      "assets": {
+        "square": "social/assets/2026-08-22/moonshot-mlb-2026-08-22-storyline-max-muncy-square.png",
+        "story": "social/assets/2026-08-22/moonshot-mlb-2026-08-22-storyline-max-muncy-story.png",
+        "landscape": "social/assets/2026-08-22/moonshot-mlb-2026-08-22-storyline-max-muncy-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-08-22|storyline|Max_Muncy|x",
+        "instagram": "MLB|moonshot|2026-08-22|storyline|Max_Muncy|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-08-22T22:17:24Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-08-22-stacked-game",
+      "created_at": "2026-08-22T22:17:24Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "stacked_game",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-08-22",
+        "game_pk": 823509,
+        "team": "TOR",
+        "opponent": "NYY",
+        "game_time": "2026-08-22T17:35:00Z",
+        "pick_count": 4,
+        "picks": [
+          {
+            "name": "Kazuma Okamoto",
+            "team": "TOR",
+            "role": "HR",
+            "score": 76.0
+          },
+          {
+            "name": "Ben Rice",
+            "team": "NYY",
+            "role": "TOP",
+            "score": 69.2
+          },
+          {
+            "name": "Alejandro Kirk",
+            "team": "TOR",
+            "role": "HIT/CONTACT",
+            "score": 49.7
+          },
+          {
+            "name": "Vladimir Guerrero Jr.",
+            "team": "TOR",
+            "role": "HRR",
+            "score": 34.9
+          }
+        ]
+      },
+      "assets": {
+        "square": "social/assets/2026-08-22/moonshot-mlb-2026-08-22-stacked-game-square.png",
+        "story": "social/assets/2026-08-22/moonshot-mlb-2026-08-22-stacked-game-story.png",
+        "landscape": "social/assets/2026-08-22/moonshot-mlb-2026-08-22-stacked-game-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-08-22|stacked_game|STACKED_GAME|x",
+        "instagram": "MLB|moonshot|2026-08-22|stacked_game|STACKED_GAME|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-08-22T22:17:24Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-08-22-daily-board",
+      "created_at": "2026-08-22T22:17:22Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "daily_board",
+      "status": "pending_review",
+      "priority": "normal",
+      "data": {
+        "date": "2026-08-22",
+        "games": 15,
+        "hitters": 268,
+        "board_size": 52,
+        "board": [
+          {
+            "name": "Max Muncy",
+            "team": "LAD",
+            "opponent": "PIT",
+            "role": "TOP/HR",
+            "score": 89.0
+          },
+          {
+            "name": "Kody Clemens",
+            "team": "MIN",
+            "opponent": "SD",
+            "role": "TOP/HR",
+            "score": 79.6
+          },
+          {
+            "name": "Kazuma Okamoto",
+            "team": "TOR",
+            "opponent": "NYY",
+            "role": "HR",
+            "score": 76.0
+          },
+          {
+            "name": "Miguel Vargas",
+            "team": "CWS",
+            "opponent": "NYM",
+            "role": "HR",
+            "score": 75.9
+          },
+          {
+            "name": "Corey Seager",
+            "team": "TEX",
+            "opponent": "LAA",
+            "role": "TOP/HR/CONTACT",
+            "score": 75.2
+          }
+        ]
+      },
+      "assets": {
+        "square": "social/assets/2026-08-22/moonshot-mlb-2026-08-22-daily-board-square.png",
+        "story": "social/assets/2026-08-22/moonshot-mlb-2026-08-22-daily-board-story.png",
+        "landscape": "social/assets/2026-08-22/moonshot-mlb-2026-08-22-daily-board-landscape.png"
+      },
+      "captions": {
+        "x": null,
+        "instagram": null,
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-08-22|daily_board|BOARD|x",
+        "instagram": "MLB|moonshot|2026-08-22|daily_board|BOARD|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-08-22T22:17:22Z"
+        }
+      ]
+    },
+    {
+      "id": "moonshot-mlb-2026-08-21-night-recap",
+      "created_at": "2026-08-22T19:49:49Z",
+      "brand": "dash",
+      "product": "moonshot",
+      "sport": "MLB",
+      "content_type": "night_recap",
+      "status": "rejected",
+      "priority": "normal",
+      "data": {
+        "date": "2026-08-21",
+        "board_record": "6/15",
+        "board_hit_rate": 40.0,
+        "hr_pick_record": "2/15",
+        "hr_pick_hit_rate": 13.3,
+        "hr_scorers": 11,
+        "slate_hr_coverage": "24/29",
+        "slate_hr_coverage_pct": 82.8,
+        "top_cashes": [
+          "Pete Crow-Armstrong",
+          "Max Muncy",
+          "Pete Alonso",
+          "Jordan Walker",
+          "Miguel Vargas"
+        ],
+        "longest_hr": {
+          "name": "Pete Alonso",
+          "feet": 443
+        }
+      },
+      "assets": {
+        "square": "social/assets/2026-08-21/moonshot-mlb-2026-08-21-night-recap-square.png",
+        "story": "social/assets/2026-08-21/moonshot-mlb-2026-08-21-night-recap-story.png",
+        "landscape": "social/assets/2026-08-21/moonshot-mlb-2026-08-21-night-recap-landscape.png"
+      },
+      "captions": {
+        "x": "",
+        "instagram": "",
+        "story": null
+      },
+      "headline": null,
+      "recommended_platforms": [],
+      "publish": {
+        "x": false,
+        "instagram": false
+      },
+      "fingerprints": {
+        "x": "MLB|moonshot|2026-08-21|night_recap|RECAP|x",
+        "instagram": "MLB|moonshot|2026-08-21|night_recap|RECAP|instagram"
+      },
+      "approved_at": null,
+      "published_at": null,
+      "error": null,
+      "status_history": [
+        {
+          "status": "pending_review",
+          "at": "2026-08-22T19:49:49Z"
+        },
+        {
+          "status": "rejected",
+          "at": "2026-08-22T19:59:37Z"
+        }
+      ]
+    }
+  ]
+}

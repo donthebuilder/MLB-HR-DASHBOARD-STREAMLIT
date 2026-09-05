@@ -1,0 +1,32 @@
+archive health — 2026-08-31T19:09:46Z
+run: https://github.com/donthebuilder/MLB-HR-DASHBOARD-STREAMLIT/actions/runs/33428997175
+
+Traceback (most recent call last):
+  File "/home/runner/work/MLB-HR-DASHBOARD-STREAMLIT/MLB-HR-DASHBOARD-STREAMLIT/bots/leak_scan.py", line 300, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "/home/runner/work/MLB-HR-DASHBOARD-STREAMLIT/MLB-HR-DASHBOARD-STREAMLIT/bots/leak_scan.py", line 275, in main
+    text = report(args.dir)
+           ^^^^^^^^^^^^^^^^
+  File "/home/runner/work/MLB-HR-DASHBOARD-STREAMLIT/MLB-HR-DASHBOARD-STREAMLIT/bots/leak_scan.py", line 209, in report
+    rows = load_nights(dirpath)
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/MLB-HR-DASHBOARD-STREAMLIT/MLB-HR-DASHBOARD-STREAMLIT/bots/leak_scan.py", line 148, in load_nights
+    night = str(blob.get("date") or os.path.basename(path))
+                ^^^^^^^^
+AttributeError: 'list' object has no attribute 'get'
+
+Traceback (most recent call last):
+  File "/home/runner/work/MLB-HR-DASHBOARD-STREAMLIT/MLB-HR-DASHBOARD-STREAMLIT/bots/due_study.py", line 242, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "/home/runner/work/MLB-HR-DASHBOARD-STREAMLIT/MLB-HR-DASHBOARD-STREAMLIT/bots/due_study.py", line 237, in main
+    print(report(args.dir))
+          ^^^^^^^^^^^^^^^^
+  File "/home/runner/work/MLB-HR-DASHBOARD-STREAMLIT/MLB-HR-DASHBOARD-STREAMLIT/bots/due_study.py", line 148, in report
+    rows = load_nights(dirpath)
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/MLB-HR-DASHBOARD-STREAMLIT/MLB-HR-DASHBOARD-STREAMLIT/bots/leak_scan.py", line 148, in load_nights
+    night = str(blob.get("date") or os.path.basename(path))
+                ^^^^^^^^
+AttributeError: 'list' object has no attribute 'get'

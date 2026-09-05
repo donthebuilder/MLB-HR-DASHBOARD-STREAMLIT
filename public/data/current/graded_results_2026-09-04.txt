@@ -1,0 +1,168 @@
+RESULTS TRACKER - 2026-09-04
+------------------------------------------
+BETTABLE RESULTS
+Top 15 HR: 1/15 (6.7%)
+HR Picks: 0/14 (0.0%)
+Top Picks: 2/14 (14.3%)
+
+FULL SHEET BASE HIT PERFORMANCE
+Base Hit Accuracy: 63.5%
+
+HR CAPTURE (BETTABLE)
+Total Slate HRs: 40
+Caught in Top 15: 1
+Caught in HR Picks: 0
+Top 15 Capture Rate: 2.5%
+HR Pick Capture Rate: 0.0%
+
+MODEL VISION (Top 40)
+Model Caught HRs: 2 / 40
+Vision Rate: 5.0%
+
+UNIQUE PLAYER HR ACCURACY
+Unique Players Tracked: 62
+Players Who Homered: 5
+Unique HR Accuracy: 8.1%
+
+HR CATEGORY BREAKDOWN
+------------------------------------------
+🏆 TOP 15 BOARD → 1 HR
+🔥 TOP PICKS → 2 HR
+🧨 HR PICKS → 0 HR
+🏁 HRR PICKS → 2 HR
+💠 HIT PICKS → 1 HR
+⚾ CONTACT PICKS → 1 HR
+Best HR-producing category: 🔥 TOP PICKS
+
+LONGEST HR (BOARD)
+------------------------------------------
+- TJ Rumfield — 441 ft · 105.1 mph · 33.0°
+- Gabriel Moreno — 387 ft · 105.1 mph · 22.0°
+- Miguel Vargas — 382 ft · 101.0 mph · 27.0°
+- Rafael Devers — 376 ft · 98.7 mph · 31.0°
+- Spencer Torkelson — 359 ft · 101.9 mph · 35.0°
+Longest on the board: TJ Rumfield (441 ft)
+
+
+HR RESULTS BY PLAYER
+------------------------------------------
+- Rafael Devers — 🏆#2 + 🔥 + ⚾
+- Spencer Torkelson — 🔥
+- Miguel Vargas — 🏁
+- TJ Rumfield — 🏁
+- Gabriel Moreno — 💠 + ⭐
+
+POOL PERFORMANCE
+------------------------------------------
+4-MAN Pool A — Strongest → 1/4 HR (Zack Gelof)
+4-MAN Pool B — HRR+Power → 0/4 HR (none)
+4-MAN Pool C — Balanced → 1/4 HR (Colson Montgomery)
+4-MAN Pool D — Variance → 0/4 HR (none)
+3-MAN Pool A — Strongest → 0/3 HR (none)
+3-MAN Pool B — HRR+Var → 1/3 HR (Francisco Lindor)
+3-MAN Pool C — Balanced → 0/3 HR (none)
+3-MAN Pool D — Variance → 0/3 HR (none)
+
+PAIR PERFORMANCE
+------------------------------------------
+Pair 1 → 0/2 HR (none) | Pete Crow-Armstrong + Juan Soto
+Pair 2 → 1/2 HR (Rafael Devers) | Rafael Devers + Junior Caminero
+Pair 3 → 0/2 HR (none) | Sal Stewart + Brandon Lowe
+Pair 4 → 0/2 HR (none) | Dominic Canzone + Jordan Walker
+Pair 5 → 0/2 HR (none) | Joshua Báez + Yordan Alvarez
+Pair 6 → 0/2 HR (none) | Heriberto Hernández + Hunter Goodman
+Pair 7 → 0/2 HR (none) | Carter Jensen + Kody Clemens
+Pair 8 → 0/2 HR (none) | Jordan Walker + Coby Mayo
+Pair 9 → 0/2 HR (none) | Joc Pederson + Kazuma Okamoto
+Pair 10 → 0/2 HR (none) | Ryan Jeffers + Munetaka Murakami
+
+PLAYER TYPE PERFORMANCE
+------------------------------------------
+🏆 TOP 15 BOARD (15)
+HR: 6.7% | 1+ Hit: 66.7% | XBH: 20.0% | 2+ TB: 33.3% | 2+ HRR: 53.3% | 3+ HRR: 33.3%
+
+🔥 TOP PICKS (14)
+HR: 14.3% | 1+ Hit: 71.4% | XBH: 21.4% | 2+ TB: 21.4% | 2+ HRR: 57.1% | 3+ HRR: 21.4%
+
+🧨 HR PICKS (14)
+HR: 0.0% | 1+ Hit: 71.4% | XBH: 0.0% | 2+ TB: 28.6% | 2+ HRR: 71.4% | 3+ HRR: 21.4%
+
+🏁 HRR PICKS (14)
+HR: 14.3% | 1+ Hit: 71.4% | XBH: 50.0% | 2+ TB: 50.0% | 2+ HRR: 57.1% | 3+ HRR: 50.0%
+
+💠 HIT PICKS (14)
+HR: 7.1% | 1+ Hit: 50.0% | XBH: 42.9% | 2+ TB: 50.0% | 2+ HRR: 28.6% | 3+ HRR: 28.6%
+
+⚾ CONTACT PICKS (14)
+HR: 7.1% | 1+ Hit: 50.0% | XBH: 14.3% | 2+ TB: 35.7% | 2+ HRR: 42.9% | 3+ HRR: 28.6%
+
+
+DESIGNED OUTCOME (did the pick do its job)
+------------------------------------------
+🏆 TOP 15 BOARD (15) -> 1/15 (6.7%)  ·  needs: HR
+🔥 TOP PICKS (14) -> 4/14 (28.6%)  ·  needs: most productive of our picks in his game (HRR or TB)
+🧨 HR PICKS (14) -> 0/14 (0.0%)  ·  needs: HR
+🏁 HRR PICKS (14) -> 8/14 (57.1%)  ·  needs: 2+ hits+runs+RBI
+💠 HIT PICKS (14) -> 7/14 (50.0%)  ·  needs: 1+ hit
+⚾ CONTACT PICKS (14) -> 5/14 (35.7%)  ·  needs: 2+ TB or XBH
+ALL PICKS -> 25/85 (29.4%)
+
+HIT RESULTS BY CATEGORY
+------------------------------------------
+
+🔥 TOP PICKS (1+ Hit)
+- Rafael Devers — 3H 🔥
+- Spencer Torkelson — 2H ⭐
+- Brandon Lowe — 1H
+- Jeremy Peña — 1H
+- Joshua Báez — 1H
+- Justin Foscue — 1H
+- Kazuma Okamoto — 1H
+- Pete Crow-Armstrong — 1H
+- Sal Stewart — 1H
+- Spencer Jones — 1H
+
+🧨 HR PICKS (1+ Hit)
+- Kody Clemens — 3H 🔥
+- Alex Bregman — 2H ⭐
+- Corey Seager — 2H ⭐
+- Yordan Alvarez — 2H ⭐
+- Christian Encarnacion-Strand — 1H
+- Eduardo Valencia — 1H
+- Jordan Walker — 1H
+- Kazuma Okamoto — 1H
+- Luis García Jr. — 1H
+- Nathaniel Lowe — 1H
+
+🏁 HRR PICKS (1+ Hit)
+- TJ Rumfield — 3H 🔥
+- Junior Caminero — 2H ⭐
+- Kevin McGonigle — 2H ⭐
+- Ty France — 2H ⭐
+- Drake Baldwin — 1H
+- George Springer — 1H
+- Isaac Paredes — 1H
+- Jackson Chourio — 1H
+- José Ramírez — 1H
+- Miguel Vargas — 1H
+
+💠 HIT PICKS (1+ Hit)
+- Blaze Alexander — 3H 🔥
+- Chase DeLauter — 2H ⭐
+- Bryce Eldridge — 1H
+- Gabriel Moreno — 1H
+- Javier Sanoja — 1H
+- Ozzie Albies — 1H
+- William Contreras — 1H
+
+⚾ CONTACT PICKS (1+ Hit)
+- Max Clark — 3H 🔥
+- Rafael Devers — 3H 🔥
+- Alex Bregman — 2H ⭐
+- Corey Seager — 2H ⭐
+- Brandon Lowe — 1H
+- Joshua Báez — 1H
+- William Contreras — 1H
+
+MODEL DIAGNOSTIC (LOW PRIORITY)
+Full Sheet HR Coverage: 40 / 40 (100.0%)

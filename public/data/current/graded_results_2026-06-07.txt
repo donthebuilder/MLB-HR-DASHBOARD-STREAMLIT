@@ -1,0 +1,167 @@
+RESULTS TRACKER - 2026-06-07
+------------------------------------------
+BETTABLE RESULTS
+Top 15 HR: 2/15 (13.3%)
+HR Picks: 3/15 (20.0%)
+Top Picks: 1/15 (6.7%)
+
+FULL SHEET BASE HIT PERFORMANCE
+Base Hit Accuracy: 57.5%
+
+HR CAPTURE (BETTABLE)
+Total Slate HRs: 35
+Caught in Top 15: 2
+Caught in HR Picks: 3
+Top 15 Capture Rate: 5.7%
+HR Pick Capture Rate: 8.6%
+
+MODEL VISION (Top 40)
+Model Caught HRs: 7 / 35
+Vision Rate: 20.0%
+
+UNIQUE PLAYER HR ACCURACY
+Unique Players Tracked: 106
+Players Who Homered: 13
+Unique HR Accuracy: 12.3%
+
+HR CATEGORY BREAKDOWN
+------------------------------------------
+🏆 TOP 15 BOARD → 2 HR
+🔥 TOP PICKS → 1 HR
+🧨 HR PICKS → 3 HR
+🏁 HRR PICKS → 3 HR
+💠 HIT PICKS → 3 HR
+⚾ CONTACT PICKS → 3 HR
+Best HR-producing category: 🧨 HR PICKS
+
+HR RESULTS BY PLAYER
+------------------------------------------
+- Marcus Semien — 🏆#6 + 🔥
+- Yohendrick Piñango — 🏆#7 + 🧨
+- Brent Rooker — 🧨
+- Carson Benge — 🧨
+- Brandon Valenzuela — 🏁
+- Wyatt Langford — 🏁 + ⭐
+- Zach Neto — 🏁 + ⭐
+- Brandon Marsh — 💠 + ⭐
+- Corbin Carroll — 💠
+- Josh Jung — 💠 + ⭐
+- Hunter Goodman — ⚾
+- Josh Bell — ⚾ + ⭐
+- Nick Kurtz — ⚾ + ⭐
+
+MISSED HRs (NOT IN MODEL SHEET)
+------------------------------------------
+- Starling Marte (KC) — not in model sheet / lineup pool
+- Ryan Ward (LAD) — not in model sheet / lineup pool
+- Rafael Marchán (PHI) — not in model sheet / lineup pool
+- Bryan Torres (STL) — not in model sheet / lineup pool
+- Justin Foscue (TEX) — not in model sheet / lineup pool
+- Michael Helman (TEX) — not in model sheet / lineup pool
+
+POOL PERFORMANCE
+------------------------------------------
+4-MAN HR POOL A → 0/4 HR (none)
+4-MAN HR POOL B → 0/4 HR (none)
+4-MAN HR POOL C → 0/4 HR (none)
+4-MAN HR POOL D → 0/4 HR (none)
+6-MAN HR POOL A → 3/6 HR (Hunter Goodman, Brandon Valenzuela, Brandon Marsh)
+6-MAN HR POOL B → 0/6 HR (none)
+6-MAN HR POOL C → 1/6 HR (Brent Rooker)
+6-MAN HR POOL D → 2/6 HR (Colton Cowser, Zach Neto)
+
+PAIR PERFORMANCE
+------------------------------------------
+Pair 1 → 0/2 HR (none) | Dillon Dingler + Carter Jensen
+Pair 2 → 0/2 HR (none) | Ronald Acuña Jr. + Matt Chapman
+Pair 3 → 1/2 HR (Marcus Semien) | Casey Schmitt + Marcus Semien
+Pair 4 → 1/2 HR (Yohendrick Piñango) | Yohendrick Piñango + Ezequiel Tovar
+
+PLAYER TYPE PERFORMANCE
+------------------------------------------
+🏁 HRR PICKS (30)
+2+ HRR: 33.3% | 3+ HRR: 26.7%
+
+💠 HIT PICKS (30)
+1+ Hit: 56.7% | HR: 10.0%
+
+⚾ CONTACT PICKS (15)
+XBH: 46.7% | 2+ TB: 46.7% | HR: 20.0%
+
+HIT RESULTS BY CATEGORY
+------------------------------------------
+
+🔥 TOP PICKS (1+ Hit)
+- Kody Clemens — 2H ⭐
+- Marcus Semien — 2H ⭐
+- Matt Chapman — 2H ⭐
+- Adley Rutschman — 1H
+- Alec Burleson — 1H
+- Brice Turang — 1H
+- Miguel Vargas — 1H
+- Yandy Díaz — 1H
+- Yordan Alvarez — 1H
+
+🧨 HR PICKS (1+ Hit)
+- Carson Benge — 5H 🔥
+- Trent Grisham — 3H 🔥
+- Brent Rooker — 2H ⭐
+- Wenceel Pérez — 2H ⭐
+- Yohendrick Piñango — 2H ⭐
+- Carter Jensen — 1H
+- Ezequiel Tovar — 1H
+
+🏁 HRR PICKS (1+ Hit)
+- Andrew Vaughn — 3H 🔥
+- Josh Naylor — 2H ⭐
+- Nick Loftin — 2H ⭐
+- Paul Goldschmidt — 2H ⭐
+- William Contreras — 2H ⭐
+- Blake Dunn — 1H
+- Brandon Valenzuela — 1H
+- Chase Meidroth — 1H
+- Curtis Mead — 1H
+- Heriberto Hernández — 1H
+- Jackson Merrill — 1H
+- Luis Arraez — 1H
+- Max Muncy — 1H
+- Ozzie Albies — 1H
+- Richie Palacios — 1H
+- Shea Langeliers — 1H
+- Wyatt Langford — 1H
+- Zach Neto — 1H
+
+💠 HIT PICKS (1+ Hit)
+- Jackson Chourio — 3H 🔥
+- Bo Bichette — 2H ⭐
+- Brandon Marsh — 2H ⭐
+- Ceddanne Rafaela — 2H ⭐
+- Freddie Freeman — 2H ⭐
+- Jordan Walker — 2H ⭐
+- Josh Jung — 2H ⭐
+- Otto Lopez — 2H ⭐
+- Tristan Peters — 2H ⭐
+- Vinnie Pasquantino — 2H ⭐
+- Corbin Carroll — 1H
+- Ernie Clement — 1H
+- Fernando Tatis Jr. — 1H
+- Jake McCarthy — 1H
+- Jung Hoo Lee — 1H
+- Pete Crow-Armstrong — 1H
+- Willson Contreras — 1H
+
+⚾ CONTACT PICKS (1+ Hit)
+- Blaze Alexander — 2H ⭐
+- Bryce Harper — 2H ⭐
+- Amed Rosario — 1H
+- Hunter Goodman — 1H
+- Ian Happ — 1H
+- Josh Bell — 1H
+- Julio Rodríguez — 1H
+- Kyle Stowers — 1H
+- Nick Kurtz — 1H
+- Patrick Bailey — 1H
+- Ryan Waldschmidt — 1H
+
+MODEL DIAGNOSTIC (LOW PRIORITY)
+Full Sheet HR Coverage: 29 / 35 (82.9%)

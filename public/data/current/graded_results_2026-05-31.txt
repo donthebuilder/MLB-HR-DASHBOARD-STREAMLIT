@@ -1,0 +1,172 @@
+RESULTS TRACKER - 2026-05-31
+------------------------------------------
+BETTABLE RESULTS
+Top 15 HR: 3/15 (20.0%)
+HR Picks: 3/15 (20.0%)
+Top Picks: 4/15 (26.7%)
+
+FULL SHEET BASE HIT PERFORMANCE
+Base Hit Accuracy: 65.8%
+
+HR CAPTURE (BETTABLE)
+Total Slate HRs: 32
+Caught in Top 15: 3
+Caught in HR Picks: 3
+Top 15 Capture Rate: 9.4%
+HR Pick Capture Rate: 9.4%
+
+MODEL VISION (Top 40)
+Model Caught HRs: 6 / 32
+Vision Rate: 18.8%
+
+UNIQUE PLAYER HR ACCURACY
+Unique Players Tracked: 105
+Players Who Homered: 12
+Unique HR Accuracy: 11.4%
+
+HR CATEGORY BREAKDOWN
+------------------------------------------
+🏆 TOP 15 BOARD → 3 HR
+🔥 TOP PICKS → 4 HR
+🧨 HR PICKS → 3 HR
+🏁 HRR PICKS → 2 HR
+💠 HIT PICKS → 1 HR
+⚾ CONTACT PICKS → 2 HR
+Best HR-producing category: 🔥 TOP PICKS
+
+HR RESULTS BY PLAYER
+------------------------------------------
+- Jarren Duran — 🏆#4 + 🔥 + ⭐
+- Jonathan Aranda — 🏆#1 + 🔥
+- Willy Adames — 🏆#5 + 🧨 + ⭐
+- Carson Benge — 🧨
+- Ronald Acuña Jr. — 🧨
+- James Wood — 🔥
+- Juan Soto — 🔥
+- Colson Montgomery — 🏁 + ⭐
+- Luis García Jr. — 🏁
+- Alex Bregman — 💠
+- Dominic Canzone — ⚾
+- Jorge Mateo — ⚾
+
+MISSED HRs (NOT IN MODEL SHEET)
+------------------------------------------
+- Jonah Heim (ATH) — not in model sheet / lineup pool
+- Colton Cowser (BAL) — not in model sheet / lineup pool
+- Ryan Ward (LAD) — not in model sheet / lineup pool
+- Ryan O'Hearn (PIT) — not in model sheet / lineup pool
+- Bryce Eldridge (SF) — not in model sheet / lineup pool
+- Jesus Rodriguez (SF) — not in model sheet / lineup pool
+
+POOL PERFORMANCE
+------------------------------------------
+4-MAN HR POOL A → 0/4 HR (none)
+4-MAN HR POOL B → 0/4 HR (none)
+4-MAN HR POOL C → 0/4 HR (none)
+4-MAN HR POOL D → 0/4 HR (none)
+6-MAN HR POOL A → 1/6 HR (James Wood)
+6-MAN HR POOL B → 1/6 HR (Ronald Acuña Jr.)
+6-MAN HR POOL C → 1/6 HR (Colson Montgomery)
+6-MAN HR POOL D → 0/6 HR (none)
+
+PAIR PERFORMANCE
+------------------------------------------
+Pair 1 → 1/2 HR (Jonathan Aranda) | Jonathan Aranda + Brandon Nimmo
+Pair 2 → 0/2 HR (none) | Casey Schmitt + Yordan Alvarez
+Pair 3 → 2/2 HR (Jarren Duran, Willy Adames) | Jarren Duran + Willy Adames
+Pair 4 → 0/2 HR (none) | Andy Pages + Julio Rodríguez
+
+PLAYER TYPE PERFORMANCE
+------------------------------------------
+🏁 HRR PICKS (30)
+2+ HRR: 53.3% | 3+ HRR: 40.0%
+
+💠 HIT PICKS (30)
+1+ Hit: 60.0% | HR: 3.3%
+
+⚾ CONTACT PICKS (15)
+XBH: 53.3% | 2+ TB: 53.3% | HR: 13.3%
+
+HIT RESULTS BY CATEGORY
+------------------------------------------
+
+🔥 TOP PICKS (1+ Hit)
+- Casey Schmitt — 3H 🔥
+- Ben Rice — 2H ⭐
+- JJ Bleday — 2H ⭐
+- Juan Soto — 2H ⭐
+- Andy Pages — 1H
+- James Wood — 1H
+- Jarren Duran — 1H
+- Jesús Sánchez — 1H
+- Jonathan Aranda — 1H
+- Pete Crow-Armstrong — 1H
+
+🧨 HR PICKS (1+ Hit)
+- Jackson Merrill — 3H 🔥
+- Willy Adames — 3H 🔥
+- Cody Bellinger — 2H ⭐
+- JJ Wetherholt — 2H ⭐
+- Josh Jung — 2H ⭐
+- Ronald Acuña Jr. — 2H ⭐
+- Spencer Torkelson — 2H ⭐
+- Wilyer Abreu — 2H ⭐
+- Carson Benge — 1H
+- Gabriel Moreno — 1H
+- Mike Trout — 1H
+
+🏁 HRR PICKS (1+ Hit)
+- Rafael Devers — 4H 🔥
+- CJ Abrams — 2H ⭐
+- Gunnar Henderson — 2H ⭐
+- Junior Caminero — 2H ⭐
+- Michael Busch — 2H ⭐
+- Samuel Basallo — 2H ⭐
+- Aaron Judge — 1H
+- Brandon Lowe — 1H
+- Caleb Durbin — 1H
+- Chase Meidroth — 1H
+- Colson Montgomery — 1H
+- Ezequiel Tovar — 1H
+- J.P. Crawford — 1H
+- Jake Burger — 1H
+- José Ramírez — 1H
+- Luis García Jr. — 1H
+- Luke Raley — 1H
+- Paul Goldschmidt — 1H
+- Trea Turner — 1H
+- Vaughn Grissom — 1H
+
+💠 HIT PICKS (1+ Hit)
+- Jung Hoo Lee — 5H 🔥
+- Bobby Witt Jr. — 2H ⭐
+- Ernie Clement — 2H ⭐
+- Masataka Yoshida — 2H ⭐
+- Michael Harris II — 2H ⭐
+- Shohei Ohtani — 2H ⭐
+- Alex Bregman — 1H
+- Ezequiel Duran — 1H
+- Freddie Freeman — 1H
+- Jeremy Peña — 1H
+- Kevin McGonigle — 1H
+- Luis Arraez — 1H
+- Luke Keaschall — 1H
+- Ozzie Albies — 1H
+- Randy Arozarena — 1H
+- Spencer Horwitz — 1H
+- Trent Grisham — 1H
+- Tyler Soderstrom — 1H
+
+⚾ CONTACT PICKS (1+ Hit)
+- Blaze Alexander — 2H ⭐
+- Brayan Rocchio — 2H ⭐
+- Dominic Canzone — 2H ⭐
+- Iván Herrera — 2H ⭐
+- Kyle Karros — 2H ⭐
+- Nick Kurtz — 2H ⭐
+- David Hamilton — 1H
+- Jorge Mateo — 1H
+- Kyle Stowers — 1H
+
+MODEL DIAGNOSTIC (LOW PRIORITY)
+Full Sheet HR Coverage: 26 / 32 (81.2%)

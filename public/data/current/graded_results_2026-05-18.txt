@@ -1,0 +1,83 @@
+RESULTS TRACKER — 2026-05-18
+------------------------------------------
+HR Picks: 14 | HR Accuracy: 21.4%
+Base Hit Picks: 56 | Base Hit Accuracy: 67.9%
+HRR Picks: 28 | HRR 2+ Accuracy: 67.9%
+HRR Picks: 28 | HRR 3+ Accuracy: 53.6%
+
+HR PICKS THAT HOMERED
+- Brett Baty (NYM) | HR Score 59.0
+- Ernie Clement (TOR) | HR Score 59.45
+- Gabriel Moreno (ARI) | HR Score 59.78
+
+TRACKED PICKS THAT GOT A BASE HIT
+- Rhys Hoskins (CLE) | HR | 1 H
+- José Ramírez (CLE) | HIT | 3 H
+- Riley Greene (DET) | HIT | 2 H
+- Kevin McGonigle (DET) | HRR | 1 H
+- Angel Martínez (CLE) | HRR | 2 H
+- Brayan Rocchio (CLE) | CONTACT | 1 H
+- Junior Caminero (TB) | TOP | 2 H
+- Coby Mayo (BAL) | HR | 1 H
+- Jonathan Aranda (TB) | HIT | 1 H
+- Chandler Simpson (TB) | HIT | 1 H
+- Taylor Walls (TB) | HRR | 2 H
+- Jonny DeLuca (TB) | HRR | 2 H
+- Adley Rutschman (BAL) | CONTACT | 2 H
+- Spencer Steer (CIN) | TOP | 1 H
+- Tyler Stephenson (CIN) | HR | 1 H
+- Matt McLain (CIN) | HRR | 1 H
+- Bryson Stott (PHI) | HRR | 1 H
+- Jakob Marsee (MIA) | HIT | 1 H
+- Liam Hicks (MIA) | HIT | 2 H
+- Javier Sanoja (MIA) | HRR | 1 H
+- Mauricio Dubón (ATL) | HRR | 1 H
+- Owen Caissie (MIA) | CONTACT | 1 H
+- Juan Soto (NYM) | TOP | 2 H
+- Brett Baty (NYM) | HR | 2 H
+- CJ Abrams (WSH) | HIT | 2 H
+- Carson Benge (NYM) | HRR | 3 H
+- Marcus Semien (NYM) | HRR | 1 H
+- James Wood (WSH) | CONTACT | 3 H
+- Ben Rice (NYY) | TOP | 1 H
+- Ernie Clement (TOR) | HR | 1 H
+- Paul Goldschmidt (NYY) | HIT | 2 H
+- Daulton Varsho (TOR) | HIT | 1 H
+- Cody Bellinger (NYY) | HRR | 2 H
+- Aaron Judge (NYY) | HRR | 1 H
+- Kazuma Okamoto (TOR) | CONTACT | 1 H
+- Willson Contreras (BOS) | TOP | 1 H
+- Bobby Witt Jr. (KC) | HIT | 1 H
+- Andruw Monasterio (BOS) | HRR | 2 H
+- Marcelo Mayer (BOS) | HRR | 1 H
+- Jac Caglianone (KC) | CONTACT | 2 H
+- Yordan Alvarez (HOU) | TOP | 1 H
+- Christian Walker (HOU) | HR | 2 H
+- Trevor Larnach (MIN) | HRR | 1 H
+- Josh Bell (MIN) | HRR | 3 H
+- Luke Keaschall (MIN) | CONTACT | 1 H
+- Michael Busch (CHC) | HR | 2 H
+- Jake Bauers (MIL) | HIT | 2 H
+- Carson Kelly (CHC) | HRR | 2 H
+- Dansby Swanson (CHC) | CONTACT | 1 H
+- Jake Burger (TEX) | TOP | 1 H
+- Jake McCarthy (COL) | HIT | 1 H
+- Josh Jung (TEX) | HIT | 1 H
+- Ezequiel Duran (TEX) | HRR | 3 H
+- Ezequiel Tovar (COL) | HRR | 1 H
+- TJ Rumfield (COL) | CONTACT | 1 H
+- Zack Gelof (ATH) | HR | 1 H
+- Shea Langeliers (ATH) | HIT | 1 H
+- Nick Kurtz (ATH) | HIT | 1 H
+- Zach Neto (LAA) | HRR | 1 H
+- Miguel Andujar (SD) | TOP | 2 H
+- Shohei Ohtani (LAD) | HIT | 2 H
+- Andy Pages (LAD) | HRR | 1 H
+- Casey Schmitt (SF) | TOP | 1 H
+- Gabriel Moreno (ARI) | HR | 2 H
+- Ildemaro Vargas (ARI) | HIT | 2 H
+- Harrison Bader (SF) | HRR | 2 H
+- Jose Fernandez (ARI) | HRR | 1 H
+- Randy Arozarena (SEA) | HIT | 2 H
+- Josh Naylor (SEA) | HIT | 3 H
+- Munetaka Murakami (CWS) | CONTACT | 2 H

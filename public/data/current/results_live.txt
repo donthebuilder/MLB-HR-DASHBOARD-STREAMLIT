@@ -1,0 +1,112 @@
+LIVE RESULTS TRACKER - 2026-09-05
+------------------------------------------
+Game status: 0/15 graded games final
+Note: live results can change until every game is final.
+
+BETTABLE RESULTS
+Top 15 HR: 0/15 (0.0%)
+HR Picks: 0/15 (0.0%)
+Top Picks: 0/15 (0.0%)
+
+FULL SHEET BASE HIT PERFORMANCE
+Base Hit Accuracy: 0.0%
+
+HR CAPTURE (BETTABLE)
+Total Slate HRs: 0
+Caught in Top 15: 0
+Caught in HR Picks: 0
+
+MODEL VISION (Top 40)
+Model Caught HRs: 0 / 0
+Vision Rate: 0.0%
+
+UNIQUE PLAYER HR ACCURACY
+Unique Players Tracked: 67
+Players Who Homered: 0
+Unique HR Accuracy: 0.0%
+
+HR CATEGORY BREAKDOWN
+------------------------------------------
+🏆 TOP 15 BOARD → 0 HR
+🔥 TOP PICKS → 0 HR
+🧨 HR PICKS → 0 HR
+🏁 HRR PICKS → 0 HR
+💠 HIT PICKS → 0 HR
+⚾ CONTACT PICKS → 0 HR
+Best HR-producing category: 🏆 TOP 15 BOARD
+
+HR RESULTS BY PLAYER
+------------------------------------------
+- none
+
+POOL PERFORMANCE
+------------------------------------------
+4-MAN Pool A — Strongest → 0/0 HR (none)
+4-MAN Pool B — HRR+Power → 0/0 HR (none)
+4-MAN Pool C — Balanced → 0/0 HR (none)
+4-MAN Pool D — Variance → 0/0 HR (none)
+3-MAN Pool A — Strongest → 0/0 HR (none)
+3-MAN Pool B — HRR+Var → 0/0 HR (none)
+3-MAN Pool C — Balanced → 0/0 HR (none)
+3-MAN Pool D — Variance → 0/0 HR (none)
+
+PAIR PERFORMANCE
+------------------------------------------
+Pair 1 → 0/2 HR (none) | Pete Crow-Armstrong + Rafael Devers
+Pair 2 → 0/2 HR (none) | Heriberto Hernández + Juan Soto
+Pair 3 → 0/2 HR (none) | Esmerlyn Valdez + Junior Caminero
+Pair 4 → 0/2 HR (none) | Ben Rice + Brandon Lowe
+Pair 5 → 0/2 HR (none) | Yordan Alvarez + Joshua Báez
+Pair 6 → 0/2 HR (none) | Carter Jensen + Colson Montgomery
+Pair 7 → 0/2 HR (none) | Sal Stewart + Pete Alonso
+Pair 8 → 0/2 HR (none) | Kody Clemens + Mickey Gasper
+Pair 9 → 0/2 HR (none) | Zack Gelof + Joc Pederson
+Pair 10 → 0/2 HR (none) | Michael Harris II + Matt Olson
+
+PLAYER TYPE PERFORMANCE
+------------------------------------------
+🏆 TOP 15 BOARD (15)
+HR: 0.0% | 1+ Hit: 0.0% | XBH: 0.0% | 2+ TB: 0.0% | 2+ HRR: 0.0% | 3+ HRR: 0.0%
+
+🔥 TOP PICKS (15)
+HR: 0.0% | 1+ Hit: 0.0% | XBH: 0.0% | 2+ TB: 0.0% | 2+ HRR: 0.0% | 3+ HRR: 0.0%
+
+🧨 HR PICKS (15)
+HR: 0.0% | 1+ Hit: 0.0% | XBH: 0.0% | 2+ TB: 0.0% | 2+ HRR: 0.0% | 3+ HRR: 0.0%
+
+🏁 HRR PICKS (15)
+HR: 0.0% | 1+ Hit: 0.0% | XBH: 0.0% | 2+ TB: 0.0% | 2+ HRR: 0.0% | 3+ HRR: 0.0%
+
+💠 HIT PICKS (15)
+HR: 0.0% | 1+ Hit: 0.0% | XBH: 0.0% | 2+ TB: 0.0% | 2+ HRR: 0.0% | 3+ HRR: 0.0%
+
+⚾ CONTACT PICKS (15)
+HR: 0.0% | 1+ Hit: 0.0% | XBH: 0.0% | 2+ TB: 0.0% | 2+ HRR: 0.0% | 3+ HRR: 0.0%
+
+
+DESIGNED OUTCOME (did the pick do its job)
+------------------------------------------
+
+HIT RESULTS BY CATEGORY
+------------------------------------------
+
+🔥 TOP PICKS (1+ Hit)
+- none
+
+🧨 HR PICKS (1+ Hit)
+- none
+
+🏁 HRR PICKS (1+ Hit)
+- none
+
+💠 HIT PICKS (1+ Hit)
+- none
+
+⚾ CONTACT PICKS (1+ Hit)
+- none
+
+MODEL DIAGNOSTIC (LOW PRIORITY)
+Full Sheet HR Coverage: 0 / 0 (0.0%)
+
+LIVE / IN-PROGRESS PICKS WITH ACTION
+- none yet

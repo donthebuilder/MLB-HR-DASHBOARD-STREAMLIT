@@ -1,0 +1,2294 @@
+{
+ "date": "2026-09-05",
+ "updated": "2026-09-05T17:08:09+00:00",
+ "runs": 4,
+ "games": {
+  "823577": {
+   "first_pitch": "2026-09-05T20:10:00+00:00",
+   "cats": {
+    "HIT": {
+     "pid": 806367,
+     "name": "Turner Hill",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 806367,
+       "name": "Turner Hill",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    },
+    "HRR": {
+     "pid": 813841,
+     "name": "Jonah Cox",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 813841,
+       "name": "Jonah Cox",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    },
+    "TOP": {
+     "pid": 646240,
+     "name": "Rafael Devers",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 646240,
+       "name": "Rafael Devers",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    },
+    "CONTACT": {
+     "pid": 646240,
+     "name": "Rafael Devers",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 646240,
+       "name": "Rafael Devers",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    },
+    "HR": {
+     "pid": 665742,
+     "name": "Juan Soto",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 665742,
+       "name": "Juan Soto",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    }
+   }
+  },
+  "823823": {
+   "first_pitch": "2026-09-05T20:10:00+00:00",
+   "cats": {
+    "HR": {
+     "pid": 691718,
+     "name": "Pete Crow-Armstrong",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 691718,
+       "name": "Pete Crow-Armstrong",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    },
+    "HIT": {
+     "pid": 608324,
+     "name": "Alex Bregman",
+     "at": "2026-09-05T17:08:09+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 621438,
+       "name": "Tyrone Taylor",
+       "at": "2026-09-05T08:21:46+00:00"
+      },
+      {
+       "pid": 608324,
+       "name": "Alex Bregman",
+       "at": "2026-09-05T17:08:09+00:00"
+      }
+     ]
+    },
+    "HRR": {
+     "pid": 673548,
+     "name": "Seiya Suzuki",
+     "at": "2026-09-05T17:08:09+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 608324,
+       "name": "Alex Bregman",
+       "at": "2026-09-05T08:21:46+00:00"
+      },
+      {
+       "pid": 673548,
+       "name": "Seiya Suzuki",
+       "at": "2026-09-05T17:08:09+00:00"
+      }
+     ]
+    },
+    "CONTACT": {
+     "pid": 608324,
+     "name": "Alex Bregman",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 608324,
+       "name": "Alex Bregman",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    },
+    "TOP": {
+     "pid": 669065,
+     "name": "Kyle Stowers",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 669065,
+       "name": "Kyle Stowers",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    }
+   }
+  },
+  "823419": {
+   "first_pitch": "2026-09-05T22:05:00+00:00",
+   "cats": {
+    "HIT": {
+     "pid": 686948,
+     "name": "Drake Baldwin",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 686948,
+       "name": "Drake Baldwin",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    },
+    "HR": {
+     "pid": 621566,
+     "name": "Matt Olson",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 621566,
+       "name": "Matt Olson",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    },
+    "TOP": {
+     "pid": 671739,
+     "name": "Michael Harris II",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 671739,
+       "name": "Michael Harris II",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    },
+    "CONTACT": {
+     "pid": 671739,
+     "name": "Michael Harris II",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 671739,
+       "name": "Michael Harris II",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    },
+    "HRR": {
+     "pid": 547180,
+     "name": "Bryce Harper",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 547180,
+       "name": "Bryce Harper",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    }
+   }
+  },
+  "824389": {
+   "first_pitch": "2026-09-05T22:10:00+00:00",
+   "cats": {
+    "HRR": {
+     "pid": 703601,
+     "name": "Max Clark",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 703601,
+       "name": "Max Clark",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    },
+    "HR": {
+     "pid": 679529,
+     "name": "Spencer Torkelson",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 679529,
+       "name": "Spencer Torkelson",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    },
+    "HIT": {
+     "pid": 800050,
+     "name": "Chase DeLauter",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 800050,
+       "name": "Chase DeLauter",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    },
+    "CONTACT": {
+     "pid": 800050,
+     "name": "Chase DeLauter",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 800050,
+       "name": "Chase DeLauter",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    },
+    "TOP": {
+     "pid": 682657,
+     "name": "Angel Mart\u00ednez",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 682657,
+       "name": "Angel Mart\u00ednez",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    }
+   }
+  },
+  "823335": {
+   "first_pitch": "2026-09-05T22:40:00+00:00",
+   "cats": {
+    "TOP": {
+     "pid": 699013,
+     "name": "Esmerlyn Valdez",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 699013,
+       "name": "Esmerlyn Valdez",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    },
+    "HRR": {
+     "pid": 665833,
+     "name": "Oneil Cruz",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 665833,
+       "name": "Oneil Cruz",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    },
+    "HR": {
+     "pid": 664040,
+     "name": "Brandon Lowe",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 664040,
+       "name": "Brandon Lowe",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    },
+    "CONTACT": {
+     "pid": 664040,
+     "name": "Brandon Lowe",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 664040,
+       "name": "Brandon Lowe",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    },
+    "HIT": {
+     "pid": 668804,
+     "name": "Bryan Reynolds",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 668804,
+       "name": "Bryan Reynolds",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    }
+   }
+  },
+  "824468": {
+   "first_pitch": "2026-09-05T22:40:00+00:00",
+   "cats": {
+    "HIT": {
+     "pid": 683734,
+     "name": "Andrew Vaughn",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 683734,
+       "name": "Andrew Vaughn",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    },
+    "HR": {
+     "pid": 694192,
+     "name": "Jackson Chourio",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 694192,
+       "name": "Jackson Chourio",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    },
+    "CONTACT": {
+     "pid": 661388,
+     "name": "William Contreras",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 661388,
+       "name": "William Contreras",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    },
+    "HRR": {
+     "pid": 701398,
+     "name": "Sal Stewart",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 701398,
+       "name": "Sal Stewart",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    },
+    "TOP": {
+     "pid": 699302,
+     "name": "H\u00e9ctor Rodr\u00edguez",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 699302,
+       "name": "H\u00e9ctor Rodr\u00edguez",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    }
+   }
+  },
+  "824795": {
+   "first_pitch": "2026-09-05T23:05:00+00:00",
+   "cats": {
+    "TOP": {
+     "pid": 681508,
+     "name": "Mickey Gasper",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 681508,
+       "name": "Mickey Gasper",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    },
+    "HIT": {
+     "pid": 701350,
+     "name": "Roman Anthony",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 701350,
+       "name": "Roman Anthony",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    },
+    "CONTACT": {
+     "pid": 701350,
+     "name": "Roman Anthony",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 701350,
+       "name": "Roman Anthony",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    },
+    "HRR": {
+     "pid": 677942,
+     "name": "Blaze Alexander",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 677942,
+       "name": "Blaze Alexander",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    },
+    "HR": {
+     "pid": 691723,
+     "name": "Coby Mayo",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 691723,
+       "name": "Coby Mayo",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    }
+   }
+  },
+  "822850": {
+   "first_pitch": "2026-09-05T23:05:00+00:00",
+   "cats": {
+    "HIT": {
+     "pid": 650490,
+     "name": "Yandy D\u00edaz",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 650490,
+       "name": "Yandy D\u00edaz",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    },
+    "CONTACT": {
+     "pid": 650490,
+     "name": "Yandy D\u00edaz",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 650490,
+       "name": "Yandy D\u00edaz",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    },
+    "HRR": {
+     "pid": 691406,
+     "name": "Junior Caminero",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 691406,
+       "name": "Junior Caminero",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    },
+    "TOP": {
+     "pid": 679822,
+     "name": "Justin Foscue",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 679822,
+       "name": "Justin Foscue",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    },
+    "HR": {
+     "pid": 592626,
+     "name": "Joc Pederson",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 592626,
+       "name": "Joc Pederson",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    }
+   }
+  },
+  "824066": {
+   "first_pitch": "2026-09-05T23:10:00+00:00",
+   "cats": {
+    "HRR": {
+     "pid": 703520,
+     "name": "Brett Bateman",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 703520,
+       "name": "Brett Bateman",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    },
+    "HR": {
+     "pid": 672960,
+     "name": "Kazuma Okamoto",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 672960,
+       "name": "Kazuma Okamoto",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    },
+    "HIT": {
+     "pid": 695506,
+     "name": "Jac Caglianone",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 695506,
+       "name": "Jac Caglianone",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    },
+    "TOP": {
+     "pid": 695600,
+     "name": "Carter Jensen",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 695600,
+       "name": "Carter Jensen",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    },
+    "CONTACT": {
+     "pid": 695600,
+     "name": "Carter Jensen",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 695600,
+       "name": "Carter Jensen",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    }
+   }
+  },
+  "824553": {
+   "first_pitch": "2026-09-05T23:10:00+00:00",
+   "cats": {
+    "TOP": {
+     "pid": 680777,
+     "name": "Ryan Jeffers",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 680777,
+       "name": "Ryan Jeffers",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    },
+    "CONTACT": {
+     "pid": 680777,
+     "name": "Ryan Jeffers",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 680777,
+       "name": "Ryan Jeffers",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    },
+    "HRR": {
+     "pid": 701785,
+     "name": "Kaelen Culpepper",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 701785,
+       "name": "Kaelen Culpepper",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    },
+    "HIT": {
+     "pid": 678246,
+     "name": "Miguel Vargas",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 678246,
+       "name": "Miguel Vargas",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    },
+    "HR": {
+     "pid": 695657,
+     "name": "Colson Montgomery",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 695657,
+       "name": "Colson Montgomery",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    }
+   }
+  },
+  "824145": {
+   "first_pitch": "2026-09-05T23:15:00+00:00",
+   "cats": {
+    "HIT": {
+     "pid": 672515,
+     "name": "Gabriel Moreno",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 672515,
+       "name": "Gabriel Moreno",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    },
+    "HR": {
+     "pid": 606466,
+     "name": "Ketel Marte",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 606466,
+       "name": "Ketel Marte",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    },
+    "TOP": {
+     "pid": 670541,
+     "name": "Yordan Alvarez",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 670541,
+       "name": "Yordan Alvarez",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    },
+    "HRR": {
+     "pid": 670623,
+     "name": "Isaac Paredes",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 670623,
+       "name": "Isaac Paredes",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    },
+    "CONTACT": {
+     "pid": 673237,
+     "name": "Yainer Diaz",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 673237,
+       "name": "Yainer Diaz",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    }
+   }
+  },
+  "823257": {
+   "first_pitch": "2026-09-05T23:15:00+00:00",
+   "cats": {
+    "HR": {
+     "pid": 502671,
+     "name": "Paul Goldschmidt",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 502671,
+       "name": "Paul Goldschmidt",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    },
+    "HIT": {
+     "pid": 641355,
+     "name": "Cody Bellinger",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 641355,
+       "name": "Cody Bellinger",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    },
+    "TOP": {
+     "pid": 682987,
+     "name": "Spencer Jones",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 682987,
+       "name": "Spencer Jones",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    },
+    "CONTACT": {
+     "pid": 664034,
+     "name": "Ty France",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 664034,
+       "name": "Ty France",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    },
+    "HRR": {
+     "pid": 665487,
+     "name": "Fernando Tatis Jr.",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 665487,
+       "name": "Fernando Tatis Jr.",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    }
+   }
+  },
+  "824310": {
+   "first_pitch": "2026-09-06T00:10:00+00:00",
+   "cats": {
+    "TOP": {
+     "pid": 695491,
+     "name": "Joshua B\u00e1ez",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 695491,
+       "name": "Joshua B\u00e1ez",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    },
+    "HR": {
+     "pid": 691023,
+     "name": "Jordan Walker",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 691023,
+       "name": "Jordan Walker",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    },
+    "CONTACT": {
+     "pid": 695336,
+     "name": "Thomas Saggese",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 695336,
+       "name": "Thomas Saggese",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    },
+    "HIT": {
+     "pid": 681198,
+     "name": "TJ Rumfield",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 681198,
+       "name": "TJ Rumfield",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    },
+    "HRR": {
+     "pid": 691182,
+     "name": "Adael Amador",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 691182,
+       "name": "Adael Amador",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    }
+   }
+  },
+  "823904": {
+   "first_pitch": "2026-09-06T01:10:00+00:00",
+   "cats": {
+    "HIT": {
+     "pid": 518692,
+     "name": "Freddie Freeman",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 518692,
+       "name": "Freddie Freeman",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    },
+    "HR": {
+     "pid": 571970,
+     "name": "Max Muncy",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 571970,
+       "name": "Max Muncy",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    },
+    "TOP": {
+     "pid": 687221,
+     "name": "Dalton Rushing",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 687221,
+       "name": "Dalton Rushing",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    },
+    "HRR": {
+     "pid": 605141,
+     "name": "Mookie Betts",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 605141,
+       "name": "Mookie Betts",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    },
+    "CONTACT": {
+     "pid": 605141,
+     "name": "Mookie Betts",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 605141,
+       "name": "Mookie Betts",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    }
+   }
+  },
+  "823094": {
+   "first_pitch": "2026-09-06T01:40:00+00:00",
+   "cats": {
+    "HRR": {
+     "pid": 683021,
+     "name": "Michael Stefanic",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 683021,
+       "name": "Michael Stefanic",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    },
+    "TOP": {
+     "pid": 680869,
+     "name": "Zack Gelof",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 680869,
+       "name": "Zack Gelof",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    },
+    "HIT": {
+     "pid": 643446,
+     "name": "Jeff McNeil",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 643446,
+       "name": "Jeff McNeil",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    },
+    "HR": {
+     "pid": 668227,
+     "name": "Randy Arozarena",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 668227,
+       "name": "Randy Arozarena",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    },
+    "CONTACT": {
+     "pid": 686527,
+     "name": "Dominic Canzone",
+     "at": "2026-09-05T08:21:46+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 686527,
+       "name": "Dominic Canzone",
+       "at": "2026-09-05T08:21:46+00:00"
+      }
+     ]
+    }
+   }
+  }
+ },
+ "rejected": [],
+ "gone_from_slate": [],
+ "tickets": {
+  "recommended_pairs|TOP30|0": {
+   "section": "recommended_pairs",
+   "first_pitch": "2026-09-05T20:10:00+00:00",
+   "pids": [
+    691718,
+    646240
+   ],
+   "meta": {
+    "type": "Top 30 Pairs",
+    "lane_key": "TOP30",
+    "pair_key": "646240|691718",
+    "pair_score": 24.84,
+    "risk": "High",
+    "tags": [
+     "HRW",
+     "Recent HR",
+     "Reliable"
+    ],
+    "reason": "EV 93.6+97.7 | HRW 85+88 | L7 6HR+4HR"
+   },
+   "stubs": {
+    "691718": {
+     "player_id": 691718,
+     "name": "Pete Crow-Armstrong",
+     "team": "CHC",
+     "opponent": "MIA",
+     "game_pk": 823823,
+     "lineup_spot": 1
+    },
+    "646240": {
+     "player_id": 646240,
+     "name": "Rafael Devers",
+     "team": "SF",
+     "opponent": "NYM",
+     "game_pk": 823577,
+     "lineup_spot": 4
+    }
+   },
+   "at": "2026-09-05T08:21:46+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      691718,
+      646240
+     ],
+     "at": "2026-09-05T08:21:46+00:00"
+    }
+   ]
+  },
+  "recommended_pairs|TOP30|1": {
+   "section": "recommended_pairs",
+   "first_pitch": "2026-09-05T20:10:00+00:00",
+   "pids": [
+    665742,
+    681715
+   ],
+   "meta": {
+    "type": "Top 30 Pairs",
+    "lane_key": "TOP30",
+    "pair_key": "665742|681715",
+    "pair_score": 22.49,
+    "risk": "High",
+    "tags": [
+     "HRW",
+     "Pitcher target",
+     "Recent HR"
+    ],
+    "reason": "HRW 77+62 | HR/9 1.26+1.62 | L7 2HR+2HR"
+   },
+   "stubs": {
+    "665742": {
+     "player_id": 665742,
+     "name": "Juan Soto",
+     "team": "NYM",
+     "opponent": "SF",
+     "game_pk": 823577,
+     "lineup_spot": 2
+    },
+    "681715": {
+     "player_id": 681715,
+     "name": "Heriberto Hern\u00e1ndez",
+     "team": "MIA",
+     "opponent": "CHC",
+     "game_pk": 823823,
+     "lineup_spot": 2
+    }
+   },
+   "at": "2026-09-05T17:08:09+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      681715,
+      665742
+     ],
+     "at": "2026-09-05T08:21:46+00:00"
+    },
+    {
+     "pids": [
+      665742,
+      681715
+     ],
+     "at": "2026-09-05T17:08:09+00:00"
+    }
+   ]
+  },
+  "recommended_pairs|A|0": {
+   "section": "recommended_pairs",
+   "first_pitch": "2026-09-05T22:40:00+00:00",
+   "pids": [
+    699013,
+    691406
+   ],
+   "meta": {
+    "type": "CORE HR PAIRS",
+    "lane_key": "A",
+    "pair_key": "691406|699013",
+    "pair_score": 20.25,
+    "risk": "High",
+    "tags": [
+     "Pitcher target",
+     "Hard contact",
+     "Weak side",
+     "Recent HR"
+    ],
+    "reason": "1 HARD CONTACT | L7 2HR+2HR"
+   },
+   "stubs": {
+    "699013": {
+     "player_id": 699013,
+     "name": "Esmerlyn Valdez",
+     "team": "PIT",
+     "opponent": "LAA",
+     "game_pk": 823335,
+     "lineup_spot": 2
+    },
+    "691406": {
+     "player_id": 691406,
+     "name": "Junior Caminero",
+     "team": "TB",
+     "opponent": "TEX",
+     "game_pk": 822850,
+     "lineup_spot": 2
+    }
+   },
+   "at": "2026-09-05T08:21:46+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      699013,
+      691406
+     ],
+     "at": "2026-09-05T08:21:46+00:00"
+    }
+   ]
+  },
+  "recommended_pairs|A|1": {
+   "section": "recommended_pairs",
+   "first_pitch": "2026-09-05T22:40:00+00:00",
+   "pids": [
+    700250,
+    664040
+   ],
+   "meta": {
+    "type": "CORE HR PAIRS",
+    "lane_key": "A",
+    "pair_key": "664040|700250",
+    "pair_score": 19.52,
+    "risk": "High",
+    "tags": [
+     "HRW",
+     "Pitcher target",
+     "Hard contact",
+     "Recent HR"
+    ],
+    "reason": "HR/9 1.21+1.47 | 1 HARD CONTACT | L5 8H+8H hot"
+   },
+   "stubs": {
+    "700250": {
+     "player_id": 700250,
+     "name": "Ben Rice",
+     "team": "NYY",
+     "opponent": "SD",
+     "game_pk": 823257,
+     "lineup_spot": 1
+    },
+    "664040": {
+     "player_id": 664040,
+     "name": "Brandon Lowe",
+     "team": "PIT",
+     "opponent": "LAA",
+     "game_pk": 823335,
+     "lineup_spot": 4
+    }
+   },
+   "at": "2026-09-05T08:21:46+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      700250,
+      664040
+     ],
+     "at": "2026-09-05T08:21:46+00:00"
+    }
+   ]
+  },
+  "recommended_pairs|B|0": {
+   "section": "recommended_pairs",
+   "first_pitch": "2026-09-05T23:15:00+00:00",
+   "pids": [
+    670541,
+    695491
+   ],
+   "meta": {
+    "type": "STATCAST HR PAIRS",
+    "lane_key": "B",
+    "pair_key": "670541|695491",
+    "pair_score": 20.72,
+    "risk": "High",
+    "tags": [
+     "HRW",
+     "Pitcher target",
+     "Hard contact",
+     "Weak side",
+     "Recent HR",
+     "Due"
+    ],
+    "reason": "1 HARD CONTACT | L7 1HR+2HR | due-rate pressure"
+   },
+   "stubs": {
+    "670541": {
+     "player_id": 670541,
+     "name": "Yordan Alvarez",
+     "team": "HOU",
+     "opponent": "ARI",
+     "game_pk": 824145,
+     "lineup_spot": 1
+    },
+    "695491": {
+     "player_id": 695491,
+     "name": "Joshua B\u00e1ez",
+     "team": "STL",
+     "opponent": "COL",
+     "game_pk": 824310,
+     "lineup_spot": 3
+    }
+   },
+   "at": "2026-09-05T08:21:46+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      670541,
+      695491
+     ],
+     "at": "2026-09-05T08:21:46+00:00"
+    }
+   ]
+  },
+  "recommended_pairs|B|1": {
+   "section": "recommended_pairs",
+   "first_pitch": "2026-09-05T23:10:00+00:00",
+   "pids": [
+    695657,
+    686527
+   ],
+   "meta": {
+    "type": "STATCAST HR PAIRS",
+    "lane_key": "B",
+    "pair_key": "686527|695657",
+    "pair_score": 19.35,
+    "risk": "High",
+    "tags": [
+     "HRW",
+     "Pitcher target",
+     "Weak side",
+     "Recent HR"
+    ],
+    "reason": "HRW 62+70 | HR/9 1.22+2.41 | L7 2HR+1HR"
+   },
+   "stubs": {
+    "695657": {
+     "player_id": 695657,
+     "name": "Colson Montgomery",
+     "team": "CWS",
+     "opponent": "MIN",
+     "game_pk": 824553,
+     "lineup_spot": 4
+    },
+    "686527": {
+     "player_id": 686527,
+     "name": "Dominic Canzone",
+     "team": "SEA",
+     "opponent": "ATH",
+     "game_pk": 823094,
+     "lineup_spot": 3
+    }
+   },
+   "at": "2026-09-05T17:08:09+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      695600,
+      695657
+     ],
+     "at": "2026-09-05T08:21:46+00:00"
+    },
+    {
+     "pids": [
+      695657,
+      686527
+     ],
+     "at": "2026-09-05T17:08:09+00:00"
+    }
+   ]
+  },
+  "recommended_pairs|C|0": {
+   "section": "recommended_pairs",
+   "first_pitch": "2026-09-05T22:40:00+00:00",
+   "pids": [
+    695600,
+    624413
+   ],
+   "meta": {
+    "type": "FLEX HR PAIRS",
+    "lane_key": "C",
+    "pair_key": "624413|695600",
+    "pair_score": 18.53,
+    "risk": "High",
+    "tags": [
+     "HRW",
+     "Pitcher target",
+     "Weak side",
+     "Recent HR"
+    ],
+    "reason": "EV 98.8+96.2 | L7 4HR+1HR"
+   },
+   "stubs": {
+    "695600": {
+     "player_id": 695600,
+     "name": "Carter Jensen",
+     "team": "KC",
+     "opponent": "TOR",
+     "game_pk": 824066,
+     "lineup_spot": 4
+    },
+    "624413": {
+     "player_id": 624413,
+     "name": "Pete Alonso",
+     "team": "BAL",
+     "opponent": "BOS",
+     "game_pk": 824795,
+     "lineup_spot": 1
+    }
+   },
+   "at": "2026-09-05T17:08:09+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      701398,
+      624413
+     ],
+     "at": "2026-09-05T08:21:46+00:00"
+    },
+    {
+     "pids": [
+      695600,
+      624413
+     ],
+     "at": "2026-09-05T17:08:09+00:00"
+    }
+   ]
+  },
+  "recommended_pairs|C|1": {
+   "section": "recommended_pairs",
+   "first_pitch": "2026-09-05T23:05:00+00:00",
+   "pids": [
+    665019,
+    701398
+   ],
+   "meta": {
+    "type": "FLEX HR PAIRS",
+    "lane_key": "C",
+    "pair_key": "665019|701398",
+    "pair_score": 17.92,
+    "risk": "High",
+    "tags": [
+     "HRW",
+     "Pitcher target",
+     "Recent HR"
+    ],
+    "reason": "HRW 88+82 | L7 3HR+3HR"
+   },
+   "stubs": {
+    "665019": {
+     "player_id": 665019,
+     "name": "Kody Clemens",
+     "team": "MIN",
+     "opponent": "CWS",
+     "game_pk": 824553,
+     "lineup_spot": 4
+    },
+    "701398": {
+     "player_id": 701398,
+     "name": "Sal Stewart",
+     "team": "CIN",
+     "opponent": "MIL",
+     "game_pk": 824468,
+     "lineup_spot": 2
+    }
+   },
+   "at": "2026-09-05T17:08:09+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      665019,
+      681508
+     ],
+     "at": "2026-09-05T08:21:46+00:00"
+    },
+    {
+     "pids": [
+      665019,
+      701398
+     ],
+     "at": "2026-09-05T17:08:09+00:00"
+    }
+   ]
+  },
+  "recommended_pairs|D|0": {
+   "section": "recommended_pairs",
+   "first_pitch": "2026-09-05T23:05:00+00:00",
+   "pids": [
+    680869,
+    592626
+   ],
+   "meta": {
+    "type": "VARIANCE POWER PAIRS",
+    "lane_key": "D",
+    "pair_key": "592626|680869",
+    "pair_score": 18.2,
+    "risk": "High",
+    "tags": [
+     "HRW",
+     "Recent HR"
+    ],
+    "reason": "L7 3HR+1HR"
+   },
+   "stubs": {
+    "680869": {
+     "player_id": 680869,
+     "name": "Zack Gelof",
+     "team": "ATH",
+     "opponent": "SEA",
+     "game_pk": 823094,
+     "lineup_spot": 3
+    },
+    "592626": {
+     "player_id": 592626,
+     "name": "Joc Pederson",
+     "team": "TEX",
+     "opponent": "TB",
+     "game_pk": 822850,
+     "lineup_spot": 3
+    }
+   },
+   "at": "2026-09-05T08:21:46+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      680869,
+      592626
+     ],
+     "at": "2026-09-05T08:21:46+00:00"
+    }
+   ]
+  },
+  "recommended_pairs|D|1": {
+   "section": "recommended_pairs",
+   "first_pitch": "2026-09-05T22:05:00+00:00",
+   "pids": [
+    681508,
+    680777
+   ],
+   "meta": {
+    "type": "VARIANCE POWER PAIRS",
+    "lane_key": "D",
+    "pair_key": "680777|681508",
+    "pair_score": 17.44,
+    "risk": "High",
+    "tags": [
+     "HRW",
+     "Pitcher target",
+     "Weak side",
+     "Recent HR",
+     "Reliable"
+    ],
+    "reason": "HRW 88+88 | L5 6H+6H hot | L7 3HR+3HR"
+   },
+   "stubs": {
+    "681508": {
+     "player_id": 681508,
+     "name": "Mickey Gasper",
+     "team": "BOS",
+     "opponent": "BAL",
+     "game_pk": 824795,
+     "lineup_spot": 2
+    },
+    "680777": {
+     "player_id": 680777,
+     "name": "Ryan Jeffers",
+     "team": "MIN",
+     "opponent": "CWS",
+     "game_pk": 824553,
+     "lineup_spot": 1
+    }
+   },
+   "at": "2026-09-05T17:08:09+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      671739,
+      621566
+     ],
+     "at": "2026-09-05T08:21:46+00:00"
+    },
+    {
+     "pids": [
+      681508,
+      680777
+     ],
+     "at": "2026-09-05T17:08:09+00:00"
+    }
+   ]
+  },
+  "pools_4man|Pool A \u2014 Strongest|0": {
+   "section": "pools_4man",
+   "first_pitch": "2026-09-05T20:10:00+00:00",
+   "pids": [
+    679822,
+    671739,
+    691182,
+    608324
+   ],
+   "meta": {
+    "name": "Pool A \u2014 Strongest",
+    "pool_score": 59.4,
+    "size": 4,
+    "risk": "Lower",
+    "tags": [
+     "HRW",
+     "Recent HR",
+     "Pitcher target",
+     "Reliable"
+    ],
+    "reason": "Pool A \u2014 Strongest build \u00b7 optimized for 2+ \u00b7 4/4 players filled"
+   },
+   "stubs": {
+    "679822": {
+     "player_id": 679822,
+     "name": "Justin Foscue",
+     "team": "TEX",
+     "opponent": "TB",
+     "game_pk": 822850,
+     "lineup_spot": 2
+    },
+    "671739": {
+     "player_id": 671739,
+     "name": "Michael Harris II",
+     "team": "ATL",
+     "opponent": "PHI",
+     "game_pk": 823419,
+     "lineup_spot": 4
+    },
+    "691182": {
+     "player_id": 691182,
+     "name": "Adael Amador",
+     "team": "COL",
+     "opponent": "STL",
+     "game_pk": 824310,
+     "lineup_spot": 2
+    },
+    "608324": {
+     "player_id": 608324,
+     "name": "Alex Bregman",
+     "team": "CHC",
+     "opponent": "MIA",
+     "game_pk": 823823,
+     "lineup_spot": 4
+    }
+   },
+   "at": "2026-09-05T17:08:09+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      680777,
+      679822,
+      596019,
+      666160
+     ],
+     "at": "2026-09-05T08:21:46+00:00"
+    },
+    {
+     "pids": [
+      679822,
+      671739,
+      691182,
+      608324
+     ],
+     "at": "2026-09-05T17:08:09+00:00"
+    }
+   ]
+  },
+  "pools_4man|Pool B \u2014 HRR+Power|0": {
+   "section": "pools_4man",
+   "first_pitch": "2026-09-05T20:10:00+00:00",
+   "pids": [
+    691023,
+    699302,
+    596019,
+    656941
+   ],
+   "meta": {
+    "name": "Pool B \u2014 HRR+Power",
+    "pool_score": 56.3,
+    "size": 4,
+    "risk": "Lower",
+    "tags": [
+     "Pitcher target",
+     "Reliable",
+     "Recent HR",
+     "HRW"
+    ],
+    "reason": "Pool B \u2014 HRR+Power build \u00b7 optimized for 2+ \u00b7 4/4 players filled"
+   },
+   "stubs": {
+    "691023": {
+     "player_id": 691023,
+     "name": "Jordan Walker",
+     "team": "STL",
+     "opponent": "COL",
+     "game_pk": 824310,
+     "lineup_spot": 4
+    },
+    "699302": {
+     "player_id": 699302,
+     "name": "H\u00e9ctor Rodr\u00edguez",
+     "team": "CIN",
+     "opponent": "MIL",
+     "game_pk": 824468,
+     "lineup_spot": 3
+    },
+    "596019": {
+     "player_id": 596019,
+     "name": "Francisco Lindor",
+     "team": "NYM",
+     "opponent": "SF",
+     "game_pk": 823577,
+     "lineup_spot": 1
+    },
+    "656941": {
+     "player_id": 656941,
+     "name": "Kyle Schwarber",
+     "team": "PHI",
+     "opponent": "ATL",
+     "game_pk": 823419,
+     "lineup_spot": 3
+    }
+   },
+   "at": "2026-09-05T17:08:09+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      691182,
+      608324,
+      686527,
+      656941
+     ],
+     "at": "2026-09-05T08:21:46+00:00"
+    },
+    {
+     "pids": [
+      691023,
+      699302,
+      596019,
+      656941
+     ],
+     "at": "2026-09-05T17:08:09+00:00"
+    }
+   ]
+  },
+  "pools_4man|Pool C \u2014 Balanced|0": {
+   "section": "pools_4man",
+   "first_pitch": "2026-09-05T20:10:00+00:00",
+   "pids": [
+    669065,
+    664034,
+    666160,
+    621566
+   ],
+   "meta": {
+    "name": "Pool C \u2014 Balanced",
+    "pool_score": 51.8,
+    "size": 4,
+    "risk": "Lower",
+    "tags": [
+     "HRW",
+     "Pitcher target",
+     "Reliable",
+     "Recent HR",
+     "Due"
+    ],
+    "reason": "Pool C \u2014 Balanced build \u00b7 optimized for 2+ \u00b7 4/4 players filled"
+   },
+   "stubs": {
+    "669065": {
+     "player_id": 669065,
+     "name": "Kyle Stowers",
+     "team": "MIA",
+     "opponent": "CHC",
+     "game_pk": 823823,
+     "lineup_spot": 1
+    },
+    "664034": {
+     "player_id": 664034,
+     "name": "Ty France",
+     "team": "SD",
+     "opponent": "NYY",
+     "game_pk": 823257,
+     "lineup_spot": 1
+    },
+    "666160": {
+     "player_id": 666160,
+     "name": "Mickey Moniak",
+     "team": "COL",
+     "opponent": "STL",
+     "game_pk": 824310,
+     "lineup_spot": 7
+    },
+    "621566": {
+     "player_id": 621566,
+     "name": "Matt Olson",
+     "team": "ATL",
+     "opponent": "PHI",
+     "game_pk": 823419,
+     "lineup_spot": 3
+    }
+   },
+   "at": "2026-09-05T17:08:09+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      691023,
+      699302,
+      669065,
+      664034
+     ],
+     "at": "2026-09-05T08:21:46+00:00"
+    },
+    {
+     "pids": [
+      669065,
+      664034,
+      666160,
+      621566
+     ],
+     "at": "2026-09-05T17:08:09+00:00"
+    }
+   ]
+  },
+  "pools_4man|Pool D \u2014 Variance|0": {
+   "section": "pools_4man",
+   "first_pitch": "2026-09-05T20:10:00+00:00",
+   "pids": [
+    808959,
+    672960,
+    502671,
+    691002
+   ],
+   "meta": {
+    "name": "Pool D \u2014 Variance",
+    "pool_score": 52.4,
+    "size": 4,
+    "risk": "Lower",
+    "tags": [
+     "Pitcher target",
+     "HRW",
+     "Recent HR"
+    ],
+    "reason": "Pool D \u2014 Variance build \u00b7 optimized for 2+ \u00b7 4/4 players filled"
+   },
+   "stubs": {
+    "808959": {
+     "player_id": 808959,
+     "name": "Munetaka Murakami",
+     "team": "CWS",
+     "opponent": "MIN",
+     "game_pk": 824553,
+     "lineup_spot": 2
+    },
+    "672960": {
+     "player_id": 672960,
+     "name": "Kazuma Okamoto",
+     "team": "TOR",
+     "opponent": "KC",
+     "game_pk": 824066,
+     "lineup_spot": 3
+    },
+    "502671": {
+     "player_id": 502671,
+     "name": "Paul Goldschmidt",
+     "team": "NYY",
+     "opponent": "SD",
+     "game_pk": 823257,
+     "lineup_spot": 3
+    },
+    "691002": {
+     "player_id": 691002,
+     "name": "Yohandy Morales",
+     "team": "WSH",
+     "opponent": "LAD",
+     "game_pk": 823904,
+     "lineup_spot": 2
+    }
+   },
+   "at": "2026-09-05T17:08:09+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      808959,
+      621438,
+      672960,
+      502671
+     ],
+     "at": "2026-09-05T08:21:46+00:00"
+    },
+    {
+     "pids": [
+      808959,
+      672960,
+      502671,
+      691002
+     ],
+     "at": "2026-09-05T17:08:09+00:00"
+    }
+   ]
+  },
+  "pools_3man|Pool A \u2014 Strongest|0": {
+   "section": "pools_3man",
+   "first_pitch": "2026-09-05T20:10:00+00:00",
+   "pids": [
+    668227,
+    673548,
+    694192
+   ],
+   "meta": {
+    "name": "Pool A \u2014 Strongest",
+    "pool_score": 51.2,
+    "size": 3,
+    "risk": "Lower",
+    "tags": [
+     "HRW",
+     "Pitcher target",
+     "Reliable",
+     "Recent HR"
+    ],
+    "reason": "Pool A \u2014 Strongest build \u00b7 optimized for 2+ \u00b7 3/3 players filled"
+   },
+   "stubs": {
+    "668227": {
+     "player_id": 668227,
+     "name": "Randy Arozarena",
+     "team": "SEA",
+     "opponent": "ATH",
+     "game_pk": 823094,
+     "lineup_spot": 1
+    },
+    "673548": {
+     "player_id": 673548,
+     "name": "Seiya Suzuki",
+     "team": "CHC",
+     "opponent": "MIA",
+     "game_pk": 823823,
+     "lineup_spot": 2
+    },
+    "694192": {
+     "player_id": 694192,
+     "name": "Jackson Chourio",
+     "team": "MIL",
+     "opponent": "CIN",
+     "game_pk": 824468,
+     "lineup_spot": 3
+    }
+   },
+   "at": "2026-09-05T17:08:09+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      691002,
+      668227,
+      673548
+     ],
+     "at": "2026-09-05T08:21:46+00:00"
+    },
+    {
+     "pids": [
+      668227,
+      673548,
+      694192
+     ],
+     "at": "2026-09-05T17:08:09+00:00"
+    }
+   ]
+  },
+  "pools_3man|Pool B \u2014 HRR+Var|0": {
+   "section": "pools_3man",
+   "first_pitch": "2026-09-05T22:40:00+00:00",
+   "pids": [
+    695336,
+    668709,
+    671277
+   ],
+   "meta": {
+    "name": "Pool B \u2014 HRR+Var",
+    "pool_score": 49.6,
+    "size": 3,
+    "risk": "Lower",
+    "tags": [
+     "HRW",
+     "Pitcher target",
+     "Reliable",
+     "Recent HR",
+     "Due"
+    ],
+    "reason": "Pool B \u2014 HRR+Var build \u00b7 optimized for 2+ \u00b7 3/3 players filled"
+   },
+   "stubs": {
+    "695336": {
+     "player_id": 695336,
+     "name": "Thomas Saggese",
+     "team": "STL",
+     "opponent": "COL",
+     "game_pk": 824310,
+     "lineup_spot": 6
+    },
+    "668709": {
+     "player_id": 668709,
+     "name": "JJ Bleday",
+     "team": "CIN",
+     "opponent": "MIL",
+     "game_pk": 824468,
+     "lineup_spot": 4
+    },
+    "671277": {
+     "player_id": 671277,
+     "name": "Luis Garc\u00eda Jr.",
+     "team": "NYY",
+     "opponent": "SD",
+     "game_pk": 823257,
+     "lineup_spot": 2
+    }
+   },
+   "at": "2026-09-05T17:08:09+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      694192,
+      695336,
+      671277
+     ],
+     "at": "2026-09-05T08:21:46+00:00"
+    },
+    {
+     "pids": [
+      695336,
+      668709,
+      671277
+     ],
+     "at": "2026-09-05T17:08:09+00:00"
+    }
+   ]
+  },
+  "pools_3man|Pool C \u2014 Balanced|0": {
+   "section": "pools_3man",
+   "first_pitch": "2026-09-05T20:10:00+00:00",
+   "pids": [
+    813841,
+    695734,
+    680664
+   ],
+   "meta": {
+    "name": "Pool C \u2014 Balanced",
+    "pool_score": 43.7,
+    "size": 3,
+    "risk": "Lower",
+    "tags": [
+     "Recent HR",
+     "HRW"
+    ],
+    "reason": "Pool C \u2014 Balanced build \u00b7 optimized for 2+ \u00b7 3/3 players filled"
+   },
+   "stubs": {
+    "813841": {
+     "player_id": 813841,
+     "name": "Jonah Cox",
+     "team": "SF",
+     "opponent": "NYM",
+     "game_pk": 823577,
+     "lineup_spot": 3
+    },
+    "695734": {
+     "player_id": 695734,
+     "name": "Daylen Lile",
+     "team": "WSH",
+     "opponent": "LAD",
+     "game_pk": 823904,
+     "lineup_spot": 6
+    },
+    "680664": {
+     "player_id": 680664,
+     "name": "Eduardo Valencia",
+     "team": "DET",
+     "opponent": "CLE",
+     "game_pk": 824389,
+     "lineup_spot": 2
+    }
+   },
+   "at": "2026-09-05T17:08:09+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      668709,
+      813841,
+      695578
+     ],
+     "at": "2026-09-05T08:21:46+00:00"
+    },
+    {
+     "pids": [
+      813841,
+      695734,
+      680664
+     ],
+     "at": "2026-09-05T17:08:09+00:00"
+    }
+   ]
+  },
+  "pools_3man|Pool D \u2014 Variance|0": {
+   "section": "pools_3man",
+   "first_pitch": "2026-09-05T22:40:00+00:00",
+   "pids": [
+    695578,
+    624424,
+    678246
+   ],
+   "meta": {
+    "name": "Pool D \u2014 Variance",
+    "pool_score": 48.0,
+    "size": 3,
+    "risk": "Lower",
+    "tags": [
+     "Recent HR",
+     "Pitcher target"
+    ],
+    "reason": "Pool D \u2014 Variance build \u00b7 optimized for 2+ \u00b7 3/3 players filled"
+   },
+   "stubs": {
+    "695578": {
+     "player_id": 695578,
+     "name": "James Wood",
+     "team": "WSH",
+     "opponent": "LAD",
+     "game_pk": 823904,
+     "lineup_spot": 1
+    },
+    "624424": {
+     "player_id": 624424,
+     "name": "Michael Conforto",
+     "team": "CHC",
+     "opponent": "MIA",
+     "game_pk": 823823,
+     "lineup_spot": 8
+    },
+    "678246": {
+     "player_id": 678246,
+     "name": "Miguel Vargas",
+     "team": "CWS",
+     "opponent": "MIN",
+     "game_pk": 824553,
+     "lineup_spot": 1
+    }
+   },
+   "at": "2026-09-05T17:08:09+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      571970,
+      678246,
+      804668
+     ],
+     "at": "2026-09-05T08:21:46+00:00"
+    },
+    {
+     "pids": [
+      695578,
+      624424,
+      678246
+     ],
+     "at": "2026-09-05T17:08:09+00:00"
+    }
+   ]
+  }
+ },
+ "prediction_of_record": {},
+ "rule": "Before a game's first pitch a designation may change and every change is kept in history[]. At first pitch it freezes: the published sheet is rewritten to match the lock and any later change is recorded in rejected[] instead of being applied. locked_late marks games first seen after they had already started. Pools and pairs follow the same rule keyed on their slot (label / lane_key), freezing when their EARLIEST leg starts; a locked ticket is never re-rostered when a leg scratches \u2014 that leg voids, which is what a real ticket does. prediction_of_record locks, per game_pk, the run_id standing at that game's first pitch -- the one official run for every player in that game, not just the picks; a player who joins the slate after that lock has no row in it, which is honest, not a bug."
+}

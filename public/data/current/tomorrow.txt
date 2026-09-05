@@ -1,0 +1,782 @@
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+┃ ⚾ THE BOARD — SUNDAY · SEPTEMBER 06, 2026
+┃ data locked 2026-09-05 · lineups live/confirmed
+┃ filter: recent 20+ PA (or 80+ season PA)
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+═══════════════════════════════════════
+⚠️ 18/267 players missing weather data
+⚠️ 267/267 players on unconfirmed lineups
+═══════════════════════════════════════
+
+📊 SLATE ─────────────────────────────────────
+
+ projected HRs 35–44 · power grade Strong
+ top HR profiles 109 · weak pitcher spots 13
+
+
+
+🎯 THE FOUR ──────────────────────────────────
+
+ 🧨 HR       Rafael Devers (SF)               78.0
+             L5 7H/4HR/6XBH · vs Christian Scott
+
+ 💠 HIT      Yandy Díaz (TB) ⭐                84.0
+             L5 8H/1HR/3XBH · vs MacKenzie Gore
+
+ 🏁 HRR      Turner Hill (SF) ⭐               91.6
+             L5 8H/0HR/1XBH · vs Christian Scott
+
+ ⚾ CONTACT  Thomas Saggese (STL)             91.6
+             L5 9H/3HR/4XBH · vs Tanner Gordon
+
+──────────────────────────────────────────────
+
+🗓️ GAME BY GAME ──────────────────────────────
+
+═══════════════════════════════════════
+⚾ MIL @ CIN (09:10 AM MST)
+(UNCONFIRMED LINEUP)
+🎯 MIL SP Kyle Harrison (L) | RHB Weak — Neutral | HR/9 1.60 | HH 40%
+Weak pitches: FF (12HR 51%HH) , CH (2HR 38%HH)
+🎯 CIN SP Brady Singer (R) | LHB Weak — ⚠️ HARD CONTACT | HR/9 1.65 | HH 47%
+Weak pitches: SL (1HR 57%HH) , SI (1HR 51%HH)
+85F | Wind 10mph in from CF/corner
+═══════════════════════════════════════
+
+🥇 Top Pick | Sal Stewart ⭐ (CIN) — HR 61.6 | OVR 63.5 | HR/PA +1.0 vs pace (hot) | 4g | HRW 🌋 (82) | IHR 0.21
+PMix 79 | Crush FF/SI | 350+ 7/29 375+ 5/29 | FB 38% Pull 52% | L5 6H/1HR/2XBH R2 RBI2
+
+🎆 HR Pick | Héctor Rodríguez ⭐ (CIN) — HR 61.5 | HR/PA +0.8 vs pace (hot) | 1g | HRW ⚡ (69) | IHR 0.12
+PMix 56 | Risk SI | 350+ 4/24 375+ 3/24 | FB 33% Pull 65% | L5 5H/2HR/3XBH
+
+➕ Hit Pick | Elly De La Cruz ⭐ 🧩 (CIN) — HIT 78.6 | HR/PA -0.8 vs pace (due) | 11g | IHR 0.13
+BA .276 | BA vs LHP .323 | K 27% | L5 8H/0HR/1XBH
+
+🔺 HRR Pick | Jackson Chourio (MIL) — HRR 69.8 | HR/PA +0.1 vs pace (on pace) | 2g | HRW ⚡ (65) | IHR 0.23
+BA .284 | BABIP 0.341 | PreOB 0.435 Post 0.471 | L5 8H/6R/1RBI
+
+🟢 Base Pick | William Contreras ⭐ (MIL) — XBH Anchor | HR/PA -0.5 vs pace (due) | 5g | HRW ⚡ (56) | IHR 0.12
+BA .272 | BABIP 0.298 | L5 6H/4XBH/0HR
+
+═══════════════════════════════════════
+⚾ ATL @ PHI (10:10 AM MST)
+(UNCONFIRMED LINEUP)
+🎯 ATL SP Tyler Mahle (R) | RHB Weak — ⚠️ HARD CONTACT | HR/9 1.22 | HH 46%
+Weak pitches: FF (4HR 40%HH) , FS (3HR 34%HH)
+🎯 PHI SP Aaron Nola (R) | RHB Weak — 🧊 GB/TRAP | HR/9 1.95 | HH 40%
+Weak pitches: KC (6HR 41%HH) , FF (5HR 51%HH)
+72F | Wind 8mph crosswind (in)
+═══════════════════════════════════════
+
+🥇 Top Pick | Michael Harris II (ATL) — HR 59.9 | OVR 61.3 | HR/PA +1.1 vs pace (hot) | 2g | HRW 🌋 (84) | IHR 0.18
+PMix 70 | Crush FF/SL | 350+ 4/22 375+ 3/22 | FB 23% Pull 27% | L5 4H/2HR/2XBH R3 RBI3
+
+🎆 HR Pick | Sean Murphy ⭐ 🧩 (ATL) — HR 64.6 | HR/PA +2.1 vs pace (hot) | 1g | HRW 🌋 (88) | IHR 0.16
+PMix 56 | Crush FF | 350+ 4/19 375+ 3/19 | FB 26% Pull 58% | L5 6H/2HR/3XBH
+
+➕ Hit Pick | Bryce Harper ⭐ 🧩 (PHI) — HIT 79.7 | HR/PA -0.9 vs pace (due) | 7g | IHR 0.12
+BA .273 | BA vs RHP .300 | K 21% | L5 9H/0HR/2XBH
+
+🔺 HRR Pick | Ronald Acuña Jr. (ATL) — HRR 63.9 | HR/PA +0.3 vs pace (on pace) | 1g | HRW 🌤️ (48) | IHR 0.09
+BA .249 | BABIP 0.293 | PreOB 0.386 Post 0.448 | L5 9H/3R/5RBI
+
+🟢 Base Pick | Edmundo Sosa (PHI) — XBH Anchor | HR/PA +1.4 vs pace (hot) | 2g | HRW ⚡ (69) | IHR 0.10
+BA .239 | BABIP 0.278 | L5 6H/3XBH/2HR
+
+═══════════════════════════════════════
+⚾ BOS @ BAL (10:35 AM MST)
+(UNCONFIRMED LINEUP)
+🎯 BOS SP Payton Tolle (L) — 🧊 GB/TRAP | HR/9 1.03 | HH 29% | 📈 Trending better
+Weak pitches: FF (4HR 35%HH) , CU (1HR 39%HH)
+  Barrel 2%→0% | HH 32%→26% | EV 86.2→84.0 (last 5 vs last 8)
+🎯 BAL SP Kyle Bradish (R) | LHB Weak — Neutral | HR/9 1.03 | HH 41%
+Weak pitches: SL (3HR 53%HH) , CU (3HR 44%HH)
+79F | Wind 10mph in from CF
+═══════════════════════════════════════
+
+🥇 Top Pick | Mickey Gasper ⭐ (BOS) — HR 61.2 | OVR 66.3 | HR/PA +1.1 vs pace (hot) | 0g | HRW 🌋 (88) | IHR 0.24
+PMix 62 | Crush SI/FF | 350+ 4/17 375+ 4/17 | FB 35% Pull 71% | L5 6H/3HR/4XBH R5 RBI3
+
+🎆 HR Pick | Coby Mayo (BAL) — HR 52.0 | HR/PA -0.0 vs pace (on pace) | 4g | HRW 🌤️ (45) | IHR 0.14
+PMix 86 | Crush FF/SI | 350+ 3/21 375+ 3/21 | FB 33% Pull 52% | L5 5H/1HR/1XBH
+
+➕ Hit Pick | Blaze Alexander ⭐ (BAL) — HIT 69.6 | HR/PA -0.3 vs pace (on pace) | 8g | IHR 0.13
+BA .316 | BA vs LHP .286 | K 21% | L5 7H/0HR/0XBH
+
+🔺 HRR Pick | Roman Anthony ⭐ (BOS) — HRR 65.9 | HR/PA +1.6 vs pace (hot) | 1g | HRW 🌋 (84) | IHR 0.24
+BA .259 | BABIP 0.364 | PreOB 0.340 Post 0.463 | L5 8H/5R/2RBI
+
+🟢 Base Pick | Wilyer Abreu ⭐ (BOS) — XBH Anchor | HR/PA -0.8 vs pace (due) | 7g | HRW 🧊 (33) | IHR 0.07
+BA .257 | BABIP 0.285 | L5 5H/3XBH/0HR
+
+═══════════════════════════════════════
+⚾ LAA @ PIT (10:35 AM MST)
+(UNCONFIRMED LINEUP)
+🎯 LAA SP Walbert Ureña (R) — 🧊 GB/TRAP | HR/9 0.58 | HH 42%
+Weak pitches: FF (2HR 61%HH) , CH (2HR 26%HH)
+🎯 PIT SP Paul Skenes (R) — 🧊 GB/TRAP | HR/9 0.90 | HH 42%
+Weak pitches: FF (2HR 49%HH) , ST (2HR 22%HH)
+73F | Wind 6mph in from CF
+═══════════════════════════════════════
+
+🥇 Top Pick | Brandon Lowe (PIT) — HR 57.0 | OVR 58.3 | HR/PA +0.0 vs pace (on pace) | 3g | HRW 🚀 (78) | IHR 0.16
+PMix 93 | Crush CH/SI | 350+ 4/19 375+ 2/19 | FB 42% Pull 63% | L5 8H/1HR/3XBH R4 RBI2
+
+🎆 HR Pick | Esmerlyn Valdez (PIT) — HR 47.1 | HR/PA -0.2 vs pace (on pace) | 2g | HRW 🌤️ (52) | IHR 0.29
+PMix 55 | Crush FF | 350+ 3/14 375+ 1/14 | FB 21% Pull 93% | L5 3H/1HR/1XBH
+
+➕ Hit Pick | Wade Meckler (LAA) — HIT 64.9 | HR/PA -0.2 vs pace (on pace) | 23g | IHR 0.04
+BA .296 | BA vs RHP .313 | K 20% | L5 8H/0HR/1XBH
+
+🔺 HRR Pick | Bryan Reynolds (PIT) — HRR 69.5 | HR/PA -0.5 vs pace (due) | 34g | HRW 🌤️ (50) | IHR 0.21
+BA .263 | BABIP 0.331 | PreOB 0.398 Post 0.459 | L5 7H/6R/0RBI
+
+🟢 Base Pick | Vaughn Grissom (LAA) — XBH Anchor | HR/PA +0.5 vs pace (hot) | 1g | HRW ⚡ (62) | IHR 0.18
+BA .249 | BABIP 0.277 | L5 7H/3XBH/1HR
+
+═══════════════════════════════════════
+⚾ DET @ CLE (10:40 AM MST)
+(UNCONFIRMED LINEUP)
+🎯 DET SP Jackson Jobe (R) | RHB Weak — 🧊 GB/TRAP | HR/9 1.54 | HH 40%
+Weak pitches: FF (2HR 52%HH) , CU (1HR 80%HH)
+🎯 CLE SP Gavin Williams (R) | RHB Weak — Neutral | HR/9 1.49 | HH 40%
+Weak pitches: SI (3HR 70%HH) , ST (3HR 36%HH)
+73F | Wind 10mph in from CF
+═══════════════════════════════════════
+
+🥇 Top Pick | Angel Martínez (CLE) — HR 55.2 | OVR 52.4 | HR/PA +1.2 vs pace (hot) | 3g | HRW 🚀 (72) | IHR 0.14
+PMix 68 | Crush FF/CU | 350+ 3/21 375+ 2/21 | FB 29% Pull 71% | L5 4H/2HR/2XBH R4 RBI5
+
+🎆 HR Pick | Spencer Torkelson ⭐ (DET) — HR 52.0 | HR/PA +0.2 vs pace (on pace) | 1g | HRW ⚡ (61) | IHR 0.07
+PMix 92 | Crush ST/FF | 350+ 1/14 375+ 1/14 | FB 29% Pull 79% | L5 5H/2HR/3XBH
+
+➕ Hit Pick | Chase DeLauter (CLE) — HIT 73.0 | HR/PA -0.5 vs pace (due) | 18g | IHR 0.05
+BA .294 | BA vs RHP .260 | K 15% | L5 6H/0HR/4XBH
+
+🔺 HRR Pick | Max Clark (DET) — HRR 61.4 | HR/PA -0.3 vs pace (on pace) | 9g | HRW 🧊 (32) | IHR 0.11
+BA .265 | BABIP 0.301 | PreOB 0.385 Post 0.473 | L5 7H/3R/3RBI
+
+🟢 Base Pick | Brayan Rocchio (CLE) — XBH Anchor | HR/PA +1.5 vs pace (hot) | 1g | HRW 🌤️ (52) | IHR 0.00
+BA .247 | BABIP 0.273 | L5 4H/3XBH/2HR
+
+═══════════════════════════════════════
+⚾ SF @ NYM (10:40 AM MST)
+(UNCONFIRMED LINEUP)
+🎯 SF SP Logan Webb (R) — 🧊 GB/TRAP | HR/9 0.66 | HH 35%
+Weak pitches: SI (2HR 42%HH) , ST (1HR 44%HH)
+🎯 NYM SP Christian Scott (R) — Neutral | HR/9 0.95 | HH 35%
+Weak pitches: FF (7HR 45%HH) , ST (1HR 22%HH)
+73F | Wind 7mph out to CF
+═══════════════════════════════════════
+
+🥇 Top Pick | Rafael Devers (SF) — HR 78.0 | OVR 74.9 | HR/PA +1.9 vs pace (hot) | 0g | HRW 🌋 (88) | IHR 0.19
+PMix 95 | Crush FF/FC | 350+ 5/26 375+ 5/26 | FB 42% Pull 68% | L5 7H/4HR/6XBH R6 RBI10
+
+🎆 HR Pick | Juan Soto (NYM) — HR 62.3 | HR/PA +0.8 vs pace (hot) | 1g | HRW 🚀 (77) | IHR 0.22
+PMix 93 | Crush ST/FC | 350+ 3/18 375+ 3/18 | FB 44% Pull 56% | L5 3H/2HR/2XBH
+
+➕ Hit Pick | Turner Hill ⭐ (SF) — HIT 75.2 | HR/PA +0.0 vs pace (on pace) | 17g | IHR 0.12
+BA .333 | BA vs RHP .269 | K 11% | L5 8H/0HR/1XBH
+
+🔺 HRR Pick | Jonah Cox ⭐ (SF) — HRR 62.1 | HR/PA +0.0 vs pace (on pace) | 4g | HRW 🌤️ (51) | IHR 0.18
+BA .297 | BABIP 0.457 | PreOB 0.431 Post 0.490 | L5 6H/5R/3RBI
+
+🟢 Base Pick | Francisco Lindor (NYM) — XBH Anchor | HR/PA +1.1 vs pace (hot) | 0g | HRW 🌋 (80) | IHR 0.05
+BA .233 | BABIP 0.246 | L5 5H/3XBH/3HR
+
+═══════════════════════════════════════
+⚾ CHC @ MIA (10:40 AM MST)
+(UNCONFIRMED LINEUP)
+🎯 CHC SP Clay Holmes (R) — 🧊 GB/TRAP | HR/9 0.44 | HH 39%
+Weak pitches: SI (1HR 51%HH) , CH (0HR 20%HH)
+🎯 MIA SP Tyler Phillips (R) — Neutral | HR/9 1.14 | HH 38%
+Weak pitches: SI (4HR 44%HH) , FS (1HR 49%HH)
+78F | Wind 10mph in from CF
+═══════════════════════════════════════
+
+🥇 Top Pick | Pete Crow-Armstrong ⭐ 🧩 (CHC) — HR 71.0 | OVR 69.8 | HR/PA +0.8 vs pace (hot) | 1g | HRW 🌋 (85) | IHR 0.24
+PMix 95 | Crush ST/FS | 350+ 6/25 375+ 6/25 | FB 32% Pull 76% | L5 4H/1HR/2XBH R6 RBI2
+
+🎆 HR Pick | Kyle Stowers (MIA) — HR 66.5 | HR/PA +1.2 vs pace (hot) | 1g | HRW 🌋 (86) | IHR 0.33
+PMix 95 | Crush SI/CH | 350+ 4/15 375+ 3/15 | FB 33% Pull 93% | L5 6H/2HR/3XBH
+
+➕ Hit Pick | Tyrone Taylor (CHC) — HIT 66.9 | HR/PA -0.0 vs pace (on pace) | 2g | IHR 0.08
+BA .284 | BA vs RHP .226 | K 17% | L5 10H/1HR/3XBH
+
+🔺 HRR Pick | Alex Bregman (CHC) — HRR 74.1 | HR/PA +3.2 vs pace (hot) | 2g | HRW 🌋 (88) | IHR 0.19
+BA .262 | BABIP 0.278 | PreOB 0.402 Post 0.478 | L5 9H/6R/8RBI
+
+🟢 Base Pick | Heriberto Hernández (MIA) — XBH Anchor | HR/PA -0.1 vs pace (on pace) | 1g | HRW ⚡ (62) | IHR 0.15
+BA .230 | BABIP 0.267 | L5 3H/3XBH/1HR
+
+═══════════════════════════════════════
+⚾ ARI @ HOU (11:10 AM MST)
+(UNCONFIRMED LINEUP)
+🎯 ARI SP Eduardo Rodriguez (L) — 🧊 GB/TRAP | HR/9 0.75 | HH 22%
+Weak pitches: CU (1HR 52%HH) , SI (1HR 26%HH)
+🎯 HOU SP Peter Lambert (R) — 🧊 GB/TRAP | HR/9 0.88 | HH 30%
+Weak pitches: FF (4HR 52%HH) , SL (1HR 47%HH)
+86F | Wind 5mph crosswind (out)
+═══════════════════════════════════════
+
+🥇 Top Pick | Yordan Alvarez (HOU) — HR 39.1 | OVR 50.1 | HR/PA -1.2 vs pace (due) | 6g | HRW 🧊 (42) | IHR 0.11
+PMix 92 | Crush FF/CU | 350+ 2/19 375+ 1/19 | FB 37% Pull 68% | L5 5H/0HR/1XBH R3 RBI1
+
+🎆 HR Pick | Lars Nootbaar (ARI) — HR 49.1 | HR/PA +1.5 vs pace (hot) | 4g | HRW 🚀 (75) | IHR 0.10
+PMix 66 | Crush FF/FC | 350+ 2/21 375+ 2/21 | FB 48% Pull 57% | L5 3H/1HR/2XBH
+
+➕ Hit Pick | Isaac Paredes (HOU) — HIT 62.0 | HR/PA +0.4 vs pace (on pace) | 3g | IHR 0.00
+BA .258 | BA vs LHP .292 | K 13% | L5 5H/1HR/3XBH
+
+🔺 HRR Pick | Gabriel Moreno (ARI) — HRR 58.0 | HR/PA +0.5 vs pace (hot) | 0g | HRW 🌤️ (52) | IHR 0.04
+BA .299 | BABIP 0.327 | PreOB 0.330 Post 0.488 | L5 5H/2R/2RBI
+
+🟢 Base Pick | Yainer Diaz (HOU) — XBH Anchor | HR/PA +0.2 vs pace (on pace) | 0g | HRW 🧊 (44) | IHR 0.24
+BA .262 | BABIP 0.265 | L5 4H/3XBH/1HR
+
+═══════════════════════════════════════
+⚾ TOR @ KC (11:10 AM MST)
+(UNCONFIRMED LINEUP)
+🎯 TOR SP Spencer Miles (R) — 🧊 GB/TRAP | HR/9 0.53 | HH 30% | 📈 Trending better
+Weak pitches: SI (2HR 45%HH) , FF (1HR 17%HH)
+  Barrel 4%→7% | HH 35%→27% | EV 89.6→87.2 (last 5 vs last 8)
+🎯 KC SP Randy Dobnak (R) — 🧊 GB/TRAP | HR/9 0.78 | HH 38%
+Weak pitches: ST (1HR 40%HH) , SI (0HR 51%HH)
+76F | Wind 32mph crosswind (out)
+═══════════════════════════════════════
+
+🥇 Top Pick | Carter Jensen (KC) — HR 63.0 | OVR 65.8 | HR/PA +2.2 vs pace (hot) | 1g | HRW 🌋 (88) | IHR 0.30
+PMix 86 | Crush SI/CU | 350+ 7/23 375+ 5/23 | FB 48% Pull 78% | L5 9H/3HR/7XBH R5 RBI6
+
+🎆 HR Pick | Kazuma Okamoto (TOR) — HR 54.4 | HR/PA +1.0 vs pace (hot) | 3g | HRW 🚀 (72) | IHR 0.18
+PMix 95 | Crush SI/ST | 350+ 4/17 375+ 3/17 | FB 35% Pull 71% | L5 3H/1HR/1XBH
+
+➕ Hit Pick | Michael Massey (KC) — HIT 67.0 | HR/PA -0.6 vs pace (due) | 9g | IHR 0.12
+BA .280 | BA vs RHP .263 | K 16% | L5 4H/0HR/1XBH
+
+🔺 HRR Pick | Brett Bateman (TOR) — HRR 64.6 | HR/PA +0.0 vs pace (on pace) | 23g | HRW 🧊 (20) | IHR 0.00
+BA .330 | BABIP 0.430 | PreOB 0.364 Post 0.453 | L5 6H/7R/1RBI
+
+🟢 Base Pick | George Springer (TOR) — XBH Anchor | HR/PA +0.4 vs pace (on pace) | 5g | HRW 🚀 (70) | IHR 0.14
+BA .251 | BABIP 0.284 | L5 5H/4XBH/0HR
+
+═══════════════════════════════════════
+⚾ TB @ TEX (11:35 AM MST)
+(UNCONFIRMED LINEUP)
+🎯 TB SP Ian Seymour (L) | LHB Weak — Neutral | HR/9 1.59 | HH 31%
+Weak pitches: CH (4HR 28%HH) , ST (3HR 24%HH)
+🎯 TEX SP MacKenzie Gore (L) — 🧊 GB/TRAP | HR/9 1.05 | HH 36%
+Weak pitches: CU (4HR 48%HH) , FF (4HR 39%HH)
+═══════════════════════════════════════
+
+🥇 Top Pick | Yandy Díaz ⭐ 🧩 (TB) — HR 49.7 | OVR 59.6 | HR/PA +0.3 vs pace (on pace) | 3g | HRW ⚡ (67) | IHR 0.19
+PMix 95 | Crush FF/CH | 350+ 6/26 375+ 3/26 | FB 19% Pull 46% | L5 8H/1HR/3XBH R3 RBI1
+
+🎆 HR Pick | Justin Foscue (TEX) — HR 61.9 | HR/PA +0.9 vs pace (hot) | 2g | HRW ⚡ (69) | IHR 0.25
+PMix 84 | Crush FF/CH | 350+ 4/16 375+ 3/16 | FB 62% Pull 56% | L5 4H/2HR/2XBH
+
+➕ Hit Pick | Brandon Nimmo (TEX) — HIT 69.7 | HR/PA -0.5 vs pace (due) | 6g | IHR 0.13
+BA .266 | BA vs LHP .311 | K 21% | L5 7H/0HR/1XBH
+
+🔺 HRR Pick | Junior Caminero (TB) — HRR 66.2 | HR/PA -1.2 vs pace (due) | 5g | HRW 🌤️ (52) | IHR 0.08
+BA .280 | BABIP 0.285 | PreOB 0.422 Post 0.500 | L5 5H/1R/3RBI
+
+🟢 Base Pick | Ezequiel Duran (TEX) — XBH Anchor | HR/PA +0.3 vs pace (on pace) | 0g | HRW 🚀 (76) | IHR 0.14
+BA .276 | BABIP 0.334 | L5 6H/2XBH/2HR
+
+═══════════════════════════════════════
+⚾ STL @ COL (12:10 PM MST)
+(UNCONFIRMED LINEUP)
+🎯 STL SP Kyle Leahy (R) | LHB Weak — 🧊 GB/TRAP | HR/9 0.90 | HH 42%
+Weak pitches: SL (2HR 46%HH) , FF (1HR 52%HH)
+🎯 COL SP Tanner Gordon (R) | LHB Weak — Neutral | HR/9 1.73 | HH 38%
+Weak pitches: SL (4HR 41%HH) , FF (1HR 68%HH)
+74F | Wind 4mph in from CF
+═══════════════════════════════════════
+
+🥇 Top Pick | Thomas Saggese (STL) — HR 63.2 | OVR 63.3 | HR/PA +2.2 vs pace (hot) | 2g | HRW 🌋 (88) | IHR 0.28
+PMix 76 | Crush FF | 350+ 5/18 375+ 4/18 | FB 44% Pull 50% | L5 9H/3HR/4XBH R8 RBI7
+
+🎆 HR Pick | Jordan Walker ⭐ (STL) — HR 55.2 | HR/PA +0.1 vs pace (on pace) | 3g | HRW ⚡ (57) | IHR 0.10
+PMix 92 | Crush FF/CH | 350+ 3/21 375+ 1/21 | FB 10% Pull 71% | L5 7H/1HR/4XBH
+
+➕ Hit Pick | TJ Rumfield ⭐ (COL) — HIT 82.5 | HR/PA +0.5 vs pace (hot) | 0g | IHR 0.09
+BA .295 | BA vs RHP .301 | K 14% | L5 8H/2HR/3XBH
+
+🔺 HRR Pick | Adael Amador ⭐ (COL) — HRR 76.5 | HR/PA -0.5 vs pace (due) | 2g | HRW ⚡ (66) | IHR 0.14
+BA .381 | BABIP 0.276 | PreOB 0.422 Post 0.520 | L5 6H/3R/4RBI
+
+🟢 Base Pick | Joshua Báez (STL) — XBH Anchor | HR/PA +0.4 vs pace (on pace) | 3g | HRW 🚀 (73) | IHR 0.21
+BA .212 | BABIP 0.211 | L5 5H/3XBH/1HR
+
+═══════════════════════════════════════
+⚾ ATH @ SEA (01:10 PM MST)
+(UNCONFIRMED LINEUP)
+🎯 ATH SP Gage Jump (L) | RHB Weak — Neutral | HR/9 0.97 | HH 35%
+Weak pitches: FF (6HR 44%HH) , CH (1HR 32%HH)
+🎯 SEA SP Bryan Woo (R) — ⚠️ HARD CONTACT | HR/9 1.09 | HH 48%
+Weak pitches: SI (3HR 41%HH) , ST (1HR 14%HH)
+54F | Wind 5mph in from CF
+═══════════════════════════════════════
+
+🥇 Top Pick | Zack Gelof (ATH) — HR 63.8 | OVR 63.6 | HR/PA +1.0 vs pace (hot) | 0g | HRW 🌋 (88) | IHR 0.13
+PMix 78 | Crush FF/ST | 350+ 3/23 375+ 3/23 | FB 39% Pull 57% | L5 7H/3HR/5XBH R7 RBI4
+
+🎆 HR Pick | Randy Arozarena ⭐ (SEA) — HR 56.5 | HR/PA +1.2 vs pace (hot) | 3g | HRW 🌋 (83) | IHR 0.14
+PMix 69 | Crush FF/SI | 350+ 3/22 375+ 2/22 | FB 32% Pull 77% | L5 7H/2HR/4XBH
+
+➕ Hit Pick | Josh Naylor ⭐ (SEA) — HIT 65.1 | HR/PA -0.4 vs pace (on pace) | 22g | IHR 0.07
+BA .269 | BA vs LHP .296 | K 13% | L5 6H/0HR/2XBH
+
+🔺 HRR Pick | Michael Stefanic (ATH) — HRR 67.8 | HR/PA +0.0 vs pace (on pace) | 9g | HRW 🧊 (24) | IHR 0.06
+BA .389 | BABIP 0.522 | PreOB 0.402 Post 0.442 | L5 4H/1R/1RBI
+
+🟢 Base Pick | Dominic Canzone (SEA) — XBH Anchor | HR/PA +0.1 vs pace (on pace) | 3g | HRW ⚡ (70) | IHR 0.23
+BA .254 | BABIP 0.287 | L5 6H/4XBH/1HR
+
+═══════════════════════════════════════
+⚾ NYY @ SD (01:10 PM MST)
+(UNCONFIRMED LINEUP)
+🎯 NYY SP Gerrit Cole (R) — ⚠️ HARD CONTACT | HR/9 1.13 | HH 46%
+Weak pitches: FF (1HR 52%HH) , SL (1HR 47%HH)
+🎯 SD SP Michael King (R) — Neutral | HR/9 1.00 | HH 29%
+Weak pitches: SI (4HR 44%HH) , FF (3HR 44%HH)
+78F | Wind 9mph in from CF
+═══════════════════════════════════════
+
+🥇 Top Pick | Ty France (SD) — HR 47.1 | OVR 55.4 | HR/PA +0.1 vs pace (on pace) | 1g | HRW ⚡ (55) | IHR 0.04
+PMix 95 | Crush FF/SL | 350+ 2/23 375+ 0/23 | FB 26% Pull 35% | L5 8H/1HR/3XBH R4 RBI4
+
+🎆 HR Pick | Spencer Jones (NYY) — HR 54.4 | HR/PA +1.2 vs pace (hot) | 2g | HRW 🚀 (79) | IHR 0.21
+PMix 93 | Crush CH/SI | 350+ 2/14 375+ 2/14 | FB 21% Pull 71% | L5 5H/2HR/2XBH
+
+➕ Hit Pick | Ben Rice (NYY) — HIT 63.9 | HR/PA -0.2 vs pace (on pace) | 0g | IHR 0.17
+BA .257 | BA vs RHP .256 | K 25% | L5 8H/1HR/1XBH
+
+🔺 HRR Pick | Fernando Tatis Jr. (SD) — HRR 65.2 | HR/PA +1.4 vs pace (hot) | 2g | HRW ⚡ (67) | IHR 0.19
+BA .282 | BABIP 0.325 | PreOB 0.422 Post 0.477 | L5 5H/4R/3RBI
+
+🟢 Base Pick | Luis García Jr. (NYY) — XBH Anchor | HR/PA -1.2 vs pace (due) | 8g | HRW 🧊 (24) | IHR 0.14
+BA .284 | BABIP 0.276 | L5 4H/1XBH/0HR
+
+═══════════════════════════════════════
+⚾ MIN @ CWS (03:20 PM MST)
+(UNCONFIRMED LINEUP)
+🎯 MIN SP Bailey Ober (R) | LHB Weak — Neutral | HR/9 1.43 | HH 44%
+Weak pitches: FF (4HR 38%HH) , CH (3HR 37%HH)
+🎯 CWS SP Sean Burke (R) — ⚠️ HARD CONTACT | HR/9 1.05 | HH 42%
+Weak pitches: FC (1HR 71%HH) , FF (1HR 33%HH)
+70F | Wind 10mph in from CF/corner
+═══════════════════════════════════════
+
+🥇 Top Pick | Ryan Jeffers (MIN) — HR 57.8 | OVR 62.2 | HR/PA +2.2 vs pace (hot) | 2g | HRW 🌋 (88) | IHR 0.22
+PMix 60 | Crush FF/FC | 350+ 6/23 375+ 5/23 | FB 26% Pull 65% | L5 6H/3HR/6XBH R6 RBI8
+
+🎆 HR Pick | Kody Clemens (MIN) — HR 62.4 | HR/PA +1.0 vs pace (hot) | 2g | HRW 🌋 (88) | IHR 0.20
+PMix 90 | Crush FF/FC | 350+ 6/20 375+ 5/20 | FB 50% Pull 80% | L5 5H/2HR/2XBH
+
+➕ Hit Pick | Miguel Vargas ⭐ (CWS) — HIT 69.5 | HR/PA +0.0 vs pace (on pace) | 0g | IHR 0.04
+BA .251 | BA vs RHP .236 | K 17% | L5 6H/1HR/1XBH
+
+🔺 HRR Pick | Kaelen Culpepper (MIN) — HRR 64.8 | HR/PA -0.7 vs pace (due) | 7g | HRW 🧊 (22) | IHR 0.08
+BA .301 | BABIP 0.375 | PreOB 0.427 Post 0.472 | L5 5H/3R/3RBI
+
+🟢 Base Pick | Colson Montgomery ⭐ (CWS) — XBH Anchor | HR/PA -0.1 vs pace (on pace) | 0g | HRW ⚡ (62) | IHR 0.11
+BA .213 | BABIP 0.269 | L5 5H/4XBH/2HR
+
+═══════════════════════════════════════
+⚾ WSH @ LAD (07:10 PM MST)
+(UNCONFIRMED LINEUP)
+🎯 WSH SP Andrew Alvarez (L) — Neutral | HR/9 0.50 | HH 36%
+Weak pitches: FF (2HR 36%HH) , SL (1HR 44%HH)
+🎯 LAD SP Eric Lauer (L) — Neutral | HR/9 2.16 | HH 38%
+Weak pitches: FF (2HR 43%HH) , FC (1HR 33%HH)
+75F | Wind 2mph in from CF/corner
+═══════════════════════════════════════
+
+🥇 Top Pick | Daylen Lile (WSH) — HR 56.9 | OVR 56.7 | HR/PA +1.3 vs pace (hot) | 3g | HRW 🌋 (83) | IHR 0.27
+PMix 84 | Crush FF/FC | 350+ 6/22 375+ 3/22 | FB 45% Pull 50% | L5 4H/2HR/2XBH R3 RBI5
+
+🎆 HR Pick | Teoscar Hernández (LAD) — HR 48.3 | HR/PA +0.4 vs pace (hot) | 4g | HRW 🚀 (75) | IHR 0.14
+PMix 73 | Crush FF/CH | 350+ 3/22 375+ 2/22 | FB 27% Pull 82% | L5 9H/1HR/4XBH
+
+➕ Hit Pick | Keibert Ruiz (WSH) — HIT 66.7 | HR/PA +0.4 vs pace (hot) | 3g | IHR 0.12
+BA .282 | BA vs LHP .287 | K 11% | L5 5H/1HR/2XBH
+
+🔺 HRR Pick | Freddie Freeman (LAD) — HRR 71.1 | HR/PA +0.5 vs pace (hot) | 1g | HRW ⚡ (55) | IHR 0.14
+BA .303 | BABIP 0.347 | PreOB 0.330 Post 0.490 | L5 5H/5R/4RBI
+
+🟢 Base Pick | Mookie Betts (LAD) — XBH Anchor | HR/PA +0.2 vs pace (on pace) | 2g | HRW ⚡ (64) | IHR 0.04
+BA .244 | BABIP 0.244 | L5 7H/5XBH/1HR
+
+🧩 PAIRINGS
+Rules: max 1 appearance in pairs | reasons compact
+
+🔒 TOP 30 PAIRS
+Straight from the Top 30 board, max 1 appearance
+1) Pete Crow-Armstrong (CHC) + Rafael Devers (SF)
+   Reason: EV 93.6+97.7 | HRW 85+88 | L7 6HR+4HR
+2) Juan Soto (NYM) + Junior Caminero (TB)
+   Reason: EV 96.0+91.9 | L7 2HR+2HR
+
+🔒 CORE HR PAIRS
+1) Ben Rice (NYY) 🎆  + Sal Stewart (CIN) 🎆
+   Reason: L5 8H+6H hot | L7 1HR+3HR
+2) Esmerlyn Valdez (PIT) 🎆  + Heriberto Hernández (MIA) 🟢
+   Reason: L7 2HR+2HR
+
+🧬 STATCAST HR PAIRS
+1) Joshua Báez (STL) 🥇  + Colson Montgomery (CWS) 🟢
+   Reason: HRW 73+62 | HR/9 1.73+1.43 | L7 2HR+2HR
+2) Brandon Lowe (PIT) 🥇  + Hunter Goodman (COL) 🎆
+   Reason: HR + power profile
+
+🎯 FLEX HR PAIRS
+1) Pete Alonso (BAL) 🔺  + Dominic Canzone (SEA) 🔺
+   Reason: L7 1HR+1HR
+2) Kody Clemens (MIN) 🎆  + Justin Foscue (TEX) 🥇
+   Reason: EV 94.0+92.4 | HRW 88+69 | 1 HARD CONTACT
+
+🎲 VARIANCE POWER PAIRS
+1) Zack Gelof (ATH) 🥇  + Joc Pederson (TEX) 🎆
+   Reason: 1 HARD CONTACT | L7 3HR+1HR
+2) Mickey Gasper (BOS) 🥇  + Yordan Alvarez (HOU) 🥇
+   Reason: L7 3HR+1HR
+
+🏊 4-MAN HR POOLS
+POOL A — STRONGEST                  POOL B — HRR+POWER                  POOL C — BALANCED                   POOL D — VARIANCE
+
+Ryan Jeffers (MIN) 🥇                Adael Amador (COL) 🔺                Jordan Walker (STL) 🎆               Matt Olson (ATL) 🎆
+Carter Jensen (KC) 🥇                Héctor Rodríguez (CIN) 🥇            Kyle Stowers (MIA) 🥇                Tyrone Taylor (CHC) ➕
+Francisco Lindor (NYM) 🟢            Alex Bregman (CHC) 🔺                Ty France (SD) ➕                    Brian Serven (ATH) 🎆
+Michael Harris II (ATL) 🥇           Kyle Schwarber (PHI)                Eugenio Suárez (CIN) 🎆              Kazuma Okamoto (TOR) 🎆
+
+🏊 3-MAN HR POOLS  (replaces the 6-man — see the note in the code)
+   Grade ladder: 2+ is a hit, 3/3 is perfect. One homer is not a win.
+POOL A — STRONGEST                  POOL B — HRR+VAR                    POOL C — BALANCED                   POOL D — VARIANCE
+
+Paul Goldschmidt (NYY) 🎆            Thomas Saggese (STL) 🟢              Jackson Chourio (MIL) 🔺             Rafael Flores Jr. (PIT)
+Michael Conforto (CHC) 🎆            Seiya Suzuki (CHC) 🔺                Jonah Cox (SF) 🔺                    JJ Bleday (CIN) 🎆
+Randy Arozarena (SEA) 🎆             Miguel Vargas (CWS) ➕               James Wood (WSH) 🥇                  Coby Mayo (BAL) 🎆
+
+⚾ THE BOARDS ─────────────────────────────────
+
+🏆 TOP 30 ────────────────────────────────────
+ min 40 PA · 10 BBE · avoid = TRUE avoid only
+
+1. Pete Crow-Armstrong ⭐ 🧩 (CHC) — 💎 HR Bet | PA 636 BBE 25
+HR 71.0 | Board 83.3 | DC 68.4 | HR/PA +0.8 vs pace (hot) | 1g | HRW 🌋 (85) | IHR 0.24 | spot 1
+PMix 95 | Crush ST/FS | 350+ 6/25 375+ 6/25 | FB 32% Pull 76% | L5 4H/1HR/2XBH
+
+2. Kody Clemens (MIN) — 💎 HR Bet | PA 502 BBE 20
+HR 62.4 | Board 77.5 | DC 67.5 | HR/PA +1.0 vs pace (hot) | 2g | HRW 🌋 (88) | IHR 0.20 | spot 4
+PMix 90 | Crush FF/FC | 350+ 6/20 375+ 5/20 | FB 50% Pull 80% | L5 5H/2HR/2XBH
+
+3. Rafael Devers (SF) — 💎 HR Bet | PA 607 BBE 26
+HR 78.0 | Board 79.5 | DC 63.2 | HR/PA +1.9 vs pace (hot) | 0g | HRW 🌋 (88) | IHR 0.19 | spot 4
+PMix 95 | Crush FF/FC | 350+ 5/26 375+ 5/26 | FB 42% Pull 68% | L5 7H/4HR/6XBH
+
+4. Thomas Saggese (STL) — 💎 HR Bet | PA 104 BBE 18
+HR 63.2 | Board 70.0 | DC 63.6 | HR/PA +2.2 vs pace (hot) | 2g | HRW 🌋 (88) | IHR 0.28 | spot 6
+PMix 76 | Crush FF | 350+ 5/18 375+ 4/18 | FB 44% Pull 50% | L5 9H/3HR/4XBH
+
+5. Matt Olson (ATL) — 🔭 Power Watch | PA 613 BBE 22
+HR 45.8 | Board 71.6 | DC 58.3 | HR/PA -1.2 vs pace (due) | 8g | HRW 🧊 (25) | IHR 0.18 | spot 3
+PMix 92 | Crush KC/FF | 350+ 3/22 375+ 2/22 | FB 36% Pull 64% | L5 2H/0HR/1XBH
+
+6. Kyle Stowers (MIA) — 📈 HR Lean | PA 437 BBE 15
+HR 66.5 | Board 78.8 | DC 57.7 | HR/PA +1.2 vs pace (hot) | 1g | HRW 🌋 (86) | IHR 0.33 | spot 5
+PMix 95 | Crush SI/CH | 350+ 4/15 375+ 3/15 | FB 33% Pull 93% | L5 6H/2HR/3XBH
+
+7. Sal Stewart ⭐ (CIN) — 📈 HR Lean | PA 611 BBE 29
+HR 61.6 | Board 74.5 | DC 65.8 | HR/PA +1.0 vs pace (hot) | 4g | HRW 🌋 (82) | IHR 0.21 | spot 2
+PMix 79 | Crush FF/SI | 350+ 7/29 375+ 5/29 | FB 38% Pull 52% | L5 6H/1HR/2XBH
+
+8. Justin Foscue (TEX) — 📈 HR Lean | PA 209 BBE 16
+HR 61.9 | Board 75.3 | DC 64.0 | HR/PA +0.9 vs pace (hot) | 2g | HRW ⚡ (69) | IHR 0.25 | spot 2
+PMix 84 | Crush FF/CH | 350+ 4/16 375+ 3/16 | FB 62% Pull 56% | L5 4H/2HR/2XBH
+
+9. Brandon Lowe (PIT) — 🔭 Power Watch | PA 582 BBE 19
+HR 57.0 | Board 71.6 | DC 53.5 | HR/PA +0.0 vs pace (on pace) | 3g | HRW 🚀 (78) | IHR 0.16 | spot 4
+PMix 93 | Crush CH/SI | 350+ 4/19 375+ 2/19 | FB 42% Pull 63% | L5 8H/1HR/3XBH
+
+10. Corey Seager (TEX) — 🔭 Power Watch | PA 348 BBE 24
+HR 51.7 | Board 70.5 | DC 53.3 | HR/PA +0.2 vs pace (on pace) | 1g | HRW ⚡ (68) | IHR 0.21 | spot 7
+PMix 88 | Crush SI/ST | 350+ 5/24 375+ 3/24 | FB 38% Pull 58% | L5 5H/1HR/3XBH
+
+11. Juan Soto (NYM) — 📈 HR Lean | PA 382 BBE 18
+HR 62.3 | Board 76.0 | DC 57.1 | HR/PA +0.8 vs pace (hot) | 1g | HRW 🚀 (77) | IHR 0.22 | spot 1
+PMix 93 | Crush ST/FC | 350+ 3/18 375+ 3/18 | FB 44% Pull 56% | L5 3H/2HR/2XBH
+
+12. Zack Gelof (ATH) — 💎 HR Bet | PA 353 BBE 23
+HR 63.8 | Board 64.5 | DC 59.2 | HR/PA +1.0 vs pace (hot) | 0g | HRW 🌋 (88) | IHR 0.13 | spot 3
+PMix 78 | Crush FF/ST | 350+ 3/23 375+ 3/23 | FB 39% Pull 57% | L5 7H/3HR/5XBH
+
+13. Kazuma Okamoto (TOR) — 📈 HR Lean | PA 555 BBE 17
+HR 54.4 | Board 73.9 | DC 59.3 | HR/PA +1.0 vs pace (hot) | 3g | HRW 🚀 (72) | IHR 0.18 | spot 3
+PMix 95 | Crush SI/ST | 350+ 4/17 375+ 3/17 | FB 35% Pull 71% | L5 3H/1HR/1XBH
+
+14. JJ Bleday ⭐ (CIN) — 🔭 Power Watch | PA 471 BBE 26
+HR 49.6 | Board 67.6 | DC 56.5 | HR/PA +0.1 vs pace (on pace) | 1g | HRW 🌤️ (52) | IHR 0.15 | spot 4
+PMix 75 | Crush FF | 350+ 2/26 375+ 1/26 | FB 27% Pull 69% | L5 5H/1HR/2XBH
+
+15. Joc Pederson ⭐ (TEX) — 📈 HR Lean | PA 413 BBE 13
+HR 59.6 | Board 73.2 | DC 58.6 | HR/PA +0.8 vs pace (hot) | 4g | HRW 🌤️ (53) | IHR 0.15 | spot 3
+PMix 76 | Crush FF | 350+ 2/13 375+ 2/13 | FB 54% Pull 62% | L5 3H/1HR/1XBH
+
+16. Spencer Jones (NYY) — 🔭 Power Watch | PA 214 BBE 14
+HR 54.4 | Board 68.8 | DC 50.5 | HR/PA +1.2 vs pace (hot) | 2g | HRW 🚀 (79) | IHR 0.21 | spot 6
+PMix 93 | Crush CH/SI | 350+ 2/14 375+ 2/14 | FB 21% Pull 71% | L5 5H/2HR/2XBH
+
+17. Brian Serven (ATH) — 🔭 Power Watch | PA 63 BBE 20
+HR 51.3 | Board 65.4 | DC 56.6 | HR/PA -0.6 vs pace (due) | 2g | HRW 🌤️ (55) | IHR 0.20 | spot 6
+PMix 60 | Crush FF | 350+ 4/20 375+ 3/20 | FB 25% Pull 65% | L5 4H/1HR/2XBH
+
+18. Junior Caminero (TB) — 🔭 Power Watch | PA 615 BBE 25
+HR 40.4 | Board 66.3 | DC 54.4 | HR/PA -1.2 vs pace (due) | 5g | HRW 🌤️ (52) | IHR 0.08 | spot 2
+PMix 95 | Crush FF/CU | 350+ 3/25 375+ 3/25 | FB 20% Pull 64% | L5 5H/0HR/1XBH
+
+19. Eugenio Suárez (CIN) — 🔭 Power Watch | PA 430 BBE 16
+HR 57.1 | Board 66.5 | DC 53.5 | HR/PA +1.0 vs pace (hot) | 0g | HRW 🚀 (74) | IHR 0.06 | spot 7
+PMix 75 | Crush FF | 350+ 2/16 375+ 2/16 | FB 25% Pull 69% | L5 3H/2HR/2XBH
+
+20. Daylen Lile (WSH) — 📈 HR Lean | PA 583 BBE 22
+HR 56.9 | Board 70.3 | DC 59.8 | HR/PA +1.3 vs pace (hot) | 3g | HRW 🌋 (83) | IHR 0.27 | spot 6
+PMix 84 | Crush FF/FC | 350+ 6/22 375+ 3/22 | FB 45% Pull 50% | L5 4H/2HR/2XBH
+
+21. Teoscar Hernández (LAD) — 🔭 Power Watch | PA 410 BBE 22
+HR 48.3 | Board 66.8 | DC 51.0 | HR/PA +0.4 vs pace (hot) | 4g | HRW 🚀 (75) | IHR 0.14 | spot 6
+PMix 73 | Crush FF/CH | 350+ 3/22 375+ 2/22 | FB 27% Pull 82% | L5 9H/1HR/4XBH
+
+22. Jordan Walker ⭐ (STL) — 📈 HR Lean | PA 591 BBE 21
+HR 55.2 | Board 70.8 | DC 57.9 | HR/PA +0.1 vs pace (on pace) | 3g | HRW ⚡ (57) | IHR 0.10 | spot 4
+PMix 92 | Crush FF/CH | 350+ 3/21 375+ 1/21 | FB 10% Pull 71% | L5 7H/1HR/4XBH
+
+23. Jackson Merrill (SD) — 🔭 Power Watch | PA 580 BBE 24
+HR 39.1 | Board 66.4 | DC 51.5 | HR/PA -0.8 vs pace (due) | 6g | HRW 🌤️ (47) | IHR 0.17 | spot 7
+PMix 93 | Crush FF/SL | 350+ 4/24 375+ 1/24 | FB 29% Pull 67% | L5 5H/0HR/1XBH
+
+24. Andrew Benintendi (CWS) — 🔭 Power Watch | PA 422 BBE 24
+HR 29.0 | Board 63.0 | DC 58.1 | HR/PA -0.7 vs pace (due) | 6g | HRW 🧊 (44) | IHR 0.21 | spot 8
+PMix 90 | Crush CH/FF | 350+ 5/24 375+ 3/24 | FB 33% Pull 71% | L5 1H/0HR/0XBH
+
+25. Lars Nootbaar (ARI) — 🔭 Power Watch | PA 265 BBE 21
+HR 49.1 | Board 65.6 | DC 52.0 | HR/PA +1.5 vs pace (hot) | 4g | HRW 🚀 (75) | IHR 0.10 | spot 9
+PMix 66 | Crush FF/FC | 350+ 2/21 375+ 2/21 | FB 48% Pull 57% | L5 3H/1HR/2XBH
+
+26. Brady House (WSH) — 🔭 Power Watch | PA 296 BBE 22
+HR 40.0 | Board 63.2 | DC 56.9 | HR/PA +0.3 vs pace (on pace) | 5g | HRW 🌤️ (55) | IHR 0.18 | spot 7
+PMix 76 | Crush FF | 350+ 4/22 375+ 2/22 | FB 36% Pull 50% | L5 7H/0HR/2XBH
+
+27. Bryce Harper ⭐ 🧩 (PHI) — 🔭 Power Watch | PA 603 BBE 24
+HR 42.3 | Board 63.9 | DC 55.4 | HR/PA -0.9 vs pace (due) | 7g | HRW 🧊 (36) | IHR 0.12 | spot 1
+PMix 88 | Crush FF/FC | 350+ 2/24 375+ 2/24 | FB 25% Pull 46% | L5 9H/0HR/2XBH
+
+28. Michael Conforto (CHC) — 🔭 Power Watch | PA 253 BBE 15
+HR 49.1 | Board 61.3 | DC 60.6 | HR/PA +2.0 vs pace (hot) | 3g | HRW 🌤️ (54) | IHR 0.13 | spot 5
+PMix 51 | Crush SI/FF | 350+ 4/15 375+ 2/15 | FB 33% Pull 87% | L5 3H/1HR/1XBH
+
+29. Cole Carrigg (COL) — 🔭 Power Watch | PA 285 BBE 25
+HR 43.7 | Board 65.3 | DC 51.4 | HR/PA +0.5 vs pace (hot) | 0g | HRW ⚡ (58) | IHR 0.24 | spot 6
+PMix 75 | Crush CU/SL | 350+ 5/25 375+ 4/25 | FB 40% Pull 60% | L5 5H/1HR/3XBH
+
+30. Heliot Ramos (NYY) — 🔭 Power Watch | PA 386 BBE 15
+HR 39.9 | Board 64.4 | DC 53.0 | HR/PA +0.5 vs pace (hot) | 2g | HRW ⚡ (60) | IHR 0.20 | spot 9
+PMix 75 | Crush ST/FF | 350+ 3/15 375+ 2/15 | FB 53% Pull 53% | L5 3H/1HR/2XBH
+
+🔄 ALT LOOKS · small sample / variance ───────
+
+1. Sean Murphy ⭐ 🧩 (ATL) | HOT/DUE — 🧭 Contact / Monitor | ✅ PA 70 BBE 19
+HR 64.6 | Board 64.1 | DC 37.9 | HR/PA +2.1 vs pace (hot) | 1g | HRW 🌋 (88) | IHR 0.16 | spot 7
+PMix 56 | Crush FF | 350+ 4/19 375+ 3/19 | FB 26% Pull 58% | L5 6H/2HR/3XBH
+
+2. Jeff McNeil (ATH) | HOT/DUE — 🧭 Contact / Monitor | ✅ PA 447 BBE 30
+HR 30.4 | Board 41.0 | DC 45.5 | HR/PA +0.6 vs pace (hot) | 0g | HRW ⚡ (67) | IHR 0.03 | spot 9
+PMix 65 | Crush FF/CH | 350+ 2/30 375+ 1/30 | FB 30% Pull 57% | L5 8H/2HR/3XBH
+
+3. Francisco Alvarez (NYM) | HOT/DUE — 🧭 Contact / Monitor | ✅ PA 363 BBE 12
+HR 35.5 | Board 41.6 | DC 36.4 | HR/PA +1.2 vs pace (hot) | 0g | HRW ⚡ (65) | IHR 0.08 | spot 5
+PMix 55 | Crush SI/ST | 350+ 2/12 375+ 2/12 | FB 25% Pull 33% | L5 4H/2HR/3XBH
+
+4. Adley Rutschman (BOS) | HOT/DUE — 🧭 Contact / Monitor | ✅ PA 351 BBE 24
+HR 35.1 | Board 44.2 | DC 38.3 | HR/PA +1.4 vs pace (hot) | 1g | HRW ⚡ (61) | IHR 0.08 | spot 7
+PMix 75 | Crush SI/CU | 350+ 4/24 375+ 2/24 | FB 33% Pull 71% | L5 5H/2HR/2XBH
+
+5. Luke Keaschall (MIN) | HOT/DUE — 🧭 Contact / Monitor | ✅ PA 532 BBE 27
+HR 32.8 | Board 50.2 | DC 44.9 | HR/PA +0.7 vs pace (hot) | 4g | HRW ⚡ (59) | IHR 0.07 | spot 7
+PMix 87 | Crush FF/SL | 350+ 1/27 375+ 1/27 | FB 33% Pull 48% | L5 7H/1HR/3XBH
+
+6. Eduardo Valencia ⭐ (DET) | MATCHUP — 🔭 Power Watch | ✅ PA 90 BBE 16
+HR 36.5 | Board 55.2 | DC 60.0 | HR/PA -1.3 vs pace (due) | 11g | HRW 🧊 (32) | IHR 0.19 | spot 2
+PMix 61 | Crush FF/FC | 350+ 2/16 375+ 1/16 | FB 12% Pull 50% | L5 4H/0HR/2XBH
+
+7. Alec Burleson ⭐ 🧩 (STL) | MATCHUP — 🧭 Contact / Monitor | ✅ PA 595 BBE 25
+HR 30.6 | Board 51.1 | DC 43.8 | HR/PA -0.7 vs pace (due) | 18g | HRW 🧊 (17) | IHR 0.04 | spot 5
+PMix 95 | Crush FF/CH | 350+ 1/25 375+ 1/25 | FB 24% Pull 68% | L5 2H/0HR/0XBH
+
+8. Brice Turang ⭐ (MIL) | MATCHUP — 🧭 Contact / Monitor | ✅ PA 597 BBE 21
+HR 29.9 | Board 47.7 | DC 37.7 | HR/PA -0.6 vs pace (due) | 8g | HRW 🧊 (20) | IHR 0.00 | spot 4
+PMix 89 | Crush SL/ST | 350+ 2/21 375+ 1/21 | FB 14% Pull 43% | L5 5H/0HR/1XBH
+
+9. Munetaka Murakami ⭐ (CWS) | MATCHUP — 🧭 Contact / Monitor | ✅ PA 464 BBE 13
+HR 29.0 | Board 41.8 | DC 47.6 | HR/PA -1.2 vs pace (due) | 16g | HRW 🧊 (11) | IHR 0.08 | spot 2
+PMix 45 | Crush FF/SL | 350+ 0/13 375+ 0/13 | FB 38% Pull 77% | L5 1H/0HR/0XBH
+
+10. CJ Abrams ⭐ (WSH) | MATCHUP — 🔭 Power Watch | ✅ PA 578 BBE 19
+HR 35.4 | Board 58.3 | DC 52.7 | HR/PA -1.0 vs pace (due) | 17g | HRW 🧊 (15) | IHR 0.00 | spot 4
+PMix 86 | Crush FF/SL | 350+ 2/19 375+ 0/19 | FB 58% Pull 47% | L5 2H/0HR/0XBH
+
+11. Nelson Velázquez (HOU) | VARIANCE ⚠️ LIMITED — 🔭 Power Watch | ⚠️ PA 102 BBE 8
+HR 47.9 | Board 73.0 | DC 60.0 | HR/PA +0.0 vs pace (on pace) | 2g | HRW 🌤️ (48) | IHR 0.12 | spot 8
+PMix 79 | Crush FF/FC | 350+ 2/8 375+ 2/8 | FB 62% Pull 62% | L5 2H/1HR/1XBH
+
+12. Mark Vientos (NYM) | VARIANCE ⚠️ LIMITED — 🔭 Power Watch | ✅ PA 264 BBE 13
+HR 46.1 | Board 55.0 | DC 48.9 | HR/PA +1.0 vs pace (hot) | 0g | HRW 🌋 (85) | IHR 0.15 | spot 8
+PMix 36 | Crush ST/FF | 350+ 2/13 375+ 2/13 | FB 38% Pull 38% | L5 4H/2HR/2XBH
+
+13. Zac Veen ⭐ (COL) | VARIANCE ⚠️ LIMITED — 🔭 Power Watch | ⚠️ PA 42 BBE 7
+HR 45.1 | Board 66.7 | DC 55.1 | HR/PA -1.0 vs pace (due) | 17g | HRW 🧊 (41) | IHR 0.29 | spot 3
+PMix 72 | Neutral mix | 350+ 2/7 375+ 1/7 | FB 57% Pull 86% | L5 2H/0HR/2XBH
+
+14. Yohandy Morales (WSH) | ALT — 🔭 Power Watch | ⚠️ PA 10 BBE 11
+HR 46.8 | Board 65.6 | DC 65.9 | HR/PA -1.0 vs pace (due) | 2g | HRW 🚀 (72) | IHR 0.36 | spot 2
+PMix 35 | Neutral mix | 350+ 4/11 375+ 3/11 | FB 36% Pull 55% | L5 5H/1HR/3XBH
+
+15. Dane Myers ⭐ (CIN) | ALT — 🧭 Contact / Monitor | ✅ PA 286 BBE 22
+HR 36.8 | Board 48.4 | DC 39.5 | HR/PA +0.6 vs pace (hot) | 4g | HRW 🧊 (42) | IHR 0.00 | spot 6
+PMix 85 | Crush FF | 350+ 1/22 375+ 1/22 | FB 27% Pull 45% | L5 7H/1HR/2XBH
+
+💣 LONGEST BOMB WATCH ────────────────────────
+
+1. Kody Clemens (MIN) — DIST 75.6 | RAW 92.7 | HR 62.4 | HR/PA +1.0 vs pace (hot) | 2g | IHR 0.20 | 350+ 6/20 375+ 5/20 400+ 2
+FB 50% Pull 80% | Pitcher ⚠️ HARD CONTACT ATK 41 | P allowed: Barrel 5.0% | HH 42% | EV 90.3 | 375+ 5 | BABIP 0.218
+
+2. Carter Jensen (KC) — DIST 70.9 | RAW 93.0 | HR 63.0 | HR/PA +2.2 vs pace (hot) | 1g | IHR 0.30 | 350+ 7/23 375+ 5/23 400+ 4
+FB 48% Pull 78% | Pitcher 🧊 GB/TRAP ATK 12 | P allowed: Barrel 6.0% | HH 30% | EV 88.1 | 375+ 0 | BABIP 0.190
+
+3. Pete Crow-Armstrong (CHC) — DIST 70.2 | RAW 86.3 | HR 71.0 | HR/PA +0.8 vs pace (hot) | 1g | IHR 0.24 | 350+ 6/25 375+ 6/25 400+ 5
+FB 32% Pull 76% | Pitcher Neutral ATK 32 | P allowed: Barrel 6.0% | HH 38% | EV 87.0 | 375+ 5 | BABIP 0.267
+
+💣 DUE BOMBER BOARD ──────────────────────────
+ drought 5g+ · ⭐ weak-spot · HR score 45+ · HRW ignored on purpose
+1) Zac Veen (COL) — 17g since HR | HR 45.1 | HRW 41 | vs Kyle Leahy HR/9 0.90
+
+═══════════════════════════════════════
+🏁 HRR BUILDER
+═══════════════════════════════════════
+Rules: max 2/player · no duplicate combos · hit picks can qualify
+
+💰 CORE PLAY  (2-man)
+1) Turner Hill ⭐ (SF) [HRR 92/HIT 75]  +  TJ Rumfield ⭐ (COL) [HRR 76/HIT 82]
+   avg HRR 83.8 | avg HIT 78.9 · elite HRR floor · strong contact · full team spread
+2) Turner Hill ⭐ (SF) [HRR 92/HIT 75]  +  Yandy Díaz ⭐ (TB) [HRR 65/HIT 84]
+   avg HRR 78.1 | avg HIT 79.6 · elite HRR floor · strong contact · full team spread
+
+💰 BALANCED PLAY  (3-man)
+1) TJ Rumfield ⭐ (COL) [HRR 76/HIT 82]  +  Freddie Freeman (LAD) [HRR 71/HIT 61]  +  Yandy Díaz ⭐ (TB) [HRR 65/HIT 84]
+   avg HRR 70.5 | avg HIT 75.7 · elite HRR floor · strong contact · full team spread
+2) Freddie Freeman (LAD) [HRR 71/HIT 61]  +  Bryan Reynolds (PIT) [HRR 69/HIT 65]  +  Bryce Harper ⭐ (PHI) [HRR 70/HIT 80]
+   avg HRR 70.3 | avg HIT 68.3 · elite HRR floor · full team spread
+
+💰 VALUE PLAY  (5-man)
+1) Bryan Reynolds (PIT) [HRR 69/HIT 65]  +  Fernando Tatis Jr. (SD) [HRR 65/HIT 61]  +  Bryce Harper ⭐ (PHI) [HRR 70/HIT 80]  +  Jake McCarthy (COL) [HRR 65/HIT 68]  +  Roman Anthony ⭐ (BOS) [HRR 66/HIT 63]
+   avg HRR 67.1 | avg HIT 67.4 · elite HRR floor · full team spread
+2) Oneil Cruz (PIT) [HRR 67/HIT 48]  +  Fernando Tatis Jr. (SD) [HRR 65/HIT 61]  +  Jake McCarthy (COL) [HRR 65/HIT 68]  +  Roman Anthony ⭐ (BOS) [HRR 66/HIT 63]  +  Mookie Betts (LAD) [HRR 66/HIT 65]
+   avg HRR 66.0 | avg HIT 61.2 · elite HRR floor · full team spread
+
+🔎 MODEL CROSS-CHECK PLAYS
+
+HIGH ACROSS CATEGORIES
+Daylen Lile (WSH) 🟢
+Roman Anthony (BOS) ➕
+TJ Rumfield (COL) ➕
+Tyler Stephenson (CIN) 🟢
+Spencer Jones (NYY) 🥇
+
+HR UPSIDE / UNDERLISTED
+Jonathan Aranda (TB) 🎆
+James McCann (ARI) 🔺
+Cole Carrigg (COL) 🎆
+Corey Seager (TEX) 🎆
+
+LEGEND
+
+Score Keys:
+HR = Home run score / power ceiling
+OVR = overall Top Pick score; HR + HRR + HIT blend
+HRW = Home Run Window; timing score for today's HR chance
+IHR = Ideal HR contact rate
+350+/375+ = recent tracked balls hit 350/375+ feet
+FB = recent fly-ball rate
+Pull = recent pull rate
+HR/9 = pitcher home runs allowed per 9 innings
+ATK = Pitcher Attack Score from recent pitcher damage allowed
+Projected HR Total = model estimate for full-slate home runs
+Longest HR Targets = distance-ceiling section, not safest HR picks
+
+Emoji / Category Keys — tonight's game-slot picks (pick_type; this report only, not the site):
+🥇 TOP = best overall/model blend from that game or board
+🎆 HR = pure HR/power pick
+🔺 HRR = hits + runs + RBI production profile; also used for hot production bats
+➕ HIT = base-hit profile / hit-floor pick
+🟢 CON = Base Pick; contact/XBH anchor, gap-power or total-base profile
+⭐ = batter lines up in a pitcher weak spot
+🎯 = pitcher throws a pitch type this batter crushes (pitch-type match)
+🧩 = Aligned Signals: weak-spot + pitch-match + real recent contact quality all stacking together (strongest validated combo)
+🚀 HRW 70+ = strong HR timing
+⚡ HRW 60–69 = playable HR timing
+🌤️ HRW 50–59 = borderline/building timing
+🧊 HRW under 50 = weak HR timing
+⚠️ LIMITED = sample/variance warning (soft caution, score not forced down)
+⛔ = hard score suppression in effect (e.g. True Avoid HR -- score actively capped, not just flagged)
+
+Role Tags (final_hr_role -- a DIFFERENT system from the game-slot picks above:
+his general profile for the season, not tonight's designation. Also on the
+site, on every card. Corrected here 2026-08-12 -- this legend had drifted
+behind the actual code, still teaching the emoji final_hr_role moved off of):
+💎 HR Bet = model's top-confidence home run play
+📈 HR Lean = good home run shot, strong but not airtight
+🧲 HRR / XBH = good bet for extra-base hits even if HR isn't a lock
+🔭 Power Watch = real raw power, more matchup uncertainty
+🧭 Contact / Monitor = not projecting a home run; may suit contact bets
+⛔ True Avoid HR = model expects no home run; score actively capped
+
+Player Output Keys:
+BA = batting average
+BA vs RHP/LHP = batting average split vs starting pitcher side
+BABIP = batting average on balls in play
+PreOB = on-base strength of hitters before him
+Post = run-production strength of hitters after him
+L5 = last 5 games shown on output
+K = strikeout rate
+XBH = extra-base hits
+2+ TB = two or more total bases
+
+Sections:
+Top 30 = trusted sample only; 40+ PA and 10+ tracked BBE
+Global PA Filter = applies to every output section; recent PA 30+ when available, otherwise season PA 80+
+ALT LOOKS = unique quality looks not already used in main board/pools/pairs when possible
+PAIRINGS = HR-focused two-man slips with compact reasons
+DUE BOMBER = drought 5g+ + weak-spot star + HR score 45+; HRW ignored on purpose (timing score buries droughts)
+POOLS = HR coverage groups; C/D can include variance and underlisted model plays
+HRR BUILDER = production slips; 2-man, 3-man, and 5-man combos; max 2 appearances per player
+MODEL CROSS-CHECK = high-scoring players across multiple categories or underlisted HR upside
+
+Helpful Read:
+Use HR picks for home run slips.
+Use HRR Builder for hit/run/RBI style slips.
+Use Base Picks for XBH or 2+ total-base ideas.
+Use ALT LOOKS as quality variance, not primary plays.
+
+
+📋 MODEL HEALTH ──────────────────────────────
+
+Players scored: 267 | Games: 15
+Role breakdown:
+  🧭 Contact / Monitor: 180
+  🔭 Power Watch: 66
+  📈 HR Lean: 13
+  💎 HR Bet: 5
+  ⛔ True Avoid HR: 3
+Coverage: weather 249/267 | pitch-mix 267/267 | pitcher Statcast 267/267

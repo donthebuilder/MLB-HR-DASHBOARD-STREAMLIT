@@ -1,0 +1,186 @@
+RESULTS TRACKER - 2026-06-10
+------------------------------------------
+BETTABLE RESULTS
+Top 15 HR: 1/15 (6.7%)
+HR Picks: 2/15 (13.3%)
+Top Picks: 2/15 (13.3%)
+
+FULL SHEET BASE HIT PERFORMANCE
+Base Hit Accuracy: 68.3%
+
+HR CAPTURE (BETTABLE)
+Total Slate HRs: 45
+Caught in Top 15: 1
+Caught in HR Picks: 2
+Top 15 Capture Rate: 2.2%
+HR Pick Capture Rate: 4.4%
+
+MODEL VISION (Top 40)
+Model Caught HRs: 8 / 45
+Vision Rate: 17.8%
+
+UNIQUE PLAYER HR ACCURACY
+Unique Players Tracked: 105
+Players Who Homered: 17
+Unique HR Accuracy: 16.2%
+
+HR CATEGORY BREAKDOWN
+------------------------------------------
+🏆 TOP 15 BOARD → 1 HR
+🔥 TOP PICKS → 2 HR
+🧨 HR PICKS → 2 HR
+🏁 HRR PICKS → 4 HR
+💠 HIT PICKS → 5 HR
+⚾ CONTACT PICKS → 4 HR
+Best HR-producing category: 💠 HIT PICKS
+
+HR RESULTS BY PLAYER
+------------------------------------------
+- Ian Happ — 🏆#13 + ⚾ + ⭐
+- JJ Bleday — 🧨
+- James Wood — 🧨
+- Alec Burleson — 🔥
+- Matt Chapman — 🔥
+- Bryce Eldridge — 🏁
+- Byron Buxton — 🏁 + ⭐
+- Kyle Stowers — 🏁
+- Rafael Devers — 🏁
+- Alec Bohm — 💠
+- Fernando Tatis Jr. — 💠 + ⭐
+- Jackson Chourio — 💠
+- Jordan Walker — 💠
+- Shohei Ohtani — 💠
+- Bryce Harper — ⚾ + ⭐
+- Mike Trout — ⚾
+- Pete Alonso — ⚾ + ⭐
+
+MISSED HRs (NOT IN MODEL SHEET)
+------------------------------------------
+- Alika Williams (ATH) — not in model sheet / lineup pool
+- Jackson Holliday (BAL) — not in model sheet / lineup pool
+- Caleb Durbin (BOS) (2 HR) — not in model sheet / lineup pool
+- Shay Whitcomb (HOU) — not in model sheet / lineup pool
+- Ryan Ward (LAD) — not in model sheet / lineup pool
+- Tyler Callihan (PIT) (2 HR) — not in model sheet / lineup pool
+- Nelson Velázquez (STL) — not in model sheet / lineup pool
+- Cedric Mullins (TB) — not in model sheet / lineup pool
+- Jake Burger (TEX) — not in model sheet / lineup pool
+
+POOL PERFORMANCE
+------------------------------------------
+4-MAN HR POOL A → 0/4 HR (none)
+4-MAN HR POOL B → 1/4 HR (Ian Happ)
+4-MAN HR POOL C → 0/4 HR (none)
+4-MAN HR POOL D → 1/4 HR (Kyle Schwarber)
+6-MAN HR POOL A → 1/6 HR (Alec Burleson)
+6-MAN HR POOL B → 1/6 HR (James Wood)
+6-MAN HR POOL C → 5/6 HR (Matt Chapman, Byron Buxton, Gary Sánchez, Pete Alonso, JJ Bleday)
+6-MAN HR POOL D → 0/6 HR (none)
+
+PAIR PERFORMANCE
+------------------------------------------
+Pair 1 → 0/2 HR (none) | Pete Crow-Armstrong + Nick Kurtz
+Pair 2 → 0/2 HR (none) | Adolis García + Dillon Dingler
+Pair 3 → 0/2 HR (none) | Matt Olson + Colton Cowser
+Pair 4 → 0/2 HR (none) | Ezequiel Tovar + Marcus Semien
+
+PLAYER TYPE PERFORMANCE
+------------------------------------------
+🏁 HRR PICKS (30)
+2+ HRR: 46.7% | 3+ HRR: 26.7%
+
+💠 HIT PICKS (30)
+1+ Hit: 66.7% | HR: 16.7%
+
+⚾ CONTACT PICKS (15)
+XBH: 60.0% | 2+ TB: 60.0% | HR: 26.7%
+
+HIT RESULTS BY CATEGORY
+------------------------------------------
+
+🔥 TOP PICKS (1+ Hit)
+- Jac Caglianone — 4H 🔥
+- Matt Chapman — 4H 🔥
+- Trent Grisham — 2H ⭐
+- Alec Burleson — 1H
+- Andy Pages — 1H
+- Corbin Carroll — 1H
+- Dillon Dingler — 1H
+- Matt McLain — 1H
+- Matt Olson — 1H
+- Nick Kurtz — 1H
+- Pete Crow-Armstrong — 1H
+- Yordan Alvarez — 1H
+
+🧨 HR PICKS (1+ Hit)
+- Ezequiel Tovar — 2H ⭐
+- Cody Bellinger — 1H
+- Freddie Freeman — 1H
+- JJ Bleday — 1H
+- James Wood — 1H
+- Kerry Carpenter — 1H
+- Mauricio Dubón — 1H
+
+🏁 HRR PICKS (1+ Hit)
+- Gleyber Torres — 3H 🔥
+- Byron Buxton — 2H ⭐
+- Gabriel Moreno — 2H ⭐
+- Hunter Goodman — 2H ⭐
+- Jackson Merrill — 2H ⭐
+- Ben Rice — 1H
+- Brandon Valenzuela — 1H
+- Bryan Reynolds — 1H
+- Bryce Eldridge — 1H
+- Christian Walker — 1H
+- Iván Herrera — 1H
+- Jazz Chisholm Jr. — 1H
+- Jonathan Aranda — 1H
+- Josh Naylor — 1H
+- Junior Caminero — 1H
+- Kyle Stowers — 1H
+- Manny Machado — 1H
+- Oswald Peraza — 1H
+- Ozzie Albies — 1H
+- Rafael Devers — 1H
+- Randal Grichuk — 1H
+- Seiya Suzuki — 1H
+- Tyler Soderstrom — 1H
+- Wyatt Langford — 1H
+
+💠 HIT PICKS (1+ Hit)
+- Yandy Díaz — 3H 🔥
+- Alec Bohm — 2H ⭐
+- Andrew Vaughn — 2H ⭐
+- Fernando Tatis Jr. — 2H ⭐
+- Jackson Chourio — 2H ⭐
+- Jordan Walker — 2H ⭐
+- Jung Hoo Lee — 2H ⭐
+- Luis Arraez — 2H ⭐
+- Otto Lopez — 2H ⭐
+- Paul Goldschmidt — 2H ⭐
+- Dominic Canzone — 1H
+- Ernie Clement — 1H
+- Geraldo Perdomo — 1H
+- Josh Jung — 1H
+- José Ramírez — 1H
+- Max Muncy — 1H
+- Miguel Vargas — 1H
+- Sal Stewart — 1H
+- Shohei Ohtani — 1H
+- Vinnie Pasquantino — 1H
+
+⚾ CONTACT PICKS (1+ Hit)
+- Daylen Lile — 4H 🔥
+- Bryce Harper — 2H ⭐
+- Heriberto Hernández — 2H ⭐
+- Jorge Mateo — 2H ⭐
+- Pete Alonso — 2H ⭐
+- Amed Rosario — 1H
+- Gavin Sheets — 1H
+- Ian Happ — 1H
+- Josh Bell — 1H
+- Mike Trout — 1H
+- Shea Langeliers — 1H
+
+MODEL DIAGNOSTIC (LOW PRIORITY)
+Full Sheet HR Coverage: 34 / 45 (75.6%)

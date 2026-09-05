@@ -1,0 +1,140 @@
+odds probe — 2026-08-29T11:57:40Z
+run: https://github.com/donthebuilder/MLB-HR-DASHBOARD-STREAMLIT/actions/runs/33251302859
+
+probing https://api.theoddsapi.com …
+
+── /me
+{
+ "success": true,
+ "source": "cache",
+ "data": {
+  "tier": "free",
+  "requests_today": 2,
+  "daily_limit": 25,
+  "remaining": 23
+ }
+}
+
+── /me/usage
+{
+ "success": true,
+ "source": "cache",
+ "data": {
+  "tier": "free",
+  "requests_today": 2,
+  "daily_limit": 25,
+  "remaining": 23,
+  "monthly_quota": null,
+  "stats": {
+   "daily": [
+    {
+     "ok": 1,
+     "day": "2026-08-15",
+     "err": 13,
+     "total": 14
+    },
+    {
+     "ok": 3,
+     "day": "2026-08-17",
+     "err": 2,
+     "total": 5
+    },
+    {
+     "ok": 12,
+     "day": "2026-08-23",
+     "err": 6,
+     "total": 18
+    },
+    {
+     "ok": 0,
+     "day": "2026-08-24",
+     "err": 1,
+     "total": 1
+    },
+    {
+     "ok": 0,
+     "day": "2026-08-25",
+     "err": 4,
+     "total": 4
+    },
+    {
+     "ok": 0,
+     "day": "2026-08-27",
+     "err": 1,
+     "total": 1
+    },
+    {
+     "ok": 4,
+     "day": "2026-08-28",
+     "err": 6,
+     "total": 10
+    },
+    {
+     "ok": 2,
+     "day": "2026-08-29",
+     "err": 2,
+     "total": 4
+    }
+   ],
+   "endpoints": [
+    {
+     "err": 17,
+     "total": 18,
+     "avg_ms": 92,
+     "endpoint": "/odds/"
+    },
+    {
+     "err": 18,
+     "total": 18,
+     "avg_ms": 605,
+     "endpoint": "/props/"
+    },
+    {
+     "err": 0,
+     "total": 6,
+     "avg_ms": 87,
+     "endpoint": "/me/"
+    },
+    {
+     "err": 0,
+     "total": 6,
+    
+
+── /sports/
+{
+ "success": true,
+ "source": "cache",
+ "data": [
+  {
+   "key": "basketball_nba",
+   "sport": "basketball",
+   "league": "NBA"
+  },
+  {
+   "key": "baseball_mlb",
+   "sport": "baseball",
+   "league": "MLB"
+  }
+ ]
+}
+
+    ↳ theoddsapi /odds/ → 400: {"detail":"Unsupported market(s): ['batter_doubles', 'batter_hits', 'batter_hits_runs_rbis', 'batter_home_runs', 'batter_rbis', 'batter_runs_scored', 'batter_stolen_bases', 'batter_total_bases', 'batt
+── /odds/
+  HTTP 400: 
+
+    ↳ theoddsapi /props/ → 403: {"detail":"Player props require a Business plan or higher. Upgrade at https://theoddsapi.com/#pricing"}
+── /props/
+  HTTP 403: 
+
+probing https://api.odds-api.io/v3 …
+
+    ↳ oddsapiio /events → 400: {"error":"Invalid sport slug"}
+── /events sport=mlb
+  HTTP 400: 
+
+── /events sport=baseball
+  25 event(s)
+    ↳ oddsapiio /odds/multi → 400: {"error":"fanatics is not a valid bookmaker, use /v3/bookmakers to get a list of valid bookmakers"}
+── /events sport=baseball
+  HTTP 400: 
+
