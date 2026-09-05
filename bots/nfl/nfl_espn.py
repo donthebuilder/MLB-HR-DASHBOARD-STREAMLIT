@@ -235,6 +235,70 @@ def attach_rest_days(all_games: list[dict[str, Any]], target: list[dict[str, Any
     return out
 
 
+def current_week(year: int | None = None) -> int | None:
+    """The regular-season week ESPN's scoreboard is on RIGHT NOW, or None.
+
+    Asked with no parameters the scoreboard answers for the week it is on and
+    says which in its top-level `week.number`. It rolls to the next week on
+    Wednesday 07:00Z (Tuesday midnight Phoenix), the day the bot's weekly
+    spine opens -- so the Tuesday build and the Monday-night grade see
+    different numbers, and both are right.
+
+    NO `dates` AND NO `seasontype` -- verified against the live endpoint on
+    2026-09-05. Asked with dates=2026&seasontype=2 and no week, ESPN answers
+    week 18 and a game from January (the 2025 season's last week falls in
+    calendar 2026). Asked plainly it answers week 1 with the Sep 10 opener as
+    its first event. The year is only used to refuse an answer from another
+    season, and the event's own season type refuses a preseason or playoff
+    week.
+
+    (Until this existed the scheduled workflow, which passes no --week,
+    built a "Week None" slate out of the whole season's schedule in week
+    mode and nfl_results.py exited before grading anything.)
+    """
+    try:
+        r = requests.get(SCOREBOARD, params={"limit": 1}, timeout=TIMEOUT)
+        if not r.ok:
+            return None
+        payload = r.json()
+        n = (payload.get("week") or {}).get("number")
+        ev = (payload.get("events") or [{}])[0]
+        season = ev.get("season") or {}
+        if not n or int(season.get("type") or 0) != 2:
+            return None
+        if year and int(season.get("year") or 0) not in (0, int(year)):
+            return None
+        return int(n)
+    except Exception:
+        return None
+
+
+# ESPN's own calendar (read 2026-09-05): Week 1 is Sep 6-15, Week 2 opens
+# Sep 16 (Wed 07:00Z). The fallback only matters when ESPN is unreachable,
+# and it must roll on the same day ESPN does or a Tuesday build would grade
+# the wrong week. Anchor on the first Wednesday.
+SEASON_OPEN = {2026: dt.date(2026, 9, 9)}
+
+
+def week_from_date(year: int, today: dt.date | None = None) -> int:
+    today = today or dt.date.today()
+    start = SEASON_OPEN.get(year, dt.date(year, 9, 8))
+    return max(1, min(18, (today - start).days // 7 + 1))
+
+
+def resolve_week(year: int, asked: int | None) -> int:
+    """--week if given, else ESPN's current week, else the calendar."""
+    if asked:
+        return int(asked)
+    w = current_week(year)
+    if w:
+        print(f"  week {w} (ESPN's current week)")
+        return w
+    w = week_from_date(year)
+    print(f"  week {w} (from the calendar -- ESPN unreachable)")
+    return w
+
+
 def scoring_plays(game_id: str) -> list[dict[str, Any]]:
     """Who scored, for the live wire. Empty on any failure."""
     url = ("https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary"

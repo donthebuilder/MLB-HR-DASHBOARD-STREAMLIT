@@ -204,6 +204,14 @@ NFL_PRED_LOG_KEEP=300
 NFL_OUTCOME_LOG_GLOB="nfl_outcome_log_*.jsonl"
 NFL_OUTCOME_LOG_KEEP=75
 
+# nfl_results_<season>_w03.json (2026-09-05): ONE FILE PER GRADED WEEK under a
+# name the site can guess, rewritten in place on every pass of that week.
+# The outcome log above keeps every pass but is named by run date, which a
+# static fetch list can't know. ~100 KB a week; 60 keeps three seasons.
+# `_20*` so it never matches nfl_results.json itself.
+NFL_RESULTS_GLOB="nfl_results_20*.json"
+NFL_RESULTS_KEEP=60
+
 # nfl_odds_<date>.json (B1, 2026-08-28 master plan): ONE FILE PER FETCH-RUN
 # DATE, written by bots/nfl/nfl_odds_fetch.py's main(), same accumulate-and-
 # cap shape as ODDS_GLOB above -- a closing-ish price, once overwritten by
@@ -419,6 +427,7 @@ stage_local() {
            "$SRC"/data/$POR_LOG_GLOB "$SRC"/data/current/$POR_LOG_GLOB \
            "$SRC"/data/$NFL_PRED_LOG_GLOB "$SRC"/data/current/$NFL_PRED_LOG_GLOB \
            "$SRC"/data/$NFL_OUTCOME_LOG_GLOB "$SRC"/data/current/$NFL_OUTCOME_LOG_GLOB \
+           "$SRC"/data/$NFL_RESULTS_GLOB "$SRC"/data/current/$NFL_RESULTS_GLOB \
            "$SRC"/data/$NFL_ODDS_GLOB "$SRC"/data/current/$NFL_ODDS_GLOB; do
     [ -f "$g" ] && cp "$g" "$STAGE/public/data/current/"
   done
@@ -465,6 +474,7 @@ carry_forward() {
               "$PRED_LOG_GLOB:$PRED_LOG_KEEP" "$OUTCOME_LOG_GLOB:$OUTCOME_LOG_KEEP" \
               "$POR_LOG_GLOB:$POR_LOG_KEEP" \
               "$NFL_PRED_LOG_GLOB:$NFL_PRED_LOG_KEEP" "$NFL_OUTCOME_LOG_GLOB:$NFL_OUTCOME_LOG_KEEP" \
+              "$NFL_RESULTS_GLOB:$NFL_RESULTS_KEEP" \
               "$NFL_ODDS_GLOB:$NFL_ODDS_KEEP"; do
     glob="${spec%:*}"; keep="${spec##*:}"
     n=$(find "$STAGE/public/data/current" -maxdepth 1 -type f -name "$glob" | wc -l)

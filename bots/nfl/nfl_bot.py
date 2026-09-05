@@ -732,6 +732,11 @@ def main() -> int:
 
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
+    # In week mode the scheduled workflow passes no --week (it can't know one).
+    # Without this the season-long table went unfiltered, the schedule fetch
+    # returned every game of the year, and the card was labelled "Week None".
+    if a.mode == "week":
+        a.week = nfl_espn.resolve_week(a.season, a.week)
     payload = build_payload(a.mode, a.season, a.week, out)
 
     # MODEL FOUNDATION (2026-08-24). One run identity per execution, and a

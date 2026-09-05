@@ -250,11 +250,23 @@ def main() -> int:
     ap.add_argument("--prefix", type=str, default="")
     a = ap.parse_args()
 
+    # THE WEEK BEING GRADED IS THE CARD'S WEEK. The scheduled workflow passes
+    # no --week, and until 2026-09-05 this returned 2 here -- so from the first
+    # regular-season run onward nothing would ever have been graded. The card
+    # this run just wrote carries its week; that is the week its rungs were
+    # promised for, so that is the week to grade. ESPN's current week is the
+    # fallback for a run with no card, then the calendar.
+    card_week = None
+    try:
+        cp0 = Path(a.card)
+        if cp0.exists():
+            card_week = (json.loads(cp0.read_text()) or {}).get("week")
+    except Exception:
+        card_week = None
+    if a.mode == "week" and not a.week:
+        a.week = int(card_week) if card_week else nfl_espn.resolve_week(a.season, None)
     print(f"grading {a.mode} · season {a.season}" + (f" · week {a.week}" if a.week else ""))
     if a.mode == "week":
-        if not a.week:
-            print("--week is required in week mode")
-            return 2
         lines = _reg_lines(a.season, a.week)
     else:
         lines = _pre_lines(a.season, a.week)
@@ -298,9 +310,22 @@ def main() -> int:
     }
 
     out = Path(a.out); out.mkdir(parents=True, exist_ok=True)
+    body = json.dumps(payload, separators=(",", ":"))
     dest = out / f"{a.prefix}results.json"
-    dest.write_text(json.dumps(payload, separators=(",", ":")))
+    dest.write_text(body)
     print(f"wrote {dest} ({dest.stat().st_size / 1024:.0f} KB)")
+    # THE ARCHIVE THE SITE CAN GUESS (2026-09-05). The outcome log below keeps
+    # every pass, but its filename carries the run date, which a static fetch
+    # list can't know. This is one file per graded WEEK under a fixed name --
+    # nfl_results_2026_w03.json, p02 for preseason -- rewritten in place on
+    # every pass of the same week so the last grade wins. publish_data.sh
+    # carries them forward; the site's lib/nfl/resultsArchive.js harvests
+    # them for the season-to-date record and the week picker.
+    if a.week:
+        tag = f"{'p' if a.mode == 'preseason' else 'w'}{int(a.week):02d}"
+        arch = out / f"{a.prefix}results_{a.season}_{tag}.json"
+        arch.write_text(body)
+        print(f"wrote {arch.name}")
     for k, t in totals.items():
         if t["n"]:
             print(f"  {k:<9} {t['hit']}/{t['n']}  {t['pct']:.0f}%"
