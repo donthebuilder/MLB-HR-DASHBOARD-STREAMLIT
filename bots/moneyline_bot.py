@@ -322,6 +322,9 @@ class Line:
     away_fip: float | None = None
     home_sp: str = ""
     away_sp: str = ""
+    # Full commence time (ISO) -- the only key that tells a doubleheader's
+    # two games apart, since the feed's game_pk is not MLB's. Optional.
+    commence: str = ""
 
 
 def make_picks(lines: list[Line], strength: dict[str, float],
@@ -502,6 +505,7 @@ def fetch_lines(regions: str = "us") -> list[Line]:
             out.append(Line(
                 game_pk=int(str(ev.get("id") or "0").replace("-", "")[:9] or 0),
                 date=str(ev.get("commence_time") or "")[:10],
+                commence=str(ev.get("commence_time") or ""),
                 home=home, away=away,
                 home_price=best[home][0], away_price=best[away][0],
                 book=best[home][1],
@@ -551,8 +555,33 @@ def fetch_starters(slate_url: str = "") -> dict:
         # The pitcher on a hitter's row throws for the OPPONENT.
         key = (pk, opp)
         if key not in out and fip is not None:
-            out[key] = {"fip": fip, "name": r.get("pitcher_name") or ""}
+            out[key] = {"fip": fip, "name": r.get("pitcher_name") or "",
+                        "time": str(r.get("game_time") or "")}
     return out
+
+
+def starter_for(starters: dict, team: str, commence: str = "") -> dict | None:
+    """The starter a team sends out for THIS line.
+
+    A team normally has one entry; on a doubleheader it has two, keyed by two
+    game_pks, and the first match used to win regardless of which game the
+    line was for -- the wrong arm on one of the two, silently. The slate row
+    carries game_time and the odds feed carries commence_time, so when there
+    is more than one candidate the closest first pitch decides. Pure.
+    """
+    cands = [sp for (pk, tm), sp in starters.items() if tm == team]
+    if not cands:
+        return None
+    if len(cands) == 1 or not commence:
+        return cands[0]
+    def gap(sp):
+        try:
+            a = dt.datetime.fromisoformat(str(sp.get("time") or "").replace("Z", "+00:00"))
+            b = dt.datetime.fromisoformat(commence.replace("Z", "+00:00"))
+            return abs((a - b).total_seconds())
+        except Exception:
+            return float("inf")
+    return min(cands, key=gap)
 
 
 def price_rows(lines: list[Line], strength: dict[str, float], rates=None,
@@ -729,11 +758,10 @@ def main(argv=None):
             team = abbr.get(getattr(ln, side))
             if not team:
                 continue
-            for (pk, tm), sp in starters.items():
-                if tm == team:
-                    setattr(ln, f"{side}_fip", sp.get("fip"))
-                    setattr(ln, f"{side}_sp", sp.get("name", ""))
-                    break
+            sp = starter_for(starters, team, ln.commence)
+            if sp:
+                setattr(ln, f"{side}_fip", sp.get("fip"))
+                setattr(ln, f"{side}_sp", sp.get("name", ""))
     known = sum(1 for ln in lines if ln.home_fip and ln.away_fip)
     print(f"  starters known for {known}/{len(lines)} game(s)")
     today = make_picks(lines, strength, rates, coef, blend_w)

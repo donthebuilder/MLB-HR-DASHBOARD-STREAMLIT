@@ -18,7 +18,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "bots"))
 from moneyline_bot import (  # noqa: E402
     EDGE_FLOOR, FALLBACK_LEAGUE_FIP, STARTER_INNINGS, STARTER_WEIGHT,
     WORST_PRICE, Line, Pick, devig, game_probability, implied, league_baseline,
-    make_picks, payout, payload, record, settle, starter_shift,
+    make_picks, payout, payload, record, settle, starter_for, starter_shift,
 )
 
 # Two teams, so a "model" is just a dict of strengths.
@@ -500,3 +500,18 @@ def test_price_rows_carry_the_unmixed_parts():
     from playoff_odds import win_probability
     assert r["p_rates"] and r["p_record"] == round(win_probability(.5, .5), 4) and r["starter_shift"] == 0.0
     assert abs(r["model_home"] - mb.blend(r["p_rates"], r["p_record"], 0.5)) < 1e-3
+
+
+def test_doubleheader_join_picks_the_arm_for_this_first_pitch():
+    """Two games, same team, two starters -- the line's commence time decides."""
+    starters = {
+        (1, "CHC"): {"fip": 3.1, "name": "Early Arm", "time": "2026-09-05T17:20:00Z"},
+        (2, "CHC"): {"fip": 4.9, "name": "Late Arm", "time": "2026-09-05T23:05:00Z"},
+    }
+    early = starter_for(starters, "CHC", "2026-09-05T17:20:00Z")
+    late = starter_for(starters, "CHC", "2026-09-05T23:10:00Z")
+    assert early["name"] == "Early Arm"
+    assert late["name"] == "Late Arm"
+    # One candidate needs no time at all; no candidate is None, not a crash.
+    assert starter_for({(1, "CHC"): starters[(1, "CHC")]}, "CHC", "")["name"] == "Early Arm"
+    assert starter_for(starters, "NYY", "2026-09-05T17:20:00Z") is None
