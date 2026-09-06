@@ -410,6 +410,7 @@ def _regular_season_is_near(season: int, today: dt.date | None = None) -> bool:
 
 def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> dict:
     now = dt.datetime.now(PHX)
+    bye_tbl = pl.DataFrame()   # week mode only; preseason has no bye weeks
 
     if mode == "preseason":
         games = nfl_espn.fetch(seasontype=1, year=season)
@@ -472,7 +473,7 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
         # the schedule's spread, total, roof and wind for week w. Slate and
         # reference are the same frame in week mode -- see the note at the end
         # of nfl_features.upcoming_rows for why that is the honest population.
-        slate, league = upcoming_rows(season, week)
+        slate, league, bye_tbl = upcoming_rows(season, week)
         tbl = _fill_missing(slate)
         ref = _fill_missing(league)
         # Real spread/total/venue is exactly what "context" means, and week
@@ -506,6 +507,7 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
                 "position": r.get("position"),
                 "carryover": bool(r.get("is_carryover") or 0),
                 "questionable": bool(r.get("inj_q") or 0),
+                "on_bye": False,
                 # SAMPLE GATE. A goal-line vulture with 0.3 targets a game can
                 # percentile-rank above a every-down back, because a rate built
                 # on four touches has no business sitting at the same visual
@@ -540,6 +542,45 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
 
     rows = sorted(players.values(),
                   key=lambda p: -(p["scores"].get("TD") or 0))
+
+    # PLAYERS ON A BYE (2026-09-06). Carried, not scored -- there is nothing to
+    # score, he is not playing. They are here because FRANCHISE builds its draft
+    # board, team pages and wire from this same `players` array, and dropping
+    # them made a rostered man vanish from his own team page on his bye week.
+    #
+    # No site change is needed to keep them off TUDDY's boards: every board
+    # filters on Number.isFinite(player.scores[market]), and `scores` is empty
+    # here. The player portal, search and watchlist still find him.
+    # Only the positions some market scores. Without this the bye rows drag in
+    # every safety, linebacker and tackle on the roster -- 42 of the first 69
+    # were defenders with no offensive stat to their name. Both consumers throw
+    # them away (normalizeNflCatalog keeps QB/RB/WR/TE/K/DEF), so they are pure
+    # payload weight.
+    SCORED_POS = sorted({p for m in MODELS.values() for p in m["pos"]})
+    for r in (derive(_fill_missing(bye_tbl))
+              .filter(pl.col("position").is_in(SCORED_POS)).iter_rows(named=True)
+              if not bye_tbl.is_empty() else []):
+        stats = {}
+        for col, short, _, _dp, _pct in RESEARCH:
+            v = _num(r.get(col))
+            if col in r and v is not None and v != 0:
+                stats[short] = v
+        rows.append({
+            "player_id": r["player_id"],
+            "name": r.get("name") or r.get("player_display_name") or "—",
+            "team": r.get("team"),
+            "opp": None,
+            "position": r.get("position"),
+            "carryover": bool(r.get("is_carryover") or 0),
+            "questionable": bool(r.get("inj_q") or 0),
+            "on_bye": True,
+            "low_sample": (
+                (r.get("f_targets") or 0) + (r.get("f_carries") or 0) < 3.0
+                and (r.get("position") in ("RB", "WR", "TE"))
+            ),
+            "scores": {}, "components": {}, "stats": stats,
+            "splits": splits.get(r["player_id"], {}),
+        })
 
     # ── the research layer ───────────────────────────────────────────────────
     # Written as SEPARATE files rather than folded into week.json. The slate is

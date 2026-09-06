@@ -429,8 +429,9 @@ def upcoming_rows(season: int, week: int) -> tuple[pl.DataFrame, pl.DataFrame]:
       PREGAME   the schedule's spread, total, roof and wind for week w
       INJURY    this week's report -- Out/Doubtful dropped, Q damped
 
-    Returns (slate, league). The league frame is every qualified player so
-    _league_pct stays an absolute scale rather than a rank inside one slate.
+    Returns (slate, league, bye). `bye` is the rostered players whose team is
+    not playing week w -- carried so the catalog the fantasy side reads does not
+    lose a man for a week, see the note where the schedule is joined.
     """
     prior = season - 1
 
@@ -513,8 +514,16 @@ def upcoming_rows(season: int, week: int) -> tuple[pl.DataFrame, pl.DataFrame]:
     rows = rows.with_columns(pl.lit(week).cast(pl.Int32).alias("week"))
     ctx = team_context(season).filter(pl.col("week") == week) \
             .with_columns(pl.col("week").cast(pl.Int32))
-    rows = rows.join(ctx, on=["team", "week"], how="inner") \
+    # LEFT, then split. A team not playing week w has no row in team_context for
+    # week w, so an inner join here silently deletes every player on a bye --
+    # which is right for a board (you do not rank a man who is not playing) and
+    # wrong for a catalog. FRANCHISE builds its draft board, team pages and wire
+    # from the same `players` array, so an inner join made a rostered player
+    # vanish from his own team page on his bye. 2026's first bye is Week 5.
+    rows = rows.join(ctx, on=["team", "week"], how="left") \
                .rename({"opp": "opponent_team"})
+    bye = rows.filter(pl.col("opponent_team").is_null())
+    rows = rows.filter(pl.col("opponent_team").is_not_null())
 
     if not sform.is_empty():
         rows = rows.join(sform.with_columns(pl.col("week").cast(pl.Int32)),
@@ -557,7 +566,10 @@ def upcoming_rows(season: int, week: int) -> tuple[pl.DataFrame, pl.DataFrame]:
     # In-season the honest population is everyone playing this week, which is
     # what build(season).filter(week == w) always was. A man on bye is not part
     # of this week's league.
-    return rows, rows
+    bye = bye.filter(pl.col("f_gp") >= MIN_GP) \
+             .with_columns(pl.lit(season).alias("season_yr"),
+                           pl.col("name").alias("player_display_name"))
+    return rows, rows, bye
 
 
 
