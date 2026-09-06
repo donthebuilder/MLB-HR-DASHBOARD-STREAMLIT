@@ -1058,8 +1058,14 @@ def _webhook_transitions(old_payload, new_payload, date_str: str = "") -> None:
             sections.append(("📋 PICKS SO FAR — did the job", [status_line]))
         tally = {}
         if final_share(new_payload) >= 0.95 and final_share(old_payload) < 0.95:
-            # simple per-role tally
+            # ── night wrap: a real recap, not a repeat of PICKS SO FAR above
+            # (2026-09-06, Donovan: "make it a real recap, not a repeat") ──
+            # per-role tally still gets computed -- the receipts IMAGE wants it --
+            # but the text embed now leads with the best call of the night and
+            # names the misses, instead of restating the same ok/n counts that
+            # already ran a few lines up in this same message.
             tally = {}
+            cleared_picks, missed_picks = [], []
             for (nm, role), sl in new_s.items():
                 if not role:
                     continue
@@ -1068,9 +1074,36 @@ def _webhook_transitions(old_payload, new_payload, date_str: str = "") -> None:
                     continue
                 ok, n = tally.get(role, (0, 0))
                 tally[role] = (ok + (1 if c else 0), n + 1)
+                name = str(sl.get("name", nm)).strip() or nm.title()
+                if c:
+                    cleared_picks.append((_board_score(sl), name, role, sl))
+                else:
+                    missed_picks.append((name, role))
+
+            wrap_lines = []
+            if cleared_picks:
+                cleared_picks.sort(key=lambda t: -t[0])
+                _sc, _name, _role, _sl = cleared_picks[0]
+                _hr, _h, _ab = (int(_sl.get("actual_hr") or 0), int(_sl.get("actual_hits") or 0),
+                                int(_sl.get("actual_ab") or 0))
+                _line = f"{_h}-{_ab}" + (f", {_hr} HR" if _hr else "")
+                wrap_lines.append(f"🏅 Best call: **{_name}** ({_role}, called at {_sc:.0f}) — {_line}")
+            _tot_ok2, _tot_n2 = len(cleared_picks), len(cleared_picks) + len(missed_picks)
+            _hr_tonight = sum(int(sl.get("actual_hr") or 0) for sl in new_s.values())
+            if _tot_n2:
+                _pct = round(100 * _tot_ok2 / _tot_n2)
+                wrap_lines.append(
+                    f"📊 **{_tot_ok2}/{_tot_n2}** designated picks cleared their bar tonight ({_pct}%)"
+                    + (f" · {_hr_tonight} total HR from the board" if _hr_tonight else "")
+                )
+            if missed_picks:
+                _named = ", ".join(f"{nm} ({rl})" for nm, rl in missed_picks[:10])
+                _more = f" +{len(missed_picks) - 10} more" if len(missed_picks) > 10 else ""
+                wrap_lines.append(f"📉 Didn't get there: {_named}{_more}")
+
+            if wrap_lines:
+                sections.append(("🧾 NIGHT WRAP", wrap_lines))
             if tally:
-                parts = [f"**{r}** {ok}/{n}" for r, (ok, n) in sorted(tally.items())]
-                sections.append(("🧾 NIGHT WRAP", [" · ".join(parts)]))
                 # the shareable artifact: tonight's receipts as an image
                 try:
                     _png = _render_night_card(tally, date_str or "tonight")
