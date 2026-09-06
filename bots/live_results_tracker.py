@@ -917,9 +917,15 @@ def _webhook_transitions(old_payload, new_payload, date_str: str = "") -> None:
             if not tot:
                 continue
             old_hit = oldp.get(label, (0,))[0]
-            if hit >= tot and old_hit < tot:
+            # POOL CASHED means a POOL -- 2 or more names riding together.
+            # tot == 1 is a single player, already covered by his own 💥 HR
+            # line above; alerting "POOL CASHED" the moment a one-man "pool"
+            # homers is the same event announced twice; a real cash needs a
+            # second (or third+) name to have come home with him (2026-09-06,
+            # Donovan: "the pool cashing is only for 2 or more").
+            if tot >= 2 and hit >= tot and old_hit < tot:
                 ticket_lines.append(f"💰 **POOL CASHED — {label}**: all {tot} went deep")
-            elif hit == tot - 1 and old_hit < tot - 1:
+            elif tot >= 2 and hit == tot - 1 and old_hit < tot - 1:
                 missing = [m for m in members if m.lower() not in homered]
                 ticket_lines.append(f"🎟 {label} · **{hit}/{tot}** — one swing away ({', '.join(missing[:3])})")
 
