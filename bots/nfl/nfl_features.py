@@ -573,6 +573,52 @@ def upcoming_rows(season: int, week: int) -> tuple[pl.DataFrame, pl.DataFrame]:
 
 
 
+def newcomer_rows(season: int, week: int, known: set[str]) -> pl.DataFrame:
+    """Rostered men the models cannot price, so that they at least EXIST.
+
+    The board's population is `season_baseline(prior)` -- last season's stat
+    lines, filtered to four games or more. That is the right population for a
+    SCORE: a man with no NFL history has nothing to rank. It is the wrong
+    population for a CATALOG, and the catalog is the same array.
+
+    Measured on the 2026 Week 1 roster: 127 active skill players had no 2025
+    baseline, 83 of them rookies -- including the first, third and fourth
+    overall picks. None of them existed anywhere in the payload, so FRANCHISE's
+    draft board could not offer them and nobody could draft a rookie at all.
+
+    They come back UNSCORED and flagged `no_data`, the same shape the bye rows
+    use: an empty `scores` keeps them off every TUDDY board (each one filters on
+    Number.isFinite), while search, the player portal and the draft board find
+    them. Nothing is invented -- a draft slot is real, but turning one into a
+    projection would be a model, and this file does not guess.
+
+    They leave on their own: once a man has MIN_GP games of his own he joins the
+    scored population through the ordinary form path.
+    """
+    roster = current_roster(season, week)
+    if roster.is_empty():
+        return pl.DataFrame()
+    reg = _try(lambda: nfl.load_rosters(seasons=[season]), f"{season} roster detail")
+    if reg.is_empty() or not {"gsis_id", "full_name", "position"} <= set(reg.columns):
+        return pl.DataFrame()
+    who = (reg.filter(pl.col("gsis_id").is_not_null())
+              .select(pl.col("gsis_id").alias("player_id"),
+                      pl.col("full_name").alias("name"),
+                      pl.col("position").alias("position"))
+              .unique(subset=["player_id"], keep="first", maintain_order=True))
+    rows = (roster.join(who, on="player_id", how="inner")
+                  .filter(~pl.col("player_id").is_in(list(known)))
+                  .rename({"team_now": "team"}))
+    if rows.is_empty():
+        return rows
+    ctx = (team_context(season).filter(pl.col("week") == week)
+             .select("team", pl.col("opp").alias("opponent_team")))
+    rows = rows.join(ctx, on="team", how="left")
+    return rows.with_columns(
+        pl.col("opponent_team").is_null().cast(pl.Int8).alias("on_bye"),
+        pl.lit(season).alias("season_yr"))
+
+
 def build_multi(seasons: list[int]) -> pl.DataFrame:
     """Stack seasons so the report card isn't a single sample."""
     frames = [build(s) for s in seasons]

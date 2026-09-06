@@ -43,7 +43,8 @@ import nfl_explosive
 import nfl_field
 import nfl_picks
 from nfl_features import (build, season_baseline, upcoming_rows, stats_season_for,
-                          current_roster, played_weeks, PLAYER_FORM, USAGE_FORM)
+                          current_roster, newcomer_rows, played_weeks,
+                          PLAYER_FORM, USAGE_FORM)
 from nfl_scoring import MODELS, OUTCOME, score, derive, _pctile
 
 # MODEL FOUNDATION (2026-08-24) -- the NFL side of the same provenance work
@@ -508,6 +509,7 @@ def _regular_season_is_near(season: int, today: dt.date | None = None) -> bool:
 def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> dict:
     now = dt.datetime.now(PHX)
     bye_tbl = pl.DataFrame()   # week mode only; preseason has no bye weeks
+    new_tbl = pl.DataFrame()   # rostered men with no history to price
 
     if mode == "preseason":
         games = nfl_espn.fetch(seasontype=1, year=season)
@@ -571,6 +573,13 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
         # reference are the same frame in week mode -- see the note at the end
         # of nfl_features.upcoming_rows for why that is the honest population.
         slate, league, bye_tbl = upcoming_rows(season, week)
+        # Rostered men with no NFL history to price -- rookies, mostly. See
+        # nfl_features.newcomer_rows: 127 active skill players had no 2025
+        # baseline on the Week 1 roster and existed nowhere in the payload, so
+        # FRANCHISE could not offer a single rookie on its draft board.
+        new_tbl = newcomer_rows(season, week,
+                                set(slate["player_id"].to_list())
+                                | set(bye_tbl["player_id"].to_list()))
         tbl = _fill_missing(slate)
         ref = _fill_missing(league)
         # Real spread/total/venue is exactly what "context" means, and week
@@ -678,6 +687,29 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
             "scores": {}, "components": {}, "stats": stats,
             "splits": splits.get(r["player_id"], {}),
         })
+
+    # UNPRICEABLE, BUT REAL. Same shape as the bye rows above and for the same
+    # reason: an empty `scores` keeps them off every board, while search, the
+    # player portal and FRANCHISE's draft board can all find them. `no_data`
+    # says why the number is missing, so nothing has to show a 0 as if it were
+    # measured.
+    if not new_tbl.is_empty():
+        pos_ok = sorted({p for m in MODELS.values() for p in m["pos"]})
+        for r in new_tbl.filter(pl.col("position").is_in(pos_ok)).iter_rows(named=True):
+            rows.append({
+                "player_id": r["player_id"],
+                "name": r.get("name") or "—",
+                "team": r.get("team"),
+                "opp": r.get("opponent_team"),
+                "position": r.get("position"),
+                "carryover": False,
+                "questionable": False,
+                "on_bye": bool(r.get("on_bye")),
+                "no_data": True,
+                "low_sample": True,
+                "scores": {}, "components": {}, "stats": {},
+                "splits": {},
+            })
 
     # ── the research layer ───────────────────────────────────────────────────
     # Written as SEPARATE files rather than folded into week.json. The slate is
