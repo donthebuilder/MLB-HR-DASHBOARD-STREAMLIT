@@ -72,7 +72,7 @@ jobs:
       # publish_data.sh already copies current/detail/* as a whole
       # (stage_local) and merges any subdirectory under it the current run
       # didn't touch back in from the data branch (carry_forward's `for sub
-      # in detail splits zones social` loop) -- current/detail/archive/ is
+      # in detail splits zones` loop) -- current/detail/archive/ is
       # just one more subdirectory alongside today/ and tomorrow/ to it. No
       # changes needed there.
       - name: Publish to data branch
