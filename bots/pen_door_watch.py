@@ -94,7 +94,13 @@ def get_json(url: str) -> dict | None:
 
 
 def discord_urls() -> list[str]:
-    raw = os.environ.get("DISCORD_WEBHOOK", "")
+    # OWN CHANNEL (2026-09-06, Donovan: "pen door needs its own [channel],
+    # what other notis do we even have"). DISCORD_PENDOOR_WEBHOOK, if set,
+    # takes this bot OUT of the shared DISCORD_WEBHOOK room entirely -- so
+    # its live sweep pings stop competing with everything else (Live
+    # Results Digest, the social bots, Called It) for the same feed. Unset,
+    # this is a no-op and nothing about tonight changes.
+    raw = os.environ.get("DISCORD_PENDOOR_WEBHOOK") or os.environ.get("DISCORD_WEBHOOK", "")
     return [u.strip() for u in raw.replace(",", "\n").split() if u.strip().startswith("http")]
 
 

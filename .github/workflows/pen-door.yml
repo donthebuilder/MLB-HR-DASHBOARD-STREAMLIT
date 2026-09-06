@@ -51,6 +51,11 @@ jobs:
 
       - name: Watch the games
         env:
+          # DISCORD_PENDOOR_WEBHOOK, if set, gives this bot its own channel
+          # instead of sharing DISCORD_WEBHOOK with everything else in this
+          # repo (2026-09-06). Unset = falls back to DISCORD_WEBHOOK, same
+          # as before.
+          DISCORD_PENDOOR_WEBHOOK: ${{ secrets.DISCORD_PENDOOR_WEBHOOK }}
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         run: python bots/pen_door_watch.py
 

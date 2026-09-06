@@ -483,10 +483,18 @@ def _sync_read_json(path: Path, default):
     return default
 
 def _discord_urls() -> list:
-    """DISCORD_WEBHOOK accepts MULTIPLE webhook URLs separated by commas,
+    """DISCORD_LIVE_WEBHOOK, if set, is this bot's OWN channel — Donovan
+    wanted the Live Results Digest sharing a room with Called It (the
+    pregame/homer/numerology bot on the moonshot-push side) rather than the
+    shared DISCORD_WEBHOOK room everything else in this repo posts to
+    (2026-09-06). Point it at the SAME webhook URL as moonshot-push's
+    DISCORD_HOMER_WEBHOOK to land both there. Unset, this falls back to
+    DISCORD_WEBHOOK exactly like before.
+
+    Either var still accepts MULTIPLE webhook URLs separated by commas,
     whitespace or newlines (2026-08-08 — second server added). One secret,
     every room gets every post; a failure on one URL never blocks the rest."""
-    raw = os.environ.get("DISCORD_WEBHOOK", "")
+    raw = os.environ.get("DISCORD_LIVE_WEBHOOK") or os.environ.get("DISCORD_WEBHOOK", "")
     return [u.strip() for u in raw.replace(",", "\n").split() if u.strip().startswith("http")]
 
 

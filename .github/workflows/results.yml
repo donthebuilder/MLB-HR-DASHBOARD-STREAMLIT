@@ -188,6 +188,12 @@ jobs:
         env:
           # Optional: set the DISCORD_WEBHOOK repo secret to get pool/pair
           # transition alerts (one-away, cashed) in Discord. Absent = no-op.
+          # DISCORD_LIVE_WEBHOOK, if set, takes priority and gives this bot
+          # its own channel -- point it at the same webhook URL as
+          # moonshot-push's DISCORD_HOMER_WEBHOOK to share a room with
+          # Called It instead of the shared DISCORD_WEBHOOK everything else
+          # in this repo posts to (2026-09-06).
+          DISCORD_LIVE_WEBHOOK: ${{ secrets.DISCORD_LIVE_WEBHOOK }}
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
           # 2026-08-22: same transition detector also queues a "pick cashed"
           # social draft (bots/social/pick_cashed.py) — needs this to get
