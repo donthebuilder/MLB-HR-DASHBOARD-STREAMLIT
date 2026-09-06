@@ -49,8 +49,16 @@ STATS = ["passing_yards", "carries", "rushing_yards", "rushing_tds",
 
 def _reg_lines(season: int, week: int) -> pl.DataFrame:
     import nflreadpy as nfl
-    d = (nfl.load_player_stats(seasons=[season], summary_level="week")
-           .filter(pl.col("season_type") == "REG", pl.col("week") == week))
+    # nflverse publishes a season's parquet only once the season exists -- in
+    # August `seasons=[2026]` is a 404, not an empty frame. Grading a week that
+    # has not been played is a normal thing to ask for now that the bot prices
+    # the upcoming week, so it comes back with nothing rather than an exception.
+    try:
+        stats = nfl.load_player_stats(seasons=[season], summary_level="week")
+    except Exception as exc:
+        print(f"  {season} stats unavailable ({type(exc).__name__}: {exc})")
+        return pl.DataFrame()
+    d = stats.filter(pl.col("season_type") == "REG", pl.col("week") == week)
     have = set(d.columns)
     # A stat a source doesn't carry becomes 0, not null — OUTCOME sums columns
     # and a single null would poison a whole market's grade into null.
@@ -271,6 +279,13 @@ def main() -> int:
     else:
         lines = _pre_lines(a.season, a.week)
     print(f"  {lines.height} player line(s)")
+    # NOTHING PLAYED YET IS NOT A GRADE OF ZERO. Writing an empty results file
+    # would blow the season-to-date record and the week archive away every time
+    # the bot builds a card for a week that has not kicked off -- which, now
+    # that the bot prices the upcoming week, is most of its runs.
+    if lines.is_empty():
+        print("  nothing to grade yet -- leaving the existing results untouched")
+        return 0
 
     actual = outcomes(lines)
     # See eligible_lines()'s docstring for why this join has to happen by

@@ -42,7 +42,8 @@ import nfl_coverage
 import nfl_explosive
 import nfl_field
 import nfl_picks
-from nfl_features import build, season_baseline, PLAYER_FORM, USAGE_FORM
+from nfl_features import (build, season_baseline, upcoming_rows, stats_season_for,
+                          played_weeks, PLAYER_FORM, USAGE_FORM)
 from nfl_scoring import MODELS, OUTCOME, score, derive, _pctile
 
 # MODEL FOUNDATION (2026-08-24) -- the NFL side of the same provenance work
@@ -365,6 +366,31 @@ def _next_wave(games: list[dict], today: dt.date) -> list[dict]:
     return [g for g in ahead if day(g) <= cutoff]
 
 
+
+# ── which half of the calendar we are in ─────────────────────────────────────
+
+LEAD_DAYS = 7   # start pricing the regular season a week out
+
+
+def _regular_season_is_near(season: int, today: dt.date | None = None) -> bool:
+    """True once the season's first regular-season game is within LEAD_DAYS.
+
+    Reads the published schedule, so it needs no maintenance and it cannot be
+    off by a day the way a literal date in a YAML file was.
+    """
+    import polars as _pl
+    import nflreadpy as _nfl
+    today = today or dt.datetime.now(PHX).date()
+    try:
+        s = _nfl.load_schedules().filter(_pl.col("season") == season)
+        days = sorted(d for d in s["gameday"].to_list() if d)
+        first = dt.date.fromisoformat(str(days[0]))
+    except Exception as exc:
+        print(f"schedule unreadable ({type(exc).__name__}: {exc}) -- staying in preseason")
+        return False
+    return (first - today).days <= LEAD_DAYS
+
+
 def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> dict:
     now = dt.datetime.now(PHX)
 
@@ -387,9 +413,19 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
         context_ok = False
         label = f"Preseason · {now:%b %-d}"
     else:
-        tbl = build(season)
-        if week:
-            tbl = tbl.filter(pl.col("week") == week)
+        # WEEK MODE PRICES A GAME THAT HASN'T BEEN PLAYED (2026-09-06).
+        #
+        # This branch used to open with `build(season).filter(week == w)`.
+        # build() starts from load_player_stats, which carries a row for a
+        # player-week only AFTER that game -- so filtering it to the week you
+        # are about to bet returns nothing. In a brand-new season it doesn't
+        # even return nothing: the parquet for that season does not exist yet
+        # and nflverse raises a 404. The scheduled flip to week mode on Sept 9
+        # would have crashed the bot and left the site frozen on the last
+        # preseason card straight through Week 1.
+        #
+        # The rows now come from upcoming_rows() at the bottom of this branch:
+        # same columns, built from what is knowable before kickoff.
         games = nfl_espn.fetch(seasontype=2, year=season, week=week)
         # REST DAYS (2026-08-28, B7). Unlike the preseason branch, `games`
         # above is scoped to ONE week — a team's prior game lives in an
@@ -414,20 +450,24 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
             upcoming = nfl_pbp.attach_pbp_state(upcoming, season, week)
         except Exception as exc:
             print(f"nfl_pbp unavailable ({type(exc).__name__}: {exc})")
+        # THE ROWS. Trailing form over weeks < w, last season's per-game
+        # baseline as carryover until a man has MIN_GP games of his own, and
+        # the schedule's spread, total, roof and wind for week w. Slate and
+        # reference are the same frame in week mode -- see the note at the end
+        # of nfl_features.upcoming_rows for why that is the honest population.
+        slate, league = upcoming_rows(season, week)
+        tbl = _fill_missing(slate)
+        ref = _fill_missing(league)
+        # Real spread/total/venue is exactly what "context" means, and week
+        # mode has it from the schedule on day one -- so this stays true even
+        # in the week where every player feature is still last year's carryover.
         context_ok = True
         label = f"Week {week}"
-        tbl = tbl.with_columns(pl.col("player_display_name").alias("name"))
-        # In-season the reference is every player league-wide in the same week,
-        # which is what build() already returns before the week filter.
-        ref = build(season)
-        if week:
-            ref = ref.filter(pl.col("week") == week)
-        ref = ref.with_columns(pl.col("player_display_name").alias("name"))
 
     # SPLITS. Same season the form comes from, so a row's splits and its
     # baseline are describing the same football rather than two different years.
     try:
-        splits = splits_for(season - 1 if mode == "preseason" else season)
+        splits = splits_for(season - 1 if mode == "preseason" else stats_season_for(season, week))
     except Exception as exc:
         print(f"splits unavailable ({type(exc).__name__}: {exc}) — continuing without")
         splits = {}
@@ -489,20 +529,24 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
     # what every tab needs on load; game logs and defence-vs-position are what
     # ONE tab needs, and a 500 KB payload the Games tab never reads is 500 KB
     # the Games tab waits for.
-    stat_season = season - 1 if mode == "preseason" else season
+    # WHICH SEASON THE CONTEXT TABLES COME FROM. Not `season` in week mode: in
+    # Week 1 there is no 2026 defence-vs-position table and there cannot be one,
+    # so every research tab would have shipped empty. stats_season_for() asks
+    # the data -- three played weeks and it switches over on its own.
+    stat_season = season - 1 if mode == "preseason" else stats_season_for(season, week)
     extras: dict = {}
     for name, fn in (
-        ("dvp", lambda: nfl_dvp.build(stat_season)),
-        ("roles", lambda: nfl_dvp.current_roles(stat_season)),
-        ("coverage_team", lambda: nfl_coverage.team_profile(stat_season)),
-        ("coverage_player", lambda: nfl_coverage.player_vs_coverage(stat_season)),
-        ("def_explosive", lambda: nfl_explosive.defense_explosive(stat_season)),
-        ("player_explosive", lambda: nfl_explosive.player_explosive(stat_season)),
-        ("usage", lambda: nfl_explosive.team_usage(stat_season)),
-        ("field", lambda: nfl_field.build(stat_season)),
+        ("dvp", nfl_dvp.build),
+        ("roles", nfl_dvp.current_roles),
+        ("coverage_team", nfl_coverage.team_profile),
+        ("coverage_player", nfl_coverage.player_vs_coverage),
+        ("def_explosive", nfl_explosive.defense_explosive),
+        ("player_explosive", nfl_explosive.player_explosive),
+        ("usage", nfl_explosive.team_usage),
+        ("field", nfl_field.build),
     ):
         try:
-            extras[name] = fn()
+            extras[name] = fn(stat_season)
         except Exception as exc:
             print(f"{name} unavailable ({type(exc).__name__}: {exc})")
             extras[name] = {}
@@ -718,7 +762,7 @@ def write_nfl_prediction_log(run_meta: dict, players: list[dict], out_dir: Path,
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--mode", choices=["preseason", "week"], default="preseason")
+    ap.add_argument("--mode", choices=["preseason", "week", "auto"], default="preseason")
     ap.add_argument("--season", type=int, default=2026)
     ap.add_argument("--week", type=int, default=None)
     ap.add_argument("--out", type=str, default="../public/data/nfl")
@@ -735,6 +779,13 @@ def main() -> int:
     # In week mode the scheduled workflow passes no --week (it can't know one).
     # Without this the season-long table went unfiltered, the schedule fetch
     # returned every game of the year, and the card was labelled "Week None".
+    # AUTO. The workflow used to decide this with a hardcoded
+    # `date -u < 2026-09-09` in YAML, which put the first week-mode run 80
+    # minutes before kickoff and needed hand-editing every August. Ask the
+    # schedule instead: once the season's first game is inside a week, price it.
+    if a.mode == "auto":
+        a.mode = "week" if _regular_season_is_near(a.season) else "preseason"
+        print(f"auto -> {a.mode} mode")
     if a.mode == "week":
         a.week = nfl_espn.resolve_week(a.season, a.week)
     payload = build_payload(a.mode, a.season, a.week, out)

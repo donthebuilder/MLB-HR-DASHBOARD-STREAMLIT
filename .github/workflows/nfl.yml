@@ -29,9 +29,9 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "preseason or week"
+        description: "auto, preseason or week"
         required: false
-        default: "preseason"
+        default: "auto"
       week:
         description: "regular-season week number (week mode only)"
         required: false
@@ -89,14 +89,14 @@ jobs:
         id: mode
         run: |
           set -euo pipefail
-          MODE="${{ github.event.inputs.mode || '' }}"
-          if [ -z "$MODE" ]; then
-            # Week 1 of the 2026 regular season kicks off Sept 9.
-            if [ "$(date -u +%s)" -lt "$(date -u -d 2026-09-09 +%s)" ]; then
-              MODE=preseason
-            else
-              MODE=week
-            fi
+          # This used to be `date -u < 2026-09-09` written here in YAML. Two
+          # things were wrong with that: it needed hand-editing every August,
+          # and it put the first week-mode run at Wed 23:00Z -- eighty minutes
+          # before the Week 1 kickoff it was meant to price. The season's own
+          # schedule knows when the season starts, so ask it.
+          MODE="${{ github.event.inputs.mode || 'auto' }}"
+          if [ "$MODE" = "auto" ]; then
+            MODE=$(cd bots/nfl && python -c "from nfl_bot import _regular_season_is_near; print('week' if _regular_season_is_near(2026) else 'preseason')")
           fi
           echo "mode=$MODE" >> "$GITHUB_OUTPUT"
           echo "Running in $MODE mode"
