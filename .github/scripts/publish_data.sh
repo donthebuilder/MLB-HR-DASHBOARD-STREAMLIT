@@ -516,8 +516,25 @@ carry_forward() {
     glob="${spec%:*}"; keep="${spec##*:}"
     n=$(find "$STAGE/public/data/current" -maxdepth 1 -type f -name "$glob" | wc -l)
     if [ "$n" -gt "$keep" ]; then
-      find "$STAGE/public/data/current" -maxdepth 1 -type f -name "$glob" \
-        | sort | head -n "$((n - keep))" | xargs -r rm -f
+      # NOT `sort | head`, for the same reason meta_time() above spells out.
+      # head exits the instant it has its lines and closes the pipe; sort, which
+      # writes only after it has read everything, then dies on the next write --
+      # "sort: write failed: 'standard output': Broken pipe" / "sort: write
+      # error", exit 2 -- pipefail promotes that to the pipeline's status and
+      # set -e kills the publish before anything ships.
+      #
+      # It is a RACE, which is why it looked fine for months: it fires only when
+      # sort still has bytes to write when head goes away. On 2026-09-06 it took
+      # out two MLB slate publishes (Today #692 and #693) on the day
+      # prediction_log_*.jsonl first went past its 300 cap -- n=301, so
+      # `head -n 1` left sort 300 lines to write into a closed pipe. Reproduced
+      # at that exact shape: 1 failure in 5 runs before, 0 in 40 after.
+      #
+      # head reading a FILE has no upstream pipe to break.
+      trimlist="$(mktemp)"
+      find "$STAGE/public/data/current" -maxdepth 1 -type f -name "$glob" | sort > "$trimlist"
+      head -n "$((n - keep))" "$trimlist" | xargs -r rm -f
+      rm -f "$trimlist"
       echo "Trimmed $((n - keep)) old $glob file(s), keeping $keep."
     fi
   done
@@ -560,11 +577,11 @@ carry_forward() {
         want=""
         [ -f "$STAGE/public/data/current/${label}_run_meta.json" ] \
           && want="$(sed -n 's/.*"slate_date"[[:space:]]*:[[:space:]]*"\([0-9-]*\)".*/\1/p' \
-               "$STAGE/public/data/current/${label}_run_meta.json" | head -1)"
+               "$STAGE/public/data/current/${label}_run_meta.json" | head -1 || true)"
         have=""
         [ -f "$slate_dir/_manifest.json" ] \
           && have="$(sed -n 's/.*"slate_date"[[:space:]]*:[[:space:]]*"\([0-9-]*\)".*/\1/p' \
-               "$slate_dir/_manifest.json" | head -1)"
+               "$slate_dir/_manifest.json" | head -1 || true)"
         if [ -n "$want" ] && [ "$want" != "$have" ]; then
           echo "::warning::dropping carried-forward detail/${label} -- it describes ${have:-an unstamped slate}, the ${label} slate being published is ${want}."
           continue
