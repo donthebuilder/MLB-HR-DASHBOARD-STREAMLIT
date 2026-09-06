@@ -791,11 +791,65 @@ def _board_score(sl: dict) -> float:
 ROLE_EMOJI = {"TOP": "🏆", "HR": "💥", "WATCH": "👀"}
 
 
-def pregame_board_sections(graded_slots) -> list:
+def _fmt_game_time(iso_str) -> str:
+    """game_time on a slot is UTC ISO ("2026-09-06T23:05:00Z") -- render it
+    the way a person reads a first-pitch time, in ET."""
+    if not iso_str:
+        return ""
+    try:
+        from zoneinfo import ZoneInfo
+        d = dt.datetime.fromisoformat(str(iso_str).replace("Z", "+00:00"))
+        d = d.astimezone(ZoneInfo("America/New_York"))
+        h = d.hour % 12 or 12
+        return f"{h}:{d.minute:02d}{'a' if d.hour < 12 else 'p'} ET"
+    except Exception:
+        return ""
+
+
+def _proven_b2b_ids(date_str: str) -> set:
+    """Player ids who ACTUALLY homered on date_str, proven from our own
+    graded archive -- same "no proof, no render" rule lib/b2b.js on the
+    site enforces for its back-to-back watch (that file's docstring has the
+    full history of how this went wrong three different ways before landing
+    on that rule). date_str here is always YESTERDAY relative to the board
+    being built, since a today slate is proven off yesterday's own graded
+    file. A missing or unreadable file means an empty set -- never a guess,
+    and the board simply carries no B2B marks that night rather than a
+    false one. Unlike the site, there's no league/statsapi fallback here:
+    this bot already produced yesterday's own graded file itself, so if
+    it's missing that's a real gap to notice, not one to paper over."""
+    if not date_str or not DASHBOARD_REPO:
+        return set()
+    try:
+        p = DASHBOARD_REPO / "public" / "data" / "results" / f"graded_results_{date_str}.json"
+        payload = json.loads(p.read_text(encoding="utf-8"))
+    except Exception:
+        return set()
+    ids = set()
+    for sl in (payload.get("graded_slots") or payload.get("results") or []):
+        try:
+            pid = int(sl.get("player_id") or 0)
+        except Exception:
+            pid = 0
+        if pid and int(sl.get("actual_hr") or 0) > 0:
+            ids.add(pid)
+    return ids
+
+
+def pregame_board_sections(graded_slots, proven_b2b_ids=None) -> list:
     """Tonight's designated picks, grouped by role, ranked by score. Roles
     outside TOP/HR/WATCH (TOP15, HRR, CONTACT, TB, ...) fold into one
     OTHER count -- this board is meant to be skimmed pregame, not a full
-    re-listing of the whole tracked slate."""
+    re-listing of the whole tracked slate.
+
+    Each line carries the game itself, not just the name (2026-09-06,
+    Donovan: "need more on the games") -- opponent, first pitch in ET, and
+    the pitcher he's actually facing, since "TOP pick" pregame means nothing
+    without knowing who's on the mound. And 🔁 marks a pick who is PROVEN
+    (see _proven_b2b_ids) to have homered his last time out, mirroring the
+    site's own back-to-back watch (lib/b2b.js) rather than inventing a
+    second, less careful version of the same claim."""
+    proven = proven_b2b_ids or set()
     by_role: dict[str, list] = {}
     for sl in (graded_slots or []):
         role = str(sl.get("game_pick_role") or "").split("/")[0].strip().upper()
@@ -803,17 +857,28 @@ def pregame_board_sections(graded_slots) -> list:
             continue
         by_role.setdefault(role, []).append(sl)
 
+    def line_for(sl: dict) -> str:
+        try:
+            pid = int(sl.get("player_id") or 0)
+        except Exception:
+            pid = 0
+        b2b = "🔁 " if pid and pid in proven else ""
+        name = f"{b2b}{sl.get('name', '?')}"
+        if sl.get("team"):
+            name += f" ({sl.get('team')})"
+        matchup = f" vs {sl.get('opponent')}" if sl.get("opponent") else ""
+        game_time = _fmt_game_time(sl.get("game_time"))
+        pitcher = f"opp SP {sl.get('pitcher_name')}" if sl.get("pitcher_name") else ""
+        meta = " · ".join(x for x in (game_time, pitcher) if x)
+        return f"{name}{matchup}" + (f" · {meta}" if meta else "")
+
     sections = []
     for role in ("TOP", "HR", "WATCH"):
         picks = by_role.pop(role, [])
         if not picks:
             continue
         picks.sort(key=lambda sl: -_board_score(sl))
-        lines = [
-            f"{sl.get('name', '?')}" + (f" ({sl.get('team')})" if sl.get("team") else "")
-            + (f" vs {sl.get('opponent')}" if sl.get("opponent") else "")
-            for sl in picks[:12]
-        ]
+        lines = [line_for(sl) for sl in picks[:12]]
         if len(picks) > len(lines):
             lines.append(f"+{len(picks) - len(lines)} more")
         sections.append((f"{ROLE_EMOJI.get(role, '')} {role} ({len(picks)})", lines))
@@ -831,19 +896,27 @@ def post_pregame_board(graded_slots, date_str: str) -> None:
     st = _load_board_state()
     if st.get("board_posted_date") == date_str:
         return
-    sections = pregame_board_sections(graded_slots)
+    try:
+        yesterday = (dt.date.fromisoformat(date_str) - dt.timedelta(days=1)).isoformat()
+    except Exception:
+        yesterday = ""
+    proven = _proven_b2b_ids(yesterday)
+    sections = pregame_board_sections(graded_slots, proven)
     if not sections:
         return
     desc = "\n\n".join(
         f"**{title}**\n" + "\n".join(f"· {ln}" for ln in lines) for title, lines in sections
     )[:4000]
+    footer = f"posted once, before first pitch, for {date_str}"
+    if proven:
+        footer += " · 🔁 = homered his last time out, proven off yesterday's graded file"
+    footer += " · stats & analysis, not financial or betting advice"
     ok, bad = _post_discord_payload({
         "embeds": [{
             "title": "🌅 Tonight's board",
             "description": desc,
             "color": 0xF97316,
-            "footer": {"text": f"posted once, before first pitch, for {date_str}"
-                                " · stats & analysis, not financial or betting advice"},
+            "footer": {"text": footer},
             "timestamp": dt.datetime.now(dt.timezone.utc).isoformat(),
         }],
     })
