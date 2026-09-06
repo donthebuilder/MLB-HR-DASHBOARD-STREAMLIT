@@ -1695,6 +1695,14 @@ class HitterRecord:
     recent_bat_tracking_status: str = "missing"
     recent_bat_tracking_window: str = ""
     season_max_distance: float = 0.0
+    # POWER-3 (2026-09-06): season batted-ball power inputs + the slate rank.
+    season_avg_ev: float = 0.0
+    season_max_ev: float = 0.0
+    season_bbe_n: int = 0
+    season_hr_per_bbe: float = 0.0
+    power3_score: float = 0.0     # 0-100, mean of the three within-slate percentile ranks
+    power3_rank: int = 0          # 1 = strongest season power on tonight's slate
+    power3_flag: bool = False     # top 10 on the slate with a real sample
     # Docket #20: expected HRs from contact + luck (actual − expected).
     season_xhr: float = 0.0
     season_hr_luck: float = 0.0
@@ -3847,6 +3855,13 @@ def build_batter_statcast_profile(db: CacheDB, player_id: int, end_date: dt.date
         "recent_avg_distance": 0.0,
         "recent_avg_hr_distance": 0.0,
         "season_max_distance": 0.0,
+        # POWER-3 INPUTS (2026-09-06, homer night audit): season avg EV, season
+        # max EV and season HR per ball in play -- the three slow signals that
+        # separated homer hitters from the field on 150 of 155 nights.
+        "season_avg_ev": 0.0,
+        "season_max_ev": 0.0,
+        "season_bbe_n": 0,
+        "season_hr_per_bbe": 0.0,
         "recent_ev": 88.5,
         "recent_hard_hit_rate": 0.0,
         "recent_sweet_spot_rate": 0.0,
@@ -3997,6 +4012,12 @@ def build_batter_statcast_profile(db: CacheDB, player_id: int, end_date: dt.date
         _season_bbe = df[df["type"] == "X"] if "type" in df.columns else df
         _sd = _season_bbe.loc[_season_bbe["hit_distance_sc"] > 0, "hit_distance_sc"]
         out["season_max_distance"] = float(_sd.max()) if len(_sd) else 0.0
+        _sev = _season_bbe["launch_speed"].dropna() if "launch_speed" in _season_bbe.columns else pd.Series(dtype=float)
+        out["season_bbe_n"] = int(len(_season_bbe))
+        out["season_avg_ev"] = round(float(_sev.mean()), 2) if len(_sev) else 0.0
+        out["season_max_ev"] = round(float(_sev.max()), 1) if len(_sev) else 0.0
+        _shr = int((_season_bbe.get("events") == "home_run").sum()) if len(_season_bbe) else 0
+        out["season_hr_per_bbe"] = round(_shr / len(_season_bbe), 4) if len(_season_bbe) else 0.0
         # Docket #20: per-player (EV, LA) histograms — season for the league
         # table + his own xHR, recent window for recent_xhr.
         out["xhr_hist"] = build_xhr_hist(_season_bbe)
@@ -9745,6 +9766,10 @@ def build_hitter_records(client: MLBClient, db: CacheDB, game: Dict[str, Any], s
                 recent_bat_tracking_status=str(sc.get("recent_bat_tracking_status") or "missing"),
                 recent_bat_tracking_window=str(sc.get("recent_bat_tracking_window") or ""),
                 season_max_distance=safe_float(sc.get("season_max_distance"), 0.0),
+                season_avg_ev=safe_float(sc.get("season_avg_ev"), 0.0),
+                season_max_ev=safe_float(sc.get("season_max_ev"), 0.0),
+                season_bbe_n=safe_int(sc.get("season_bbe_n"), 0),
+                season_hr_per_bbe=safe_float(sc.get("season_hr_per_bbe"), 0.0),
                 recent_ev=safe_float(sc.get("recent_ev"), 88.5),
                 recent_hard_hit_rate=sc["recent_hard_hit_rate"],
                 recent_sweet_spot_rate=sc["recent_sweet_spot_rate"],
@@ -10530,6 +10555,8 @@ def build_top10_alt_board(rows: List[HitterRecord]) -> str:
     LAST_ALT_TAGS = {}
     MIN_TOP10_PA = 40
     MIN_TOP10_BBE = 10
+    POWER3_MIN_BBE = 60    # season balls in play before the flag can fire
+    POWER3_FLAG_TOP = 10   # the audit's "top ten by Power-3 homer at 21.4%"
 
     def trusted_sample(r: HitterRecord) -> bool:
         return r.season_pa >= MIN_TOP10_PA and r.recent_350_den >= MIN_TOP10_BBE
@@ -10576,6 +10603,30 @@ def build_top10_alt_board(rows: List[HitterRecord]) -> str:
         sorted(rows, key=lambda r: safe_float(getattr(r, "longest_hr_score", 0.0), 0.0), reverse=True), 1
     ):
         _lrec.longest_hr_rank = _lrank
+
+    # POWER-3 (2026-09-06, homer night audit). Equal average of three
+    # within-slate percentile ranks -- season HR per ball in play, season avg
+    # EV, season max EV. Measured over 155 nights of 2026 it out-ranked the
+    # field on 150 of them (AUC 0.607) and its nightly top ten homered at
+    # 21.4% against an 11.2% base; no single signal, no form add-on and no
+    # weighting beat the plain average. Hitters under POWER3_MIN_BBE season
+    # balls in play are ranked but never flagged -- a 30-BBE max EV is noise.
+    _p3_pool = [r for r in rows if safe_int(getattr(r, "season_bbe_n", 0), 0) > 0]
+    if _p3_pool:
+        _n = len(_p3_pool)
+        def _pct_rank(key):
+            order = sorted(_p3_pool, key=lambda r: safe_float(getattr(r, key, 0.0), 0.0))
+            return {id(r): (i + 1) / _n for i, r in enumerate(order)}
+        _pr = [_pct_rank(k) for k in ("season_hr_per_bbe", "season_avg_ev", "season_max_ev")]
+        for r in _p3_pool:
+            r.power3_score = round(100.0 * sum(p[id(r)] for p in _pr) / 3.0, 1)
+        _eligible = sorted(
+            [r for r in _p3_pool if safe_int(getattr(r, "season_bbe_n", 0), 0) >= POWER3_MIN_BBE],
+            key=lambda r: r.power3_score, reverse=True)
+        for _i, r in enumerate(sorted(_p3_pool, key=lambda r: r.power3_score, reverse=True), 1):
+            r.power3_rank = _i
+        for r in _eligible[:POWER3_FLAG_TOP]:
+            r.power3_flag = True
 
     ranked_all = sorted(rows, key=top10_rank_score, reverse=True)
     ranked_trusted = [r for r in ranked_all if trusted_sample(r) and not getattr(r, "true_avoid_hr", False)]
@@ -12197,6 +12248,10 @@ def _s2_player_dict(r: HitterRecord) -> Dict[str, Any]:
         "recent_squared_up_sample": getattr(r, "recent_squared_up_sample", 0),
         "recent_blast_rate": getattr(r, "recent_blast_rate", None),
         "season_max_distance": getattr(r, "season_max_distance", 0.0),
+        "season_avg_ev": getattr(r, "season_avg_ev", 0.0), "season_max_ev": getattr(r, "season_max_ev", 0.0),
+        "season_bbe_n": getattr(r, "season_bbe_n", 0), "season_hr_per_bbe": getattr(r, "season_hr_per_bbe", 0.0),
+        "power3_score": getattr(r, "power3_score", 0.0), "power3_rank": getattr(r, "power3_rank", 0),
+        "power3_flag": bool(getattr(r, "power3_flag", False)),
         "recent_ev": getattr(r, "recent_ev", None), "last5_hits": r.last5_hits,
         "last5_hr": r.last5_hr, "last5_xbh": r.last5_xbh, "last7_hr": r.last7_hr,
         "season_hr": r.season_hr, "season_pa": r.season_pa, "hr_per_pa": r.hr_per_pa,
@@ -13971,6 +14026,8 @@ PREGAME_SNAPSHOT_FIELDS = (
     "recent_ev", "recent_hard_hit_rate", "recent_sweet_spot_rate",
     "recent_avg_hr_distance", "recent_max_distance",
     "recent_distance_tracked", "season_max_distance", "recent_xwoba",
+    "season_avg_ev", "season_max_ev", "season_bbe_n", "season_hr_per_bbe",
+    "power3_score", "power3_rank", "power3_flag",
     "l20pa_fb_rate", "l20pa_barrel_rate", "l20pa_hard_hit_rate",
     "l20pa_ideal_hr_contact", "l20pa_bbe", "l20pa_pull_rate",
     "l25pa_air_rate", "l25pa_sweet_spot_rate", "l25pa_barrel_rate",
