@@ -7,6 +7,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
@@ -489,8 +490,16 @@ def _discord_urls() -> list:
     return [u.strip() for u in raw.replace(",", "\n").split() if u.strip().startswith("http")]
 
 
-def _post_discord_payload(payload: dict) -> None:
-    for url in _discord_urls():
+def _post_discord_payload(payload: dict) -> tuple:
+    """Returns (delivered, failed) hook counts — see the docstring on
+    _post_discord below for why this reports instead of swallowing (2026-09-06,
+    same fix pen_door_watch.py got on 2026-08-11: this file's Discord posting
+    had the identical silent-failure shape and nobody had closed it here)."""
+    urls = _discord_urls()
+    if not urls:
+        return 0, 0
+    ok = bad = 0
+    for i, url in enumerate(urls, 1):
         try:
             import urllib.request
             req = urllib.request.Request(
@@ -498,9 +507,15 @@ def _post_discord_payload(payload: dict) -> None:
                 data=json.dumps(payload).encode("utf-8"),
                 headers={"Content-Type": "application/json", "User-Agent": "moonshot-bot"},
             )
-            urllib.request.urlopen(req, timeout=10)
+            with urllib.request.urlopen(req, timeout=10) as r:
+                print(f"discord hook {i}/{len(urls)}: HTTP {r.status}")
+            ok += 1
         except Exception as exc:
-            print(f"discord post failed: {exc}")
+            code = getattr(exc, "code", None)
+            hint = " (webhook deleted — refresh the DISCORD_WEBHOOK secret)" if code == 404 else ""
+            print(f"discord hook {i}/{len(urls)} FAILED: {exc}{hint}", file=sys.stderr)
+            bad += 1
+    return ok, bad
 
 
 _HL_CACHE: dict = {}
@@ -536,13 +551,22 @@ def _hr_highlight_url(game_pk, batter_name: str) -> str:
         return ""
 
 
-def _post_discord(msg: str) -> None:
-    """Fire-and-forget alert to a Discord webhook. Set the DISCORD_WEBHOOK
-    secret in the repo and pass it through the workflow env; without it this
-    is a silent no-op. The notification lives in Discord's infrastructure —
-    the cheapest way live news reaches a pocket without the site growing a
-    server (2026-08-06)."""
-    for url in _discord_urls():
+def _post_discord(msg: str) -> tuple:
+    """Alert to every configured Discord webhook. Returns (delivered, failed).
+
+    WHY THIS REPORTS (2026-09-06). This used to fire-and-forget: no return
+    value, a swallowed exception printed one easily-missed stdout line, and
+    the caller had no way to know whether a single byte actually left the
+    machine. That is the exact silent-failure shape Donovan found and fixed
+    in bots/pen_door_watch.py on 2026-08-11 ("I wanted notis for when I'm
+    not on the site — didn't work") — this file just never got the same
+    fix. Set the DISCORD_WEBHOOK secret in the repo and pass it through the
+    workflow env; without it this is a counted no-op, not a silent one."""
+    urls = _discord_urls()
+    if not urls:
+        return 0, 0
+    ok = bad = 0
+    for i, url in enumerate(urls, 1):
         try:
             import urllib.request
             req = urllib.request.Request(
@@ -550,9 +574,15 @@ def _post_discord(msg: str) -> None:
                 data=json.dumps({"content": msg[:1900]}).encode("utf-8"),
                 headers={"Content-Type": "application/json", "User-Agent": "moonshot-bot"},
             )
-            urllib.request.urlopen(req, timeout=10)
+            with urllib.request.urlopen(req, timeout=10) as r:
+                print(f"discord hook {i}/{len(urls)}: HTTP {r.status}")
+            ok += 1
         except Exception as exc:
-            print(f"discord post failed: {exc}")
+            code = getattr(exc, "code", None)
+            hint = " (webhook deleted — refresh the DISCORD_WEBHOOK secret)" if code == 404 else ""
+            print(f"discord hook {i}/{len(urls)} FAILED: {exc}{hint}", file=sys.stderr)
+            bad += 1
+    return ok, bad
 
 
 def send_pitching_change_alerts(game_cache: Dict[int, Dict[str, Any]], rows: List[Dict[str, Any]]) -> None:
@@ -622,8 +652,11 @@ def send_pitching_change_alerts(game_cache: Dict[int, Dict[str, Any]], rows: Lis
         return
     header = (f"🚪 **PEN DOORS — last hour** ({len(lines)} change{'s' if len(lines) != 1 else ''})\n"
               "Fresh arms are where the late homers live — full pen workloads on the site.")
-    _post_discord(header + "\n" + "\n".join(lines[:15]))
-    print(f"pen-door alert: {len(lines)} change(s) posted")
+    ok, bad = _post_discord(header + "\n" + "\n".join(lines[:15]))
+    if ok:
+        print(f"pen-door alert: {len(lines)} change(s) posted ({ok} hook(s), {bad} failed)")
+    else:
+        print(f"pen-door alert: DELIVERED NOTHING — {len(lines)} change(s) had nowhere to go", file=sys.stderr)
 
 
 def _render_night_card(tally: dict, date_str: str) -> bytes:
@@ -678,8 +711,15 @@ def _render_night_card(tally: dict, date_str: str) -> bytes:
     return buf.getvalue()
 
 
-def _post_discord_file(png: bytes, filename: str, content: str) -> None:
-    for url in _discord_urls():
+def _post_discord_file(png: bytes, filename: str, content: str) -> tuple:
+    """Same delivery-reporting contract as _post_discord — see its docstring.
+    Used once a night for the receipts image; the rarest of the three, and
+    exactly the one most likely to go unnoticed if it silently stopped."""
+    urls = _discord_urls()
+    if not urls:
+        return 0, 0
+    ok = bad = 0
+    for i, url in enumerate(urls, 1):
         try:
             import urllib.request, uuid
             boundary = uuid.uuid4().hex
@@ -690,9 +730,15 @@ def _post_discord_file(png: bytes, filename: str, content: str) -> None:
             body += f"--{boundary}--\r\n".encode()
             req = urllib.request.Request(url, data=body, headers={
                 "Content-Type": f"multipart/form-data; boundary={boundary}", "User-Agent": "moonshot-bot"})
-            urllib.request.urlopen(req, timeout=15)
+            with urllib.request.urlopen(req, timeout=15) as r:
+                print(f"discord hook {i}/{len(urls)}: HTTP {r.status}")
+            ok += 1
         except Exception as exc:
-            print(f"discord file post failed: {exc}")
+            code = getattr(exc, "code", None)
+            hint = " (webhook deleted — refresh the DISCORD_WEBHOOK secret)" if code == 404 else ""
+            print(f"discord hook {i}/{len(urls)} FAILED: {exc}{hint}", file=sys.stderr)
+            bad += 1
+    return ok, bad
 
 
 def _webhook_transitions(old_payload, new_payload, date_str: str = "") -> None:
@@ -930,8 +976,11 @@ def _webhook_transitions(old_payload, new_payload, date_str: str = "") -> None:
                 # the shareable artifact: tonight's receipts as an image
                 try:
                     _png = _render_night_card(tally, date_str or "tonight")
-                    _post_discord_file(_png, f"receipts_{date_str or 'night'}.png",
-                                       "🧾 **Night receipts** — locked, graded, done.")
+                    _img_ok, _img_bad = _post_discord_file(
+                        _png, f"receipts_{date_str or 'night'}.png",
+                        "🧾 **Night receipts** — locked, graded, done.")
+                    if not _img_ok:
+                        print(f"night card DELIVERED NOTHING ({_img_bad} hook(s) failed)", file=sys.stderr)
                 except Exception as _cexc:
                     print(f"night card skipped: {_cexc}")
         if ticket_lines:
@@ -954,7 +1003,7 @@ def _webhook_transitions(old_payload, new_payload, date_str: str = "") -> None:
         n_t = sum(n for ok, n in src_tally.values()) if src_tally else None
         footer = (f"picks {ok_t}/{n_t} on their own bars tonight" if n_t else "moonshot live digest") \
             + " · stats & analysis, not financial or betting advice"
-        _post_discord_payload({
+        _deliv_ok, _deliv_bad = _post_discord_payload({
             "embeds": [{
                 "title": "📡 Moonshot — live digest",
                 "description": desc,
@@ -963,8 +1012,23 @@ def _webhook_transitions(old_payload, new_payload, date_str: str = "") -> None:
                 "timestamp": dt.datetime.now(dt.timezone.utc).isoformat(),
             }],
         })
+        if _deliv_ok:
+            print(f"live digest posted ({_deliv_ok} hook(s), {_deliv_bad} failed)")
+        else:
+            # NOT the same thing as the except below. This means the digest
+            # was built fine and every webhook refused it — 2026-09-06, the
+            # same silent-failure class Donovan already found and fixed in
+            # pen_door_watch.py on 2026-08-11, closed here too. This still
+            # doesn't fail the script (grading already wrote its files by
+            # this point, which matters more than the ping), but it's now a
+            # RED-flagged stderr line instead of one easily-missed print.
+            print("live digest DELIVERED NOTHING — every Discord webhook refused it or none is configured",
+                  file=sys.stderr)
     except Exception as exc:
-        print(f"webhook transitions skipped: {exc}")
+        # A crash while BUILDING the digest (bad data shape, etc.) — distinct
+        # from a delivery failure, which is reported above and never reaches
+        # here.
+        print(f"webhook transitions skipped (digest build failed): {exc}")
 
 
 def _sync_write_json(path: Path, payload) -> None:
