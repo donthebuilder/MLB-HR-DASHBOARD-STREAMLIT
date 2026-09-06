@@ -384,6 +384,103 @@ def _next_wave(games: list[dict], today: dt.date) -> list[dict]:
 
 
 
+
+# ── D/ST, from measurement rather than a flat number ─────────────────────────
+
+# The site's own vocabulary, so nothing has to translate on the way in.
+# lib/fantasy/scoring.js reads exactly these keys.
+DEF_STATS = {
+    "def_sacks": "def_sacks",
+    "def_interceptions": "def_interceptions",
+    "fumble_recovery_opp": "def_fumble_recoveries",
+}
+
+
+def team_defense(stat_season: int, season: int) -> dict:
+    """Per-team defensive production: last season's per-game rates, and this
+    season's weekly lines once they exist.
+
+    WHY THIS EXISTS. FRANCHISE projected every D/ST at exactly 0.0 points and
+    the reason was not a bug in the arithmetic -- it was an absence. A defence's
+    fantasy score is points-allowed plus sacks, takeaways and touchdowns, and
+    the payload carried none of the second half. scoring.js correctly refused to
+    guess them ("absent from BOTH sides ... rather than contradicting each
+    other") and fell back to DEF_BASELINE_POINTS_ALLOWED = 21, which lands in
+    the 21-27 tier worth zero. So all 32 defences tied at 0 and their order on
+    the draft board was alphabetical.
+
+    nflverse has had these columns the whole time in load_team_stats(): def_sacks,
+    def_interceptions, def_tds, fumble_recovery_opp, special_teams_tds. Points
+    allowed comes from the schedule's own scores.
+
+    BOTH SIDES OR NEITHER. `per_game` feeds the projection and `weeks` feeds the
+    actual, and they carry the same five terms -- so the two columns a manager
+    reads side by side still cannot disagree about the model, only about the
+    game. That was the rule the flat 21 was protecting, and it is kept.
+    """
+    import nflreadpy as nfl
+
+    def _pa(year: int) -> pl.DataFrame:
+        """Points allowed per team-week, from the schedule's own scores."""
+        s = nfl.load_schedules().filter(pl.col("season") == year,
+                                        pl.col("game_type") == "REG")
+        home = s.select(pl.col("home_team").alias("team"), "week",
+                        pl.col("away_score").alias("points_allowed"))
+        away = s.select(pl.col("away_team").alias("team"), "week",
+                        pl.col("home_score").alias("points_allowed"))
+        return pl.concat([home, away]).drop_nulls()
+
+    def _lines(year: int) -> pl.DataFrame:
+        t = nfl.load_team_stats(seasons=[year], summary_level="week") \
+               .filter(pl.col("season_type") == "REG")
+        cols = [c for c in list(DEF_STATS) + ["def_tds", "special_teams_tds"] if c in t.columns]
+        t = t.select(["team", "week"] + cols).with_columns([pl.col(c).fill_null(0) for c in cols])
+        # A return touchdown is a D/ST touchdown in every fantasy scoring system
+        # this app supports, and scoring.js has one `def_touchdowns` term.
+        td = [c for c in ("def_tds", "special_teams_tds") if c in cols]
+        t = t.with_columns(
+            (pl.sum_horizontal([pl.col(c) for c in td]) if td else pl.lit(0.0))
+            .alias("def_touchdowns"))
+        ren = {k: v for k, v in DEF_STATS.items() if k in cols}
+        return t.rename(ren).select(["team", "week"] + list(ren.values()) + ["def_touchdowns"])
+
+    out: dict = {"season": stat_season, "per_game": {}, "weeks": {}}
+    keys = list(DEF_STATS.values()) + ["def_touchdowns"]
+
+    try:
+        lines = _lines(stat_season)
+        pa = _pa(stat_season)
+        per = (lines.group_by("team").agg([pl.col(k).mean().alias(k) for k in keys] +
+                                          [pl.len().alias("g")])
+                    .join(pa.group_by("team").agg(pl.col("points_allowed").mean()),
+                          on="team", how="left"))
+        for r in per.iter_rows(named=True):
+            out["per_game"][r["team"]] = {
+                **{k: _num(r.get(k)) for k in keys},
+                "points_allowed": _num(r.get("points_allowed")),
+                "g": int(r.get("g") or 0),
+            }
+    except Exception as exc:
+        print(f"team defence baselines unavailable ({type(exc).__name__}: {exc})")
+
+    # This season's weekly lines. Absent until the season has been played --
+    # nflverse raises rather than returning nothing for a season it has not
+    # opened, which is the same 404 the player stats give in August.
+    try:
+        wl = _lines(season)
+        wpa = _pa(season)
+        wk = wl.join(wpa, on=["team", "week"], how="left")
+        for r in wk.iter_rows(named=True):
+            out["weeks"].setdefault(str(int(r["week"])), {})[r["team"]] = {
+                **{k: _num(r.get(k)) for k in keys},
+                "points_allowed": _num(r.get("points_allowed")),
+            }
+    except Exception as exc:
+        print(f"team defence weekly lines unavailable ({type(exc).__name__}: {exc})")
+
+    return out
+
+
 # ── which half of the calendar we are in ─────────────────────────────────────
 
 LEAD_DAYS = 7   # start pricing the regular season a week out
@@ -619,6 +716,9 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
         "built_at": now.isoformat(),
         "built_at_human": now.strftime("%b %-d, %-I:%M %p") + " PHX",
         "context_available": context_ok,
+        # D/ST inputs. Small (32 teams) and read by FRANCHISE on load, so it
+        # rides on week.json rather than the research payload.
+        "team_defense": team_defense(stat_season, season),
         "games": upcoming,
         "players": rows,
         "markets": [
