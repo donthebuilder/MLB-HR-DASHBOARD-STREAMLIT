@@ -749,6 +749,112 @@ def _post_discord_file(png: bytes, filename: str, content: str) -> tuple:
     return ok, bad
 
 
+# ── PREGAME BOARD ────────────────────────────────────────────────────────
+#
+# Donovan (2026-09-06): "we need a pregame of this too" -- the hourly digest
+# only ever shows what's CHANGED since the last run, so on a quiet slate
+# before first pitch it has nothing to say. This posts ONCE per date_str,
+# on whichever run is first to see that date -- which, given results.yml's
+# own schedule (hourly starting 18:00 UTC / 11am Phoenix, "ahead of the
+# earliest first pitch"), is always the pregame run. Every TOP/HR/WATCH
+# designated pick for the night, grouped by role and ranked by score --
+# the same "tonight's board" shape as the live digest's own TONIGHT SO FAR
+# section, just posted before anyone has swung yet instead of waiting for
+# a homer to earn a spot on it.
+BOARD_STATE_PATH = Path("state/live_digest_state.json")
+
+def _load_board_state() -> dict:
+    try:
+        return json.loads(BOARD_STATE_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+def _save_board_state(st: dict) -> None:
+    try:
+        BOARD_STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
+        BOARD_STATE_PATH.write_text(json.dumps(st), encoding="utf-8")
+    except Exception as exc:
+        print(f"board state save failed: {exc}")
+
+
+def _board_score(sl: dict) -> float:
+    for k in ("hrw_score", "top_board_score_v2", "overall_score"):
+        try:
+            v = float(sl.get(k) or 0)
+            if v:
+                return v
+        except Exception:
+            pass
+    return 0.0
+
+
+ROLE_EMOJI = {"TOP": "🏆", "HR": "💥", "WATCH": "👀"}
+
+
+def pregame_board_sections(graded_slots) -> list:
+    """Tonight's designated picks, grouped by role, ranked by score. Roles
+    outside TOP/HR/WATCH (TOP15, HRR, CONTACT, TB, ...) fold into one
+    OTHER count -- this board is meant to be skimmed pregame, not a full
+    re-listing of the whole tracked slate."""
+    by_role: dict[str, list] = {}
+    for sl in (graded_slots or []):
+        role = str(sl.get("game_pick_role") or "").split("/")[0].strip().upper()
+        if not role:
+            continue
+        by_role.setdefault(role, []).append(sl)
+
+    sections = []
+    for role in ("TOP", "HR", "WATCH"):
+        picks = by_role.pop(role, [])
+        if not picks:
+            continue
+        picks.sort(key=lambda sl: -_board_score(sl))
+        lines = [
+            f"{sl.get('name', '?')}" + (f" ({sl.get('team')})" if sl.get("team") else "")
+            + (f" vs {sl.get('opponent')}" if sl.get("opponent") else "")
+            for sl in picks[:12]
+        ]
+        if len(picks) > len(lines):
+            lines.append(f"+{len(picks) - len(lines)} more")
+        sections.append((f"{ROLE_EMOJI.get(role, '')} {role} ({len(picks)})", lines))
+
+    leftover = [sl for picks in by_role.values() for sl in picks]
+    if leftover:
+        other_roles = ", ".join(sorted(by_role.keys()))
+        sections.append(("OTHER", [f"{len(leftover)} more tracked picks across {other_roles}"]))
+    return sections
+
+
+def post_pregame_board(graded_slots, date_str: str) -> None:
+    if not date_str:
+        return
+    st = _load_board_state()
+    if st.get("board_posted_date") == date_str:
+        return
+    sections = pregame_board_sections(graded_slots)
+    if not sections:
+        return
+    desc = "\n\n".join(
+        f"**{title}**\n" + "\n".join(f"· {ln}" for ln in lines) for title, lines in sections
+    )[:4000]
+    ok, bad = _post_discord_payload({
+        "embeds": [{
+            "title": "🌅 Tonight's board",
+            "description": desc,
+            "color": 0xF97316,
+            "footer": {"text": f"posted once, before first pitch, for {date_str}"
+                                " · stats & analysis, not financial or betting advice"},
+            "timestamp": dt.datetime.now(dt.timezone.utc).isoformat(),
+        }],
+    })
+    if ok:
+        st["board_posted_date"] = date_str
+        _save_board_state(st)
+        print(f"pregame board posted for {date_str} ({ok} hook(s), {bad} failed)")
+    else:
+        print(f"pregame board DELIVERED NOTHING for {date_str}", file=sys.stderr)
+
+
 def _webhook_transitions(old_payload, new_payload, date_str: str = "") -> None:
     """Diff the previous published live results against the new ones and post
     ONE Discord digest per grading run (2026-08-06, expanded on request).
@@ -1084,6 +1190,10 @@ def sync_results_to_website_repo_v2(date_str: str, live_mode: bool, json_path: P
             _webhook_transitions(_oldp, _newp, date_str)
         except Exception as _wexc:
             print(f"webhook diff skipped: {_wexc}")
+        try:
+            post_pregame_board(_newp.get("graded_slots") or _newp.get("results"), date_str)
+        except Exception as _bexc:
+            print(f"pregame board skipped: {_bexc}")
 
     targets = [
         (json_path, data_dir / active_json),
