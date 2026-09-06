@@ -104,9 +104,18 @@ OAIO_BOOKS = "fanatics,draftkings"
 # They exist only in each quote's `by_book`, which is what the site's Line
 # shop reads, so he can see where his two books are worse than the market.
 # Donovan: "if possible for free then do it."
-OAIO_SHOP_BOOKS = "fanduel,betmgm"
-OAIO_BOOKS_FALLBACK = ("fanatics,draftkings,fanduel,bet365,betmgm,caesars,"
-                       "pointsbet,betrivers,unibet,williamhill,pinnacle,bovada")
+#
+# IT WAS NOT FREE (2026-09-06). The plan allows TWO bookmakers, full stop:
+#   /odds/multi -> 403 {"error":"Access denied. You're allowed max 2
+#   bookmakers. Allowed: Fanatics, DraftKings."}
+# Asking for four made every rung of the ladder 403 or 400, the provider
+# returned nothing, The Odds API fallback 403s on props (Business plan), and
+# the site showed "NO LINES YET" for the whole slate -- the board was empty
+# from the moment this shipped. Shop books are off until the plan changes;
+# set ODDSAPI_IO_SHOP_BOOKMAKERS in the repo to turn them back on, and the
+# ladder below now retries with the primary books alone if the plan refuses.
+OAIO_SHOP_BOOKS = ""
+OAIO_BOOKS_FALLBACK = OAIO_BOOKS
 
 # Their markets are selected by EXACT NAME (case-insensitive) via `markets`.
 # Player props arrive under the generic "Player Props" name with the specific
@@ -1061,6 +1070,24 @@ def fetch_oddsapiio(key: str, books: str, _wide: bool = False) -> list[dict]:
             first = fn([ids[0]])
         except Exception as e:
             _rec("oddsapiio", f"·ladder:{nm}", note=f"rejected ({type(e).__name__})")
+            # THE PLAN CAP (2026-09-06): "allowed max N bookmakers". Extra
+            # shop books are a nicety; the board is not. Drop to the primary
+            # two and try this rung once more before moving down the ladder.
+            # (urllib's HTTPError str() is "HTTP Error 403: Forbidden" -- the
+            # "max 2 bookmakers" body is in the forensics record, not in e --
+            # so the trigger is the status, not the wording.)
+            _code = getattr(e, "code", None)
+            if nm.endswith("books") and _code in (400, 403) \
+                    and books != oaio_books(key, OAIO_BOOKS):
+                books = oaio_books(key, OAIO_BOOKS)
+                print(f"  odds-api.io: plan caps the bookmaker list -- retrying '{nm}' with {books}")
+                try:
+                    first = fn([ids[0]])
+                    mode = nm
+                    _rec("oddsapiio", "·ladder", note=f"'{nm}' accepted after dropping shop books")
+                    break
+                except Exception as e2:
+                    _rec("oddsapiio", f"·ladder:{nm}·primary", note=f"rejected ({type(e2).__name__})")
             continue
         mode = nm
         print(f"  odds-api.io: call shape '{nm}' accepted")
