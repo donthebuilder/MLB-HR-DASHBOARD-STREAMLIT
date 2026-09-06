@@ -40,7 +40,13 @@ on:
     # 10:30 UTC, so 11:10 lands 40 minutes after it, as asked. And every other
     # today.yml build fires on the hour, so grading at :10 reads a slate that
     # has finished publishing instead of racing it.
-    - cron: "10 * * * *"
+    #
+    # TWICE AN HOUR (2026-09-06, Donovan: the action-hour digest "should run
+    # every :30"). Added :40 alongside the existing :10 -- same anchor point,
+    # same reasoning above, just twice as often. Grading and the Live Digest
+    # both ride this one cron, so the Results tab also gets fresher updates
+    # as a side effect.
+    - cron: "10,40 * * * *"
   workflow_dispatch: {}
 
 # One group PER WORKFLOW, not one shared across all of them.
