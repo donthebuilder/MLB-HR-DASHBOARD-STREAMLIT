@@ -8876,8 +8876,8 @@ def apply_model_v2_layers(h: HitterRecord) -> HitterRecord:
     # profile even if its average matches a well-rounded player's),
     # discounts low-sample-size players (reintroduces the sample-confidence
     # concept cleanly, without the dead System-1 baggage it used to carry),
-    # and adds a small nudge for HR "dueness" (hr_due_ratio, built earlier
-    # this session) as a tiebreaker context signal, not a dominant factor.
+    # and (until 2026-09-06) added a small nudge for HR "dueness" -- see the
+    # block below for why that is now zero.
     _cs_scores = [h.hr_score, h.hrr_score, h.hit_score, h.contact_score]
     _cs_base = 0.30*h.hr_score + 0.25*h.hrr_score + 0.25*h.hit_score + 0.20*h.contact_score
     _cs_spread = max(_cs_scores) - min(_cs_scores)
@@ -8887,12 +8887,16 @@ def apply_model_v2_layers(h: HitterRecord) -> HitterRecord:
         0.45 * minmax_norm(safe_float(h.recent_350_den, 0.0), 6, 26)
     )
     _cs_confidence_mult = 0.85 + 0.15 * _cs_sample_confidence
-    _cs_due_ratio = safe_float(getattr(h, "hr_due_ratio", 1.0), 1.0)
+    # ── THE DUE NUDGE IS ZERO (2026-09-06, homer night audit) ──────────
+    # Up to +3.0 used to be added here when hr_due_ratio sat in 1.3-4.0.
+    # Measured over 158 nights / 4,596 HR hitter-nights of 2026: HR rate is
+    # highest the game AFTER a homer (14.6%) and drifts DOWN as the drought
+    # lengthens (10-11% at 6+ games); hr_due_score ranked the night's homer
+    # hitters BELOW the field (AUC 0.459 inside the tracked pool). "Due" is
+    # which power tercile a hitter is in, wearing a jersey. hr_due_ratio /
+    # hr_due_score stay on the record for the Due board, which already says
+    # the drought column is noise; they just no longer move a score.
     _cs_due_nudge = 0.0
-    if 1.3 <= _cs_due_ratio <= 2.5:
-        _cs_due_nudge = minmax_norm(_cs_due_ratio, 1.3, 2.5) * 3.0
-    elif 2.5 < _cs_due_ratio <= 4.0:
-        _cs_due_nudge = 3.0 * (1.0 - minmax_norm(_cs_due_ratio, 2.5, 4.0))
     h.consistency_score = round(min(100.0, _cs_base * _cs_balance_factor * _cs_confidence_mult + _cs_due_nudge), 2)
     # ────────────────────────────────────────────────────────────────────────
 

@@ -185,6 +185,16 @@ OUTCOME_LOG_KEEP=150
 POR_LOG_GLOB="por_log_*.jsonl"
 POR_LOG_KEEP=150
 
+# slate_<date>_slim.json: ONE FILE PER SLATE DATE (2026-09-06), a copy of the
+# winning today_slim.json stamped with its slate_date. Exists because the
+# grader's input for a PAST date used to be whatever today_slim.json held at
+# the time -- the next day's slate -- so a night whose West-coast games were
+# still going at the last pre-midnight pass could never be finished
+# (graded_results_2026-08-26/_08-28 are the two known casualties). ~600 KB a
+# night; 14 keeps two weeks, which is the regrade lookback and then some.
+SLATE_GLOB="slate_20*_slim.json"
+SLATE_KEEP=14
+
 # MODEL FOUNDATION, NFL side (2026-08-24, the #1 gap in the NFL-vs-MLB parity
 # audit). Same accumulate-and-cap shape as PRED_LOG_GLOB/OUTCOME_LOG_GLOB
 # above, generalized into the same trim loop below -- but NOT the same KEEP
@@ -462,6 +472,27 @@ stage_local() {
   return 0
 }
 
+# THE DATED SLATE (2026-09-06). After the slate race is settled, stamp the
+# winning today/tomorrow slim under its own slate date so a past date can be
+# graded against the slate that was actually published for it. Runs after
+# guard_slate_regression on purpose: whichever slate won is the one copied.
+# Overwrites: the latest publish of a slate date is the one of record.
+snapshot_dated_slates() {
+  local label d meta
+  for label in today tomorrow; do
+    meta="$STAGE/public/data/current/${label}_run_meta.json"
+    [ -f "$meta" ] && [ -f "$STAGE/public/data/current/${label}_slim.json" ] || continue
+    # sed, not python -- same rule as meta_time() above.
+    d="$(sed -n 's/.*"slate_date"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$meta" 2>/dev/null | head -n 1 || true)"
+    case "$d" in
+      20[0-9][0-9]-[0-9][0-9]-[0-9][0-9]) ;;
+      *) continue ;;
+    esac
+    cp "$STAGE/public/data/current/${label}_slim.json" "$STAGE/public/data/current/slate_${d}_slim.json"
+    echo "Dated slate copy: slate_${d}_slim.json (from ${label}_slim.json)"
+  done
+}
+
 # Copy anything already on the data branch that THIS run didn't regenerate,
 # so a grading run doesn't drop the slate and a slate run doesn't drop results.
 carry_forward() {
@@ -486,7 +517,7 @@ carry_forward() {
   for spec in "$GRADED_GLOB:$GRADED_KEEP" "$GRADED_JSON_GLOB:$GRADED_KEEP" "$ODDS_GLOB:$ODDS_KEEP" \
               "$ML_PRICES_GLOB:$ML_PRICES_KEEP" \
               "$PRED_LOG_GLOB:$PRED_LOG_KEEP" "$OUTCOME_LOG_GLOB:$OUTCOME_LOG_KEEP" \
-              "$POR_LOG_GLOB:$POR_LOG_KEEP" \
+              "$POR_LOG_GLOB:$POR_LOG_KEEP" "$SLATE_GLOB:$SLATE_KEEP" \
               "$NFL_PRED_LOG_GLOB:$NFL_PRED_LOG_KEEP" "$NFL_OUTCOME_LOG_GLOB:$NFL_OUTCOME_LOG_KEEP" \
               "$NFL_RESULTS_GLOB:$NFL_RESULTS_KEEP" \
               "$NFL_ODDS_GLOB:$NFL_ODDS_KEEP"; do
@@ -587,6 +618,7 @@ while [ "$attempt" -le "$MAX_ATTEMPTS" ]; do
     remote_before="$(git rev-parse origin/data)"
     carry_forward origin/data
     guard_slate_regression origin/data
+    snapshot_dated_slates
     guard_results_regression origin/data
   fi
 

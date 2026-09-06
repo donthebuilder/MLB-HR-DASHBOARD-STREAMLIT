@@ -178,6 +178,19 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--date", default="today")
     ap.add_argument("--label", default="today", choices=["today", "tomorrow"])
+    # ── THE DATED SLATE (2026-09-06) ────────────────────────────────────
+    # `{label}_slim.json` is whatever slate the LAST slate run published. Ask
+    # for a past date and you get today's rows under yesterday's filename --
+    # which is exactly how graded_results_2026-08-26 and _08-28 froze as a
+    # 7pm snapshot labelled "Final": every post-midnight pass fetched the new
+    # day's slate, graded it as the new day, and nothing ever re-wrote the
+    # night that still had West-coast games in progress.
+    # publish_data.sh now keeps `slate_<date>_slim.json` per slate date.
+    # --dated-only refuses to fall back to `{label}_slim.json` and exits 3
+    # when no dated copy exists, so a past-date grade can never run on the
+    # wrong slate again.
+    ap.add_argument("--dated-only", action="store_true",
+                    help="only accept slate_<date>_slim.json; exit 3 if the branch has none")
     args = ap.parse_args()
 
     date = resolve(args.date)
@@ -329,7 +342,17 @@ def main() -> int:
         return 0
 
     url = f"{RAW_BASE}/public/data/current/{args.label}_slim.json"
-    resp = get_with_retry(url, label=f"{args.label}_slim.json")
+    dated_url = f"{RAW_BASE}/public/data/current/slate_{date.isoformat()}_slim.json"
+    resp = get_with_retry(dated_url, label=f"slate_{date.isoformat()}_slim.json")
+    if resp is not None and resp.status_code == 200 and resp.text.strip():
+        print(f"Using the dated slate copy slate_{date.isoformat()}_slim.json")
+    else:
+        if args.dated_only:
+            print(f"No dated slate for {date.isoformat()} on the branch "
+                  f"({'unreachable' if resp is None else describe_status(resp.status_code)}); "
+                  f"refusing to fall back to {args.label}_slim.json, which is another day's slate.")
+            return 3
+        resp = get_with_retry(url, label=f"{args.label}_slim.json")
     if resp is None:
         print(f"Could not reach {url} after retries.", file=sys.stderr)
         return 1
@@ -365,6 +388,9 @@ def main() -> int:
     # first, and hr_companion_cache.py takes --slate pointing at it. Without
     # this, both died in CI with "No slate file found" because a fresh
     # checkout has no slate anywhere on disk.
+    if args.dated_only:
+        # A past date must not become "today's" slate for spray_cache & co.
+        return 0
     stable = REPO_ROOT / "public" / "data" / "today_slate.json"
     stable.parent.mkdir(parents=True, exist_ok=True)
     stable.write_text(blob, encoding="utf-8")

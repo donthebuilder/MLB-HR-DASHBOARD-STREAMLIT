@@ -202,6 +202,21 @@ def tier_of(count: int) -> str:
     return "4+" if count >= 4 else str(int(count))
 
 
+# Matchup / environment fields copied verbatim from the published slate row.
+# Numeric unless listed in MATCHUP_STR. Kept small: ~20 scalars a row is
+# ~6 KB a night on top of the file's ~60 KB.
+MATCHUP_FIELDS = (
+    "pitcher_id", "pitcher_name", "pitcher_throws", "bats",
+    "pitcher_hr9", "pitcher_l3_hr9", "pitcher_hr9_vs_lhb", "pitcher_hr9_vs_rhb",
+    "pitcher_barrel_allowed", "pitcher_hardhit_allowed", "pitcher_ev_allowed",
+    "pitcher_hr_fb_pct", "pitcher_pullair_allowed_pct", "pitcher_xhr_allowed",
+    "pitcher_fb_rate", "pitcher_meatball_pct", "pitcher_iso_against", "pitcher_slg_against",
+    "park_factor", "park_hr_factor", "weather_temp_f", "weather_wind_mph",
+    "weather_wind_boost", "weather_hr_effect_pct", "venue_name",
+)
+MATCHUP_STR = {"pitcher_name", "pitcher_throws", "bats", "venue_name"}
+
+
 def load_features(date: str) -> dict[int, dict]:
     path = BBE / f"features_{date}.jsonl"
     if not path.exists():
@@ -254,6 +269,14 @@ def cmd_score(args) -> int:
             "game_pick_role": r.get("game_pick_role") or "",
             "season_bbe": num(prof.get("season_bbe")),
             **{f: num(prof.get(f)) for f, _, _, _ in TERMS},
+            # THE MATCHUP LAYER, FULL SLATE (2026-09-06). The graded file only
+            # carries opposing starter / park / weather for the ~85 tracked
+            # hitters, so the homer night audit could measure that layer on
+            # 55% of homer hitters at best and found it near coin-flip. This
+            # file is the only per-date full-slate record kept, so the fields
+            # ride along here -- verbatim off the slate row, no recompute --
+            # and the next audit can settle the question on all ~280 bats.
+            **{f: (r.get(f) if f in MATCHUP_STR else num(r.get(f))) for f in MATCHUP_FIELDS},
         })
     ok = sum(1 for r in out if r["hr_score_v3_status"] == "ok")
     # Record WHICH slate was actually read. The workflow is scheduled for 15:20

@@ -150,11 +150,47 @@ def test_grade_ledger_is_idempotent():
             V.DATA, V.BBE = old_data, old_bbe
 
 
+def test_score_carries_the_matchup_layer():
+    print("the full-slate board carries pitcher / park / weather off the slate row")
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        (root / "public" / "data" / "current" / "bbe_history").mkdir(parents=True)
+        old_data, old_bbe = V.DATA, V.BBE
+        try:
+            V.DATA = root / "public" / "data" / "current"
+            V.BBE = V.DATA / "bbe_history"
+            with (V.BBE / "features_2026-08-01.jsonl").open("w") as fh:
+                fh.write(json.dumps({"batter_id": 7, "as_of": "2026-08-01", **prof()}) + "\n")
+            slate = root / "slate.json"
+            slate.write_text(json.dumps([{
+                "player_id": 7, "name": "B7", "team": "X", "game_pk": 1, "hr_score": 41.5,
+                "game_pick_role": "HR", "game_date": "2026-08-01", "bats": "L",
+                "pitcher_id": 99, "pitcher_name": "Arm", "pitcher_throws": "R",
+                "pitcher_hr9": "1.42", "park_hr_factor": 1.08, "weather_temp_f": 91,
+                "weather_hr_effect_pct": None, "venue_name": "Somewhere Park",
+            }]))
+
+            class A:
+                date = "2026-08-01"
+            A.slate = str(slate)
+            V.cmd_score(A())
+            board = json.loads((V.DATA / "hr_v3_2026-08-01.json").read_text())
+            row = board["rows"][0]
+            check(row["pitcher_hr9"] == 1.42, "numeric matchup fields are coerced to float")
+            check(row["park_hr_factor"] == 1.08 and row["weather_temp_f"] == 91.0, "park and weather ride along")
+            check(row["pitcher_name"] == "Arm" and row["pitcher_throws"] == "R" and row["bats"] == "L",
+                  "string matchup fields are copied verbatim")
+            check(row["weather_hr_effect_pct"] is None, "a missing field is None, not 0")
+            check(all(f in row for f in V.MATCHUP_FIELDS), "every declared matchup field is present on the row")
+        finally:
+            V.DATA, V.BBE = old_data, old_bbe
+
+
 def main() -> int:
     for fn in (test_weights, test_barrel_is_deliberately_absent,
                test_scoring_range_and_monotonicity, test_low_sample_refuses,
                test_missing_terms, test_neutral_is_not_zero,
-               test_grade_ledger_is_idempotent):
+               test_grade_ledger_is_idempotent, test_score_carries_the_matchup_layer):
         fn()
     if FAILS:
         print(f"\n{len(FAILS)} RED")
