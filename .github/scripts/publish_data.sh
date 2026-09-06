@@ -248,6 +248,24 @@ NFL_RESULTS_KEEP=60
 NFL_ODDS_GLOB="nfl_odds_20*.json"
 NFL_ODDS_KEEP=90
 
+# nfl_picks_<season>_w03.json (2026-09-06): ONE FILE PER WEEK'S CARD, the
+# companion to NFL_RESULTS_GLOB above.
+#
+# nfl_picks.json is overwritten every run, so the moment the board rolls to
+# week N+1 the card week N was graded against no longer exists anywhere. That
+# is why grading used to be pinned to whatever week the live card said, and why
+# week N had to be graded before the roll -- an eight-and-a-half-hour window
+# after Monday night, after which its Monday-night rungs stayed void for good.
+# nfl_results.py now grades week N against this file, fetching it back off the
+# branch the way pick_lock.py fetches its ledger.
+#
+# Which makes this line load-bearing, and it is the third time this file has
+# had to say so: pick_lock.json and pick_matrix.json were both real files
+# written by green steps that died with the runner because nothing here carried
+# them. ~7 KB a week; 60 is three seasons.
+NFL_PICKS_GLOB="nfl_picks_20*.json"
+NFL_PICKS_KEEP=60
+
 
 # ── READING THE BRANCH, AND NOT PUBLISHING BACKWARDS ────────────────────────
 #
@@ -512,6 +530,7 @@ carry_forward() {
               "$POR_LOG_GLOB:$POR_LOG_KEEP" "$SLATE_GLOB:$SLATE_KEEP" \
               "$NFL_PRED_LOG_GLOB:$NFL_PRED_LOG_KEEP" "$NFL_OUTCOME_LOG_GLOB:$NFL_OUTCOME_LOG_KEEP" \
               "$NFL_RESULTS_GLOB:$NFL_RESULTS_KEEP" \
+              "$NFL_PICKS_GLOB:$NFL_PICKS_KEEP" \
               "$NFL_ODDS_GLOB:$NFL_ODDS_KEEP"; do
     glob="${spec%:*}"; keep="${spec##*:}"
     n=$(find "$STAGE/public/data/current" -maxdepth 1 -type f -name "$glob" | wc -l)

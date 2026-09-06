@@ -17,6 +17,7 @@ Four things this closes that the first cut left open:
   4. SEASONS    build_multi() stacks years so the report card isn't one sample
 """
 from __future__ import annotations
+import datetime as dt
 import functools
 import nflreadpy as nfl
 import polars as pl
@@ -352,6 +353,87 @@ def stats_season_for(season: int, week: int | None) -> int:
     the same MIN_GP/FORM_W logic the player features already use.
     """
     return season if len(played_weeks(season, week)) >= 3 else season - 1
+
+
+
+# ── the week to price, and the week to grade, are two different weeks ────────
+
+# A game is over about this long after kickoff. Only used to decide when a week
+# stops being the one you can still bet, so it does not need to be exact.
+GAME_HOURS = 3.5
+
+# nflverse publishes kickoff as a local date plus an Eastern clock time.
+_ET = "America/New_York"
+
+
+@functools.lru_cache(maxsize=4)
+def _kickoffs(season: int) -> tuple[tuple[int, dt.datetime], ...]:
+    """(week, kickoff UTC) for every regular-season game, from the schedule."""
+    from zoneinfo import ZoneInfo
+    s = nfl.load_schedules().filter(pl.col("season") == season,
+                                    pl.col("game_type") == "REG")
+    et = ZoneInfo(_ET)
+    out = []
+    for r in s.select("week", "gameday", "gametime").iter_rows(named=True):
+        if not r["gameday"] or not r["gametime"]:
+            continue
+        try:
+            naive = dt.datetime.fromisoformat(f"{r['gameday']}T{r['gametime']}")
+        except ValueError:
+            continue
+        out.append((int(r["week"]), naive.replace(tzinfo=et).astimezone(dt.timezone.utc)))
+    return tuple(sorted(out, key=lambda x: x[1]))
+
+
+def schedule_weeks(season: int, now: dt.datetime | None = None) -> tuple[int | None, int | None]:
+    """(week to PRICE, week to GRADE). They are not the same week.
+
+    The bot answered both with ESPN's "current week", which rolls Wednesday
+    07:00Z, and that one number was wrong for both jobs in opposite directions:
+
+      PRICING was late. Week N's last game ends early Tuesday, but the number
+      stayed on N until Wednesday -- so the Tuesday 13:00Z "week opens" run
+      rebuilt the week that had just finished and published it as the upcoming
+      card, with `context_available: true` and a "Week N" label. About 34 hours
+      a week of a board describing games already played.
+
+      GRADING was early. It rolled to N+1 on Wednesday, and from that moment
+      `_reg_lines(season, N+1)` is empty and the grader returns without writing.
+      So week N's last chance to be graded was the Tuesday 13:00Z run -- eight
+      and a half hours after the Monday night game ended. If nflverse had not
+      published Monday's lines by then, every Monday-night rung on that card
+      stayed VOID for good.
+
+    Asked of the schedule instead, both answers are obvious and neither depends
+    on when a third party decides to turn a page:
+
+      price = the earliest week that still has a game not yet finished. Rolls
+              once Monday night is over, which is when there is nothing left in
+              week N to bet.
+      grade = the latest week that has already started. Stays on N until week
+              N+1 kicks off on Thursday, so week N can be graded by every run
+              across three days instead of two runs across nine hours.
+
+    Either can be None -- before the season, and after the last regular-season
+    game -- and the caller falls back to ESPN.
+    """
+    now = now or dt.datetime.now(dt.timezone.utc)
+    try:
+        kicks = _kickoffs(season)
+    except Exception as exc:
+        print(f"schedule unreadable ({type(exc).__name__}: {exc})")
+        return None, None
+    if not kicks:
+        return None, None
+    first: dict[int, dt.datetime] = {}
+    last: dict[int, dt.datetime] = {}
+    for w, k in kicks:
+        first[w] = min(k, first.get(w, k))
+        last[w] = max(k, last.get(w, k))
+    over = dt.timedelta(hours=GAME_HOURS)
+    price = min((w for w, k in last.items() if k + over > now), default=None)
+    grade = max((w for w, k in first.items() if k <= now), default=None)
+    return price, grade
 
 
 def current_roster(season: int, week: int | None = None) -> pl.DataFrame:

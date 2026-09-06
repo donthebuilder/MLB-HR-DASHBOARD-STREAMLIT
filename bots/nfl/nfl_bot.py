@@ -44,7 +44,7 @@ import nfl_field
 import nfl_picks
 from nfl_features import (build, season_baseline, upcoming_rows, stats_season_for,
                           current_roster, newcomer_rows, played_weeks,
-                          PLAYER_FORM, USAGE_FORM)
+                          schedule_weeks, PLAYER_FORM, USAGE_FORM)
 from nfl_scoring import MODELS, OUTCOME, score, derive, _pctile
 
 # MODEL FOUNDATION (2026-08-24) -- the NFL side of the same provenance work
@@ -977,6 +977,14 @@ def main() -> int:
         a.mode = "week" if _regular_season_is_near(a.season) else "preseason"
         print(f"auto -> {a.mode} mode")
     if a.mode == "week":
+        # THE WEEK TO PRICE, which is not the week to grade -- see
+        # nfl_features.schedule_weeks. ESPN's "current week" rolls Wednesday
+        # 07:00Z, so the Tuesday "week opens" run rebuilt the week that had
+        # just finished and shipped it as the upcoming card, about 34 hours a
+        # week of a board describing games already played. The schedule rolls
+        # it when the last game is actually over. ESPN stays the fallback.
+        if not a.week:
+            a.week = schedule_weeks(a.season)[0]
         a.week = nfl_espn.resolve_week(a.season, a.week)
     payload = build_payload(a.mode, a.season, a.week, out)
 
@@ -1061,7 +1069,7 @@ def main() -> int:
         except Exception as exc:
             print(f"report card unreadable ({type(exc).__name__}) — card ships without edges")
     card = nfl_picks.build(payload["players"], edges=edges, depth=nfl_picks.DEPTH)
-    (out / f"{a.prefix}picks.json").write_text(json.dumps({
+    picks_body = json.dumps({
         # a.season / a.week / a.mode — NOT bare names. Those are locals of
         # build_payload; here they were NameErrors, and the very first live run
         # of this workflow died on this line (2026-08-15, Donovan's Actions
@@ -1074,7 +1082,20 @@ def main() -> int:
         "depth": nfl_picks.DEPTH,
         "label": payload["label"],
         "card": card,
-    }, separators=(",", ":")))
+    }, separators=(",", ":"))
+    (out / f"{a.prefix}picks.json").write_text(picks_body)
+
+    # THE CARD, KEPT PER WEEK. nfl_picks.json is overwritten every run, so the
+    # moment the board rolls to week N+1 the card week N was graded against is
+    # gone. That is why grading used to be pinned to whatever week the live card
+    # happened to say, and why week N's grade had to happen before the roll --
+    # an eight-and-a-half-hour window after Monday night. Keeping the card under
+    # a name the grader can guess is what lets the two weeks come apart.
+    # Rewritten in place on every pass of the same week, so the last one wins.
+    if a.week:
+        arch = out / f"{a.prefix}picks_{a.season}_w{int(a.week):02d}.json"
+        arch.write_text(picks_body)
+        print(f"  archived {arch.name}")
     print(nfl_picks.summary(card))
 
     (out / f"{a.prefix}week.json").write_text(json.dumps(payload, separators=(",", ":")))
