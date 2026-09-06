@@ -43,7 +43,7 @@ import nfl_explosive
 import nfl_field
 import nfl_picks
 from nfl_features import (build, season_baseline, upcoming_rows, stats_season_for,
-                          played_weeks, PLAYER_FORM, USAGE_FORM)
+                          current_roster, played_weeks, PLAYER_FORM, USAGE_FORM)
 from nfl_scoring import MODELS, OUTCOME, score, derive, _pctile
 
 # MODEL FOUNDATION (2026-08-24) -- the NFL side of the same provenance work
@@ -135,14 +135,18 @@ def preseason_rows(prior_season: int, teams: set[str]) -> pl.DataFrame:
                  pl.col("player_display_name").last().alias("name"),
                  pl.col("position").last().alias("position"),
                  pl.col("team").last().alias("team")))
-    # 2026 rosters place the player on the team he's actually on now.
-    try:
-        cur = (nfl.load_rosters_weekly(seasons=[prior_season + 1])
-                 .group_by("gsis_id").agg(pl.col("team").last().alias("team_now")))
-        who = who.join(cur, left_on="player_id", right_on="gsis_id", how="left") \
-                 .with_columns(pl.coalesce(["team_now", "team"]).alias("team"))
-    except Exception:
-        pass
+    # PUT HIM ON THE TEAM HE IS ACTUALLY ON. This used to call
+    # load_rosters_weekly(prior_season + 1), which for a season nflverse has
+    # not opened yet raises "Season must be between 2002 and 2025" -- caught by
+    # the bare except below it, silently, so every off-season move stayed on
+    # last season's team. Measured on 2026 that was 478 of 2019 players.
+    # current_roster() reads the season-level roster file (which does exist)
+    # and falls back to the player registry's latest_team.
+    cur = current_roster(prior_season + 1)
+    if not cur.is_empty():
+        # INNER: a man on nobody's roster is not on a preseason board either.
+        who = who.join(cur, on="player_id", how="inner") \
+                 .with_columns(pl.col("team_now").alias("team")).drop("team_now")
     full = base.join(who, on="player_id", how="inner")
     ren = {c: "f_" + c[2:] for c in full.columns if c.startswith("b_") and c != "b_gp"}
     full = full.rename(ren).with_columns(
@@ -263,7 +267,20 @@ def score_all(tbl: pl.DataFrame, context_ok: bool, ref: pl.DataFrame | None = No
         rd = None
         if ref is not None:
             rd = derive(ref).filter(pl.col("position").is_in(m["pos"]))
-            if rd.height < 30:           # too thin to be a population
+            # HOW THIN IS TOO THIN. This floor exists to stop a handful of rows
+            # being treated as a league. It was 30, which is fine for the skill
+            # positions (300+ rows) and quietly wrong for kickers: the NFL has
+            # 32 of them in total, and once the board was restricted to men
+            # actually on a 2026 roster the eligible pool came to 28. Under the
+            # old floor KICK_PTS fell off the shared scale onto a raw slate
+            # percentile -- median 52, top 96.8 -- while the other six markets
+            # sat at median 47 and topped out around 79. An A+ kicker was not
+            # the same claim as an A+ receiver, and nothing said so.
+            #
+            # 20 is the number because a market whose entire league population
+            # is one man per team is still a league population; below twenty
+            # there genuinely isn't a distribution to rank against.
+            if rd.height < 20:
                 rd = None
 
         parts, ref_parts = [], []

@@ -354,6 +354,67 @@ def stats_season_for(season: int, week: int | None) -> int:
     return season if len(played_weeks(season, week)) >= 3 else season - 1
 
 
+def current_roster(season: int, week: int | None = None) -> pl.DataFrame:
+    """Who is on an NFL roster THIS season, and for whom. Three sources, best first.
+
+    This is the difference between a Week 1 board and a Week 1 board that is
+    wrong about a quarter of the league. Before this, a player's team came from
+    the last game he played LAST season, so every off-season move was priced
+    against the wrong defence -- measured on 2026: 478 of 2019 players. It also
+    means the board is built from men who are actually on a 53-man roster,
+    rather than everyone who took a snap last year and has since retired or
+    been cut.
+
+      0. load_rosters_weekly(), as of the most recent week at or before `week`.
+         Only a completed season has this file -- it is what keeps a player who
+         was traded at the deadline on the right team when this function is
+         asked about a week in the past, which is what a backtest does.
+      1. load_rosters(seasons=[season]) -- the season's own roster, status ACT.
+         This is the SEASON-level loader, and the one that matters in September:
+         load_rosters_weekly() has no 2026 file yet and raises "Season must be
+         between 2002 and 2025", which is what sent the first cut of this down
+         the stale-team path.
+      2. load_players().latest_team, for anyone active whose last_season has
+         reached this season. Fills the handful the roster file misses.
+
+    Returns player_id -> team_now. Empty means neither source answered, and the
+    caller falls back to last season's team the way it always did.
+    """
+    ros = _try(lambda: nfl.load_rosters(seasons=[season]), f"{season} roster")
+    reg = _try(lambda: nfl.load_players(), "player registry")
+    frames = []
+    if week is not None:
+        wkr = _try(lambda: nfl.load_rosters_weekly(seasons=[season])
+                             .filter(pl.col("week") <= week),
+                   f"{season} weekly roster")
+        if not wkr.is_empty() and {"gsis_id", "team", "week"} <= set(wkr.columns):
+            frames.append(wkr.filter(pl.col("gsis_id").is_not_null()).sort("week")
+                             .group_by("gsis_id").agg(pl.col("team").last().alias("team_now"))
+                             .rename({"gsis_id": "player_id"})
+                             .with_columns(pl.lit(-1).cast(pl.Int8).alias("_src")))
+    if not ros.is_empty() and {"gsis_id", "team", "status"} <= set(ros.columns):
+        frames.append(ros.filter(pl.col("status") == "ACT",
+                                 pl.col("gsis_id").is_not_null())
+                         .select(pl.col("gsis_id").alias("player_id"),
+                                 pl.col("team").alias("team_now"))
+                         .unique(subset=["player_id"], keep="first", maintain_order=True)
+                         .with_columns(pl.lit(0).cast(pl.Int8).alias("_src")))
+    if not reg.is_empty() and {"gsis_id", "latest_team", "status", "last_season"} <= set(reg.columns):
+        frames.append(reg.filter(pl.col("status") == "ACT",
+                                 pl.col("last_season") >= season,
+                                 pl.col("latest_team").is_not_null(),
+                                 pl.col("gsis_id").is_not_null())
+                         .select(pl.col("gsis_id").alias("player_id"),
+                                 pl.col("latest_team").alias("team_now"))
+                         .unique(subset=["player_id"], keep="first", maintain_order=True)
+                         .with_columns(pl.lit(1).cast(pl.Int8).alias("_src")))
+    if not frames:
+        return pl.DataFrame()
+    return (pl.concat(frames).sort("_src")
+              .unique(subset=["player_id"], keep="first", maintain_order=True)
+              .drop("_src"))
+
+
 def upcoming_rows(season: int, week: int) -> tuple[pl.DataFrame, pl.DataFrame]:
     """One row per player for a week that has NOT been played.
 
@@ -382,14 +443,14 @@ def upcoming_rows(season: int, week: int) -> tuple[pl.DataFrame, pl.DataFrame]:
                  pl.col("player_display_name").last().alias("name"),
                  pl.col("position").last().alias("position"),
                  pl.col("team").last().alias("team")))
-    roster = _try(lambda: nfl.load_rosters_weekly(seasons=[season])
-                            .filter(pl.col("week") <= week).sort("week")
-                            .group_by("gsis_id").agg(pl.col("team").last().alias("team_now")),
-                  f"{season} rosters")
+    roster = current_roster(season, week)
     if not roster.is_empty():
-        who = (who.join(roster, left_on="player_id", right_on="gsis_id", how="left")
-                  .with_columns(pl.coalesce(["team_now", "team"]).alias("team"))
-                  .drop("team_now"))
+        # INNER, on purpose. A man who is not on anyone's roster this season is
+        # not a row on this week's board, however good last season's baseline
+        # was. If neither roster source answered, current_roster() comes back
+        # empty and this falls through to last season's team unchanged.
+        who = (who.join(roster, on="player_id", how="inner")
+                  .with_columns(pl.col("team_now").alias("team")).drop("team_now"))
 
     rows = season_baseline(prior).join(who, on="player_id", how="inner")
 
