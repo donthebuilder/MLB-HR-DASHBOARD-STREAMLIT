@@ -475,14 +475,34 @@ def current_roster(season: int, week: int | None = None) -> pl.DataFrame:
     reg = _try(lambda: nfl.load_players(), "player registry")
     frames = []
     if week is not None:
+        # THAT WEEK, not "any week up to it" (fixed 2026-09-07). `<= week` with
+        # a last() meant a man's most recent roster row answered forever: cut in
+        # week 4, still resolving to a team in week 10, still on the board, still
+        # eligible for a rung. He grades void because there is no line for him,
+        # so it costs a top-five slot rather than a wrong grade -- but a call on
+        # a man who is not in the league is its own kind of wrong.
+        #
+        # An exact match also fails cleanly. If the weekly file has not reached
+        # this week yet, the frame is empty and the season-level roster below
+        # answers instead, which is what happens in-season anyway.
         wkr = _try(lambda: nfl.load_rosters_weekly(seasons=[season])
-                             .filter(pl.col("week") <= week),
+                             .filter(pl.col("week") == week),
                    f"{season} weekly roster")
         if not wkr.is_empty() and {"gsis_id", "team", "week"} <= set(wkr.columns):
-            frames.append(wkr.filter(pl.col("gsis_id").is_not_null()).sort("week")
-                             .group_by("gsis_id").agg(pl.col("team").last().alias("team_now"))
-                             .rename({"gsis_id": "player_id"})
-                             .with_columns(pl.lit(-1).cast(pl.Int8).alias("_src")))
+            keep = ({"ACT"} & set(wkr["status"].unique().to_list())) if "status" in wkr.columns else set()
+            if keep:
+                wkr = wkr.filter(pl.col("status") == "ACT")
+            exact = (wkr.filter(pl.col("gsis_id").is_not_null())
+                        .group_by("gsis_id").agg(pl.col("team").last().alias("team_now"))
+                        .rename({"gsis_id": "player_id"}))
+            # AND IT ANSWERS ALONE. The season-level roster and the registry
+            # below both describe the END of the season, so on a past week they
+            # put the cut players straight back: 462 men were active in week 4
+            # and gone by week 14, and 359 of them still resolved to a team in
+            # week 14 with those two filling in behind. A file that knows what
+            # week it is beats two that do not.
+            if not exact.is_empty():
+                return exact
     if not ros.is_empty() and {"gsis_id", "team", "status"} <= set(ros.columns):
         frames.append(ros.filter(pl.col("status") == "ACT",
                                  pl.col("gsis_id").is_not_null())
