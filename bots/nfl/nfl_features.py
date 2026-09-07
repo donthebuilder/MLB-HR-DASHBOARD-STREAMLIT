@@ -56,7 +56,11 @@ def team_context(season: int) -> pl.DataFrame:
 
 @functools.lru_cache(maxsize=6)
 def _pbp(season: int) -> pl.DataFrame:
-    return nfl.load_pbp(seasons=[season]).filter(pl.col("season_type") == "REG")
+    # REG and POST both: red-zone usage and expected TDs for a playoff week have
+    # to come from somewhere, and the games before it are the answer. The
+    # prior-season baselines that also read this join on regular-season weeks
+    # only, so the extra rows reach nothing they should not.
+    return nfl.load_pbp(seasons=[season])
 
 
 def td_curve(season: int) -> pl.DataFrame:
@@ -335,8 +339,8 @@ def _try(fn, label: str):
 
 def played_weeks(season: int, before: int | None = None) -> list[int]:
     """Regular-season weeks of `season` that have stat lines, ascending."""
-    wk = _try(lambda: nfl.load_player_stats(seasons=[season], summary_level="week")
-                        .filter(pl.col("season_type") == "REG"), f"{season} player stats")
+    wk = _try(lambda: nfl.load_player_stats(seasons=[season], summary_level="week"),
+              f"{season} player stats")
     if wk.is_empty() or "week" not in wk.columns:
         return []
     ws = sorted(int(w) for w in wk["week"].unique().to_list() if w is not None)
@@ -370,8 +374,13 @@ _ET = "America/New_York"
 def _kickoffs(season: int) -> tuple[tuple[int, dt.datetime], ...]:
     """(week, kickoff UTC) for every regular-season game, from the schedule."""
     from zoneinfo import ZoneInfo
-    s = nfl.load_schedules().filter(pl.col("season") == season,
-                                    pl.col("game_type") == "REG")
+    # EVERY game of the season, playoffs included. Filtering to REG here is
+    # what left the bot with nothing to say in January: schedule_weeks returned
+    # (None, None) after week 18, both callers fell back to ESPN, and ESPN's
+    # current_week refuses to answer for a non-regular-season type -- so the
+    # calendar fallback answered 18, forever, and the bot rebuilt and re-graded
+    # a finished week roughly twelve times a week for six weeks.
+    s = nfl.load_schedules().filter(pl.col("season") == season)
     et = ZoneInfo(_ET)
     out = []
     for r in s.select("week", "gameday", "gametime").iter_rows(named=True):
@@ -538,8 +547,12 @@ def upcoming_rows(season: int, week: int) -> tuple[pl.DataFrame, pl.DataFrame]:
     rows = season_baseline(prior).join(who, on="player_id", how="inner")
 
     # FORM. Whatever of this season has been played, rolled forward INTO week w.
+    # No season_type filter: a playoff week's trailing form is the games that
+    # came before it, and by January some of those are playoff games. Week
+    # numbers do not collide -- 1-18 are REG and 19-22 are POST -- so `week <`
+    # is the whole condition.
     wk = _try(lambda: nfl.load_player_stats(seasons=[season], summary_level="week")
-                        .filter(pl.col("season_type") == "REG", pl.col("week") < week),
+                        .filter(pl.col("week") < week),
               f"{season} form")
     form = sform = dform = _empty()
     if not wk.is_empty():

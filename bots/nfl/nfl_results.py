@@ -58,7 +58,11 @@ def _reg_lines(season: int, week: int) -> pl.DataFrame:
     except Exception as exc:
         print(f"  {season} stats unavailable ({type(exc).__name__}: {exc})")
         return pl.DataFrame()
-    d = stats.filter(pl.col("season_type") == "REG", pl.col("week") == week)
+    # Week numbers do not collide across types -- 1-18 REG, 19-22 POST -- so
+    # the week alone identifies the games. Filtering to REG here meant a playoff
+    # week always graded empty, which the "nothing to grade yet" guard then read
+    # as "not played", so no postseason call was ever settled.
+    d = stats.filter(pl.col("week") == week)
     have = set(d.columns)
     # A stat a source doesn't carry becomes 0, not null — OUTCOME sums columns
     # and a single null would poison a whole market's grade into null.

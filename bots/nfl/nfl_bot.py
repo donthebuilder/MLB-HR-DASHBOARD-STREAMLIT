@@ -543,7 +543,10 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
         #
         # The rows now come from upcoming_rows() at the bottom of this branch:
         # same columns, built from what is knowable before kickoff.
-        games = nfl_espn.fetch(seasontype=2, year=season, week=week)
+        # ESPN files the playoffs under seasontype=3 with its own week
+        # numbering; nfl_espn.slice_for maps our 19-22 onto it.
+        st, ew = nfl_espn.slice_for(week)
+        games = nfl_espn.fetch(seasontype=st, year=season, week=ew)
         # REST DAYS (2026-08-28, B7). Unlike the preseason branch, `games`
         # above is scoped to ONE week — a team's prior game lives in an
         # earlier week, so this needs its own whole-season-schedule fetch
@@ -553,7 +556,11 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
         # there's nothing before Week 1 in this pool on purpose; the
         # preseason-to-Week-1 turnaround isn't a comparable "short week" the
         # way an in-season Thursday game is).
+        # In January a team's previous game can be a regular-season one, so the
+        # rest-days pool has to span both halves of the season.
         season_games = nfl_espn.fetch(seasontype=2, year=season)
+        if st == 3:
+            season_games = (season_games or []) + (nfl_espn.fetch(seasontype=3, year=season) or [])
         upcoming = nfl_espn.attach_rest_days(season_games or games, games)
         # PBP DRIVE STATE (2026-08-28). A second, independent drive-state
         # source on top of nfl_espn.py's live (but unverified-shape) ESPN
@@ -985,6 +992,17 @@ def main() -> int:
         # it when the last game is actually over. ESPN stays the fallback.
         if not a.week:
             a.week = schedule_weeks(a.season)[0]
+            # NOTHING LEFT TO PRICE. Past the Super Bowl there is no next week,
+            # and the honest thing is to stop rather than rebuild a finished one.
+            # This is what used to go wrong: schedule_weeks said nothing, ESPN's
+            # current_week refuses to answer outside the regular season, the
+            # calendar fallback is clamped to 18, and the bot spent six weeks
+            # republishing week 18 and re-grading it about twelve times a week.
+            # The last card and the final grades stay where they are.
+            if not a.week and _regular_season_is_near(a.season):
+                print(f"the {a.season} season is over — nothing left to price, "
+                      f"leaving the published card and grades as they stand")
+                return 0
         a.week = nfl_espn.resolve_week(a.season, a.week)
     payload = build_payload(a.mode, a.season, a.week, out)
 
