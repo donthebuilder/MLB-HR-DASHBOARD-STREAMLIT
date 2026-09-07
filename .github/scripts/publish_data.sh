@@ -248,6 +248,24 @@ NFL_RESULTS_KEEP=60
 NFL_ODDS_GLOB="nfl_odds_20*.json"
 NFL_ODDS_KEEP=90
 
+# nfl_picks_<season>_w03.json (2026-09-06): ONE FILE PER WEEK'S CARD, the
+# companion to NFL_RESULTS_GLOB above.
+#
+# nfl_picks.json is overwritten every run, so the moment the board rolls to
+# week N+1 the card week N was graded against no longer exists anywhere. That
+# is why grading used to be pinned to whatever week the live card said, and why
+# week N had to be graded before the roll -- an eight-and-a-half-hour window
+# after Monday night, after which its Monday-night rungs stayed void for good.
+# nfl_results.py now grades week N against this file, fetching it back off the
+# branch the way pick_lock.py fetches its ledger.
+#
+# Which makes this line load-bearing, and it is the third time this file has
+# had to say so: pick_lock.json and pick_matrix.json were both real files
+# written by green steps that died with the runner because nothing here carried
+# them. ~7 KB a week; 60 is three seasons.
+NFL_PICKS_GLOB="nfl_picks_20*.json"
+NFL_PICKS_KEEP=60
+
 
 # ── READING THE BRANCH, AND NOT PUBLISHING BACKWARDS ────────────────────────
 #
@@ -512,12 +530,30 @@ carry_forward() {
               "$POR_LOG_GLOB:$POR_LOG_KEEP" "$SLATE_GLOB:$SLATE_KEEP" \
               "$NFL_PRED_LOG_GLOB:$NFL_PRED_LOG_KEEP" "$NFL_OUTCOME_LOG_GLOB:$NFL_OUTCOME_LOG_KEEP" \
               "$NFL_RESULTS_GLOB:$NFL_RESULTS_KEEP" \
+              "$NFL_PICKS_GLOB:$NFL_PICKS_KEEP" \
               "$NFL_ODDS_GLOB:$NFL_ODDS_KEEP"; do
     glob="${spec%:*}"; keep="${spec##*:}"
     n=$(find "$STAGE/public/data/current" -maxdepth 1 -type f -name "$glob" | wc -l)
     if [ "$n" -gt "$keep" ]; then
-      find "$STAGE/public/data/current" -maxdepth 1 -type f -name "$glob" \
-        | sort | head -n "$((n - keep))" | xargs -r rm -f
+      # NOT `sort | head`, for the same reason meta_time() above spells out.
+      # head exits the instant it has its lines and closes the pipe; sort, which
+      # writes only after it has read everything, then dies on the next write --
+      # "sort: write failed: 'standard output': Broken pipe" / "sort: write
+      # error", exit 2 -- pipefail promotes that to the pipeline's status and
+      # set -e kills the publish before anything ships.
+      #
+      # It is a RACE, which is why it looked fine for months: it fires only when
+      # sort still has bytes to write when head goes away. On 2026-09-06 it took
+      # out two MLB slate publishes (Today #692 and #693) on the day
+      # prediction_log_*.jsonl first went past its 300 cap -- n=301, so
+      # `head -n 1` left sort 300 lines to write into a closed pipe. Reproduced
+      # at that exact shape: 1 failure in 5 runs before, 0 in 40 after.
+      #
+      # head reading a FILE has no upstream pipe to break.
+      trimlist="$(mktemp)"
+      find "$STAGE/public/data/current" -maxdepth 1 -type f -name "$glob" | sort > "$trimlist"
+      head -n "$((n - keep))" "$trimlist" | xargs -r rm -f
+      rm -f "$trimlist"
       echo "Trimmed $((n - keep)) old $glob file(s), keeping $keep."
     fi
   done
@@ -560,11 +596,11 @@ carry_forward() {
         want=""
         [ -f "$STAGE/public/data/current/${label}_run_meta.json" ] \
           && want="$(sed -n 's/.*"slate_date"[[:space:]]*:[[:space:]]*"\([0-9-]*\)".*/\1/p' \
-               "$STAGE/public/data/current/${label}_run_meta.json" | head -1)"
+               "$STAGE/public/data/current/${label}_run_meta.json" | head -1 || true)"
         have=""
         [ -f "$slate_dir/_manifest.json" ] \
           && have="$(sed -n 's/.*"slate_date"[[:space:]]*:[[:space:]]*"\([0-9-]*\)".*/\1/p' \
-               "$slate_dir/_manifest.json" | head -1)"
+               "$slate_dir/_manifest.json" | head -1 || true)"
         if [ -n "$want" ] && [ "$want" != "$have" ]; then
           echo "::warning::dropping carried-forward detail/${label} -- it describes ${have:-an unstamped slate}, the ${label} slate being published is ${want}."
           continue

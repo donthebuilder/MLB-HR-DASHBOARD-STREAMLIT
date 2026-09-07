@@ -286,6 +286,21 @@ def week_from_date(year: int, today: dt.date | None = None) -> int:
     return max(1, min(18, (today - start).days // 7 + 1))
 
 
+# THE POSTSEASON IS AT DIFFERENT COORDINATES. nflverse numbers the playoffs as
+# weeks 19-22 of the same season -- wild card, divisional, conference, Super
+# Bowl -- and every other file in this bot speaks that number. ESPN files them
+# under seasontype=3 and restarts the count, with 4 reserved for the Pro Bowl.
+# One dict, in the module that talks to ESPN, so nothing else has to know.
+POST_WEEKS = {19: 1, 20: 2, 21: 3, 22: 5}
+
+
+def slice_for(week: int | None) -> tuple[int, int | None]:
+    """(seasontype, ESPN week) for an nflverse week number."""
+    if week in POST_WEEKS:
+        return 3, POST_WEEKS[week]
+    return 2, week
+
+
 def resolve_week(year: int, asked: int | None) -> int:
     """--week if given, else ESPN's current week, else the calendar."""
     if asked:

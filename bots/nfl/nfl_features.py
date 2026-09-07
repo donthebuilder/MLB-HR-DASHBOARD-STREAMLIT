@@ -17,6 +17,7 @@ Four things this closes that the first cut left open:
   4. SEASONS    build_multi() stacks years so the report card isn't one sample
 """
 from __future__ import annotations
+import datetime as dt
 import functools
 import nflreadpy as nfl
 import polars as pl
@@ -42,8 +43,12 @@ def team_context(season: int) -> pl.DataFrame:
             .with_columns(pl.lit(0).alias("is_home"), (-pl.col("spread_line")).alias("spread"))
     return pl.concat([home, away]).with_columns(
         (pl.col("total_line") / 2 + pl.col("spread") / 2).alias("implied_total"),
-        pl.col("roof").is_in(["dome", "closed"]).cast(pl.Int8).alias("indoors"),
         pl.col("wind").fill_null(0).alias("wind_mph"),
+        # A schedule row with no roof yet (it fills in closer to kickoff) was
+        # coming through as a null `indoors`, which the site reads as "unknown"
+        # rather than "outdoors". Outdoors is the right default for the NFL.
+        pl.col("roof").is_in(["dome", "closed"]).fill_null(False)
+          .cast(pl.Int8).alias("indoors"),
     ).drop(["spread_line", "temp", "wind"])
 
 
@@ -51,7 +56,11 @@ def team_context(season: int) -> pl.DataFrame:
 
 @functools.lru_cache(maxsize=6)
 def _pbp(season: int) -> pl.DataFrame:
-    return nfl.load_pbp(seasons=[season]).filter(pl.col("season_type") == "REG")
+    # REG and POST both: red-zone usage and expected TDs for a playoff week have
+    # to come from somewhere, and the games before it are the answer. The
+    # prior-season baselines that also read this join on regular-season weeks
+    # only, so the extra rows reach nothing they should not.
+    return nfl.load_pbp(seasons=[season])
 
 
 def td_curve(season: int) -> pl.DataFrame:
@@ -182,10 +191,17 @@ def injuries(season: int) -> pl.DataFrame:
 # ── assembly ──────────────────────────────────────────────────────────────────
 
 def _roll(df: pl.DataFrame, cols: list[str], by: str = "player_id",
-          prefix: str = "f_", gp: str = "f_gp") -> pl.DataFrame:
-    """Trailing mean over the previous FORM_W weeks. Never includes week w."""
+          prefix: str = "f_", gp: str = "f_gp",
+          weeks: list[int] | None = None) -> pl.DataFrame:
+    """Trailing mean over the previous FORM_W weeks. Never includes week w.
+
+    `weeks` exists for the week you are about to BET, which has no rows of its
+    own yet: the default (every week present in `df`) can only ever produce a
+    window for a week that has already been played. Pass `weeks=[w]` to get the
+    window for an unplayed w out of the same history.
+    """
     out = []
-    for w in sorted(df["week"].unique().to_list()):
+    for w in (weeks if weeks is not None else sorted(df["week"].unique().to_list())):
         hist = df.filter(pl.col("week").is_between(w - FORM_W, w - 1))
         if hist.height == 0:
             continue
@@ -297,6 +313,405 @@ def build(season: int, carryover: bool = True) -> pl.DataFrame:
               .otherwise(pl.col(c)).alias(c) for c in damp])
 
     return out.filter(pl.col("f_gp") >= MIN_GP).with_columns(pl.lit(season).alias("season_yr"))
+
+
+# ── the week you are about to bet ────────────────────────────────────────────
+
+def _empty() -> pl.DataFrame:
+    return pl.DataFrame()
+
+
+def _try(fn, label: str):
+    """nflverse publishes a season's parquet only once it exists.
+
+    `load_player_stats(seasons=[2026])` does not return an empty frame in
+    August -- it raises a 404. Every current-season read below therefore has to
+    be allowed to come back with nothing, or the whole bot dies on the day the
+    schedule flips it into week mode. That is exactly what would have happened
+    on 2026-09-09.
+    """
+    try:
+        return fn()
+    except Exception as exc:
+        print(f"  {label} unavailable ({type(exc).__name__}: {exc})")
+        return _empty()
+
+
+def played_weeks(season: int, before: int | None = None) -> list[int]:
+    """Regular-season weeks of `season` that have stat lines, ascending."""
+    wk = _try(lambda: nfl.load_player_stats(seasons=[season], summary_level="week"),
+              f"{season} player stats")
+    if wk.is_empty() or "week" not in wk.columns:
+        return []
+    ws = sorted(int(w) for w in wk["week"].unique().to_list() if w is not None)
+    return [w for w in ws if before is None or w < before]
+
+
+def stats_season_for(season: int, week: int | None) -> int:
+    """The season the CONTEXT tables (DvP, coverage, field, splits) come from.
+
+    Not a date. Week 1 of a new season has no defence-vs-position table of its
+    own and never will until the games are played, so the honest answer through
+    the early weeks is last season -- and the honest answer once enough of this
+    season exists is this season. Three played weeks is the switch, which is
+    the same MIN_GP/FORM_W logic the player features already use.
+    """
+    return season if len(played_weeks(season, week)) >= 3 else season - 1
+
+
+
+# ── the week to price, and the week to grade, are two different weeks ────────
+
+# A game is over about this long after kickoff. Only used to decide when a week
+# stops being the one you can still bet, so it does not need to be exact.
+GAME_HOURS = 3.5
+
+# nflverse publishes kickoff as a local date plus an Eastern clock time.
+_ET = "America/New_York"
+
+
+@functools.lru_cache(maxsize=4)
+def _kickoffs(season: int) -> tuple[tuple[int, dt.datetime], ...]:
+    """(week, kickoff UTC) for every regular-season game, from the schedule."""
+    from zoneinfo import ZoneInfo
+    # EVERY game of the season, playoffs included. Filtering to REG here is
+    # what left the bot with nothing to say in January: schedule_weeks returned
+    # (None, None) after week 18, both callers fell back to ESPN, and ESPN's
+    # current_week refuses to answer for a non-regular-season type -- so the
+    # calendar fallback answered 18, forever, and the bot rebuilt and re-graded
+    # a finished week roughly twelve times a week for six weeks.
+    s = nfl.load_schedules().filter(pl.col("season") == season)
+    et = ZoneInfo(_ET)
+    out = []
+    for r in s.select("week", "gameday", "gametime").iter_rows(named=True):
+        if not r["gameday"] or not r["gametime"]:
+            continue
+        try:
+            naive = dt.datetime.fromisoformat(f"{r['gameday']}T{r['gametime']}")
+        except ValueError:
+            continue
+        out.append((int(r["week"]), naive.replace(tzinfo=et).astimezone(dt.timezone.utc)))
+    return tuple(sorted(out, key=lambda x: x[1]))
+
+
+def schedule_weeks(season: int, now: dt.datetime | None = None) -> tuple[int | None, int | None]:
+    """(week to PRICE, week to GRADE). They are not the same week.
+
+    The bot answered both with ESPN's "current week", which rolls Wednesday
+    07:00Z, and that one number was wrong for both jobs in opposite directions:
+
+      PRICING was late. Week N's last game ends early Tuesday, but the number
+      stayed on N until Wednesday -- so the Tuesday 13:00Z "week opens" run
+      rebuilt the week that had just finished and published it as the upcoming
+      card, with `context_available: true` and a "Week N" label. About 34 hours
+      a week of a board describing games already played.
+
+      GRADING was early. It rolled to N+1 on Wednesday, and from that moment
+      `_reg_lines(season, N+1)` is empty and the grader returns without writing.
+      So week N's last chance to be graded was the Tuesday 13:00Z run -- eight
+      and a half hours after the Monday night game ended. If nflverse had not
+      published Monday's lines by then, every Monday-night rung on that card
+      stayed VOID for good.
+
+    Asked of the schedule instead, both answers are obvious and neither depends
+    on when a third party decides to turn a page:
+
+      price = the earliest week that still has a game not yet finished. Rolls
+              once Monday night is over, which is when there is nothing left in
+              week N to bet.
+      grade = the latest week that has already started. Stays on N until week
+              N+1 kicks off on Thursday, so week N can be graded by every run
+              across three days instead of two runs across nine hours.
+
+    Either can be None -- before the season, and after the last regular-season
+    game -- and the caller falls back to ESPN.
+    """
+    now = now or dt.datetime.now(dt.timezone.utc)
+    try:
+        kicks = _kickoffs(season)
+    except Exception as exc:
+        print(f"schedule unreadable ({type(exc).__name__}: {exc})")
+        return None, None
+    if not kicks:
+        return None, None
+    first: dict[int, dt.datetime] = {}
+    last: dict[int, dt.datetime] = {}
+    for w, k in kicks:
+        first[w] = min(k, first.get(w, k))
+        last[w] = max(k, last.get(w, k))
+    over = dt.timedelta(hours=GAME_HOURS)
+    price = min((w for w, k in last.items() if k + over > now), default=None)
+    grade = max((w for w, k in first.items() if k <= now), default=None)
+    return price, grade
+
+
+def current_roster(season: int, week: int | None = None) -> pl.DataFrame:
+    """Who is on an NFL roster THIS season, and for whom. Three sources, best first.
+
+    This is the difference between a Week 1 board and a Week 1 board that is
+    wrong about a quarter of the league. Before this, a player's team came from
+    the last game he played LAST season, so every off-season move was priced
+    against the wrong defence -- measured on 2026: 478 of 2019 players. It also
+    means the board is built from men who are actually on a 53-man roster,
+    rather than everyone who took a snap last year and has since retired or
+    been cut.
+
+      0. load_rosters_weekly(), as of the most recent week at or before `week`.
+         Only a completed season has this file -- it is what keeps a player who
+         was traded at the deadline on the right team when this function is
+         asked about a week in the past, which is what a backtest does.
+      1. load_rosters(seasons=[season]) -- the season's own roster, status ACT.
+         This is the SEASON-level loader, and the one that matters in September:
+         load_rosters_weekly() has no 2026 file yet and raises "Season must be
+         between 2002 and 2025", which is what sent the first cut of this down
+         the stale-team path.
+      2. load_players().latest_team, for anyone active whose last_season has
+         reached this season. Fills the handful the roster file misses.
+
+    Returns player_id -> team_now. Empty means neither source answered, and the
+    caller falls back to last season's team the way it always did.
+    """
+    ros = _try(lambda: nfl.load_rosters(seasons=[season]), f"{season} roster")
+    reg = _try(lambda: nfl.load_players(), "player registry")
+    frames = []
+    if week is not None:
+        wkr = _try(lambda: nfl.load_rosters_weekly(seasons=[season])
+                             .filter(pl.col("week") <= week),
+                   f"{season} weekly roster")
+        if not wkr.is_empty() and {"gsis_id", "team", "week"} <= set(wkr.columns):
+            frames.append(wkr.filter(pl.col("gsis_id").is_not_null()).sort("week")
+                             .group_by("gsis_id").agg(pl.col("team").last().alias("team_now"))
+                             .rename({"gsis_id": "player_id"})
+                             .with_columns(pl.lit(-1).cast(pl.Int8).alias("_src")))
+    if not ros.is_empty() and {"gsis_id", "team", "status"} <= set(ros.columns):
+        frames.append(ros.filter(pl.col("status") == "ACT",
+                                 pl.col("gsis_id").is_not_null())
+                         .select(pl.col("gsis_id").alias("player_id"),
+                                 pl.col("team").alias("team_now"))
+                         .unique(subset=["player_id"], keep="first", maintain_order=True)
+                         .with_columns(pl.lit(0).cast(pl.Int8).alias("_src")))
+    if not reg.is_empty() and {"gsis_id", "latest_team", "status", "last_season"} <= set(reg.columns):
+        frames.append(reg.filter(pl.col("status") == "ACT",
+                                 pl.col("last_season") >= season,
+                                 pl.col("latest_team").is_not_null(),
+                                 pl.col("gsis_id").is_not_null())
+                         .select(pl.col("gsis_id").alias("player_id"),
+                                 pl.col("latest_team").alias("team_now"))
+                         .unique(subset=["player_id"], keep="first", maintain_order=True)
+                         .with_columns(pl.lit(1).cast(pl.Int8).alias("_src")))
+    if not frames:
+        return pl.DataFrame()
+    return (pl.concat(frames).sort("_src")
+              .unique(subset=["player_id"], keep="first", maintain_order=True)
+              .drop("_src"))
+
+
+def upcoming_rows(season: int, week: int) -> tuple[pl.DataFrame, pl.DataFrame]:
+    """One row per player for a week that has NOT been played.
+
+    `build()` starts from load_player_stats, which carries a row for a player-
+    week only after that game is over. So `build(season).filter(week == w)` is
+    empty for every week you would actually want a card for -- the in-season
+    path could only ever have graded the past, never priced the future. This
+    assembles the same column shape out of what IS knowable before kickoff:
+
+      TRAILING  this season's form over weeks < w, last season's per-game
+                baseline as carryover until MIN_GP games exist
+      PREGAME   the schedule's spread, total, roof and wind for week w
+      INJURY    this week's report -- Out/Doubtful dropped, Q damped
+
+    Returns (slate, league, bye). `bye` is the rostered players whose team is
+    not playing week w -- carried so the catalog the fantasy side reads does not
+    lose a man for a week, see the note where the schedule is joined.
+    """
+    prior = season - 1
+
+    # WHO. Names and positions from the last completed season; the team is
+    # whoever's roster he is on NOW, so an off-season move isn't priced against
+    # the wrong defence.
+    who = (nfl.load_player_stats(seasons=[prior], summary_level="week")
+             .filter(pl.col("season_type") == "REG")
+             .group_by("player_id").agg(
+                 pl.col("player_display_name").last().alias("name"),
+                 pl.col("position").last().alias("position"),
+                 pl.col("team").last().alias("team")))
+    roster = current_roster(season, week)
+    if not roster.is_empty():
+        # INNER, on purpose. A man who is not on anyone's roster this season is
+        # not a row on this week's board, however good last season's baseline
+        # was. If neither roster source answered, current_roster() comes back
+        # empty and this falls through to last season's team unchanged.
+        who = (who.join(roster, on="player_id", how="inner")
+                  .with_columns(pl.col("team_now").alias("team")).drop("team_now"))
+
+    rows = season_baseline(prior).join(who, on="player_id", how="inner")
+
+    # FORM. Whatever of this season has been played, rolled forward INTO week w.
+    # No season_type filter: a playoff week's trailing form is the games that
+    # came before it, and by January some of those are playoff games. Week
+    # numbers do not collide -- 1-18 are REG and 19-22 are POST -- so `week <`
+    # is the whole condition.
+    wk = _try(lambda: nfl.load_player_stats(seasons=[season], summary_level="week")
+                        .filter(pl.col("week") < week),
+              f"{season} form")
+    form = sform = dform = _empty()
+    if not wk.is_empty():
+        for c in PLAYER_FORM:
+            if c in wk.columns:
+                wk = wk.with_columns(pl.col(c).fill_null(0))
+        u = _try(lambda: usage(season), f"{season} usage")
+        if not u.is_empty():
+            wk = wk.join(u, on=["player_id", "week"], how="left").with_columns(
+                [pl.col(c).fill_null(0) for c in USAGE_FORM if c in u.columns])
+        ng = _try(lambda: ngs(season), f"{season} NGS")
+        ngs_cols = [c for c in ng.columns if c.startswith("ngs_")] if not ng.is_empty() else []
+        if ngs_cols:
+            wk = wk.join(ng, on=["player_id", "week"], how="left")
+        form_cols = [c for c in PLAYER_FORM + USAGE_FORM if c in wk.columns] + ngs_cols
+        form = _roll(wk.select(["player_id", "week", *form_cols]), form_cols, weeks=[week])
+
+        stall = _try(lambda: team_stall(season), f"{season} drives")
+        if not stall.is_empty():
+            sform = _roll(stall.select(["team", "week", "fg_drive_rate", "rz_td_rate", "drives"]),
+                          ["fg_drive_rate", "rz_td_rate", "drives"], by="team",
+                          prefix="f_tm_", gp="f_tm_gp", weeks=[week])
+        dallow = wk.group_by("opponent_team", "week").agg(
+            pl.col("receiving_tds").sum().alias("d_rec_td"),
+            pl.col("rushing_tds").sum().alias("d_rush_td"),
+            pl.col("receiving_yards").sum().alias("d_pass_yds"),
+            pl.col("rushing_yards").sum().alias("d_rush_yds"),
+        ).rename({"opponent_team": "team"})
+        dform = _roll(dallow, ["d_rec_td", "d_rush_td", "d_pass_yds", "d_rush_yds"],
+                      by="team", prefix="f_opp_", gp="f_opp_gp", weeks=[week])
+
+    if not form.is_empty():
+        rows = rows.join(form.drop("week"), on="player_id", how="left")
+    if "f_gp" not in rows.columns:
+        rows = rows.with_columns(pl.lit(0.0).alias("f_gp"))
+    rows = rows.with_columns(pl.col("f_gp").cast(pl.Float64).fill_null(0))
+
+    # CARRYOVER, the same rule build() uses: form once there is enough of it,
+    # last season until then, and a flag so the site can say which it is.
+    for b in [c for c in rows.columns if c.startswith("b_") and c != "b_gp"]:
+        f = "f_" + b[2:]
+        if f in rows.columns:
+            rows = rows.with_columns(
+                pl.when(pl.col("f_gp") >= MIN_GP).then(pl.col(f))
+                  .otherwise(pl.col(b)).alias(f))
+        else:
+            rows = rows.with_columns(pl.col(b).alias(f))
+    rows = rows.with_columns(
+        (pl.col("f_gp") < MIN_GP).cast(pl.Int8).alias("is_carryover"),
+        pl.max_horizontal(pl.col("f_gp"), pl.col("b_gp").fill_null(0)).alias("f_gp"))
+
+    # PREGAME. An inner join on the schedule is also the bye-week filter: a team
+    # that isn't playing week w has no row in team_context for week w.
+    rows = rows.with_columns(pl.lit(week).cast(pl.Int32).alias("week"))
+    ctx = team_context(season).filter(pl.col("week") == week) \
+            .with_columns(pl.col("week").cast(pl.Int32))
+    # LEFT, then split. A team not playing week w has no row in team_context for
+    # week w, so an inner join here silently deletes every player on a bye --
+    # which is right for a board (you do not rank a man who is not playing) and
+    # wrong for a catalog. FRANCHISE builds its draft board, team pages and wire
+    # from the same `players` array, so an inner join made a rostered player
+    # vanish from his own team page on his bye. 2026's first bye is Week 5.
+    rows = rows.join(ctx, on=["team", "week"], how="left") \
+               .rename({"opp": "opponent_team"})
+    bye = rows.filter(pl.col("opponent_team").is_null())
+    rows = rows.filter(pl.col("opponent_team").is_not_null())
+
+    if not sform.is_empty():
+        rows = rows.join(sform.with_columns(pl.col("week").cast(pl.Int32)),
+                         on=["team", "week"], how="left")
+    if not dform.is_empty():
+        rows = rows.join(dform.with_columns(pl.col("week").cast(pl.Int32)),
+                         left_on=["opponent_team", "week"], right_on=["team", "week"], how="left")
+
+    inj = _try(lambda: injuries(season).filter(pl.col("week") == week)
+                         .with_columns(pl.col("week").cast(pl.Int32)), f"{season} injuries")
+    if not inj.is_empty():
+        rows = rows.join(inj, on=["player_id", "week"], how="left")
+    for c in ("inj_out", "inj_q"):
+        if c not in rows.columns:
+            rows = rows.with_columns(pl.lit(0).cast(pl.Int8).alias(c))
+    rows = rows.with_columns(pl.col("inj_out").fill_null(0), pl.col("inj_q").fill_null(0))
+    rows = rows.filter(pl.col("inj_out") == 0)
+
+    damp = [f"f_{c}" for c in ("rz_opp", "gl_opp", "carries", "targets", "target_share", "wopr")
+            if f"f_{c}" in rows.columns]
+    if damp:
+        rows = rows.with_columns([
+            pl.when(pl.col("inj_q") == 1).then(pl.col(c) * QUESTIONABLE_DAMP)
+              .otherwise(pl.col(c)).alias(c) for c in damp])
+
+    rows = rows.filter(pl.col("f_gp") >= MIN_GP) \
+               .with_columns(pl.lit(season).alias("season_yr"),
+                             pl.col("name").alias("player_display_name"))
+    # SLATE AND REFERENCE ARE THE SAME FRAME IN WEEK MODE, deliberately.
+    #
+    # The first cut returned the pre-schedule population as the reference so
+    # bye-week players stayed in the ruler. That silently broke the scale: the
+    # reference rows had no implied total, spread or opponent-softness, so
+    # score_all fell back to 0.5 for every context component on the REFERENCE
+    # while the slate got its real 0-1 percentile. Every good player's composite
+    # then sat above the whole reference distribution, q pinned at 0.9995, and
+    # the top five of each market all came out at exactly 83.2 -- five A+ QBs
+    # on the same score, which is what caught it.
+    #
+    # In-season the honest population is everyone playing this week, which is
+    # what build(season).filter(week == w) always was. A man on bye is not part
+    # of this week's league.
+    bye = bye.filter(pl.col("f_gp") >= MIN_GP) \
+             .with_columns(pl.lit(season).alias("season_yr"),
+                           pl.col("name").alias("player_display_name"))
+    return rows, rows, bye
+
+
+
+def newcomer_rows(season: int, week: int, known: set[str]) -> pl.DataFrame:
+    """Rostered men the models cannot price, so that they at least EXIST.
+
+    The board's population is `season_baseline(prior)` -- last season's stat
+    lines, filtered to four games or more. That is the right population for a
+    SCORE: a man with no NFL history has nothing to rank. It is the wrong
+    population for a CATALOG, and the catalog is the same array.
+
+    Measured on the 2026 Week 1 roster: 127 active skill players had no 2025
+    baseline, 83 of them rookies -- including the first, third and fourth
+    overall picks. None of them existed anywhere in the payload, so FRANCHISE's
+    draft board could not offer them and nobody could draft a rookie at all.
+
+    They come back UNSCORED and flagged `no_data`, the same shape the bye rows
+    use: an empty `scores` keeps them off every TUDDY board (each one filters on
+    Number.isFinite), while search, the player portal and the draft board find
+    them. Nothing is invented -- a draft slot is real, but turning one into a
+    projection would be a model, and this file does not guess.
+
+    They leave on their own: once a man has MIN_GP games of his own he joins the
+    scored population through the ordinary form path.
+    """
+    roster = current_roster(season, week)
+    if roster.is_empty():
+        return pl.DataFrame()
+    reg = _try(lambda: nfl.load_rosters(seasons=[season]), f"{season} roster detail")
+    if reg.is_empty() or not {"gsis_id", "full_name", "position"} <= set(reg.columns):
+        return pl.DataFrame()
+    who = (reg.filter(pl.col("gsis_id").is_not_null())
+              .select(pl.col("gsis_id").alias("player_id"),
+                      pl.col("full_name").alias("name"),
+                      pl.col("position").alias("position"))
+              .unique(subset=["player_id"], keep="first", maintain_order=True))
+    rows = (roster.join(who, on="player_id", how="inner")
+                  .filter(~pl.col("player_id").is_in(list(known)))
+                  .rename({"team_now": "team"}))
+    if rows.is_empty():
+        return rows
+    ctx = (team_context(season).filter(pl.col("week") == week)
+             .select("team", pl.col("opp").alias("opponent_team")))
+    rows = rows.join(ctx, on="team", how="left")
+    return rows.with_columns(
+        pl.col("opponent_team").is_null().cast(pl.Int8).alias("on_bye"),
+        pl.lit(season).alias("season_yr"))
 
 
 def build_multi(seasons: list[int]) -> pl.DataFrame:

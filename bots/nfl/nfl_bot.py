@@ -42,7 +42,9 @@ import nfl_coverage
 import nfl_explosive
 import nfl_field
 import nfl_picks
-from nfl_features import build, season_baseline, PLAYER_FORM, USAGE_FORM
+from nfl_features import (build, season_baseline, upcoming_rows, stats_season_for,
+                          current_roster, newcomer_rows, played_weeks,
+                          schedule_weeks, PLAYER_FORM, USAGE_FORM)
 from nfl_scoring import MODELS, OUTCOME, score, derive, _pctile
 
 # MODEL FOUNDATION (2026-08-24) -- the NFL side of the same provenance work
@@ -134,14 +136,18 @@ def preseason_rows(prior_season: int, teams: set[str]) -> pl.DataFrame:
                  pl.col("player_display_name").last().alias("name"),
                  pl.col("position").last().alias("position"),
                  pl.col("team").last().alias("team")))
-    # 2026 rosters place the player on the team he's actually on now.
-    try:
-        cur = (nfl.load_rosters_weekly(seasons=[prior_season + 1])
-                 .group_by("gsis_id").agg(pl.col("team").last().alias("team_now")))
-        who = who.join(cur, left_on="player_id", right_on="gsis_id", how="left") \
-                 .with_columns(pl.coalesce(["team_now", "team"]).alias("team"))
-    except Exception:
-        pass
+    # PUT HIM ON THE TEAM HE IS ACTUALLY ON. This used to call
+    # load_rosters_weekly(prior_season + 1), which for a season nflverse has
+    # not opened yet raises "Season must be between 2002 and 2025" -- caught by
+    # the bare except below it, silently, so every off-season move stayed on
+    # last season's team. Measured on 2026 that was 478 of 2019 players.
+    # current_roster() reads the season-level roster file (which does exist)
+    # and falls back to the player registry's latest_team.
+    cur = current_roster(prior_season + 1)
+    if not cur.is_empty():
+        # INNER: a man on nobody's roster is not on a preseason board either.
+        who = who.join(cur, on="player_id", how="inner") \
+                 .with_columns(pl.col("team_now").alias("team")).drop("team_now")
     full = base.join(who, on="player_id", how="inner")
     ren = {c: "f_" + c[2:] for c in full.columns if c.startswith("b_") and c != "b_gp"}
     full = full.rename(ren).with_columns(
@@ -262,7 +268,20 @@ def score_all(tbl: pl.DataFrame, context_ok: bool, ref: pl.DataFrame | None = No
         rd = None
         if ref is not None:
             rd = derive(ref).filter(pl.col("position").is_in(m["pos"]))
-            if rd.height < 30:           # too thin to be a population
+            # HOW THIN IS TOO THIN. This floor exists to stop a handful of rows
+            # being treated as a league. It was 30, which is fine for the skill
+            # positions (300+ rows) and quietly wrong for kickers: the NFL has
+            # 32 of them in total, and once the board was restricted to men
+            # actually on a 2026 roster the eligible pool came to 28. Under the
+            # old floor KICK_PTS fell off the shared scale onto a raw slate
+            # percentile -- median 52, top 96.8 -- while the other six markets
+            # sat at median 47 and topped out around 79. An A+ kicker was not
+            # the same claim as an A+ receiver, and nothing said so.
+            #
+            # 20 is the number because a market whose entire league population
+            # is one man per team is still a league population; below twenty
+            # there genuinely isn't a distribution to rank against.
+            if rd.height < 20:
                 rd = None
 
         parts, ref_parts = [], []
@@ -365,8 +384,132 @@ def _next_wave(games: list[dict], today: dt.date) -> list[dict]:
     return [g for g in ahead if day(g) <= cutoff]
 
 
+
+
+# ── D/ST, from measurement rather than a flat number ─────────────────────────
+
+# The site's own vocabulary, so nothing has to translate on the way in.
+# lib/fantasy/scoring.js reads exactly these keys.
+DEF_STATS = {
+    "def_sacks": "def_sacks",
+    "def_interceptions": "def_interceptions",
+    "fumble_recovery_opp": "def_fumble_recoveries",
+}
+
+
+def team_defense(stat_season: int, season: int) -> dict:
+    """Per-team defensive production: last season's per-game rates, and this
+    season's weekly lines once they exist.
+
+    WHY THIS EXISTS. FRANCHISE projected every D/ST at exactly 0.0 points and
+    the reason was not a bug in the arithmetic -- it was an absence. A defence's
+    fantasy score is points-allowed plus sacks, takeaways and touchdowns, and
+    the payload carried none of the second half. scoring.js correctly refused to
+    guess them ("absent from BOTH sides ... rather than contradicting each
+    other") and fell back to DEF_BASELINE_POINTS_ALLOWED = 21, which lands in
+    the 21-27 tier worth zero. So all 32 defences tied at 0 and their order on
+    the draft board was alphabetical.
+
+    nflverse has had these columns the whole time in load_team_stats(): def_sacks,
+    def_interceptions, def_tds, fumble_recovery_opp, special_teams_tds. Points
+    allowed comes from the schedule's own scores.
+
+    BOTH SIDES OR NEITHER. `per_game` feeds the projection and `weeks` feeds the
+    actual, and they carry the same five terms -- so the two columns a manager
+    reads side by side still cannot disagree about the model, only about the
+    game. That was the rule the flat 21 was protecting, and it is kept.
+    """
+    import nflreadpy as nfl
+
+    def _pa(year: int) -> pl.DataFrame:
+        """Points allowed per team-week, from the schedule's own scores."""
+        s = nfl.load_schedules().filter(pl.col("season") == year,
+                                        pl.col("game_type") == "REG")
+        home = s.select(pl.col("home_team").alias("team"), "week",
+                        pl.col("away_score").alias("points_allowed"))
+        away = s.select(pl.col("away_team").alias("team"), "week",
+                        pl.col("home_score").alias("points_allowed"))
+        return pl.concat([home, away]).drop_nulls()
+
+    def _lines(year: int) -> pl.DataFrame:
+        t = nfl.load_team_stats(seasons=[year], summary_level="week") \
+               .filter(pl.col("season_type") == "REG")
+        cols = [c for c in list(DEF_STATS) + ["def_tds", "special_teams_tds"] if c in t.columns]
+        t = t.select(["team", "week"] + cols).with_columns([pl.col(c).fill_null(0) for c in cols])
+        # A return touchdown is a D/ST touchdown in every fantasy scoring system
+        # this app supports, and scoring.js has one `def_touchdowns` term.
+        td = [c for c in ("def_tds", "special_teams_tds") if c in cols]
+        t = t.with_columns(
+            (pl.sum_horizontal([pl.col(c) for c in td]) if td else pl.lit(0.0))
+            .alias("def_touchdowns"))
+        ren = {k: v for k, v in DEF_STATS.items() if k in cols}
+        return t.rename(ren).select(["team", "week"] + list(ren.values()) + ["def_touchdowns"])
+
+    out: dict = {"season": stat_season, "per_game": {}, "weeks": {}}
+    keys = list(DEF_STATS.values()) + ["def_touchdowns"]
+
+    try:
+        lines = _lines(stat_season)
+        pa = _pa(stat_season)
+        per = (lines.group_by("team").agg([pl.col(k).mean().alias(k) for k in keys] +
+                                          [pl.len().alias("g")])
+                    .join(pa.group_by("team").agg(pl.col("points_allowed").mean()),
+                          on="team", how="left"))
+        for r in per.iter_rows(named=True):
+            out["per_game"][r["team"]] = {
+                **{k: _num(r.get(k)) for k in keys},
+                "points_allowed": _num(r.get("points_allowed")),
+                "g": int(r.get("g") or 0),
+            }
+    except Exception as exc:
+        print(f"team defence baselines unavailable ({type(exc).__name__}: {exc})")
+
+    # This season's weekly lines. Absent until the season has been played --
+    # nflverse raises rather than returning nothing for a season it has not
+    # opened, which is the same 404 the player stats give in August.
+    try:
+        wl = _lines(season)
+        wpa = _pa(season)
+        wk = wl.join(wpa, on=["team", "week"], how="left")
+        for r in wk.iter_rows(named=True):
+            out["weeks"].setdefault(str(int(r["week"])), {})[r["team"]] = {
+                **{k: _num(r.get(k)) for k in keys},
+                "points_allowed": _num(r.get("points_allowed")),
+            }
+    except Exception as exc:
+        print(f"team defence weekly lines unavailable ({type(exc).__name__}: {exc})")
+
+    return out
+
+
+# ── which half of the calendar we are in ─────────────────────────────────────
+
+LEAD_DAYS = 7   # start pricing the regular season a week out
+
+
+def _regular_season_is_near(season: int, today: dt.date | None = None) -> bool:
+    """True once the season's first regular-season game is within LEAD_DAYS.
+
+    Reads the published schedule, so it needs no maintenance and it cannot be
+    off by a day the way a literal date in a YAML file was.
+    """
+    import polars as _pl
+    import nflreadpy as _nfl
+    today = today or dt.datetime.now(PHX).date()
+    try:
+        s = _nfl.load_schedules().filter(_pl.col("season") == season)
+        days = sorted(d for d in s["gameday"].to_list() if d)
+        first = dt.date.fromisoformat(str(days[0]))
+    except Exception as exc:
+        print(f"schedule unreadable ({type(exc).__name__}: {exc}) -- staying in preseason")
+        return False
+    return (first - today).days <= LEAD_DAYS
+
+
 def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> dict:
     now = dt.datetime.now(PHX)
+    bye_tbl = pl.DataFrame()   # week mode only; preseason has no bye weeks
+    new_tbl = pl.DataFrame()   # rostered men with no history to price
 
     if mode == "preseason":
         games = nfl_espn.fetch(seasontype=1, year=season)
@@ -387,10 +530,23 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
         context_ok = False
         label = f"Preseason · {now:%b %-d}"
     else:
-        tbl = build(season)
-        if week:
-            tbl = tbl.filter(pl.col("week") == week)
-        games = nfl_espn.fetch(seasontype=2, year=season, week=week)
+        # WEEK MODE PRICES A GAME THAT HASN'T BEEN PLAYED (2026-09-06).
+        #
+        # This branch used to open with `build(season).filter(week == w)`.
+        # build() starts from load_player_stats, which carries a row for a
+        # player-week only AFTER that game -- so filtering it to the week you
+        # are about to bet returns nothing. In a brand-new season it doesn't
+        # even return nothing: the parquet for that season does not exist yet
+        # and nflverse raises a 404. The scheduled flip to week mode on Sept 9
+        # would have crashed the bot and left the site frozen on the last
+        # preseason card straight through Week 1.
+        #
+        # The rows now come from upcoming_rows() at the bottom of this branch:
+        # same columns, built from what is knowable before kickoff.
+        # ESPN files the playoffs under seasontype=3 with its own week
+        # numbering; nfl_espn.slice_for maps our 19-22 onto it.
+        st, ew = nfl_espn.slice_for(week)
+        games = nfl_espn.fetch(seasontype=st, year=season, week=ew)
         # REST DAYS (2026-08-28, B7). Unlike the preseason branch, `games`
         # above is scoped to ONE week — a team's prior game lives in an
         # earlier week, so this needs its own whole-season-schedule fetch
@@ -400,7 +556,11 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
         # there's nothing before Week 1 in this pool on purpose; the
         # preseason-to-Week-1 turnaround isn't a comparable "short week" the
         # way an in-season Thursday game is).
+        # In January a team's previous game can be a regular-season one, so the
+        # rest-days pool has to span both halves of the season.
         season_games = nfl_espn.fetch(seasontype=2, year=season)
+        if st == 3:
+            season_games = (season_games or []) + (nfl_espn.fetch(seasontype=3, year=season) or [])
         upcoming = nfl_espn.attach_rest_days(season_games or games, games)
         # PBP DRIVE STATE (2026-08-28). A second, independent drive-state
         # source on top of nfl_espn.py's live (but unverified-shape) ESPN
@@ -414,20 +574,31 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
             upcoming = nfl_pbp.attach_pbp_state(upcoming, season, week)
         except Exception as exc:
             print(f"nfl_pbp unavailable ({type(exc).__name__}: {exc})")
+        # THE ROWS. Trailing form over weeks < w, last season's per-game
+        # baseline as carryover until a man has MIN_GP games of his own, and
+        # the schedule's spread, total, roof and wind for week w. Slate and
+        # reference are the same frame in week mode -- see the note at the end
+        # of nfl_features.upcoming_rows for why that is the honest population.
+        slate, league, bye_tbl = upcoming_rows(season, week)
+        # Rostered men with no NFL history to price -- rookies, mostly. See
+        # nfl_features.newcomer_rows: 127 active skill players had no 2025
+        # baseline on the Week 1 roster and existed nowhere in the payload, so
+        # FRANCHISE could not offer a single rookie on its draft board.
+        new_tbl = newcomer_rows(season, week,
+                                set(slate["player_id"].to_list())
+                                | set(bye_tbl["player_id"].to_list()))
+        tbl = _fill_missing(slate)
+        ref = _fill_missing(league)
+        # Real spread/total/venue is exactly what "context" means, and week
+        # mode has it from the schedule on day one -- so this stays true even
+        # in the week where every player feature is still last year's carryover.
         context_ok = True
         label = f"Week {week}"
-        tbl = tbl.with_columns(pl.col("player_display_name").alias("name"))
-        # In-season the reference is every player league-wide in the same week,
-        # which is what build() already returns before the week filter.
-        ref = build(season)
-        if week:
-            ref = ref.filter(pl.col("week") == week)
-        ref = ref.with_columns(pl.col("player_display_name").alias("name"))
 
     # SPLITS. Same season the form comes from, so a row's splits and its
     # baseline are describing the same football rather than two different years.
     try:
-        splits = splits_for(season - 1 if mode == "preseason" else season)
+        splits = splits_for(season - 1 if mode == "preseason" else stats_season_for(season, week))
     except Exception as exc:
         print(f"splits unavailable ({type(exc).__name__}: {exc}) — continuing without")
         splits = {}
@@ -449,6 +620,7 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
                 "position": r.get("position"),
                 "carryover": bool(r.get("is_carryover") or 0),
                 "questionable": bool(r.get("inj_q") or 0),
+                "on_bye": False,
                 # SAMPLE GATE. A goal-line vulture with 0.3 targets a game can
                 # percentile-rank above a every-down back, because a rate built
                 # on four touches has no business sitting at the same visual
@@ -484,25 +656,91 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
     rows = sorted(players.values(),
                   key=lambda p: -(p["scores"].get("TD") or 0))
 
+    # PLAYERS ON A BYE (2026-09-06). Carried, not scored -- there is nothing to
+    # score, he is not playing. They are here because FRANCHISE builds its draft
+    # board, team pages and wire from this same `players` array, and dropping
+    # them made a rostered man vanish from his own team page on his bye week.
+    #
+    # No site change is needed to keep them off TUDDY's boards: every board
+    # filters on Number.isFinite(player.scores[market]), and `scores` is empty
+    # here. The player portal, search and watchlist still find him.
+    # Only the positions some market scores. Without this the bye rows drag in
+    # every safety, linebacker and tackle on the roster -- 42 of the first 69
+    # were defenders with no offensive stat to their name. Both consumers throw
+    # them away (normalizeNflCatalog keeps QB/RB/WR/TE/K/DEF), so they are pure
+    # payload weight.
+    SCORED_POS = sorted({p for m in MODELS.values() for p in m["pos"]})
+    for r in (derive(_fill_missing(bye_tbl))
+              .filter(pl.col("position").is_in(SCORED_POS)).iter_rows(named=True)
+              if not bye_tbl.is_empty() else []):
+        stats = {}
+        for col, short, _, _dp, _pct in RESEARCH:
+            v = _num(r.get(col))
+            if col in r and v is not None and v != 0:
+                stats[short] = v
+        rows.append({
+            "player_id": r["player_id"],
+            "name": r.get("name") or r.get("player_display_name") or "—",
+            "team": r.get("team"),
+            "opp": None,
+            "position": r.get("position"),
+            "carryover": bool(r.get("is_carryover") or 0),
+            "questionable": bool(r.get("inj_q") or 0),
+            "on_bye": True,
+            "low_sample": (
+                (r.get("f_targets") or 0) + (r.get("f_carries") or 0) < 3.0
+                and (r.get("position") in ("RB", "WR", "TE"))
+            ),
+            "scores": {}, "components": {}, "stats": stats,
+            "splits": splits.get(r["player_id"], {}),
+        })
+
+    # UNPRICEABLE, BUT REAL. Same shape as the bye rows above and for the same
+    # reason: an empty `scores` keeps them off every board, while search, the
+    # player portal and FRANCHISE's draft board can all find them. `no_data`
+    # says why the number is missing, so nothing has to show a 0 as if it were
+    # measured.
+    if not new_tbl.is_empty():
+        pos_ok = sorted({p for m in MODELS.values() for p in m["pos"]})
+        for r in new_tbl.filter(pl.col("position").is_in(pos_ok)).iter_rows(named=True):
+            rows.append({
+                "player_id": r["player_id"],
+                "name": r.get("name") or "—",
+                "team": r.get("team"),
+                "opp": r.get("opponent_team"),
+                "position": r.get("position"),
+                "carryover": False,
+                "questionable": False,
+                "on_bye": bool(r.get("on_bye")),
+                "no_data": True,
+                "low_sample": True,
+                "scores": {}, "components": {}, "stats": {},
+                "splits": {},
+            })
+
     # ── the research layer ───────────────────────────────────────────────────
     # Written as SEPARATE files rather than folded into week.json. The slate is
     # what every tab needs on load; game logs and defence-vs-position are what
     # ONE tab needs, and a 500 KB payload the Games tab never reads is 500 KB
     # the Games tab waits for.
-    stat_season = season - 1 if mode == "preseason" else season
+    # WHICH SEASON THE CONTEXT TABLES COME FROM. Not `season` in week mode: in
+    # Week 1 there is no 2026 defence-vs-position table and there cannot be one,
+    # so every research tab would have shipped empty. stats_season_for() asks
+    # the data -- three played weeks and it switches over on its own.
+    stat_season = season - 1 if mode == "preseason" else stats_season_for(season, week)
     extras: dict = {}
     for name, fn in (
-        ("dvp", lambda: nfl_dvp.build(stat_season)),
-        ("roles", lambda: nfl_dvp.current_roles(stat_season)),
-        ("coverage_team", lambda: nfl_coverage.team_profile(stat_season)),
-        ("coverage_player", lambda: nfl_coverage.player_vs_coverage(stat_season)),
-        ("def_explosive", lambda: nfl_explosive.defense_explosive(stat_season)),
-        ("player_explosive", lambda: nfl_explosive.player_explosive(stat_season)),
-        ("usage", lambda: nfl_explosive.team_usage(stat_season)),
-        ("field", lambda: nfl_field.build(stat_season)),
+        ("dvp", nfl_dvp.build),
+        ("roles", nfl_dvp.current_roles),
+        ("coverage_team", nfl_coverage.team_profile),
+        ("coverage_player", nfl_coverage.player_vs_coverage),
+        ("def_explosive", nfl_explosive.defense_explosive),
+        ("player_explosive", nfl_explosive.player_explosive),
+        ("usage", nfl_explosive.team_usage),
+        ("field", nfl_field.build),
     ):
         try:
-            extras[name] = fn()
+            extras[name] = fn(stat_season)
         except Exception as exc:
             print(f"{name} unavailable ({type(exc).__name__}: {exc})")
             extras[name] = {}
@@ -517,6 +755,9 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
         "built_at": now.isoformat(),
         "built_at_human": now.strftime("%b %-d, %-I:%M %p") + " PHX",
         "context_available": context_ok,
+        # D/ST inputs. Small (32 teams) and read by FRANCHISE on load, so it
+        # rides on week.json rather than the research payload.
+        "team_defense": team_defense(stat_season, season),
         "games": upcoming,
         "players": rows,
         "markets": [
@@ -718,7 +959,7 @@ def write_nfl_prediction_log(run_meta: dict, players: list[dict], out_dir: Path,
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--mode", choices=["preseason", "week"], default="preseason")
+    ap.add_argument("--mode", choices=["preseason", "week", "auto"], default="preseason")
     ap.add_argument("--season", type=int, default=2026)
     ap.add_argument("--week", type=int, default=None)
     ap.add_argument("--out", type=str, default="../public/data/nfl")
@@ -735,7 +976,33 @@ def main() -> int:
     # In week mode the scheduled workflow passes no --week (it can't know one).
     # Without this the season-long table went unfiltered, the schedule fetch
     # returned every game of the year, and the card was labelled "Week None".
+    # AUTO. The workflow used to decide this with a hardcoded
+    # `date -u < 2026-09-09` in YAML, which put the first week-mode run 80
+    # minutes before kickoff and needed hand-editing every August. Ask the
+    # schedule instead: once the season's first game is inside a week, price it.
+    if a.mode == "auto":
+        a.mode = "week" if _regular_season_is_near(a.season) else "preseason"
+        print(f"auto -> {a.mode} mode")
     if a.mode == "week":
+        # THE WEEK TO PRICE, which is not the week to grade -- see
+        # nfl_features.schedule_weeks. ESPN's "current week" rolls Wednesday
+        # 07:00Z, so the Tuesday "week opens" run rebuilt the week that had
+        # just finished and shipped it as the upcoming card, about 34 hours a
+        # week of a board describing games already played. The schedule rolls
+        # it when the last game is actually over. ESPN stays the fallback.
+        if not a.week:
+            a.week = schedule_weeks(a.season)[0]
+            # NOTHING LEFT TO PRICE. Past the Super Bowl there is no next week,
+            # and the honest thing is to stop rather than rebuild a finished one.
+            # This is what used to go wrong: schedule_weeks said nothing, ESPN's
+            # current_week refuses to answer outside the regular season, the
+            # calendar fallback is clamped to 18, and the bot spent six weeks
+            # republishing week 18 and re-grading it about twelve times a week.
+            # The last card and the final grades stay where they are.
+            if not a.week and _regular_season_is_near(a.season):
+                print(f"the {a.season} season is over — nothing left to price, "
+                      f"leaving the published card and grades as they stand")
+                return 0
         a.week = nfl_espn.resolve_week(a.season, a.week)
     payload = build_payload(a.mode, a.season, a.week, out)
 
@@ -820,7 +1087,7 @@ def main() -> int:
         except Exception as exc:
             print(f"report card unreadable ({type(exc).__name__}) — card ships without edges")
     card = nfl_picks.build(payload["players"], edges=edges, depth=nfl_picks.DEPTH)
-    (out / f"{a.prefix}picks.json").write_text(json.dumps({
+    picks_body = json.dumps({
         # a.season / a.week / a.mode — NOT bare names. Those are locals of
         # build_payload; here they were NameErrors, and the very first live run
         # of this workflow died on this line (2026-08-15, Donovan's Actions
@@ -833,7 +1100,20 @@ def main() -> int:
         "depth": nfl_picks.DEPTH,
         "label": payload["label"],
         "card": card,
-    }, separators=(",", ":")))
+    }, separators=(",", ":"))
+    (out / f"{a.prefix}picks.json").write_text(picks_body)
+
+    # THE CARD, KEPT PER WEEK. nfl_picks.json is overwritten every run, so the
+    # moment the board rolls to week N+1 the card week N was graded against is
+    # gone. That is why grading used to be pinned to whatever week the live card
+    # happened to say, and why week N's grade had to happen before the roll --
+    # an eight-and-a-half-hour window after Monday night. Keeping the card under
+    # a name the grader can guess is what lets the two weeks come apart.
+    # Rewritten in place on every pass of the same week, so the last one wins.
+    if a.week:
+        arch = out / f"{a.prefix}picks_{a.season}_w{int(a.week):02d}.json"
+        arch.write_text(picks_body)
+        print(f"  archived {arch.name}")
     print(nfl_picks.summary(card))
 
     (out / f"{a.prefix}week.json").write_text(json.dumps(payload, separators=(",", ":")))

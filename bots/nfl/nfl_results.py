@@ -49,8 +49,20 @@ STATS = ["passing_yards", "carries", "rushing_yards", "rushing_tds",
 
 def _reg_lines(season: int, week: int) -> pl.DataFrame:
     import nflreadpy as nfl
-    d = (nfl.load_player_stats(seasons=[season], summary_level="week")
-           .filter(pl.col("season_type") == "REG", pl.col("week") == week))
+    # nflverse publishes a season's parquet only once the season exists -- in
+    # August `seasons=[2026]` is a 404, not an empty frame. Grading a week that
+    # has not been played is a normal thing to ask for now that the bot prices
+    # the upcoming week, so it comes back with nothing rather than an exception.
+    try:
+        stats = nfl.load_player_stats(seasons=[season], summary_level="week")
+    except Exception as exc:
+        print(f"  {season} stats unavailable ({type(exc).__name__}: {exc})")
+        return pl.DataFrame()
+    # Week numbers do not collide across types -- 1-18 REG, 19-22 POST -- so
+    # the week alone identifies the games. Filtering to REG here meant a playoff
+    # week always graded empty, which the "nothing to grade yet" guard then read
+    # as "not played", so no postseason call was ever settled.
+    d = stats.filter(pl.col("week") == week)
     have = set(d.columns)
     # A stat a source doesn't carry becomes 0, not null — OUTCOME sums columns
     # and a single null would poison a whole market's grade into null.
@@ -171,6 +183,31 @@ def eligible_lines(actual: dict[str, dict[str, float]],
     }
 
 
+
+# Where the bot publishes. Same repo and branch publish_data.sh force-pushes to;
+# see nfl_bot's dataSource note on the site side for the same URL.
+DATA_BASE = ("https://raw.githubusercontent.com/donthebuilder/"
+             "MLB-HR-DASHBOARD-STREAMLIT/data/public/data/current")
+
+
+def _fetch_archived_card(season: int, week: int, prefix: str):
+    """Last week's card, off the data branch. None when it isn't there."""
+    import tempfile, urllib.request
+    url = f"{DATA_BASE}/{prefix}picks_{season}_w{week:02d}.json"
+    try:
+        with urllib.request.urlopen(url, timeout=20) as r:
+            if r.status != 200:
+                return None
+            body = r.read()
+        json.loads(body)          # refuse to hand the grader a half-file
+        tmp = Path(tempfile.mkdtemp()) / f"{prefix}picks_{season}_w{week:02d}.json"
+        tmp.write_bytes(body)
+        return tmp
+    except Exception as exc:
+        print(f"  no archived week {week} card ({type(exc).__name__})")
+        return None
+
+
 def grade(card: dict, actual: dict) -> tuple[dict, dict]:
     """Score every rung. Returns (graded card, per-market totals)."""
     graded, totals = {}, {}
@@ -256,6 +293,19 @@ def main() -> int:
     # this run just wrote carries its week; that is the week its rungs were
     # promised for, so that is the week to grade. ESPN's current week is the
     # fallback for a run with no card, then the calendar.
+    # THE WEEK TO GRADE, which is not the week to price -- see
+    # nfl_features.schedule_weeks. This used to be the live card's week, and the
+    # live card rolls forward, so week N stopped being gradeable the moment the
+    # board moved on: two runs, eight and a half hours after Monday night. Miss
+    # that and every Monday-night rung stayed void for good. The schedule keeps
+    # week N gradeable until week N+1 kicks off on Thursday.
+    sched_grade = None
+    try:
+        from nfl_features import schedule_weeks
+        sched_grade = schedule_weeks(a.season)[1]
+    except Exception as exc:
+        print(f"  schedule weeks unavailable ({type(exc).__name__}: {exc})")
+
     card_week = None
     try:
         cp0 = Path(a.card)
@@ -264,21 +314,48 @@ def main() -> int:
     except Exception:
         card_week = None
     if a.mode == "week" and not a.week:
-        a.week = int(card_week) if card_week else nfl_espn.resolve_week(a.season, None)
+        a.week = int(sched_grade) if sched_grade else (
+            int(card_week) if card_week else nfl_espn.resolve_week(a.season, None))
     print(f"grading {a.mode} · season {a.season}" + (f" · week {a.week}" if a.week else ""))
     if a.mode == "week":
         lines = _reg_lines(a.season, a.week)
     else:
         lines = _pre_lines(a.season, a.week)
     print(f"  {lines.height} player line(s)")
+    # NOTHING PLAYED YET IS NOT A GRADE OF ZERO. Writing an empty results file
+    # would blow the season-to-date record and the week archive away every time
+    # the bot builds a card for a week that has not kicked off -- which, now
+    # that the bot prices the upcoming week, is most of its runs.
+    if lines.is_empty():
+        print("  nothing to grade yet -- leaving the existing results untouched")
+        return 0
 
     actual = outcomes(lines)
     # See eligible_lines()'s docstring for why this join has to happen by
     # position, not by truthiness.
     positions = {str(r["player_id"]): r.get("position") or "" for r in lines.iter_rows(named=True)}
 
+    # THE CARD FOR THE WEEK BEING GRADED, not whatever the live file happens to
+    # hold. Once pricing and grading came apart, `nfl_picks.json` on a Tuesday
+    # is already week N+1 -- grading week N's outcomes against it would score
+    # the wrong men. nfl_bot writes a per-week copy next to it; prefer that.
+    #
+    # It will not be in the workspace on a later run: the runner checks out
+    # main, and last week's output only exists on the data branch. So fetch it
+    # from there, the same way pick_lock.py fetches its ledger back. Fails soft
+    # to the live card, which is correct whenever the two weeks agree.
     card = {}
     cp = Path(a.card)
+    if a.week:
+        arch = cp.parent / f"{a.prefix}picks_{a.season}_w{int(a.week):02d}.json"
+        if arch.exists():
+            cp = arch
+            print(f"  grading against {arch.name}")
+        else:
+            fetched = _fetch_archived_card(a.season, int(a.week), a.prefix)
+            if fetched is not None:
+                cp = fetched
+                print(f"  grading against the data branch's week {a.week} card")
     if cp.exists():
         try:
             card = (json.loads(cp.read_text()) or {}).get("card", {})
