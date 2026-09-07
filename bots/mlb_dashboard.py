@@ -952,6 +952,11 @@ class PitcherSummary:
     statcast_games: int = 0
     statcast_base_bbe: int = 0
     statcast_base_games: int = 0
+    # HR allowed over the SAME window statcast_bbe counts (the 5-start trend,
+    # falling back to the 8-start baseline). Exists so pitcher_hr_per_bbe can
+    # divide two halves of one window: a season-long hr_allowed over a recent
+    # BBE count is a mismatched ratio that still looks like a rate.
+    hr_allowed_recent: int = 0
     statcast_status: str = "missing"
     ev_allowed: float = 88.5
     hardhit_allowed: float = 0.38
@@ -1703,6 +1708,12 @@ class HitterRecord:
     pitcher_xhr_allowed: float = 0.0
     pitcher_hr_luck: float = 0.0
     pitcher_xhr_bbe: int = 0
+    # HR/BBE the starter has allowed lately (2026-09-07). Both fields cover the
+    # same 5/8-start window; the ratio is None below MIN_HR_BBE_SAMPLE so a
+    # four-ball sample never publishes as a 25% rate. Consumed by the site's
+    # lib/dash/tweetFeed.js danger-combos post.
+    pitcher_hr_allowed_recent: int = 0
+    pitcher_hr_per_bbe: Optional[float] = None
     # MODEL FOUNDATION (2026-08-21): which scoring logic produced this row,
     # and which bot execution produced it. Both DEFAULTED on purpose -- see
     # load_locked_rows_by_game() above: a no-default field on HitterRecord
@@ -4445,6 +4456,30 @@ def build_batter_statcast_profile(db: CacheDB, player_id: int, end_date: dt.date
 
 
 
+# Below this many batted balls in the window, HR/BBE is noise -- one homer off
+# four balls in play is not a 25% rate. Published as None instead, and the
+# site's danger-combos formatter drops the row rather than inventing a floor of
+# its own (lib/dash/tweetFeed.js).
+MIN_HR_BBE_SAMPLE = 5
+
+
+def pitcher_hr_per_bbe(pitcher: Any) -> Optional[float]:
+    """Recent HR allowed per batted ball, or None when the sample is too thin.
+
+    Both halves come from build_pitcher_statcast_profile's 5-start trend (or
+    its 8-start fallback) -- the same frame, deliberately. Dividing a
+    season-long hr_allowed by a recent BBE count produces a number that looks
+    like a rate and is not one.
+    """
+    if str(getattr(pitcher, "statcast_status", "missing")) != "ok":
+        return None
+    bbe = safe_int(getattr(pitcher, "statcast_bbe", 0), 0)
+    if bbe < MIN_HR_BBE_SAMPLE:
+        return None
+    hrs = safe_int(getattr(pitcher, "hr_allowed_recent", 0), 0)
+    return round(hrs / bbe, 4)
+
+
 def build_pitcher_statcast_profile(db: CacheDB, pitcher_id: int, end_date: Optional[dt.date] = None) -> Dict[str, Any]:
     """Recent pitcher damage allowed profile.
 
@@ -4457,12 +4492,13 @@ def build_pitcher_statcast_profile(db: CacheDB, pitcher_id: int, end_date: Optio
     # v7: adds gb_allowed/ld_allowed/popup_allowed (2026-08-12) -- bumped so
     # every pitcher re-pulls once instead of serving the placeholder defaults
     # below for up to a day under the old v6 cache key.
-    key = f"pitcher_statcast_damage_v7_battedball:{SEASON}:{pitcher_id}:{end_date.isoformat()}"
+    key = f"pitcher_statcast_damage_v8_battedball:{SEASON}:{pitcher_id}:{end_date.isoformat()}"
     defaults = {
         "statcast_bbe": 0,
         "statcast_games": 0,
         "statcast_base_bbe": 0,
         "statcast_base_games": 0,
+        "hr_allowed_recent": 0,
         "statcast_status": "missing",
         "ev_allowed": 88.5,
         "hardhit_allowed": 0.38,
@@ -4584,6 +4620,7 @@ def build_pitcher_statcast_profile(db: CacheDB, pitcher_id: int, end_date: Optio
                 "dist375": 0,
                 "dist400": 0,
                 "babip": 0.300,
+                "hr": 0,
             }
             if frame is None or len(frame) == 0:
                 return metrics
@@ -4616,6 +4653,9 @@ def build_pitcher_statcast_profile(db: CacheDB, pitcher_id: int, end_date: Optio
             ab = sum(1 for e in events if e not in {"walk", "intent_walk", "hit_by_pitch", "sac_fly", "sac_bunt", "catcher_interf", "none", ""})
             denom = max(1, ab - strikeouts - hrs + sac_flies)
             metrics["babip"] = float((hits - hrs) / denom) if denom else 0.300
+            # Counted off the SAME events column, over the SAME frame, as
+            # metrics["bbe"] above -- that shared window is the whole point.
+            metrics["hr"] = int(hrs)
             return metrics
 
         m5 = _metrics(trend)
@@ -4638,6 +4678,9 @@ def build_pitcher_statcast_profile(db: CacheDB, pitcher_id: int, end_date: Optio
         out["statcast_games"] = int(m5["games"] if m5["games"] > 0 else m8["games"])
         out["statcast_base_bbe"] = int(m8["bbe"])
         out["statcast_base_games"] = int(m8["games"])
+        # The same m5-else-m8 choice statcast_bbe just made, so the numerator
+        # and the denominator always come from one frame.
+        out["hr_allowed_recent"] = int(m5["hr"] if m5["bbe"] > 0 else m8["hr"])
         out["ev_allowed"] = float(_blend("ev", 88.5))
         out["hardhit_allowed"] = float(_blend("hard", 0.38))
         out["barrel_allowed"] = float(_blend("barrel", 0.07))
@@ -6168,7 +6211,11 @@ def build_pitcher_profile(client: MLBClient, db: CacheDB, pitcher_id: int, team_
     if not pitcher_id:
         return PitcherSummary(0, "TBD", team_abbr)
     data_end_date = data_end_date or statcast_data_end_date(TODAY)
-    key = f"pitcher_profile_v5_l5l8:{SEASON}:{pitcher_id}:{data_end_date.isoformat()}"
+    # v6 (2026-09-07): hr_allowed_recent is new on PitcherSummary. A v5 entry has
+    # no such key, PitcherSummary(**allowed) would fall back to its 0 default,
+    # and pitcher_hr_per_bbe would publish a confident 0.0% instead of None for
+    # up to a day. Bumping forces one re-pull.
+    key = f"pitcher_profile_v6_l5l8:{SEASON}:{pitcher_id}:{data_end_date.isoformat()}"
     cached = db.get(key, max_age_days=1)
     if cached is not None:
         allowed = {k: cached[k] for k in PitcherSummary.__dataclass_fields__.keys() if k in cached}
@@ -6257,6 +6304,7 @@ def build_pitcher_profile(client: MLBClient, db: CacheDB, pitcher_id: int, team_
         "statcast_games": safe_int(psc.get("statcast_games"), 0),
         "statcast_base_bbe": safe_int(psc.get("statcast_base_bbe"), 0),
         "statcast_base_games": safe_int(psc.get("statcast_base_games"), 0),
+        "hr_allowed_recent": safe_int(psc.get("hr_allowed_recent"), 0),
         "statcast_status": str(psc.get("statcast_status", "missing")),
         "ev_allowed": safe_float(psc.get("ev_allowed"), 88.5),
         "fb_velo_delta": safe_float(psc.get("fb_velo_delta"), 0.0),
@@ -9808,6 +9856,8 @@ def build_hitter_records(client: MLBClient, db: CacheDB, game: Dict[str, Any], s
                 pitcher_statcast_games=getattr(pitcher, "statcast_games", 0),
                 pitcher_statcast_base_bbe=getattr(pitcher, "statcast_base_bbe", 0),
                 pitcher_statcast_base_games=getattr(pitcher, "statcast_base_games", 0),
+                pitcher_hr_allowed_recent=safe_int(getattr(pitcher, "hr_allowed_recent", 0), 0),
+                pitcher_hr_per_bbe=pitcher_hr_per_bbe(pitcher),
                 pitcher_statcast_status=pitcher.statcast_status,
                 pitcher_ev_allowed=pitcher.ev_allowed,
                 pitcher_fb_velo_delta=pitcher.fb_velo_delta,
