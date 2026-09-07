@@ -34,6 +34,7 @@ from statistics import NormalDist
 import polars as pl
 
 import nfl_espn
+import nfl_injuries
 import nfl_pbp
 from nfl_splits import splits_for, SPLIT_PAIRS, SPLIT_LABELS
 import nfl_dvp
@@ -744,6 +745,24 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
         except Exception as exc:
             print(f"{name} unavailable ({type(exc).__name__}: {exc})")
             extras[name] = {}
+
+    # ── availability ─────────────────────────────────────────────────────────
+    # Attached HERE, at the one place every row shape converges, rather than in
+    # the three constructors above — a scored row, a bye row and a no-data row
+    # all need the tag and all used to be built separately.
+    #
+    # nflverse's load_injuries() raises outright for 2026 ("Season must be
+    # between 2009 and 2025"), so inj_q has been 0 all season and the site's
+    # injury_status field has never existed. ESPN publishes the league's report
+    # as one document and the bot already talks to ESPN.
+    try:
+        _inj = nfl_injuries.fetch()
+        _tagged = nfl_injuries.attach(rows, _inj)
+        print(f"  injuries: {_tagged} of {len(rows)} published rows carry a designation")
+    except Exception as _exc:  # noqa: BLE001
+        # Never let the injury feed take the slate down; the board is correct
+        # without tags, only less informed.
+        print(f"  injuries: skipped ({type(_exc).__name__}: {_exc})")
 
     return {
         "extras": extras,
