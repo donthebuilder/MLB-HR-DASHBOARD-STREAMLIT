@@ -759,6 +759,8 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
         _inj = nfl_injuries.fetch()
         _tagged = nfl_injuries.attach(rows, _inj)
         print(f"  injuries: {_tagged} of {len(rows)} published rows carry a designation")
+        _faces = nfl_injuries.attach_espn_ids(rows, nfl_injuries.espn_ids())
+        print(f"  espn ids: {_faces} of {len(rows)} rows can show a face")
     except Exception as _exc:  # noqa: BLE001
         # Never let the injury feed take the slate down; the board is correct
         # without tags, only less informed.

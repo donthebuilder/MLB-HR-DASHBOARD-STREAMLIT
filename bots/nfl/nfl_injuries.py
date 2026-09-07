@@ -115,6 +115,42 @@ def _crosswalk() -> dict[str, str]:
     return out
 
 
+def espn_ids() -> dict[str, str]:
+    """{gsis_id: espn_id} for the player rows, so the site can show a face.
+
+    The site already has every piece of a headshot except this one. It carries a
+    3,252-entry GSIS->ESPN map (lib/nfl/headshotIds.js) and a CDN URL builder
+    (lib/nfl/nflAssets.js), and FRANCHISE renders faces from them today. TUDDY
+    cannot: that map is ~72 KB and its own header says it is imported by server
+    components only, while every TUDDY tab is a client component. Importing it
+    there would ship 72 KB to the browser to save a field that costs eight bytes
+    a row here.
+
+    So the id rides on the payload instead. Same crosswalk the injury join
+    already builds, read the other way round.
+
+    Never raises, for the same reason fetch() doesn't: a face is decoration and
+    must not cost a slate.
+    """
+    try:
+        xw = _crosswalk()
+    except Exception as exc:  # noqa: BLE001
+        print(f"  espn ids: crosswalk failed ({type(exc).__name__}) — no faces this run")
+        return {}
+    return {gsis: espn for espn, gsis in xw.items()}
+
+
+def attach_espn_ids(rows: list[dict[str, Any]], ids: dict[str, str]) -> int:
+    """Write `espn_id` onto published player rows. Returns how many."""
+    n = 0
+    for row in rows:
+        espn = ids.get(row.get("player_id"))
+        if espn:
+            row["espn_id"] = espn
+            n += 1
+    return n
+
+
 def fetch(session: requests.Session | None = None) -> dict[str, str]:
     """{gsis_id: code} for every player carrying a real designation.
 
