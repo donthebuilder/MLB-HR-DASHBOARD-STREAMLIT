@@ -41,11 +41,14 @@ on:
     # today.yml build fires on the hour, so grading at :10 reads a slate that
     # has finished publishing instead of racing it.
     #
-    # TWICE AN HOUR (2026-09-06, Donovan: the action-hour digest "should run
-    # every :30"). Added :40 alongside the existing :10 -- same anchor point,
-    # same reasoning above, just twice as often. Grading and the Live Digest
-    # both ride this one cron, so the Results tab also gets fresher updates
-    # as a side effect.
+    # EVERY 30 MINUTES (2026-09-05, Donovan: "up-tick the results crons by
+    # 1.5x–1.7x" → "well then have it run every 30 minutes"). Hourly was 24
+    # runs a day; this is 48. :10 and :40 — :10 keeps the run 40 minutes
+    # after the 10:30 UTC today.yml rollover, as the rule above asks, and :40
+    # sits between today.yml's on-the-hour builds so grading never reads a
+    # slate mid-publish. Each run is ~40s, so ~32 min of Actions time a day.
+    # GitHub delays scheduled runs by a few minutes under load; the spacing
+    # absorbs that.
     - cron: "10,40 * * * *"
   workflow_dispatch: {}
 
@@ -194,13 +197,13 @@ jobs:
         env:
           # Optional: set the DISCORD_WEBHOOK repo secret to get pool/pair
           # transition alerts (one-away, cashed) in Discord. Absent = no-op.
-          # DISCORD_LIVE_WEBHOOK, if set, takes priority and gives this bot
-          # its own channel -- point it at the same webhook URL as
-          # moonshot-push's DISCORD_HOMER_WEBHOOK to share a room with
-          # Called It instead of the shared DISCORD_WEBHOOK everything else
-          # in this repo posts to (2026-09-06).
-          DISCORD_LIVE_WEBHOOK: ${{ secrets.DISCORD_LIVE_WEBHOOK }}
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          # 2026-08-22: same transition detector also queues a "pick cashed"
+          # social draft (bots/social/pick_cashed.py) — needs this to get
+          # captions written; absent it still queues, just with blank
+          # captions for manual entry, same fallback as every other social
+          # entrypoint.
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: python bots/live_results_tracker.py --date auto --live
 
       # The Results tab's "Final" view was permanently empty because nothing
@@ -217,39 +220,6 @@ jobs:
       # --final-only skips games still in progress, so the 7pm run grades the
       # handful that are done and each later run overwrites with a fuller set;
       # by the 3am run every game is final.
-      # ── FINISH YESTERDAY (2026-09-06) ─────────────────────────────────
-      # graded_results_<date>.json was only ever written for the date on the
-      # breakdown filename -- which after midnight Phoenix is the NEW date. A
-      # night whose West-coast games were still in progress at the last
-      # pre-midnight pass therefore kept its 7pm snapshot forever, labelled
-      # "Final" with the unfinished games in skipped_live_games. The outcome
-      # log got repaired by regrade_stale_dates; the Results tab and the
-      # Called-It record did not. Aug 26 (12 HR shown, 32 real) and Aug 28
-      # (24 vs 31) are the known casualties.
-      #
-      # So: every run also re-grades YESTERDAY against its own dated slate
-      # (slate_<date>_slim.json, kept by publish_data.sh). --dated-only makes
-      # the fetch exit 3 rather than fall back to today's slate, which is
-      # the exact failure this step exists to prevent -- so a missing dated
-      # copy skips the step instead of grading the wrong night. Runs BEFORE
-      # today's final grade on purpose: both write results_final.json, and
-      # today's must be the one that lands.
-      - name: Finish yesterday's final grade
-        run: |
-          Y=$(date -u -d '-31 hours' +%Y-%m-%d)   # Phoenix yesterday
-          if python bots/fetch_picks_for_grading.py --date "$Y" --dated-only; then
-            echo "Re-grading $Y against its dated slate"
-            python bots/live_results_tracker.py --date "$Y" --final-only
-          else
-            rc=$?
-            if [ "$rc" -eq 3 ]; then
-              echo "No dated slate for $Y yet -- skipping (expected until the first slate publishes after this change)."
-            else
-              echo "::warning::yesterday fetch exited $rc; skipping the re-grade for $Y"
-            fi
-          fi
-        continue-on-error: true
-
       - name: Grade final results
         run: |
           D=$(ls bots/outputs/mlb_breakdown_today_*.json 2>/dev/null \
