@@ -151,10 +151,19 @@ def preseason_rows(prior_season: int, teams: set[str]) -> pl.DataFrame:
                  .with_columns(pl.col("team_now").alias("team")).drop("team_now")
     full = base.join(who, on="player_id", how="inner")
     ren = {c: "f_" + c[2:] for c in full.columns if c.startswith("b_") and c != "b_gp"}
+    # AVAILABILITY, FROM ESPN. This was pl.lit(0) — a hard stub — so the damp in
+    # nfl_features has never once fired on a carryover board. nflverse's
+    # load_injuries() raises for 2026, which is why the stub existed at all.
+    _q = set()
+    try:
+        _q = {k for k, v in nfl_injuries.fetch().items() if v == "Q"}
+    except Exception as _exc:  # noqa: BLE001
+        print(f"  inj_q: no injury feed ({type(_exc).__name__}) — nobody damped")
     full = full.rename(ren).with_columns(
         pl.lit(1).cast(pl.Int8).alias("is_carryover"),
-        pl.lit(0).cast(pl.Int8).alias("inj_q"),
+        pl.col("player_id").is_in(list(_q)).cast(pl.Int8).alias("inj_q"),
     )
+    print(f"  inj_q: {int(full['inj_q'].sum())} of {full.height} carryover rows damped")
     # (slate, league reference). The reference is EVERY qualified player, not
     # just the teams on this card — that's what makes the score absolute.
     return full.filter(pl.col("team").is_in(list(teams))), full

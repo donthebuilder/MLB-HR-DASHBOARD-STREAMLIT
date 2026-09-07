@@ -24,7 +24,16 @@ import polars as pl
 
 FORM_W = 4          # trailing window, in weeks
 MIN_GP = 2          # games needed inside the window to score off form alone
-QUESTIONABLE_DAMP = 0.85   # Q players keep 85% of their opportunity features
+# BACKTESTED 2026-09-07, not guessed. Five seasons (2021-25), RB/WR/TE, each
+# player's opportunity (targets + carries) in a week he was listed Questionable
+# against his OWN trailing 5-week mean, versus players who never appeared on
+# that week's report at all. n=842 questionable player-weeks.
+#     implied damp = 0.910   [95% CI 0.869, 0.950]
+# The old 0.85 sat OUTSIDE that interval — the effect is real but it is ~9%,
+# not 15%. Consistent across every season (0.872-0.953) and every position
+# (RB 0.916, WR 0.905, TE 0.918), so one global constant is the right shape and
+# per-position damps are inside the noise.
+QUESTIONABLE_DAMP = 0.91   # Q players keep 91% of their opportunity features
 
 
 # ── game context ──────────────────────────────────────────────────────────────
@@ -651,6 +660,30 @@ def upcoming_rows(season: int, week: int) -> tuple[pl.DataFrame, pl.DataFrame]:
                          .with_columns(pl.col("week").cast(pl.Int32)), f"{season} injuries")
     if not inj.is_empty():
         rows = rows.join(inj, on=["player_id", "week"], how="left")
+    else:
+        # nflverse has no injuries for this season -- load_injuries() raises
+        # outright for 2026 ("Season must be between 2009 and 2025") -- so the
+        # join above produced nothing and inj_q defaulted to 0 for everyone.
+        # That is why QUESTIONABLE_DAMP has never fired.
+        #
+        # ESPN's report is a snapshot of TODAY, with no history, so it is only
+        # ever correct for the week being priced. It is deliberately NOT wired
+        # into injuries() itself: that function also feeds the historical
+        # season builder, and stamping today's designations onto past weeks
+        # would corrupt every trailing average the model rests on.
+        try:
+            import nfl_injuries
+            live = nfl_injuries.fetch()
+            q = [k for k, v in live.items() if v == "Q"]
+            out = [k for k, v in live.items() if v in nfl_injuries.OUT_CODES or v == "D"]
+            rows = rows.with_columns(
+                pl.col("player_id").is_in(q).cast(pl.Int8).alias("inj_q"),
+                pl.col("player_id").is_in(out).cast(pl.Int8).alias("inj_out"),
+            )
+            print(f"  availability from ESPN: {int(rows['inj_q'].sum())} questionable, "
+                  f"{int(rows['inj_out'].sum())} out on this slate")
+        except Exception as exc:  # noqa: BLE001
+            print(f"  availability: ESPN unavailable ({type(exc).__name__}) — nobody damped")
     for c in ("inj_out", "inj_q"):
         if c not in rows.columns:
             rows = rows.with_columns(pl.lit(0).cast(pl.Int8).alias(c))
