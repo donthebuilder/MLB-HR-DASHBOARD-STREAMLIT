@@ -1028,45 +1028,95 @@ def _webhook_transitions(old_payload, new_payload, date_str: str = "") -> None:
         old_s, new_s = slots_of(old_payload), slots_of(new_payload)
         lines = []
 
-        # ── picks: homers, bars cleared, final without it ──
-        hr_lines, clear_lines, dead_lines, multi_lines, bases_lines = [], [], [], [], []
+        # ── ONE LINE PER PLAYER, NOT ONE PER BADGE (2026-09-08) ────────────
+        # Donovan: the same batter shown three times. `new_s` is keyed
+        # (name, role), and since the 2026-08-22 join fix one hitter may hold
+        # several designations in the same game -- TOP and HR and CONTACT.
+        # Every one of those is a separate entry here carrying the SAME
+        # actuals, so a dual-badge man who homered announced his one homer
+        # once per badge: "Riley Greene (HR pick) went deep", "Riley Greene
+        # (HRR pick) went deep", again for CONTACT.
+        #
+        # He is one player who did one thing, so he gets one line, and it
+        # names every badge he held: "(HR/HRR pick, called pregame at 88)".
+        #
+        # The bar lines stay honest about which bars: clearing HIT is not
+        # clearing HR, so those roles are collected per player and only the
+        # ones that actually turned are named. `live_tally` and the receipts
+        # count below are deliberately NOT collapsed -- they are the
+        # per-designation record, and a man holding two badges really is two
+        # judgeable picks.
+        def _pregame_score(sl):
+            for _k in ("hrw_score", "top_board_score_v2", "overall_score"):
+                try:
+                    v = float(sl.get(_k) or 0)
+                except Exception:
+                    v = 0.0
+                if v:
+                    return v
+            return 0.0
+
+        by_player: dict = {}
         for (nm, role), sl in new_s.items():
             if not role:
                 continue
-            osl = old_s.get((nm, role))
-            hr_n, hr_o = int(sl.get("actual_hr") or 0), int((osl or {}).get("actual_hr") or 0)
+            by_player.setdefault(nm, []).append((role, sl))
+
+        # ── picks: homers, bars cleared, final without it ──
+        hr_lines, clear_lines, dead_lines, multi_lines, bases_lines = [], [], [], [], []
+        for nm, entries in by_player.items():
+            entries.sort(key=lambda e: -_pregame_score(e[1]))
+            roles = "/".join(sorted({r for r, _ in entries}))
+            sl = entries[0][1]
             name = str(sl.get("name", nm)).strip() or nm.title()
+            # Same player, same game: every one of his slots carries the same
+            # box score. max() is belt and braces for a half-written payload.
+            hr_n = max(int(x.get("actual_hr") or 0) for _r, x in entries)
+            hr_o = max(
+                [int((old_s.get((nm, r)) or {}).get("actual_hr") or 0) for r, _x in entries]
+                or [0])
             if hr_n > hr_o:
                 extra = f" — that makes {hr_n}" if hr_n > 1 else ""
                 clip = _hr_highlight_url(sl.get("game_pk"), name)
                 watch = f"  [▶ watch]({clip})" if clip else ""
-                _pg = 0.0
-                for _k in ("hrw_score", "top_board_score_v2", "overall_score"):
-                    try:
-                        _pg = float(sl.get(_k) or 0)
-                    except Exception:
-                        _pg = 0.0
-                    if _pg:
-                        break
+                _pg = _pregame_score(sl)
                 _called = f", called pregame at {_pg:.0f}" if _pg else ""
-                hr_lines.append(f"💥 **{name}** ({role} pick{_called}) went deep{extra}{watch}")
+                hr_lines.append(f"💥 **{name}** ({roles} pick{_called}) went deep{extra}{watch}")
             if hr_n >= 2 and hr_o < 2:
                 multi_lines.append(f"🚀 **{name}**: {hr_n} HR tonight")
             # Big-bases nights (2026-08-06): 4+ TB crossing, gated so a fresh
             # homer doesn't double-announce — pure bases surges get their own
             # line, HR-driven ones are already covered above.
-            tb_n, tb_o = int(sl.get("actual_tb") or 0), int((osl or {}).get("actual_tb") or 0)
+            tb_n = max(int(x.get("actual_tb") or 0) for _r, x in entries)
+            tb_o = max(
+                [int((old_s.get((nm, r)) or {}).get("actual_tb") or 0) for r, _x in entries]
+                or [0])
             if tb_n >= 4 and tb_o < 4 and hr_n == hr_o:
                 h_ = int(sl.get("actual_hits") or 0); ab_ = int(sl.get("actual_ab") or 0)
-                bases_lines.append(f"🧨 **{name}** ({role}) — {tb_n} TB night ({h_}-{ab_})")
-            c_n, c_o = bar_cleared(sl, role), bar_cleared(osl, role) if osl else None
-            if c_n is True and c_o is not True and hr_n == hr_o:
+                bases_lines.append(f"🧨 **{name}** ({roles}) — {tb_n} TB night ({h_}-{ab_})")
+            # Which bars turned this run, and which pick types went final
+            # without theirs. Per role, because they are different questions --
+            # then said once, in one line, naming the roles it applies to.
+            turned, died = [], []
+            for role, rsl in entries:
+                osl = old_s.get((nm, role))
+                c_n = bar_cleared(rsl, role)
+                c_o = bar_cleared(osl, role) if osl else None
+                if c_n is True and c_o is not True and hr_n == hr_o:
+                    turned.append(role)
+                fin_n = int(rsl.get("is_final") or 0) == 1
+                fin_o = osl is not None and int(osl.get("is_final") or 0) == 1
+                if fin_n and not fin_o and c_n is False:
+                    died.append(role)
+            if turned:
                 h = int(sl.get("actual_hits") or 0); ab = int(sl.get("actual_ab") or 0)
-                clear_lines.append(f"✓ {name} clears the {role} bar ({h}-{ab})")
-            fin_n = int(sl.get("is_final") or 0) == 1
-            fin_o = osl is not None and int(osl.get("is_final") or 0) == 1
-            if fin_n and not fin_o and c_n is False:
-                dead_lines.append(f"✗ {name} — {role} pick final without it")
+                bars = "/".join(sorted(set(turned)))
+                clear_lines.append(
+                    f"✓ {name} clears the {bars} bar{'s' if len(set(turned)) > 1 else ''} ({h}-{ab})")
+            if died:
+                gone = "/".join(sorted(set(died)))
+                dead_lines.append(
+                    f"✗ {name} — {gone} pick{'s' if len(set(died)) > 1 else ''} final without it")
         # ── ALWAYS-ON LAYERS (2026-08-06, "give that good update") ──
         # Tonight's full pick-homer board, ranked by the bot's own score —
         # shown whenever the NEW list is thin, so a digest never reads empty
@@ -1081,10 +1131,13 @@ def _webhook_transitions(old_payload, new_payload, date_str: str = "") -> None:
                     pass
             return 0.0
         tonight = []
-        for (nm, role), sl in new_s.items():
-            if role and int(sl.get("actual_hr") or 0) >= 1:
+        for nm, entries in by_player.items():
+            hrs = max(int(x.get("actual_hr") or 0) for _r, x in entries)
+            if hrs >= 1:
+                sl = entries[0][1]
                 name = str(sl.get("name", nm)).strip() or nm.title()
-                tonight.append((int(sl.get("actual_hr") or 0), _score(sl), name, role))
+                roles = "/".join(sorted({r for r, _x in entries}))
+                tonight.append((hrs, _score(sl), name, roles))
         tonight.sort(key=lambda t: (-t[0], -t[1]))
         tonight_lines = [
             f"💣 **{name}** ({role}){f' — {hrn} HR' if hrn > 1 else ''}{f' · score {sc:.0f}' if sc else ''}"
@@ -1218,7 +1271,17 @@ def _webhook_transitions(old_payload, new_payload, date_str: str = "") -> None:
                 _line = f"{_h}-{_ab}" + (f", {_hr} HR" if _hr else "")
                 wrap_lines.append(f"🏅 Best call: **{_name}** ({_role}, called at {_sc:.0f}) — {_line}")
             _tot_ok2, _tot_n2 = len(cleared_picks), len(cleared_picks) + len(missed_picks)
-            _hr_tonight = sum(int(sl.get("actual_hr") or 0) for sl in new_s.values())
+            # ONE MAN, ONE HOME RUN (2026-09-08). This summed every ROW in
+            # new_s, and a hitter holding TOP + HR + CONTACT has three rows
+            # carrying the same box score -- so his one homer was counted
+            # three times and "N total HR from the board" ran high all season.
+            # The pick counts either side of it are per designation on
+            # purpose; this one is a count of baseballs.
+            _hr_by_player: dict = {}
+            for (_nm4, _r4), _sl4 in new_s.items():
+                _hr_by_player[_nm4] = max(
+                    _hr_by_player.get(_nm4, 0), int(_sl4.get("actual_hr") or 0))
+            _hr_tonight = sum(_hr_by_player.values())
             if _tot_n2:
                 _pct = round(100 * _tot_ok2 / _tot_n2)
                 wrap_lines.append(
@@ -1226,8 +1289,15 @@ def _webhook_transitions(old_payload, new_payload, date_str: str = "") -> None:
                     + (f" · {_hr_tonight} total HR from the board" if _hr_tonight else "")
                 )
             if missed_picks:
-                _named = ", ".join(f"{nm} ({rl})" for nm, rl in missed_picks[:10])
-                _more = f" +{len(missed_picks) - 10} more" if len(missed_picks) > 10 else ""
+                # Named once each, with his badges joined -- "Ty France (HR),
+                # Ty France (HIT)" was one player listed twice.
+                _missed_roles: dict = {}
+                for _nm5, _rl5 in missed_picks:
+                    _missed_roles.setdefault(_nm5, []).append(_rl5)
+                _missed_named = [
+                    (nm5, "/".join(sorted(set(rls)))) for nm5, rls in _missed_roles.items()]
+                _named = ", ".join(f"{nm5} ({rl5})" for nm5, rl5 in _missed_named[:10])
+                _more = f" +{len(_missed_named) - 10} more" if len(_missed_named) > 10 else ""
                 wrap_lines.append(f"📉 Didn't get there: {_named}{_more}")
 
             if wrap_lines:
