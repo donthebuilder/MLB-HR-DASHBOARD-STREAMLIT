@@ -4269,6 +4269,85 @@ def build_batter_statcast_profile(db: CacheDB, player_id: int, end_date: dt.date
                     "is_400_plus": bool(dist2 is not None and dist2 >= 400),
                     "is_pull_air": bool(pull_air),
                 })
+
+        # ── STRIKEOUTS, IN THE SAME LOG (2026-09-08) ─────────────────────────
+        # Donovan: "up datew the ev log to have k rate to the mix and if we can
+        # ad the k as bbe like what ever the last picth was the k the batter
+        # out." A strikeout is not a batted ball -- there is no ev/la/dist to
+        # report and none is invented here -- but `df` (the same season pull
+        # bbe_spray already comes from) carries every pitch, not just balls in
+        # play, so the pitch that actually ended the at-bat is sitting right
+        # there: real pitch type, real velocity, real arm, real pitcher. That's
+        # enough to belong in this log for the same reason a routine groundout
+        # does -- it's what happened at the plate -- so it's appended here
+        # tagged is_k, rather than built as a second list the site has to know
+        # to ask for separately.
+        #
+        # Left OUT of every batted-ball-only stat on purpose: is_hr/xbh/
+        # barrel/hard_hit/pull_air/distance-tier flags are all False/None, so
+        # a K can never be mistaken for contact by anything reading this same
+        # field spray_points already reports. The site (EVLog.js) is what
+        # keeps GB/FLY/hard-hit/etc rates computed over batted balls only and
+        # uses is_k to build an honest K rate instead.
+        k_events = {"strikeout", "strikeout_double_play"}
+        if "events" in df.columns:
+            if spray_dates:
+                k_frame = df[
+                    df["events"].isin(k_events)
+                    & df["game_date"].dt.normalize().isin(spray_dates)
+                ].copy()
+            else:
+                k_frame = df[df["events"].isin(k_events)].copy()
+        else:
+            k_frame = df.iloc[0:0]
+        if len(k_frame):
+            # Same dedupe bbe_spray already gets above — Statcast can carry
+            # the odd duplicate row for the same at-bat.
+            k_frame = dedupe_statcast_bbe(k_frame)
+        if len(k_frame):
+            k_sort_cols = [c for c in ["game_date", "at_bat_number", "pitch_number"] if c in k_frame.columns]
+            k_sorted = k_frame.sort_values(k_sort_cols, ascending=False, na_position="last") if k_sort_cols else k_frame
+            for _, kp in k_sorted.head(120).iterrows():
+                k_event = str(kp.get("events", "") or "")
+                spray_points.append({
+                    "date": str(kp.get("game_date", ""))[:10],
+                    "apex_ft": None,
+                    "hang_time_s": None,
+                    "traj_poly": None,
+                    "pitch_type": str(kp.get("pitch_type", "") or ""),
+                    "pitch_name": str(kp.get("pitch_type", "") or ""),
+                    "event": k_event,
+                    "result": k_event,
+                    "bb_type": "",
+                    "trajectory": "",
+                    "ev": None,
+                    "launch_angle": None,
+                    "la": None,
+                    "distance": None,
+                    "hc_x": None,
+                    "hc_y": None,
+                    "lane": "",
+                    "spray_side": "",
+                    "stand": str(kp.get("stand", "") or ""),
+                    "pitcher": resolve_mlb_person_name(db, kp.get("pitcher"), "—"),
+                    "pitcher_id": safe_int(kp.get("pitcher"), 0),
+                    "arm": str(kp.get("p_throws", "?") or "?"),
+                    "pitch_velocity": _clean_num(kp.get("release_speed"), 1),
+                    "is_hr": False,
+                    "hr_class": "",
+                    "is_xbh": False,
+                    "is_barrel": False,
+                    "is_hard_hit": False,
+                    "is_350_plus": False,
+                    "is_375_plus": False,
+                    "is_400_plus": False,
+                    "is_pull_air": False,
+                    "is_k": True,
+                })
+            # Newest-first, same as the batted-ball sort above -- a K slots in
+            # next to the swings around it instead of all trailing at the end.
+            spray_points.sort(key=lambda sp: str(sp.get("date") or ""), reverse=True)
+
         lane_totals: Dict[str, int] = {}
         lane_damage: Dict[str, int] = {}
         for sp in spray_points:

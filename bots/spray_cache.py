@@ -98,6 +98,11 @@ BBE_FIELDS = (
     "is_hard_hit", "is_350_plus", "is_375_plus", "is_400_plus",
     "is_pull_air", "pitch_type", "pitch_name", "pitch_velocity",
     "release_speed", "pitcher", "pitcher_name", "arm", "p_throws",
+    # 2026-09-08: strikeout rows ride in this same list now (mlb_dashboard.py
+    # tags them is_k) — without this in the allowlist, normalize_bbe() below
+    # would silently strip the one field that tells them apart from a batted
+    # ball with every numeric column blank.
+    "is_k",
 )
 
 STAT_FIELDS = (
