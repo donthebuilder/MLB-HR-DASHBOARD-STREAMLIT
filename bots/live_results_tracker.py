@@ -848,7 +848,31 @@ def pregame_board_sections(graded_slots, proven_b2b_ids=None) -> list:
     without knowing who's on the mound. And 🔁 marks a pick who is PROVEN
     (see _proven_b2b_ids) to have homered his last time out, mirroring the
     site's own back-to-back watch (lib/b2b.js) rather than inventing a
-    second, less careful version of the same claim."""
+    second, less careful version of the same claim.
+
+    ── ONE NAME, PRINTED FIVE TIMES (2026-09-08) ──────────────────────────
+    Donovan, off the live board: the same batter over and over under HR.
+    The 09-07 post had Ronald Acuna Jr. three times in TOP, identical line
+    each time, Riley Greene three times in HR, Kyle Stowers three, Carter
+    Jensen three.
+
+    The rows are right; the grouping was wrong. build_tracking_slots emits
+    FIVE slots per game -- TOP, HR, HIT, HRR, CONTACT -- and since the
+    2026-08-22 join fix a single hitter is deliberately allowed to hold
+    several of those badges at once. Every one of his slots carries the
+    same site-published `game_pick_role` string, and this function buckets
+    on `split("/")[0]`, so a man who is his game's TOP, HR and CONTACT slot
+    landed in the TOP bucket three times over.
+
+    The section counts came from the same list, so "TOP (25)" was counting
+    SLOTS on a 15-game slate, not the 25 players it plainly claimed, and
+    "+13 more" was promising names that did not exist. A reader has no way
+    to see any of that -- it just looks like the bot cannot count.
+
+    So the board is now one line per PLAYER: his highest-scoring slot wins,
+    a name already printed higher up is not printed again lower down, and
+    every count is a count of people. Nothing about grading, designation or
+    the slots themselves changes -- this function only ever read them."""
     proven = proven_b2b_ids or set()
     by_role: dict[str, list] = {}
     for sl in (graded_slots or []):
@@ -872,21 +896,53 @@ def pregame_board_sections(graded_slots, proven_b2b_ids=None) -> list:
         meta = " · ".join(x for x in (game_time, pitcher) if x)
         return f"{name}{matchup}" + (f" · {meta}" if meta else "")
 
+    def _who(sl: dict):
+        """Identity for de-duplication. player_id when the slot has one, the
+        name when it does not; a slot with neither is left alone rather than
+        collapsed into some other nameless row."""
+        try:
+            pid = int(sl.get("player_id") or 0)
+        except Exception:
+            pid = 0
+        if pid:
+            return ("id", pid)
+        nm = str(sl.get("name") or "").strip().lower()
+        return ("name", nm) if nm else ("row", id(sl))
+
+    def _one_per_player(picks, already):
+        """Best slot per player, ranked, skipping anyone printed further up."""
+        best: dict = {}
+        for sl in picks:
+            key = _who(sl)
+            if key in already:
+                continue
+            if key not in best or _board_score(sl) > _board_score(best[key]):
+                best[key] = sl
+        return sorted(best.values(), key=lambda sl: -_board_score(sl))
+
     sections = []
+    shown: set = set()
     for role in ("TOP", "HR", "WATCH"):
-        picks = by_role.pop(role, [])
+        picks = _one_per_player(by_role.pop(role, []), shown)
         if not picks:
             continue
-        picks.sort(key=lambda sl: -_board_score(sl))
+        shown.update(_who(sl) for sl in picks)
         lines = [line_for(sl) for sl in picks[:12]]
         if len(picks) > len(lines):
             lines.append(f"+{len(picks) - len(lines)} more")
         sections.append((f"{ROLE_EMOJI.get(role, '')} {role} ({len(picks)})", lines))
 
-    leftover = [sl for picks in by_role.values() for sl in picks]
+    # The same count of people, for the same reason -- "27 more tracked picks"
+    # meant 27 more SLOTS, some of them men already named above.
+    leftover = _one_per_player(
+        [sl for picks in by_role.values() for sl in picks], shown)
     if leftover:
-        other_roles = ", ".join(sorted(by_role.keys()))
-        sections.append(("OTHER", [f"{len(leftover)} more tracked picks across {other_roles}"]))
+        other_roles = ", ".join(sorted({
+            str(sl.get("game_pick_role") or "").split("/")[0].strip().upper()
+            for sl in leftover
+        } - {""}))
+        sections.append(("OTHER", [
+            f"{len(leftover)} more tracked picks across {other_roles}"]))
     return sections
 
 
