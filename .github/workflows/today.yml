@@ -24,6 +24,23 @@ on:
     # changes when the DISPLAY flips days, not whether grading continues.
     - cron: "5 7 * * *"   # 12:05am Phoenix/PT (Phoenix is UTC-7, no DST) - the day rolls over
     #
+    # BACKUP, 2026-09-11 (Donovan: tired of manually running the rollover
+    # himself). tomorrow.yml already carries a same-shaped backup for its
+    # own 07:05 UTC fire ("5 9 * * *" -- runner-acquisition insurance); this
+    # workflow's own rollover slot never got the matching one. Confirmed via
+    # live GitHub Actions run history, not assumed: 2026-09-11's run list has
+    # no run at all between 06:50 and 07:44 UTC -- the 07:05 rollover simply
+    # didn't fire, and the 07:44/07:46 entries right after are both "Manually
+    # run by donthebuilder". Same silent-scheduled-cron-skip GitHub Actions is
+    # known to do under load (see nfl.yml's own item-17 writeup) -- nothing
+    # here was misconfigured, the platform just didn't run it. Without this,
+    # a missed rollover sits stale until the next routine slot at 12:00 UTC
+    # (5am Phoenix) -- a 5-hour gap, which is exactly the gap Donovan's been
+    # covering by hand. Same concurrency-group safety as the primary slot
+    # (cancel-in-progress: false below), so if the 07:05 run actually did
+    # fire and is just running long, this queues rather than fights it.
+    - cron: "5 9 * * *"   # 2:05am Phoenix -- backup, same slot as tomorrow.yml's own backup
+    #
     # UTC times = 5am, 8am, 11am, 1pm, 3pm, 4pm, 5pm, 6pm Phoenix (Phoenix is UTC-7 year-round)
     # Phoenix 5am, 8am, then hourly 9am-6pm. The 9am-2:30pm block is the
     # lineup-drop window -- a slate scored before lineups post is a guess at
