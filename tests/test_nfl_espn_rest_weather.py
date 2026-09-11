@@ -25,6 +25,22 @@ the NFL data layer. This file covers what actually got built from that:
      proxy that needed no new data source at all, just date arithmetic over
      what fetch() already returns.
 
+  4. season_schedule_for_rest() (2026-09-11, item 22 fix). attach_rest_days()
+     itself was always correct (see section 3) -- the bug was upstream, in
+     what pool of games fed it. The site was showing real rest-day numbers
+     for Week 1 openers (should be None): traced to the ORIGINAL caller
+     building that pool via fetch(seasontype=2, year=season) with no week=,
+     assuming ESPN's scoreboard treats that as "the whole season." Confirmed
+     directly against the live endpoint that it doesn't -- it silently
+     returns one unrelated week instead. season_schedule_for_rest() replaces
+     that with nflreadpy.load_schedules(), already this file's trusted
+     source for exact per-season dates elsewhere. Covered here: the row
+     shape it hands to attach_rest_days() (mocking nflreadpy/polars, neither
+     of which is installed in this test environment) and its fails-soft
+     contract when nflreadpy genuinely isn't importable -- which is this
+     environment's REAL, un-mocked condition, so that path is exercised for
+     real, not simulated.
+
 Run: python tests/test_nfl_espn_rest_weather.py
 """
 import datetime as dt
@@ -203,6 +219,78 @@ check("subset call still finds the same real rest value", narrow[0]["home_rest_d
 original_w3a = dict(season_games[2])
 _ = nfl_espn.attach_rest_days(season_games, season_games)
 check("attach_rest_days does not mutate the games it's given", season_games[2], original_w3a)
+
+
+# -- 4: season_schedule_for_rest() ------------------------------------------
+
+# 4a. nflreadpy/polars genuinely are not installed in this test environment
+# (confirmed: no network to PyPI from here) -- so calling the real function
+# with no mocking exercises its actual fails-soft path for real, not as a
+# simulation of what would happen if the import failed.
+real_result = nfl_espn.season_schedule_for_rest(2026)
+check("real environment has no nflreadpy: fails soft to [], not a crash", real_result, [])
+
+# 4b. With nflreadpy mocked to a plausible polars-shaped return, the row
+# mapping and season filter are the only real logic left to check --
+# `filter`/`select`/`iter_rows` are exercised via a minimal fake that mimics
+# just the polars surface this function actually calls.
+class _FakeFrame:
+    def __init__(self, rows):
+        self._rows = rows
+
+    def filter(self, _pred):
+        # The real code filters by pl.col("season") == season; the fake
+        # nfl.load_schedules() below has already pre-filtered by season, so
+        # this just has to be a legal no-op passthrough.
+        return self
+
+    def select(self, *_cols):
+        return self
+
+    def iter_rows(self, named=True):
+        assert named is True
+        return iter(self._rows)
+
+
+class _FakePolarsCol:
+    def __eq__(self, _other):
+        return None  # never actually evaluated by _FakeFrame.filter
+
+
+class _FakePolars:
+    @staticmethod
+    def col(_name):
+        return _FakePolarsCol()
+
+
+class _FakeNflreadpy:
+    @staticmethod
+    def load_schedules():
+        return _FakeFrame([
+            {"home_team": "BAL", "away_team": "WSH", "gameday": "2026-09-06"},
+            {"home_team": "MIA", "away_team": "BAL", "gameday": "2026-09-13"},
+            # a bye/placeholder-shaped row with no gameday -- must be skipped,
+            # not turned into a None-kickoff row that later code has to guard against
+            {"home_team": "SF", "away_team": "SEA", "gameday": None},
+            # a real postseason row in the SAME table/season, no second fetch
+            # needed the way the old ESPN seasontype=3 branch required
+            {"home_team": "KC", "away_team": "BAL", "gameday": "2027-01-18"},
+        ])
+
+
+with mock.patch.dict(sys.modules, {"polars": _FakePolars(), "nflreadpy": _FakeNflreadpy()}):
+    rows = nfl_espn.season_schedule_for_rest(2026)
+
+check("mocked source: correct row count (bye/no-gameday row dropped)", len(rows), 3)
+check("mocked source: home/away/kickoff mapped from home_team/away_team/gameday", rows[0], {"home": "BAL", "away": "WSH", "kickoff": "2026-09-06"})
+check("mocked source: postseason row survives in the same pool, no second fetch", rows[2], {"home": "KC", "away": "BAL", "kickoff": "2027-01-18"})
+
+# 4c. Feeds straight into attach_rest_days() exactly like nfl_bot.py's real
+# call site -- a Week 1-shaped target game finds no prior game in this pool
+# and correctly comes back None, the actual bug this whole fix is about.
+week1_target = [{"game_id": "w1", "home": "BAL", "away": "CLE", "kickoff": "2026-09-06T17:00Z"}]
+annotated = nfl_espn.attach_rest_days(rows, week1_target)
+check("end to end: a Week 1 target game with no games in the season pool before it is honestly None", annotated[0]["home_rest_days"], None)
 
 
 print(f"{CHECKS - len(FAILED)}/{CHECKS} checks passed")

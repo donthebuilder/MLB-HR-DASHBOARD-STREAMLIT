@@ -235,6 +235,59 @@ def attach_rest_days(all_games: list[dict[str, Any]], target: list[dict[str, Any
     return out
 
 
+def season_schedule_for_rest(season: int) -> list[dict[str, Any]]:
+    """The whole season's REG+POST schedule, as {home, away, kickoff} rows --
+    the pool attach_rest_days() needs to find a team's actual prior game.
+
+    REST DAYS BUG (2026-09-11, item 22). nfl_bot.py's week-mode branch used
+    to build this pool with this module's own fetch(seasontype=2, year=season)
+    -- deliberately no week= argument, meaning to pull the WHOLE regular-
+    season schedule in one call. Confirmed directly against the live ESPN
+    endpoint that this doesn't work: seasontype=2&dates=<year> with no week
+    does not return the season, it returns whichever single week ESPN
+    defaults to absent an explicit week (probed 2026-09-11: got back 10
+    games from an unrelated week, not the ~272-game season the code assumed
+    it was getting). The live site was actually catching this: Week 1 games
+    were finding a "prior game" from wherever that default landed and
+    publishing real rest-day numbers instead of the honest `None`
+    Games.js's own comment already promises for a team's actual season
+    opener.
+
+    nflreadpy.load_schedules() is already this file's trusted source for
+    exact per-season dates elsewhere (see current_week()'s sibling
+    _regular_season_is_near() in nfl_bot.py) and, per this module's own
+    docstring, already covers REG+POST in one table (game_type is
+    REG/WC/DIV/CON/SB, nothing else) -- so unlike the ESPN version, this
+    needs no separate seasontype=3 fetch-and-concat for the January case.
+    It also carries NO preseason rows, which is exactly the boundary rest
+    days wants: a team's preseason finale isn't a comparable "prior game"
+    the way an in-season game is (see nfl_bot.py's own note on that).
+
+    Fails soft, same contract as fetch() above: any problem (network,
+    schema drift, nflreadpy not installed) returns [] rather than raising,
+    and the caller's existing `season_games or games` fallback (the
+    CURRENT week's own games, ESPN-sourced) keeps rest days working for at
+    least the games already in hand, just without cross-week history.
+    """
+    try:
+        import polars as pl
+        import nflreadpy as nfl
+    except Exception as exc:
+        print(f"[nfl_espn] season_schedule_for_rest: nflreadpy/polars unavailable ({type(exc).__name__}: {exc})")
+        return []
+    try:
+        s = nfl.load_schedules().filter(pl.col("season") == season)
+        out = []
+        for r in s.select("home_team", "away_team", "gameday").iter_rows(named=True):
+            if not r["gameday"]:
+                continue
+            out.append({"home": r["home_team"], "away": r["away_team"], "kickoff": r["gameday"]})
+        return out
+    except Exception as exc:
+        print(f"[nfl_espn] season_schedule_for_rest: load_schedules failed ({type(exc).__name__}: {exc})")
+        return []
+
+
 def current_week(year: int | None = None) -> int | None:
     """The regular-season week ESPN's scoreboard is on RIGHT NOW, or None.
 

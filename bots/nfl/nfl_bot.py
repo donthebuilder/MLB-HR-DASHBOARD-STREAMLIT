@@ -557,20 +557,31 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
         # numbering; nfl_espn.slice_for maps our 19-22 onto it.
         st, ew = nfl_espn.slice_for(week)
         games = nfl_espn.fetch(seasontype=st, year=season, week=ew)
-        # REST DAYS (2026-08-28, B7). Unlike the preseason branch, `games`
-        # above is scoped to ONE week — a team's prior game lives in an
-        # earlier week, so this needs its own whole-season-schedule fetch
-        # (schedule-only, not per-player stats — cheap next to everything
-        # else this function already calls). Week 1 legitimately comes back
-        # with no prior game to measure from (rest_days=None, not a bug —
-        # there's nothing before Week 1 in this pool on purpose; the
-        # preseason-to-Week-1 turnaround isn't a comparable "short week" the
-        # way an in-season Thursday game is).
-        # In January a team's previous game can be a regular-season one, so the
-        # rest-days pool has to span both halves of the season.
-        season_games = nfl_espn.fetch(seasontype=2, year=season)
-        if st == 3:
-            season_games = (season_games or []) + (nfl_espn.fetch(seasontype=3, year=season) or [])
+        # REST DAYS (2026-08-28, B7; SOURCE FIXED 2026-09-11, item 22).
+        # Unlike the preseason branch, `games` above is scoped to ONE week —
+        # a team's prior game lives in an earlier week, so this needs its
+        # own whole-season-schedule pool (schedule-only, not per-player
+        # stats — cheap next to everything else this function already
+        # calls). Week 1 legitimately comes back with no prior game to
+        # measure from (rest_days=None, not a bug — there's nothing before
+        # Week 1 in this pool on purpose; the preseason-to-Week-1 turnaround
+        # isn't a comparable "short week" the way an in-season Thursday game
+        # is). In January a team's previous game can be a regular-season
+        # one, so the rest-days pool has to span both halves of the season.
+        #
+        # Used to build this pool from nfl_espn.fetch(seasontype=2,
+        # year=season) with no week= — confirmed live (2026-09-11) that
+        # ESPN's scoreboard endpoint does NOT treat that as "the whole
+        # season" the way the comment above assumed; it silently returned a
+        # single unrelated week instead, and Week 1 games ended up with
+        # fabricated rest-day numbers rather than the honest None this
+        # comment always promised. season_schedule_for_rest() replaces it
+        # with nflreadpy's schedule table (REG+POST in one call, no
+        # preseason rows, already this file's trusted source for exact
+        # per-season dates elsewhere) — see its own docstring for the full
+        # diagnosis. Falls back to just this week's games (the old
+        # `season_games or games` safety net) if nflreadpy is unavailable.
+        season_games = nfl_espn.season_schedule_for_rest(season)
         upcoming = nfl_espn.attach_rest_days(season_games or games, games)
         # PBP DRIVE STATE (2026-08-28). A second, independent drive-state
         # source on top of nfl_espn.py's live (but unverified-shape) ESPN
