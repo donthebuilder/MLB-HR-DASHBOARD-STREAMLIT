@@ -454,6 +454,49 @@ def schedule_weeks(season: int, now: dt.datetime | None = None) -> tuple[int | N
     return price, grade
 
 
+# How long after the season's very last kickoff to keep treating that final
+# week as worth a fresh grading pass, before deciding there is nothing left
+# to grade until next season. Not just "the game is over" (GAME_HOURS) --
+# official stat corrections keep landing for days after a game, so this has
+# to be long enough that they have settled, not just long enough that the
+# clock ran out.
+SEASON_GRADE_GRACE_DAYS = 14
+
+
+def season_has_ended(season: int, now: dt.datetime | None = None) -> bool:
+    """True once every game of `season` -- the Super Bowl included -- is far
+    enough in the past that nothing about it will change again (item 4,
+    2026-09-11).
+
+    `schedule_weeks()`'s own `grade` above (the latest week that has
+    STARTED) has no equivalent of `price`'s expiry: `price` naturally
+    returns None once every week's last game is over, but `grade` is a max()
+    with nothing to raise it further past the season's last week, so it
+    freezes there forever instead of following `price` back to None. That is
+    exactly the failure `_kickoffs()`'s own comment above describes
+    happening once already, at the regular-season/playoff seam ("the bot
+    rebuilt and re-graded a finished week roughly twelve times a week for
+    six weeks", fixed by folding playoffs into the kickoff table) -- it just
+    recurs at the NEXT seam, the one after the season's actual last game,
+    which is what this function exists to catch. nfl_bot.py's build_payload()
+    already guards the pricing side the same way, keyed off `price` going
+    None; nfl_results.py's grading side has no equivalent, so this is that
+    guard's grading-side counterpart.
+    """
+    now = now or dt.datetime.now(dt.timezone.utc)
+    try:
+        kicks = _kickoffs(season)
+    except Exception as exc:
+        print(f"schedule unreadable ({type(exc).__name__}: {exc})")
+        return False
+    if not kicks:
+        return False
+    last_kickoff = kicks[-1][1]  # kicks is sorted by kickoff time ascending
+    cutoff = (last_kickoff + dt.timedelta(hours=GAME_HOURS)
+              + dt.timedelta(days=SEASON_GRADE_GRACE_DAYS))
+    return now > cutoff
+
+
 def current_roster(season: int, week: int | None = None) -> pl.DataFrame:
     """Who is on an NFL roster THIS season, and for whom. Three sources, best first.
 

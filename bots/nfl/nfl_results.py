@@ -300,11 +300,33 @@ def main() -> int:
     # that and every Monday-night rung stayed void for good. The schedule keeps
     # week N gradeable until week N+1 kicks off on Thursday.
     sched_grade = None
+    season_over = False
     try:
-        from nfl_features import schedule_weeks
+        from nfl_features import schedule_weeks, season_has_ended
         sched_grade = schedule_weeks(a.season)[1]
+        season_over = season_has_ended(a.season)
     except Exception as exc:
         print(f"  schedule weeks unavailable ({type(exc).__name__}: {exc})")
+
+    # NOTHING LEFT TO GRADE (item 4, 2026-09-11). nfl_bot.py's build_payload()
+    # already stops on its own once schedule_weeks's `price` goes None past
+    # the season's last game -- see its own comment on this exact failure
+    # mode. Grading had no equivalent: `sched_grade` above freezes on the
+    # final week forever rather than expiring (see season_has_ended()'s own
+    # docstring), so without this check, nfl.yml's ~12 firings/week would
+    # re-grade and re-append an identical final-week payload to results.json
+    # AND the outcome log for the entire off-season, every week, until next
+    # August -- several hundred KB of duplicate writes a week, forever,
+    # rather than the handful of legitimate re-grades an active week
+    # produces. Only fires once season_has_ended()'s own grace period has
+    # passed, so in-season re-grading (Monday-night corrections, a run
+    # picking up a stat fix days later) is untouched, and an explicit
+    # --week (a deliberate re-grade on demand) always overrides this, same
+    # as it overrides everything below.
+    if a.mode == "week" and not a.week and season_over:
+        print(f"  the {a.season} season is over -- nothing left to grade, "
+              f"leaving the published results and outcome log as they stand")
+        return 0
 
     card_week = None
     try:
