@@ -208,18 +208,56 @@ def _fetch_archived_card(season: int, week: int, prefix: str):
         return None
 
 
-def grade(card: dict, actual: dict) -> tuple[dict, dict]:
-    """Score every rung. Returns (graded card, per-market totals)."""
+def grade(card: dict, actual: dict, positions: dict[str, str] | None = None) -> tuple[dict, dict]:
+    """Score every rung. Returns (graded card, per-market totals).
+
+    GRADE() AND LINES DISAGREED ABOUT ELIGIBILITY (item 9, 2026-09-11).
+    eligible_lines() below already knows a market can only apply to certain
+    positions (MODELS[key]["pos"]) and voids anything outside that list --
+    its own docstring: "position eligibility is the only thing" that tells
+    "he really went scoreless" apart from "this market isn't his". grade()
+    never got that same check: it only ever voided a rung when the player
+    had NO recorded line at all. outcomes() defaults every one of the 7
+    markets to 0.0 for every player who DID record a line, so a rung whose
+    market doesn't apply to that player's CURRENT position was graded as a
+    plain miss (0.0 < bar) here, while the very same player+market pair was
+    silently absent from the published `lines` a user would use to check
+    that call -- two different answers to the same question, from the same
+    grading run.
+
+    Most likely to actually surface for a player whose listed position
+    changed after a card priced him: preseason carryover pricing
+    (nfl_bot.preseason_rows()) reads a player's position off the LAST week
+    of the PRIOR season, so a rung built under that old position can easily
+    disagree with the position eligible_lines() checks him against later --
+    the current season's own recorded position, once real games exist. Also
+    covers the site's own "swap any player into any rung" override
+    (nfl_results.py's module docstring), which has no position guard on the
+    way in.
+
+    `positions` is the same {player_id: position} map main() already builds
+    for eligible_lines() -- optional and skipped when omitted (nothing else
+    calls grade() today, but a caller with no position data should keep the
+    old no-eligibility-check behavior rather than void everything).
+    """
+    positions = positions or {}
     graded, totals = {}, {}
     for key, blk in (card or {}).items():
         bar = float(blk.get("bar", 1))
+        eligible_pos = MODELS.get(key, {}).get("pos")
         rungs, hit, n = [], 0, 0
         for r in blk.get("rungs", []):
-            line = actual.get(str(r.get("player_id")))
-            # No line at all = did not play (inactive, cut, never dressed).
-            # VOID, not a miss — the same rule the MLB tracker and the watch
-            # ledger use, and the same reason: an unasked question has no answer.
-            val = None if line is None else line.get(key)
+            pid = str(r.get("player_id"))
+            line = actual.get(pid)
+            # Void for either reason: no recorded line at all (did not play
+            # -- inactive, cut, never dressed), or a recorded line whose
+            # position doesn't match this market's eligible list (the market
+            # doesn't apply to him, whatever the raw stat defaulted to). The
+            # same rule the MLB tracker and the watch ledger use for the
+            # first case, and the same rule eligible_lines() already uses
+            # for the second: an unasked question has no answer.
+            pos_ok = (not positions) or eligible_pos is None or positions.get(pid) in eligible_pos
+            val = None if (line is None or not pos_ok) else line.get(key)
             ok = None if val is None else bool(val >= bar)
             if ok is not None:
                 n += 1
@@ -398,7 +436,7 @@ def main() -> int:
     else:
         print(f"  no card at {cp} — publishing lines only")
 
-    graded, totals = grade(card, actual)
+    graded, totals = grade(card, actual, positions)
 
     now = dt.datetime.now(dt.timezone.utc)
     payload = {
