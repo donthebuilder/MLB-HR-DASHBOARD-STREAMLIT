@@ -339,6 +339,42 @@ def week_from_date(year: int, today: dt.date | None = None) -> int:
     return max(1, min(18, (today - start).days // 7 + 1))
 
 
+# Mirrors lib/nfl/resultsArchive.js's own PRE_WEEKS=4 constant -- the site
+# unconditionally asks for preseason weeks 1-4 every load (item 6's own
+# investigation confirmed this), so the bot's own idea of "how many
+# preseason weeks" has to agree with it or the extra archive files this
+# function's result feeds just keep 404ing for no reason.
+PRE_WEEKS = 4
+
+
+def preseason_week_from_date(year: int, today: dt.date | None = None) -> int:
+    """Which of the PRE_WEEKS preseason weeks `today` falls in -- purely
+    from the calendar (item 6, 2026-09-11). There is no ESPN or nflverse
+    source for this the way current_week()/week_from_date() answer it for
+    the regular season: current_week() explicitly refuses to answer outside
+    seasontype=2 ("the event's own season type refuses a preseason ...
+    week"), and nflverse carries no preseason schedule at all (this
+    module's own docstring -- ESPN box scores are the only free preseason
+    source that exists). Anchored on the same SEASON_OPEN date
+    week_from_date() uses, counting backward PRE_WEEKS weeks from it.
+
+    This is an approximation, not a real per-team schedule lookup, and it
+    does not need to be exact: the number only labels which
+    results_<season>_pNN.json a preseason grading pass gets filed under.
+    _pre_lines() itself grades every completed preseason game regardless of
+    which week is asked for -- nfl_espn.fetch(seasontype=1, week=None, ...)
+    already returns the WHOLE preseason schedule when week is omitted (same
+    behavior nfl_bot.py's own preseason pricing already relies on, per its
+    "games here is already the WHOLE preseason schedule" comment) -- so a
+    slightly-off week label costs one archive file being filed under a
+    neighboring tag, not a wrong grade.
+    """
+    today = today or dt.date.today()
+    start = SEASON_OPEN.get(year, dt.date(year, 9, 8))
+    days_until = (start - today).days
+    return max(1, min(PRE_WEEKS, PRE_WEEKS - days_until // 7))
+
+
 # THE POSTSEASON IS AT DIFFERENT COORDINATES. nflverse numbers the playoffs as
 # weeks 19-22 of the same season -- wild card, divisional, conference, Super
 # Bowl -- and every other file in this bot speaks that number. ESPN files them

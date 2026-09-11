@@ -338,6 +338,18 @@ def main() -> int:
     if a.mode == "week" and not a.week:
         a.week = int(sched_grade) if sched_grade else (
             int(card_week) if card_week else nfl_espn.resolve_week(a.season, None))
+    # PRESEASON NEVER GOT A WEEK NUMBER AT ALL (item 6, 2026-09-11) -- the
+    # block above only ever resolves a.week for mode == "week", so every
+    # scheduled preseason grading run left a.week at argparse's None default
+    # and the archive write below (`if a.week: ...`) never fired. The site's
+    # own lib/nfl/resultsArchive.js unconditionally asks for
+    # nfl_results_<season>_p01..p04.json on every load regardless -- those
+    # four fetches have 404ed for the entire preseason, every visit, since
+    # the per-week archive shipped 2026-09-05. See
+    # nfl_espn.preseason_week_from_date()'s own docstring for why an
+    # approximate calendar-based week number is good enough here.
+    if a.mode == "preseason" and not a.week:
+        a.week = nfl_espn.preseason_week_from_date(a.season)
     print(f"grading {a.mode} · season {a.season}" + (f" · week {a.week}" if a.week else ""))
     if a.mode == "week":
         lines = _reg_lines(a.season, a.week)

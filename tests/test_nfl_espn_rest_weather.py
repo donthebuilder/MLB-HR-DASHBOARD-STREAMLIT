@@ -41,6 +41,14 @@ the NFL data layer. This file covers what actually got built from that:
      environment's REAL, un-mocked condition, so that path is exercised for
      real, not simulated.
 
+  5. preseason_week_from_date() (2026-09-11, item 6 fix). Pure calendar
+     arithmetic, no network/nflreadpy/polars dependency at all, so this
+     section runs for real, no mocking needed. Covers the week-1..4
+     progression across the preseason, both clamps (well before the
+     preseason starts, and on/after the regular season opens), and an
+     unlisted year falling back to SEASON_OPEN's own Sep-8 default the same
+     way week_from_date() does.
+
 Run: python tests/test_nfl_espn_rest_weather.py
 """
 import datetime as dt
@@ -291,6 +299,50 @@ check("mocked source: postseason row survives in the same pool, no second fetch"
 week1_target = [{"game_id": "w1", "home": "BAL", "away": "CLE", "kickoff": "2026-09-06T17:00Z"}]
 annotated = nfl_espn.attach_rest_days(rows, week1_target)
 check("end to end: a Week 1 target game with no games in the season pool before it is honestly None", annotated[0]["home_rest_days"], None)
+
+
+# 5a. Mid-progression: each 7-day block back from SEASON_OPEN[2026]
+# (2026-09-09) should land one preseason week later.
+import datetime as _dt
+
+check("preseason week, 28 days out: clamped to week 1",
+      nfl_espn.preseason_week_from_date(2026, _dt.date(2026, 8, 12)), 1)
+check("preseason week, 21 days out: week 1",
+      nfl_espn.preseason_week_from_date(2026, _dt.date(2026, 8, 19)), 1)
+check("preseason week, 14 days out: week 2",
+      nfl_espn.preseason_week_from_date(2026, _dt.date(2026, 8, 26)), 2)
+check("preseason week, 7 days out: week 3",
+      nfl_espn.preseason_week_from_date(2026, _dt.date(2026, 9, 2)), 3)
+check("preseason week, 1 day out: week 4",
+      nfl_espn.preseason_week_from_date(2026, _dt.date(2026, 9, 8)), 4)
+
+# 5b. Both clamps -- well before the preseason has plausibly started, and
+# on/after the regular season has already opened (this function shouldn't
+# normally be called that late since mode flips to "week" well before then,
+# but it must still answer something bounded, not a wild number).
+check("preseason week, months before the season: clamped to week 1 (floor)",
+      nfl_espn.preseason_week_from_date(2026, _dt.date(2026, 6, 1)), 1)
+check("preseason week, after the regular season has opened: clamped to week 4 (ceiling)",
+      nfl_espn.preseason_week_from_date(2026, _dt.date(2026, 9, 20)), 4)
+
+# 5c. Unlisted year falls back to week_from_date()'s own Sep-8 default.
+check("preseason week, unlisted year, 7 days before the Sep-8 fallback: week 3",
+      nfl_espn.preseason_week_from_date(2027, _dt.date(2027, 9, 1)), 3)
+
+# 5d. Mirrors the site's own PRE_WEEKS constant (lib/nfl/resultsArchive.js).
+check("PRE_WEEKS matches the site's own preseason-archive constant", nfl_espn.PRE_WEEKS, 4)
+
+# 5e. Regression guard: nfl_results.py's main() actually calls this rather
+# than leaving a.week at None for every scheduled preseason run -- the same
+# source-text tradeoff test_nfl_season_has_ended.py's own regression check
+# makes, for the same reason (nfl_results.py needs polars at module level,
+# so it can't be imported directly in this environment).
+nfl_results_src = (
+    open(os.path.join(os.path.dirname(__file__), "..", "bots", "nfl", "nfl_results.py"))
+    .read()
+)
+checkTrue("nfl_results.py's main() calls preseason_week_from_date()",
+          "preseason_week_from_date" in nfl_results_src)
 
 
 print(f"{CHECKS - len(FAILED)}/{CHECKS} checks passed")
