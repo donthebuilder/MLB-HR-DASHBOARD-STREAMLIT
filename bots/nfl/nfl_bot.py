@@ -400,10 +400,24 @@ def _next_wave(games: list[dict], today: dt.date) -> list[dict]:
 
 # The site's own vocabulary, so nothing has to translate on the way in.
 # lib/fantasy/scoring.js reads exactly these keys.
+#
+# SAFETIES (2026-09-11, item 8). scoring.js had four D/ST terms -- sacks,
+# interceptions, fumble recoveries, touchdowns -- and no safety term at all,
+# so a D/ST that notched one scored the same as one that didn't. nflverse's
+# load_team_stats() is believed to carry a `def_safeties` column alongside
+# the others already read here (same def_<stat> naming convention as
+# def_sacks/def_interceptions/def_tds) -- NOT confirmed against a live
+# response the way the other four were (no environment this session has
+# tools for can install nflreadpy/polars to check). Added the same way as
+# every other key here: `_lines()`'s existing `if c in t.columns` guard
+# means this is a safe no-op (contributes 0, same as before) if the column
+# name turns out to be wrong, and starts working with no further deploy if
+# it's right.
 DEF_STATS = {
     "def_sacks": "def_sacks",
     "def_interceptions": "def_interceptions",
     "fumble_recovery_opp": "def_fumble_recoveries",
+    "def_safeties": "def_safeties",
 }
 
 
