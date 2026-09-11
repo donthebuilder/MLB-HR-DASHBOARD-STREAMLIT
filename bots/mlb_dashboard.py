@@ -13137,8 +13137,24 @@ def refresh_locked_lineup_status(client: MLBClient, game: Dict[str, Any], rows: 
     """Keep locked picks, but refresh lineup status for the website display.
 
     Game lock should protect the actual selected players/picks after a game starts.
-    It should NOT keep showing Pending once MLB has the real lineup or the game is final.
-    This only updates row.lineup_confirmed; it does not rebuild or replace any player picks.
+    It should NOT keep showing Pending once MLB has the real lineup and the locked
+    pick is actually IN it. This only updates row.lineup_confirmed; it does not
+    rebuild or replace any player picks.
+
+    2026-09-11 fix: this used to confirm every row for a team the instant that
+    team's real lineup posted (or the game went final) -- TEAM-level, not
+    PLAYER-level. A pick locked in from build_projected_lineup()'s pregame guess
+    (ranks the roster by season OBP/OPS/SLG when no order has posted yet) is not
+    guaranteed to be one of the nine names the real lineup actually confirms.
+    Real case that caught this: Zac Veen (COL) got projected into a starting
+    slot pregame, the real posted lineup did not include him as a starter, and
+    this function flipped him to "✅ confirmed" anyway the moment ANY Rockies
+    lineup posted -- the site then showed him as a confirmed starter for a game
+    he was never starting. Now each row is checked against the real lineup's own
+    player-id set, so a wrongly-projected pick stays at Pending instead of
+    reading as confirmed. (It still isn't rebuilt/replaced -- see the docstring
+    above -- so "stays Pending forever" is the honest failure mode here, not
+    "silently wrong.")
     """
     if not rows:
         return rows
@@ -13152,24 +13168,39 @@ def refresh_locked_lineup_status(client: MLBClient, game: Dict[str, Any], rows: 
         away_abbr = normalize_team_abbr(((game_data.get("teams", {}) or {}).get("away", {}) or {}).get("abbreviation", ""))
         home_abbr = normalize_team_abbr(((game_data.get("teams", {}) or {}).get("home", {}) or {}).get("abbreviation", ""))
 
-        away_confirmed = bool(extract_lineup(teams_box.get("away", {}) or {}))
-        home_confirmed = bool(extract_lineup(teams_box.get("home", {}) or {}))
+        away_lineup = extract_lineup(teams_box.get("away", {}) or {})
+        home_lineup = extract_lineup(teams_box.get("home", {}) or {})
+        away_ids = {pid for pid, _ in away_lineup}
+        home_ids = {pid for pid, _ in home_lineup}
 
         status = game_data.get("status", {}) or {}
         abstract = str(status.get("abstractGameState", "")).lower()
         detailed = str(status.get("detailedState", "")).lower()
         game_final = abstract == "final" or "final" in detailed
 
-        confirmed_by_team = {
-            away_abbr: away_confirmed or game_final,
-            home_abbr: home_confirmed or game_final,
+        lineup_posted = {
+            away_abbr: bool(away_lineup) or game_final,
+            home_abbr: bool(home_lineup) or game_final,
         }
+        ids_by_team = {away_abbr: away_ids, home_abbr: home_ids}
 
         updated = 0
         for r in rows:
-            if confirmed_by_team.get(normalize_team_abbr(str(r.team)), False) and not r.lineup_confirmed:
-                r.lineup_confirmed = True
-                updated += 1
+            if r.lineup_confirmed:
+                continue
+            abbr = normalize_team_abbr(str(r.team))
+            if not lineup_posted.get(abbr, False):
+                continue
+            # Player-level check against the real posted order. team_ids can be
+            # empty for a FINAL game that never had a posted order to compare
+            # against (old/incomplete boxscore) -- fall back to the prior
+            # team-level behavior in that one case rather than stranding every
+            # row at Pending with no lineup to ever check against.
+            team_ids = ids_by_team.get(abbr) or set()
+            if team_ids and r.player_id not in team_ids:
+                continue
+            r.lineup_confirmed = True
+            updated += 1
 
         if updated:
             print(f"🔓 Updated locked lineup status: {updated} rows now confirmed for display.", file=sys.stderr, flush=True)
