@@ -1749,6 +1749,15 @@ class HitterRecord:
     # running"; config_hash answers "what was ACTUALLY in effect" -- the
     # machine-verifiable backstop for an unbumped version.
     config_hash: str = ""
+    # ONE-TIME REAL-LINEUP REFRESH AT LOCK (2026-09-12, OPEN-ITEMS #18/#19).
+    # True once this row has survived a build attempted AT OR AFTER
+    # game_has_started() went true for its game -- see the comment in
+    # main()'s per-game loop for the full story. Defaulted False for the
+    # same reason model_version/run_id are: load_locked_rows_by_game()
+    # back-fills any dataclass-defaulted field missing from an older saved
+    # row, so a row saved before this field existed is correctly treated as
+    # "not yet refreshed" rather than silently dropped.
+    built_after_lock: bool = False
 
 
 class CacheDB:
@@ -13132,6 +13141,31 @@ def game_has_started(game: Dict[str, Any]) -> bool:
     return False
 
 
+def should_reuse_locked_rows(game: Dict[str, Any], game_pk: int,
+                              locked_rows_by_game: Dict[int, List[HitterRecord]]) -> bool:
+    """True once a game has both started AND already survived its one
+    real-lineup refresh at lock (built_after_lock=True on its saved rows).
+
+    2026-09-12, OPEN-ITEMS #18/#19. Extracted out of main()'s per-game loop
+    so the rule has a name and a test, not just an inline boolean. A game
+    that has just started -- or is found already live/final on a FIRST look
+    (a late/failed earlier run, same case game_has_started()'s own docstring
+    already names) -- has no built_after_lock=True rows yet and correctly
+    returns False here, which sends it through one more real
+    build_hitter_records() call (using the now-guaranteed-posted real
+    battingOrder) before its row set is ever reused. See the block comment
+    at that call site in main() for the full story: this closes the gap
+    where a 1-2-spot-wrong pregame lineup GUESS got permanently frozen in
+    because the guess happened to be whatever the last run before lock saw,
+    with no real lineup ever checked against it again.
+    """
+    if not game_has_started(game):
+        return False
+    saved = locked_rows_by_game.get(game_pk)
+    if not saved:
+        return False
+    return any(r.built_after_lock for r in saved)
+
 
 def refresh_locked_lineup_status(client: MLBClient, game: Dict[str, Any], rows: List[HitterRecord]) -> List[HitterRecord]:
     """Keep locked picks, but refresh lineup status for the website display.
@@ -14504,7 +14538,7 @@ def main() -> int:
             home = normalize_team_abbr(game.get("teams", {}).get("home", {}).get("team", {}).get("abbreviation", "HOME"))
             game_pk = safe_int(game.get("gamePk"), 0)
 
-            if game_has_started(game) and game_pk in locked_rows_by_game:
+            if should_reuse_locked_rows(game, game_pk, locked_rows_by_game):
                 rows = locked_rows_by_game[game_pk]
                 rows = refresh_locked_lineup_status(client, game, rows)
                 filtered_rows = rows
@@ -14512,6 +14546,42 @@ def main() -> int:
             else:
                 print(f"[{idx}/{len(games)}] Building {away} @ {home}...", file=sys.stderr, flush=True)
                 rows = build_hitter_records(client, db, game, slate_date)
+                # ── ONE-TIME REAL-LINEUP REFRESH AT LOCK (2026-09-12) ───────────
+                # OPEN-ITEMS #18/#19, parked 2026-09-11 for lack of live data to
+                # chase -- Donovan sent a screenshot of two real starters
+                # (Michael Busch, Emmanuel Rodriguez) who homered with zero row
+                # on the board at all: no rank, no score, no pitcher line.
+                #
+                # ROOT CAUSE: once game_has_started() went true, the branch
+                # above used to freeze whatever row set the LAST pregame run
+                # saved -- correct when that run got the REAL posted
+                # battingOrder (extract_lineup), wrong when it fell back to
+                # build_projected_lineup()'s season OBP/OPS/SLG guess because
+                # the real lineup hadn't posted yet at that cron tick. The
+                # guess gets most of a lineup right and 1-2 bench/platoon spots
+                # wrong -- and the real player it guessed wrong never got a
+                # row, ever, for that game: nothing after that point rebuilt
+                # the row list, only refresh_locked_lineup_status()'s
+                # confirmation flag (its own docstring: "does not rebuild or
+                # replace any player picks").
+                #
+                # THE FIX: a live game is guaranteed to have its true
+                # battingOrder posted, so a build attempted AT OR AFTER first
+                # pitch can only improve the roster, never destabilize it.
+                # built_after_lock marks that this row survived exactly that
+                # build; once set, the branch above takes over and the row set
+                # freezes for the rest of the game, same as before -- this
+                # fires once per game, not every run.
+                #
+                # SAFE WITH prediction_of_record (bots/pick_lock.py): that lock
+                # keys off the identical instant -- "the run standing at a
+                # game's first pitch" -- so this feeds MORE accurate data into
+                # the exact run pick_lock.py was always going to treat as
+                # official, rather than fighting it. It never reopens the
+                # post-lock drift hole pick_lock.py exists to close.
+                if game_has_started(game):
+                    for _r in rows:
+                        _r.built_after_lock = True
                 filtered_rows = apply_global_pa_filter(rows)
                 # MODEL FOUNDATION (Task 3): stamp freshly-scored rows with
                 # the HR market's current version + this run's run_id.
