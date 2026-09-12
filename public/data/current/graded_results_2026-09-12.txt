@@ -1,0 +1,140 @@
+RESULTS TRACKER - 2026-09-12
+------------------------------------------
+BETTABLE RESULTS
+Top 15 HR: 0/1 (0.0%)
+HR Picks: 2/3 (66.7%)
+Top Picks: 2/3 (66.7%)
+
+FULL SHEET BASE HIT PERFORMANCE
+Base Hit Accuracy: 75.0%
+
+HR CAPTURE (BETTABLE)
+Total Slate HRs: 24
+Caught in Top 15: 0
+Caught in HR Picks: 2
+Top 15 Capture Rate: 0.0%
+HR Pick Capture Rate: 8.3%
+
+MODEL VISION (Top 40)
+Model Caught HRs: 6 / 24
+Vision Rate: 25.0%
+
+UNIQUE PLAYER HR ACCURACY
+Unique Players Tracked: 13
+Players Who Homered: 5
+Unique HR Accuracy: 38.5%
+
+HR CATEGORY BREAKDOWN
+------------------------------------------
+🏆 TOP 15 BOARD → 0 HR
+🔥 TOP PICKS → 2 HR
+🧨 HR PICKS → 2 HR
+🏁 HRR PICKS → 1 HR
+💠 HIT PICKS → 0 HR
+⚾ CONTACT PICKS → 1 HR
+Best HR-producing category: 🔥 TOP PICKS
+
+LONGEST HR (BOARD)
+------------------------------------------
+- Juan Soto — 400 ft · 106.7 mph · 34.0°
+- Kevin McGonigle — 389 ft · 106.0 mph · 23.0°
+- Francisco Lindor — 365 ft · 104.3 mph · 41.0°
+- Cody Bellinger — 364 ft · 97.9 mph · 29.0°
+- Hunter Goodman — 362 ft · 93.9 mph · 33.0°
+Longest on the board: Juan Soto (400 ft)
+
+
+HR RESULTS BY PLAYER
+------------------------------------------
+- Juan Soto — 🧨
+- Kevin McGonigle — 🧨
+- Francisco Lindor — 🔥
+- Hunter Goodman — 🔥
+- Cody Bellinger — 🏁 + ⚾
+
+MISSED HRs (NOT IN MODEL SHEET)
+------------------------------------------
+- Emmanuel Rodriguez (MIN) — not in model sheet / lineup pool
+
+POOL PERFORMANCE
+------------------------------------------
+4-MAN Pool A — Strongest → 1/2 HR (Francisco Lindor)
+4-MAN Pool B — HRR+Power → 2/3 HR (Carter Jensen, Jackson Merrill)
+4-MAN Pool C — Balanced → 3/3 HR (Mookie Betts, Carter Jensen, Pete Alonso)
+4-MAN Pool D — Variance → 0/2 HR (none)
+3-MAN Pool A — Strongest → 0/2 HR (none)
+3-MAN Pool B — HRR+Var → 0/3 HR (none)
+3-MAN Pool C — Balanced → 0/1 HR (none)
+3-MAN Pool D — Variance → 0/2 HR (none)
+
+PAIR PERFORMANCE
+------------------------------------------
+Pair 1 → 0/2 HR (none) | Kyle Schwarber + Junior Caminero
+Pair 2 → 1/2 HR (Rafael Devers) | Rafael Devers + Junior Caminero
+Pair 3 → 0/2 HR (none) | Victor Mesa Jr. + Elly De La Cruz
+Pair 4 → 1/2 HR (Max Muncy) | Elly De La Cruz + Max Muncy
+Pair 5 → 0/2 HR (none) | Joc Pederson + Munetaka Murakami
+Pair 6 → 1/2 HR (Hunter Goodman) | Hunter Goodman + Lazaro Montes
+Pair 7 → 1/2 HR (Max Muncy) | Max Muncy + Coby Mayo
+Pair 8 → 0/2 HR (none) | Randal Grichuk + Joshua Báez
+Pair 9 → 0/2 HR (none) | Matt Olson + Lazaro Montes
+Pair 10 → 1/2 HR (Juan Soto) | Juan Soto + Esmerlyn Valdez
+
+PLAYER TYPE PERFORMANCE
+------------------------------------------
+🏆 TOP 15 BOARD (1)
+HR: 0.0% | 1+ Hit: 0.0% | XBH: 0.0% | 2+ TB: 0.0% | 2+ HRR: 0.0% | 3+ HRR: 0.0%
+
+🔥 TOP PICKS (3)
+HR: 66.7% | 1+ Hit: 66.7% | XBH: 66.7% | 2+ TB: 66.7% | 2+ HRR: 66.7% | 3+ HRR: 66.7%
+
+🧨 HR PICKS (3)
+HR: 66.7% | 1+ Hit: 100.0% | XBH: 66.7% | 2+ TB: 66.7% | 2+ HRR: 100.0% | 3+ HRR: 66.7%
+
+🏁 HRR PICKS (3)
+HR: 33.3% | 1+ Hit: 66.7% | XBH: 66.7% | 2+ TB: 66.7% | 2+ HRR: 66.7% | 3+ HRR: 66.7%
+
+💠 HIT PICKS (3)
+HR: 0.0% | 1+ Hit: 66.7% | XBH: 0.0% | 2+ TB: 0.0% | 2+ HRR: 66.7% | 3+ HRR: 33.3%
+
+⚾ CONTACT PICKS (3)
+HR: 33.3% | 1+ Hit: 100.0% | XBH: 66.7% | 2+ TB: 66.7% | 2+ HRR: 100.0% | 3+ HRR: 66.7%
+
+
+DESIGNED OUTCOME (did the pick do its job)
+------------------------------------------
+🏆 TOP 15 BOARD (1) -> 0/1 (0.0%)  ·  needs: HR
+🔥 TOP PICKS (3) -> 2/3 (66.7%)  ·  needs: most productive of our picks in his game (HRR or TB)
+🧨 HR PICKS (3) -> 2/3 (66.7%)  ·  needs: HR
+🏁 HRR PICKS (3) -> 2/3 (66.7%)  ·  needs: 2+ hits+runs+RBI
+💠 HIT PICKS (3) -> 2/3 (66.7%)  ·  needs: 1+ hit
+⚾ CONTACT PICKS (3) -> 2/3 (66.7%)  ·  needs: 2+ TB or XBH
+ALL PICKS -> 10/16 (62.5%)
+
+HIT RESULTS BY CATEGORY
+------------------------------------------
+
+🔥 TOP PICKS (1+ Hit)
+- Francisco Lindor — 3H 🔥
+- Hunter Goodman — 1H
+
+🧨 HR PICKS (1+ Hit)
+- Juan Soto — 2H ⭐
+- Kevin McGonigle — 2H ⭐
+- Alex Bregman — 1H
+
+🏁 HRR PICKS (1+ Hit)
+- TJ Rumfield — 3H 🔥
+- Cody Bellinger — 2H ⭐
+
+💠 HIT PICKS (1+ Hit)
+- Bryan Reynolds — 1H
+- Jake McCarthy — 1H
+
+⚾ CONTACT PICKS (1+ Hit)
+- Eduardo Valencia — 3H 🔥
+- Cody Bellinger — 2H ⭐
+- Bryan Reynolds — 1H
+
+MODEL DIAGNOSTIC (LOW PRIORITY)
+Full Sheet HR Coverage: 23 / 24 (95.8%)

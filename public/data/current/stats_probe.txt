@@ -1,0 +1,129 @@
+stats probe — 2026-08-24T05:18:02Z
+run: https://github.com/donthebuilder/MLB-HR-DASHBOARD-STREAMLIT/actions/runs/32692994082
+
+
+────────────────────────────────────────────────────────────────────────
+0. a game to work from
+────────────────────────────────────────────────────────────────────────
+  using 2026-08-23 · gamePk 824799 · 15 games that day
+
+────────────────────────────────────────────────────────────────────────
+1. pitching — wild pitches, pickoffs, balks
+────────────────────────────────────────────────────────────────────────
+  pitcher 669358 · 62 season pitching fields
+    wild pitches             wildPitches=6
+    pickoffs                 pickoffs=0
+    balks                    balks=0
+    holds/blown              blownSaves=0, holds=0
+    stolen bases against     caughtStealing=2, caughtStealingPercentage=.250, stolenBasePercentage=.750, stolenBases=6
+    meatball / heart         — absent —
+
+────────────────────────────────────────────────────────────────────────
+2. fielding — the catcher's caught-stealing line
+────────────────────────────────────────────────────────────────────────
+  catcher 694212 · 3 fielding split(s) (one per position)
+    pos C   · 28 fields · caughtStealing=11, caughtStealingPercentage=.306, passedBall=3, stolenBasePercentage=.694, stolenBases=25, throwingErrors=1
+    pos 1B  · 19 fields · throwingErrors=0
+    pos DH  · 19 fields · throwingErrors=0
+
+────────────────────────────────────────────────────────────────────────
+3. team defense — what a team fielding line carries
+────────────────────────────────────────────────────────────────────────
+  30 teams
+  22 fields: gamesPlayed, gamesStarted, caughtStealing, stolenBases, stolenBasePercentage, caughtStealingPercentage, assists, putOuts, errors, chances, fielding, rangeFactorPerGame, rangeFactorPer9Inn, innings, games, passedBall, doublePlays, triplePlays, catchersInterference, wildPitches, throwingErrors, pickoffs
+
+────────────────────────────────────────────────────────────────────────
+4. ABS challenges — does the live feed carry a challenge record?
+────────────────────────────────────────────────────────────────────────
+  67 plays in the feed
+  CHALLENGE-ISH KEYS FOUND: details.hasReview, reviewDetails.challengeTeamId, reviewDetails.inProgress, reviewDetails.isOverturned, reviewDetails.player.fullName, reviewDetails.player.id, reviewDetails.player.link, reviewDetails.reviewType
+  (recorded 88 distinct playEvent key paths for reference)
+
+────────────────────────────────────────────────────────────────────────
+5. every pitching field, so nothing is missed by name
+────────────────────────────────────────────────────────────────────────
+   age                       gamesPlayed               gamesStarted              groundOuts                airOuts                   runs                    
+   doubles                   triples                   homeRuns                  strikeOuts                baseOnBalls               intentionalWalks        
+   hits                      hitByPitch                avg                       atBats                    obp                       slg                     
+   ops                       caughtStealing            stolenBases               stolenBasePercentage      caughtStealingPercentage  groundIntoDoublePlay    
+   numberOfPitches           era                       inningsPitched            wins                      losses                    saves                   
+   saveOpportunities         holds                     blownSaves                earnedRuns                whip                      battersFaced            
+   outs                      gamesPitched              completeGames             shutouts                  strikes                   strikePercentage        
+   hitBatsmen                balks                     wildPitches               pickoffs                  totalBases                groundOutsToAirouts     
+   winPercentage             pitchesPerInning          gamesFinished             strikeoutWalkRatio        strikeoutsPer9Inn         walksPer9Inn            
+   hitsPer9Inn               runsScoredPer9            homeRunsPer9              inheritedRunners          inheritedRunnersScored    catchersInterference    
+   sacBunts                  sacFlies                
+
+────────────────────────────────────────────────────────────────────────
+6. Baseball Savant — catcher throwing, team defence, and ABS
+────────────────────────────────────────────────────────────────────────
+  catcher-throwing  ok                 0 catchers
+  team defence      ok                 30 teams
+                    id=108  OAA  -27  vsR  -10  vsL  -17
+                    id=117  OAA   -1  vsR  -14  vsL   12
+                    id=133  OAA  -37  vsR  -23  vsL  -14
+
+  ABS challenge parameter sweep — which one actually changes the table?
+     (no parameter)   ok                 499 rows   , , 
+     type=Pit        ok                 499 rows   same     , , 
+     type=Pitcher    ok                 499 rows   same     , , 
+     type=pitcher    ok                 499 rows   same     , , 
+     type=P          ok                 499 rows   same     , , 
+     playerType=Pit        ok                 499 rows   same     , , 
+     playerType=Pitcher    ok                 499 rows   same     , , 
+     playerType=pitcher    ok                 499 rows   same     , , 
+     playerType=P          ok                 499 rows   same     , , 
+     player_type=Pit        ok                 499 rows   same     , , 
+     player_type=Pitcher    ok                 499 rows   same     , , 
+     player_type=pitcher    ok                 499 rows   same     , , 
+     player_type=P          ok                 499 rows   same     , , 
+     perspective=Pit        ok                 499 rows   same     , , 
+     perspective=Pitcher    ok                 499 rows   same     , , 
+     perspective=pitcher    ok                 499 rows   same     , , 
+     perspective=P          ok                 499 rows   same     , , 
+     role=Pit        ok                 499 rows   same     , , 
+     role=Pitcher    ok                 499 rows   same     , , 
+     role=pitcher    ok                 499 rows   same     , , 
+     role=P          ok                 499 rows   same     , , 
+     entity=Pit        ok                 499 rows   same     , , 
+     entity=Pitcher    ok                 499 rows   same     , , 
+     entity=pitcher    ok                 499 rows   same     , , 
+     entity=P          ok                 499 rows   same     , , 
+     entity_type=Pit        ok                 499 rows   same     , , 
+     entity_type=Pitcher    ok                 499 rows   same     , , 
+     entity_type=pitcher    ok                 499 rows   same     , , 
+     entity_type=P          ok                 499 rows   same     , , 
+     abs_type=Pit        ok                 499 rows   same     , , 
+     abs_type=Pitcher    ok                 499 rows   same     , , 
+     abs_type=pitcher    ok                 499 rows   same     , , 
+     abs_type=P          ok                 499 rows   same     , , 
+
+  ➜ NO CANDIDATE CHANGED THE TABLE. Every name tried returns the
+     batter view. Do NOT wire ABS by role off this endpoint yet —
+     open the dashboard in a browser, switch to Pitchers, and read
+     the query string off the address bar or the CSV button.
+
+────────────────────────────────────────────────────────────────────────
+VERDICT
+────────────────────────────────────────────────────────────────────────
+  ✓ wild pitches                       wildPitches
+  ✓ pickoffs                           pickoffs
+  ✓ pitcher SB/CS against              caughtStealing, caughtStealingPercentage, stolenBasePercentage, stolenBases
+  ✓ catcher caught stealing            caughtStealing, caughtStealingPercentage, stolenBasePercentage, stolenBases
+  ✓ team defense (StatsAPI)            22 fields
+  ✓ catcher CS% (Savant)               0 catchers, ok
+  ✓ team defence OAA (Savant)          30 teams, ok
+  ✓ ABS columns exist                  35 columns
+  ✗ ABS role parameter FOUND           no candidate changed the table — see section 6
+
+  WIRED ALREADY, off blobs the bot was fetching all along:
+    wildPitches, pickoffs, balks, stolenBases, caughtStealing
+    -> pitcher_wild_pitches, pitcher_pickoffs, pitcher_sb_against,
+       pitcher_cs_against, pitcher_cs_rate_against, pitcher_wp9,
+       pitcher_pickoff_rate  (compute_pitcher_extended_stats)
+
+  Already on the slate and unused by any model: pitcher_meatball_pct
+  is now used (hand-split, mlb_hr_v4); season_sb, season_cs and
+  season_sb_attempt_rate feed the steal board.
+
+wrote /tmp/stats_probe.json

@@ -1,0 +1,144 @@
+RESULTS TRACKER - 2026-08-28
+------------------------------------------
+BETTABLE RESULTS
+Top 15 HR: 0/5 (0.0%)
+HR Picks: 1/9 (11.1%)
+Top Picks: 1/9 (11.1%)
+
+FULL SHEET BASE HIT PERFORMANCE
+Base Hit Accuracy: 64.0%
+
+HR CAPTURE (BETTABLE)
+Total Slate HRs: 24
+Caught in Top 15: 0
+Caught in HR Picks: 1
+Top 15 Capture Rate: 0.0%
+HR Pick Capture Rate: 4.2%
+
+MODEL VISION (Top 40)
+Model Caught HRs: 4 / 24
+Vision Rate: 16.7%
+
+UNIQUE PLAYER HR ACCURACY
+Unique Players Tracked: 41
+Players Who Homered: 4
+Unique HR Accuracy: 9.8%
+
+HR CATEGORY BREAKDOWN
+------------------------------------------
+🏆 TOP 15 BOARD → 0 HR
+🔥 TOP PICKS → 1 HR
+🧨 HR PICKS → 1 HR
+🏁 HRR PICKS → 2 HR
+💠 HIT PICKS → 0 HR
+⚾ CONTACT PICKS → 0 HR
+Best HR-producing category: 🏁 HRR PICKS
+
+LONGEST HR (BOARD)
+------------------------------------------
+- Heriberto Hernández — 445 ft · 106.9 mph · 31.0°
+- Kazuma Okamoto — 400 ft · 106.8 mph · 23.0°
+- Sal Stewart — 382 ft · 101.9 mph · 24.0°
+- Nathan Lukes — 379 ft · 101.5 mph · 29.0°
+Longest on the board: Heriberto Hernández (445 ft)
+
+
+HR RESULTS BY PLAYER
+------------------------------------------
+- Kazuma Okamoto — 🧨
+- Heriberto Hernández — 🔥
+- Nathan Lukes — 🏁
+- Sal Stewart — 🏁
+
+POOL PERFORMANCE
+------------------------------------------
+4-MAN HR POOL A → 0/3 HR (none)
+4-MAN HR POOL B → 0/3 HR (none)
+4-MAN HR POOL C → 0/2 HR (none)
+4-MAN HR POOL D → 1/3 HR (Jackson Merrill)
+3-MAN HR POOL A → 0/3 HR (none)
+3-MAN HR POOL B → 1/3 HR (Carter Jensen)
+3-MAN HR POOL C → 2/3 HR (Kody Clemens, Nathan Lukes)
+3-MAN HR POOL D → 1/3 HR (Colson Montgomery)
+
+PAIR PERFORMANCE
+------------------------------------------
+Pair 1 → 0/2 HR (none) | Kyle Schwarber + Hunter Goodman
+Pair 2 → 1/2 HR (Brooks Lee) | Rafael Devers + Brooks Lee
+Pair 3 → 0/2 HR (none) | Tristan Peters + Pete Alonso
+Pair 4 → 0/2 HR (none) | Cal Raleigh + Ian Happ
+
+PLAYER TYPE PERFORMANCE
+------------------------------------------
+🏆 TOP 15 BOARD (5)
+HR: 0.0% | 1+ Hit: 80.0% | XBH: 0.0% | 2+ TB: 40.0% | 2+ HRR: 60.0% | 3+ HRR: 20.0%
+
+🔥 TOP PICKS (9)
+HR: 11.1% | 1+ Hit: 88.9% | XBH: 22.2% | 2+ TB: 44.4% | 2+ HRR: 66.7% | 3+ HRR: 33.3%
+
+🧨 HR PICKS (9)
+HR: 11.1% | 1+ Hit: 33.3% | XBH: 11.1% | 2+ TB: 22.2% | 2+ HRR: 33.3% | 3+ HRR: 11.1%
+
+🏁 HRR PICKS (9)
+HR: 22.2% | 1+ Hit: 44.4% | XBH: 22.2% | 2+ TB: 22.2% | 2+ HRR: 44.4% | 3+ HRR: 22.2%
+
+💠 HIT PICKS (9)
+HR: 0.0% | 1+ Hit: 88.9% | XBH: 11.1% | 2+ TB: 44.4% | 2+ HRR: 44.4% | 3+ HRR: 33.3%
+
+⚾ CONTACT PICKS (9)
+HR: 0.0% | 1+ Hit: 55.6% | XBH: 11.1% | 2+ TB: 44.4% | 2+ HRR: 44.4% | 3+ HRR: 33.3%
+
+
+DESIGNED OUTCOME (did the pick do its job)
+------------------------------------------
+🏆 TOP 15 BOARD (5) -> 0/5 (0.0%)  ·  needs: HR
+🔥 TOP PICKS (9) -> 5/9 (55.6%)  ·  needs: most productive of our picks in his game (HRR or TB)
+🧨 HR PICKS (9) -> 1/9 (11.1%)  ·  needs: HR
+🏁 HRR PICKS (9) -> 4/9 (44.4%)  ·  needs: 2+ hits+runs+RBI
+💠 HIT PICKS (9) -> 8/9 (88.9%)  ·  needs: 1+ hit
+⚾ CONTACT PICKS (9) -> 4/9 (44.4%)  ·  needs: 2+ TB or XBH
+ALL PICKS -> 22/50 (44.0%)
+
+HIT RESULTS BY CATEGORY
+------------------------------------------
+
+🔥 TOP PICKS (1+ Hit)
+- Hunter Goodman — 3H 🔥
+- Ben Rice — 2H ⭐
+- Jac Caglianone — 2H ⭐
+- Heriberto Hernández — 1H
+- Ian Happ — 1H
+- Jeremy Peña — 1H
+- Junior Caminero — 1H
+- Randy Arozarena — 1H
+
+🧨 HR PICKS (1+ Hit)
+- Kazuma Okamoto — 2H ⭐
+- Pete Crow-Armstrong — 2H ⭐
+- Matt Olson — 1H
+
+🏁 HRR PICKS (1+ Hit)
+- Sal Stewart — 2H ⭐
+- Nathan Lukes — 1H
+- TJ Rumfield — 1H
+- Xavier Edwards — 1H
+
+💠 HIT PICKS (1+ Hit)
+- Elly De La Cruz — 3H 🔥
+- Brett Bateman — 2H ⭐
+- Freddie Freeman — 2H ⭐
+- Carson Benge — 1H
+- Fernando Tatis Jr. — 1H
+- Otto Lopez — 1H
+- Ozzie Albies — 1H
+- Vinnie Pasquantino — 1H
+
+⚾ CONTACT PICKS (1+ Hit)
+- Elly De La Cruz — 3H 🔥
+- Drake Baldwin — 2H ⭐
+- Jac Caglianone — 2H ⭐
+- Daylen Lile — 1H
+- Fernando Tatis Jr. — 1H
+
+MODEL DIAGNOSTIC (LOW PRIORITY)
+Full Sheet HR Coverage: 24 / 24 (100.0%)

@@ -1,0 +1,186 @@
+RESULTS TRACKER - 2026-08-29
+------------------------------------------
+BETTABLE RESULTS
+Top 15 HR: 3/15 (20.0%)
+HR Picks: 2/17 (11.8%)
+Top Picks: 4/17 (23.5%)
+
+FULL SHEET BASE HIT PERFORMANCE
+Base Hit Accuracy: 64.0%
+
+HR CAPTURE (BETTABLE)
+Total Slate HRs: 29
+Caught in Top 15: 3
+Caught in HR Picks: 2
+Top 15 Capture Rate: 10.3%
+HR Pick Capture Rate: 6.9%
+
+MODEL VISION (Top 40)
+Model Caught HRs: 9 / 29
+Vision Rate: 31.0%
+
+UNIQUE PLAYER HR ACCURACY
+Unique Players Tracked: 70
+Players Who Homered: 12
+Unique HR Accuracy: 17.1%
+
+HR CATEGORY BREAKDOWN
+------------------------------------------
+🏆 TOP 15 BOARD → 3 HR
+🔥 TOP PICKS → 4 HR
+🧨 HR PICKS → 2 HR
+🏁 HRR PICKS → 2 HR
+💠 HIT PICKS → 3 HR
+⚾ CONTACT PICKS → 0 HR
+Best HR-producing category: 🔥 TOP PICKS
+
+LONGEST HR (BOARD)
+------------------------------------------
+- Jonathan Aranda — 453 ft · 110.0 mph · 29.0°
+- Yordan Alvarez — 436 ft · 113.4 mph · 23.0°
+- Sal Stewart — 431 ft · 105.9 mph · 28.0°
+- Junior Caminero — 426 ft · 107.8 mph · 17.0°
+- Alex Bregman — 416 ft · 102.3 mph · 27.0°
+Longest on the board: Jonathan Aranda (453 ft)
+
+
+HR RESULTS BY PLAYER
+------------------------------------------
+- Cal Raleigh — 🏆#11
+- Heriberto Hernández — 🏆#13 + 🔥
+- Sal Stewart — 🏆#9 + 🔥
+- Ty France — 🧨 + ⭐
+- Yordan Alvarez — 🧨
+- Junior Caminero — 🔥
+- Zach Neto — 🔥
+- Alex Bregman — 🏁
+- William Contreras — 🏁
+- Jackson Chourio — 💠 + ⭐
+- Jonathan Aranda — 💠 + ⭐
+- Seiya Suzuki — 💠
+
+POOL PERFORMANCE
+------------------------------------------
+4-MAN Pool A — Strongest → 2/4 HR (Jackson Chourio, Seiya Suzuki)
+4-MAN Pool B — HRR+Power → 0/4 HR (none)
+4-MAN Pool C — Balanced → 0/4 HR (none)
+4-MAN Pool D — Variance → 0/4 HR (none)
+3-MAN Pool A — Strongest → 1/3 HR (Zach Neto)
+3-MAN Pool B — HRR+Var → 0/3 HR (none)
+3-MAN Pool C — Balanced → 0/3 HR (none)
+3-MAN Pool D — Variance → 1/3 HR (Ty France)
+
+PAIR PERFORMANCE
+------------------------------------------
+Pair 1 → 0/2 HR (none) | Kyle Schwarber + Hunter Goodman
+Pair 2 → 1/2 HR (Heriberto Hernández) | Heriberto Hernández + Matt Olson
+Pair 3 → 0/2 HR (none) | Ben Rice + Rafael Devers
+Pair 4 → 0/2 HR (none) | Pete Alonso + Oneil Cruz
+Pair 5 → 2/2 HR (Yordan Alvarez, Sal Stewart) | Yordan Alvarez + Sal Stewart
+Pair 6 → 1/2 HR (Junior Caminero) | Luis García Jr. + Junior Caminero
+Pair 7 → 0/2 HR (none) | Bryce Harper + Christian Encarnacion-Strand
+Pair 8 → 0/2 HR (none) | Jac Caglianone + Jake Bauers
+Pair 9 → 1/2 HR (Cal Raleigh) | Cal Raleigh + Mickey Moniak
+Pair 10 → 1/2 HR (Joshua Báez) | Joshua Báez + Colson Montgomery
+
+PLAYER TYPE PERFORMANCE
+------------------------------------------
+🏆 TOP 15 BOARD (15)
+HR: 20.0% | 1+ Hit: 60.0% | XBH: 33.3% | 2+ TB: 46.7% | 2+ HRR: 46.7% | 3+ HRR: 40.0%
+
+🔥 TOP PICKS (17)
+HR: 23.5% | 1+ Hit: 58.8% | XBH: 35.3% | 2+ TB: 52.9% | 2+ HRR: 52.9% | 3+ HRR: 47.1%
+
+🧨 HR PICKS (17)
+HR: 11.8% | 1+ Hit: 47.1% | XBH: 23.5% | 2+ TB: 35.3% | 2+ HRR: 41.2% | 3+ HRR: 29.4%
+
+🏁 HRR PICKS (17)
+HR: 11.8% | 1+ Hit: 82.4% | XBH: 23.5% | 2+ TB: 41.2% | 2+ HRR: 64.7% | 3+ HRR: 35.3%
+
+💠 HIT PICKS (17)
+HR: 17.6% | 1+ Hit: 70.6% | XBH: 35.3% | 2+ TB: 41.2% | 2+ HRR: 64.7% | 3+ HRR: 29.4%
+
+⚾ CONTACT PICKS (17)
+HR: 0.0% | 1+ Hit: 64.7% | XBH: 17.6% | 2+ TB: 41.2% | 2+ HRR: 47.1% | 3+ HRR: 23.5%
+
+
+DESIGNED OUTCOME (did the pick do its job)
+------------------------------------------
+🏆 TOP 15 BOARD (15) -> 3/15 (20.0%)  ·  needs: HR
+🔥 TOP PICKS (17) -> 5/17 (29.4%)  ·  needs: most productive of our picks in his game (HRR or TB)
+🧨 HR PICKS (17) -> 2/17 (11.8%)  ·  needs: HR
+🏁 HRR PICKS (17) -> 11/17 (64.7%)  ·  needs: 2+ hits+runs+RBI
+💠 HIT PICKS (17) -> 12/17 (70.6%)  ·  needs: 1+ hit
+⚾ CONTACT PICKS (17) -> 7/17 (41.2%)  ·  needs: 2+ TB or XBH
+ALL PICKS -> 40/100 (40.0%)
+
+HIT RESULTS BY CATEGORY
+------------------------------------------
+
+🔥 TOP PICKS (1+ Hit)
+- Luis García Jr. — 3H 🔥
+- Oneil Cruz — 2H ⭐
+- Rafael Devers — 2H ⭐
+- Rafael Devers — 2H ⭐
+- Sal Stewart — 2H ⭐
+- Heriberto Hernández — 1H
+- Jake Burger — 1H
+- Jeremy Peña — 1H
+- Junior Caminero — 1H
+- Zach Neto — 1H
+
+🧨 HR PICKS (1+ Hit)
+- Ben Rice — 2H ⭐
+- Jac Caglianone — 2H ⭐
+- Ty France — 2H ⭐
+- Yordan Alvarez — 2H ⭐
+- Christian Encarnacion-Strand — 1H
+- Kyle Stowers — 1H
+- Lars Nootbaar — 1H
+- Matt Olson — 1H
+
+🏁 HRR PICKS (1+ Hit)
+- Bryce Eldridge — 4H 🔥
+- Alex Bregman — 3H 🔥
+- Alec Bohm — 2H ⭐
+- Chandler Simpson — 2H ⭐
+- Nick Gonzales — 2H ⭐
+- William Contreras — 2H ⭐
+- Alejandro Kirk — 1H
+- Cody Bellinger — 1H
+- Geraldo Perdomo — 1H
+- Kevin McGonigle — 1H
+- Lawrence Butler — 1H
+- Otto Lopez — 1H
+- TJ Rumfield — 1H
+- Willson Contreras — 1H
+
+💠 HIT PICKS (1+ Hit)
+- Seiya Suzuki — 3H 🔥
+- Jeff McNeil — 2H ⭐
+- Michael Harris II — 2H ⭐
+- Bobby Witt Jr. — 1H
+- Carson Benge — 1H
+- Ceddanne Rafaela — 1H
+- Daylen Lile — 1H
+- Freddie Freeman — 1H
+- George Springer — 1H
+- Geraldo Perdomo — 1H
+- Jackson Chourio — 1H
+- Jonathan Aranda — 1H
+
+⚾ CONTACT PICKS (1+ Hit)
+- Luis García Jr. — 3H 🔥
+- Jac Caglianone — 2H ⭐
+- Oneil Cruz — 2H ⭐
+- Rafael Devers — 2H ⭐
+- Christian Encarnacion-Strand — 1H
+- Daylen Lile — 1H
+- Drake Baldwin — 1H
+- Fernando Tatis Jr. — 1H
+- George Springer — 1H
+- Jake Burger — 1H
+- Jeremy Peña — 1H
+
+MODEL DIAGNOSTIC (LOW PRIORITY)
+Full Sheet HR Coverage: 29 / 29 (100.0%)

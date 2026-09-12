@@ -1,0 +1,186 @@
+RESULTS TRACKER - 2026-08-19
+------------------------------------------
+BETTABLE RESULTS
+Top 15 HR: 2/15 (13.3%)
+HR Picks: 1/15 (6.7%)
+Top Picks: 2/15 (13.3%)
+
+FULL SHEET BASE HIT PERFORMANCE
+Base Hit Accuracy: 63.3%
+
+HR CAPTURE (BETTABLE)
+Total Slate HRs: 26
+Caught in Top 15: 2
+Caught in HR Picks: 1
+Top 15 Capture Rate: 7.7%
+HR Pick Capture Rate: 3.8%
+
+MODEL VISION (Top 40)
+Model Caught HRs: 7 / 26
+Vision Rate: 26.9%
+
+UNIQUE PLAYER HR ACCURACY
+Unique Players Tracked: 79
+Players Who Homered: 12
+Unique HR Accuracy: 15.2%
+
+HR CATEGORY BREAKDOWN
+------------------------------------------
+🏆 TOP 15 BOARD → 2 HR
+🔥 TOP PICKS → 2 HR
+🧨 HR PICKS → 1 HR
+🏁 HRR PICKS → 3 HR
+💠 HIT PICKS → 3 HR
+⚾ CONTACT PICKS → 2 HR
+Best HR-producing category: 🏁 HRR PICKS
+
+LONGEST HR (BOARD)
+------------------------------------------
+- Ben Rice — 447 ft · 110.2 mph · 33.0°
+- Rafael Flores Jr. — 431 ft · 110.0 mph · 30.0°
+- Vinnie Pasquantino — 427 ft · 105.9 mph · 24.0°
+- Pete Alonso — 423 ft · 109.9 mph · 27.0°
+- Sal Stewart — 422 ft · 108.2 mph · 31.0°
+Longest on the board: Ben Rice (447 ft)
+
+
+HR RESULTS BY PLAYER
+------------------------------------------
+- Pete Alonso — 🏆#7 + 💠 + ⭐
+- Rafael Flores Jr. — 🏆#4
+- Andrés Chaparro — 🧨
+- Brandon Lowe — 🔥
+- Yandy Díaz — 🔥
+- Alejandro Kirk — 🏁
+- Nick Sogard — 🏁
+- Sal Stewart — 🏁
+- Jordan Walker — 💠
+- Vinnie Pasquantino — 💠 + ⭐
+- Ben Rice — ⚾ + ⭐
+- Javier Sanoja — ⚾ + ⭐
+
+MISSED HRs (NOT IN MODEL SHEET)
+------------------------------------------
+- Lars Nootbaar (AZ) — not in model sheet / lineup pool
+- Mickey Gasper (BOS) — not in model sheet / lineup pool
+- José Tena (WSH) — not in model sheet / lineup pool
+
+POOL PERFORMANCE
+------------------------------------------
+4-MAN Pool A — Strongest → 0/4 HR (none)
+4-MAN Pool B — HRR+Power → 0/4 HR (none)
+4-MAN Pool C — Balanced → 1/4 HR (Alejandro Kirk)
+4-MAN Pool D — Contrarian → 1/4 HR (Javier Sanoja)
+3-MAN Pool A — Strongest → 0/3 HR (none)
+3-MAN Pool B — HRR+Var → 0/3 HR (none)
+3-MAN Pool C — Balanced → 0/3 HR (none)
+3-MAN Pool D — Contrarian → 0/3 HR (none)
+
+PAIR PERFORMANCE
+------------------------------------------
+Pair 1 → 0/2 HR (none) | Griffin Conine + Shohei Ohtani
+Pair 2 → 0/2 HR (none) | Abimelec Ortiz + Pete Crow-Armstrong
+Pair 3 → 1/2 HR (Pete Alonso) | Pete Alonso + Trent Grisham
+Pair 4 → 0/2 HR (none) | Eduardo Valencia + Matt Olson
+Pair 5 → 1/2 HR (Ben Rice) | Ben Rice + Coby Mayo
+Pair 6 → 2/2 HR (Rafael Flores Jr., Andrés Chaparro) | Rafael Flores Jr. + Andrés Chaparro
+Pair 7 → 0/2 HR (none) | Fernando Tatis Jr. + Randal Grichuk
+Pair 8 → 1/2 HR (Yandy Díaz) | Andy Pages + Yandy Díaz
+Pair 9 → 1/2 HR (Jordan Walker) | Jordan Walker + Munetaka Murakami
+Pair 10 → 0/2 HR (none) | Kyle Schwarber + Esmerlyn Valdez
+
+PLAYER TYPE PERFORMANCE
+------------------------------------------
+🏆 TOP 15 BOARD (15)
+HR: 13.3% | 1+ Hit: 53.3% | XBH: 26.7% | 2+ TB: 26.7% | 2+ HRR: 40.0% | 3+ HRR: 20.0%
+
+🔥 TOP PICKS (15)
+HR: 13.3% | 1+ Hit: 60.0% | XBH: 26.7% | 2+ TB: 26.7% | 2+ HRR: 53.3% | 3+ HRR: 26.7%
+
+🧨 HR PICKS (15)
+HR: 6.7% | 1+ Hit: 60.0% | XBH: 26.7% | 2+ TB: 26.7% | 2+ HRR: 46.7% | 3+ HRR: 26.7%
+
+🏁 HRR PICKS (15)
+HR: 20.0% | 1+ Hit: 60.0% | XBH: 40.0% | 2+ TB: 46.7% | 2+ HRR: 60.0% | 3+ HRR: 40.0%
+
+💠 HIT PICKS (15)
+HR: 20.0% | 1+ Hit: 73.3% | XBH: 26.7% | 2+ TB: 60.0% | 2+ HRR: 73.3% | 3+ HRR: 53.3%
+
+⚾ CONTACT PICKS (15)
+HR: 13.3% | 1+ Hit: 73.3% | XBH: 53.3% | 2+ TB: 66.7% | 2+ HRR: 73.3% | 3+ HRR: 46.7%
+
+
+DESIGNED OUTCOME (did the pick do its job)
+------------------------------------------
+🏆 TOP 15 BOARD (15) -> 2/15 (13.3%)  ·  needs: HR
+🔥 TOP PICKS (15) -> 3/15 (20.0%)  ·  needs: most productive of our picks in his game (HRR or TB)
+🧨 HR PICKS (15) -> 1/15 (6.7%)  ·  needs: HR
+🏁 HRR PICKS (15) -> 9/15 (60.0%)  ·  needs: 2+ hits+runs+RBI
+💠 HIT PICKS (15) -> 11/15 (73.3%)  ·  needs: 1+ hit
+⚾ CONTACT PICKS (15) -> 10/15 (66.7%)  ·  needs: 2+ TB or XBH
+ALL PICKS -> 36/90 (40.0%)
+
+HIT RESULTS BY CATEGORY
+------------------------------------------
+
+🔥 TOP PICKS (1+ Hit)
+- Abimelec Ortiz — 1H
+- Alec Burleson — 1H
+- Brandon Lowe — 1H
+- Francisco Lindor — 1H
+- Gabriel Moreno — 1H
+- Matt Olson — 1H
+- Yandy Díaz — 1H
+- Yordan Alvarez — 1H
+- Zack Gelof — 1H
+
+🧨 HR PICKS (1+ Hit)
+- Andrés Chaparro — 3H 🔥
+- Miguel Vargas — 2H ⭐
+- Adael Amador — 1H
+- Joshua Báez — 1H
+- Junior Caminero — 1H
+- Oneil Cruz — 1H
+- Ronald Acuña Jr. — 1H
+- Trent Grisham — 1H
+- Wilyer Abreu — 1H
+
+🏁 HRR PICKS (1+ Hit)
+- Jackson Chourio — 3H 🔥
+- Alejandro Kirk — 2H ⭐
+- Jeff McNeil — 2H ⭐
+- Nick Sogard — 2H ⭐
+- Freddie Freeman — 1H
+- Gleyber Torres — 1H
+- Gunnar Henderson — 1H
+- Isaac Paredes — 1H
+- Sal Stewart — 1H
+
+💠 HIT PICKS (1+ Hit)
+- Josh Naylor — 3H 🔥
+- Vinnie Pasquantino — 3H 🔥
+- Keibert Ruiz — 2H ⭐
+- Luke Keaschall — 2H ⭐
+- Willson Contreras — 2H ⭐
+- Xavier Edwards — 2H ⭐
+- Andy Pages — 1H
+- Chandler Simpson — 1H
+- Jordan Walker — 1H
+- Kevin McGonigle — 1H
+- Pete Alonso — 1H
+
+⚾ CONTACT PICKS (1+ Hit)
+- Javier Sanoja — 3H 🔥
+- Ben Rice — 2H ⭐
+- Connor Norby — 2H ⭐
+- Corey Seager — 2H ⭐
+- Henry Bolte — 2H ⭐
+- Fernando Tatis Jr. — 1H
+- Josh Bell — 1H
+- Rafael Devers — 1H
+- Randal Grichuk — 1H
+- Randy Arozarena — 1H
+- Richie Palacios — 1H
+
+MODEL DIAGNOSTIC (LOW PRIORITY)
+Full Sheet HR Coverage: 23 / 26 (88.5%)

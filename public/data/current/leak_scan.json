@@ -1,0 +1,40 @@
+{
+ "locked": {
+  "base": 0.13966480446927373,
+  "rows": 179,
+  "suspects": [],
+  "tested": 0,
+  "watch": []
+ },
+ "locked_rows": 179,
+ "not_locked": {
+  "base": 0.18045815801776532,
+  "rows": 2139,
+  "suspects": [
+   {
+    "expected": 105.38756428237495,
+    "field": "last5_hr",
+    "hits": 8,
+    "log10p": -38.19914465518689,
+    "log10p_leak": -8.315792907126738,
+    "n": 584,
+    "rate": 0.0136986301369863,
+    "tier": "LEAK"
+   }
+  ],
+  "tested": 8,
+  "watch": [
+   {
+    "expected": 23.279102384291726,
+    "field": "last5_xbh",
+    "hits": 3,
+    "log10p": -7.5301189805874955,
+    "log10p_leak": -1.4667512961792168,
+    "n": 129,
+    "rate": 0.023255813953488372,
+    "tier": "WATCH"
+   }
+  ]
+ },
+ "rows": 2318
+}

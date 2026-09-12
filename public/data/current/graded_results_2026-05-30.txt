@@ -1,0 +1,186 @@
+RESULTS TRACKER - 2026-05-30
+------------------------------------------
+BETTABLE RESULTS
+Top 15 HR: 3/15 (20.0%)
+HR Picks: 4/15 (26.7%)
+Top Picks: 3/15 (20.0%)
+
+FULL SHEET BASE HIT PERFORMANCE
+Base Hit Accuracy: 71.7%
+
+HR CAPTURE (BETTABLE)
+Total Slate HRs: 42
+Caught in Top 15: 3
+Caught in HR Picks: 4
+Top 15 Capture Rate: 7.1%
+HR Pick Capture Rate: 9.5%
+
+MODEL VISION (Top 40)
+Model Caught HRs: 10 / 42
+Vision Rate: 23.8%
+
+UNIQUE PLAYER HR ACCURACY
+Unique Players Tracked: 105
+Players Who Homered: 18
+Unique HR Accuracy: 17.1%
+
+HR CATEGORY BREAKDOWN
+------------------------------------------
+🏆 TOP 15 BOARD → 3 HR
+🔥 TOP PICKS → 3 HR
+🧨 HR PICKS → 4 HR
+🏁 HRR PICKS → 2 HR
+💠 HIT PICKS → 6 HR
+⚾ CONTACT PICKS → 3 HR
+Best HR-producing category: 💠 HIT PICKS
+
+HR RESULTS BY PLAYER
+------------------------------------------
+- Christian Walker — 🏆#5 + 🧨
+- Julio Rodríguez — 🏆#8 + 🔥
+- Mike Trout — 🏆#7 + 🧨
+- JJ Bleday — 🧨
+- Manny Machado — 🧨
+- Jarren Duran — 🔥
+- Joc Pederson — 🔥
+- Matt Olson — 🏁 + ⭐
+- Oneil Cruz — 🏁 + ⭐
+- Fernando Tatis Jr. — 💠
+- Jeremy Peña — 💠
+- Josh Jung — 💠 + ⭐
+- Spencer Horwitz — 💠
+- Tyler Soderstrom — 💠
+- Yandy Díaz — 💠
+- Colson Montgomery — ⚾ + ⭐
+- Dominic Canzone — ⚾
+- Pete Crow-Armstrong — ⚾ + ⭐
+
+MISSED HRs (NOT IN MODEL SHEET)
+------------------------------------------
+- Jorge Mateo (ATL) — not in model sheet / lineup pool
+- Wade Meckler (LAA) — not in model sheet / lineup pool
+- Hayden Senger (NYM) — not in model sheet / lineup pool
+- Jared Young (NYM) — not in model sheet / lineup pool
+- Alec Bohm (PHI) — not in model sheet / lineup pool
+- Edmundo Sosa (PHI) — not in model sheet / lineup pool
+- Colt Emerson (SEA) — not in model sheet / lineup pool
+
+POOL PERFORMANCE
+------------------------------------------
+4-MAN HR POOL A → 1/4 HR (Julio Rodríguez)
+4-MAN HR POOL B → 1/4 HR (JJ Bleday)
+4-MAN HR POOL C → 1/4 HR (Pete Crow-Armstrong)
+4-MAN HR POOL D → 1/4 HR (Jarren Duran)
+6-MAN HR POOL A → 1/6 HR (Luke Raley)
+6-MAN HR POOL B → 1/6 HR (Ronald Acuña Jr.)
+6-MAN HR POOL C → 3/6 HR (Oneil Cruz, Josh Jung, Jeremy Peña)
+6-MAN HR POOL D → 1/6 HR (Manny Machado)
+
+PAIR PERFORMANCE
+------------------------------------------
+Pair 1 → 0/2 HR (none) | Yordan Alvarez + Rafael Devers
+Pair 2 → 0/2 HR (none) | Casey Schmitt + Jesús Sánchez
+Pair 3 → 1/2 HR (Christian Walker) | Willy Adames + Christian Walker
+Pair 4 → 1/2 HR (Mike Trout) | Spencer Torkelson + Mike Trout
+
+PLAYER TYPE PERFORMANCE
+------------------------------------------
+🏁 HRR PICKS (30)
+2+ HRR: 53.3% | 3+ HRR: 30.0%
+
+💠 HIT PICKS (30)
+1+ Hit: 66.7% | HR: 20.0%
+
+⚾ CONTACT PICKS (15)
+XBH: 53.3% | 2+ TB: 53.3% | HR: 20.0%
+
+HIT RESULTS BY CATEGORY
+------------------------------------------
+
+🔥 TOP PICKS (1+ Hit)
+- Ian Happ — 2H ⭐
+- Jarren Duran — 2H ⭐
+- Julio Rodríguez — 2H ⭐
+- Spencer Torkelson — 2H ⭐
+- Yordan Alvarez — 2H ⭐
+- Andy Pages — 1H
+- Ben Rice — 1H
+- Brandon Lowe — 1H
+- James Wood — 1H
+- Jesús Sánchez — 1H
+- Joc Pederson — 1H
+- Jonathan Aranda — 1H
+- Juan Soto — 1H
+
+🧨 HR PICKS (1+ Hit)
+- Carson Benge — 3H 🔥
+- Byron Buxton — 2H ⭐
+- JJ Bleday — 2H ⭐
+- Manny Machado — 2H ⭐
+- Mike Trout — 2H ⭐
+- Travis Bazzana — 2H ⭐
+- Bobby Witt Jr. — 1H
+- Casey Schmitt — 1H
+- Christian Walker — 1H
+- George Springer — 1H
+- Kyle Schwarber — 1H
+- Matt Vierling — 1H
+- Michael Busch — 1H
+
+🏁 HRR PICKS (1+ Hit)
+- Jake Burger — 3H 🔥
+- Liam Hicks — 3H 🔥
+- Mookie Betts — 3H 🔥
+- Konnor Griffin — 2H ⭐
+- Luis García Jr. — 2H ⭐
+- Brandon Nimmo — 1H
+- Cam Smith — 1H
+- Christian Yelich — 1H
+- Hunter Goodman — 1H
+- J.P. Crawford — 1H
+- Kazuma Okamoto — 1H
+- Matt Olson — 1H
+- Miguel Vargas — 1H
+- Oneil Cruz — 1H
+- Paul Goldschmidt — 1H
+- Samuel Basallo — 1H
+- Seiya Suzuki — 1H
+- Vaughn Grissom — 1H
+- Will Smith — 1H
+- Wilyer Abreu — 1H
+
+💠 HIT PICKS (1+ Hit)
+- Vladimir Guerrero Jr. — 4H 🔥
+- Jeremy Peña — 3H 🔥
+- Josh Jung — 3H 🔥
+- Tyler Soderstrom — 3H 🔥
+- Bryan Reynolds — 2H ⭐
+- Fernando Tatis Jr. — 2H ⭐
+- Jung Hoo Lee — 2H ⭐
+- Spencer Horwitz — 2H ⭐
+- Yandy Díaz — 2H ⭐
+- Alex Bregman — 1H
+- CJ Abrams — 1H
+- Chase Meidroth — 1H
+- Freddie Freeman — 1H
+- Kevin McGonigle — 1H
+- Leody Taveras — 1H
+- Maikel Garcia — 1H
+- Ozzie Albies — 1H
+- Shohei Ohtani — 1H
+- William Contreras — 1H
+- Xavier Edwards — 1H
+
+⚾ CONTACT PICKS (1+ Hit)
+- Pete Crow-Armstrong — 4H 🔥
+- Kody Clemens — 3H 🔥
+- Colson Montgomery — 2H ⭐
+- Dominic Canzone — 2H ⭐
+- Junior Caminero — 2H ⭐
+- Willi Castro — 2H ⭐
+- Ceddanne Rafaela — 1H
+- Elly De La Cruz — 1H
+- Trea Turner — 1H
+
+MODEL DIAGNOSTIC (LOW PRIORITY)
+Full Sheet HR Coverage: 35 / 42 (83.3%)

@@ -1,0 +1,373 @@
+{
+  "as_of": "2026-09-12",
+  "model_version_filter": null,
+  "model_versions_present": [
+    "mlb_hr_v4"
+  ],
+  "warnings": [],
+  "config_hash_filter": null,
+  "n_por_entries": 291,
+  "n_candidates": 6847,
+  "n_included": 122,
+  "n_excluded": 6725,
+  "excluded_by_reason": {
+    "missing_prediction_log": 40,
+    "missing_score_row": 2323,
+    "locked_late": 4362
+  },
+  "provenance_valid_pct": 1.0,
+  "provenance_scope_n": 6847,
+  "tier_table": {
+    "tiers": {
+      "90+": {
+        "n": 0,
+        "hrs": 0,
+        "hr_rate": null,
+        "ci_95": null,
+        "lift": null
+      },
+      "80-89": {
+        "n": 1,
+        "hrs": 0,
+        "hr_rate": 0.0,
+        "ci_95": [
+          0.0,
+          0.7934506856227626
+        ],
+        "lift": 0.0
+      },
+      "70-79": {
+        "n": 3,
+        "hrs": 1,
+        "hr_rate": 0.3333333333333333,
+        "ci_95": [
+          0.061491944720396215,
+          0.7923403991979523
+        ],
+        "lift": 2.1403508771929824
+      },
+      "60-69": {
+        "n": 5,
+        "hrs": 0,
+        "hr_rate": 0.0,
+        "ci_95": [
+          0.0,
+          0.43448246478317476
+        ],
+        "lift": 0.0
+      },
+      "50-59": {
+        "n": 13,
+        "hrs": 6,
+        "hr_rate": 0.46153846153846156,
+        "ci_95": [
+          0.23206067809538303,
+          0.7085620428549398
+        ],
+        "lift": 2.9635627530364372
+      },
+      "<50": {
+        "n": 100,
+        "hrs": 12,
+        "hr_rate": 0.12,
+        "ci_95": [
+          0.06999406437019488,
+          0.19812099426711424
+        ],
+        "lift": 0.7705263157894736
+      }
+    },
+    "overall": {
+      "n": 122,
+      "hrs": 19,
+      "hr_rate": 0.1557377049180328,
+      "ci_95": [
+        0.10202734884743365,
+        0.23046608545319816
+      ]
+    },
+    "unbucketed_n": 0,
+    "unbucketed_hrs": 0
+  },
+  "monotonicity": {
+    "pairs": [
+      {
+        "higher": "90+",
+        "lower": "80-89",
+        "status": "no_data"
+      },
+      {
+        "higher": "80-89",
+        "lower": "70-79",
+        "higher_rate": 0.0,
+        "lower_rate": 0.3333333333333333,
+        "inverted": true,
+        "status": "low_confidence"
+      },
+      {
+        "higher": "70-79",
+        "lower": "60-69",
+        "higher_rate": 0.3333333333333333,
+        "lower_rate": 0.0,
+        "inverted": false,
+        "status": "low_confidence"
+      },
+      {
+        "higher": "60-69",
+        "lower": "50-59",
+        "higher_rate": 0.0,
+        "lower_rate": 0.46153846153846156,
+        "inverted": true,
+        "status": "low_confidence"
+      },
+      {
+        "higher": "50-59",
+        "lower": "<50",
+        "higher_rate": 0.46153846153846156,
+        "lower_rate": 0.12,
+        "inverted": false,
+        "status": "low_confidence"
+      }
+    ],
+    "monotonic": true,
+    "violations": []
+  },
+  "rolling": [
+    {
+      "days": 7,
+      "start": "2026-09-06",
+      "end": "2026-09-12",
+      "n": 18,
+      "hrs": 2,
+      "hr_rate": 0.1111111111111111,
+      "ci_95": [
+        0.031019522645612366,
+        0.32799765130178804
+      ]
+    },
+    {
+      "days": 14,
+      "start": "2026-08-30",
+      "end": "2026-09-12",
+      "n": 122,
+      "hrs": 19,
+      "hr_rate": 0.1557377049180328,
+      "ci_95": [
+        0.10202734884743365,
+        0.23046608545319816
+      ]
+    },
+    {
+      "days": 30,
+      "start": "2026-08-14",
+      "end": "2026-09-12",
+      "n": 122,
+      "hrs": 19,
+      "hr_rate": 0.1557377049180328,
+      "ci_95": [
+        0.10202734884743365,
+        0.23046608545319816
+      ]
+    }
+  ],
+  "hr_overlay": {
+    "version": "hr_overlay_v2",
+    "method": "locked pregame prediction-of-record only; no historical backfill",
+    "eligible_schema_n": 122,
+    "legacy_without_overlay_n": 0,
+    "overall": {
+      "n": 122,
+      "hrs": 19,
+      "hr_rate": 0.1557377049180328,
+      "ci_95": [
+        0.10202734884743365,
+        0.23046608545319816
+      ],
+      "lift_vs_overall": 1.0
+    },
+    "reference": {
+      "hr_overlay": {
+        "hr_rate": 0.177,
+        "n": 130,
+        "baseline_hr_rate": 0.138,
+        "lift": 1.29,
+        "label": "newest clean locked-slice reference; separate from live locked record"
+      },
+      "power_overlay": {
+        "hr_rate": 0.212,
+        "n": 33,
+        "baseline_hr_rate": 0.138,
+        "lift": 1.54,
+        "label": "small-sample tracking reference; separate from live locked record"
+      },
+      "premium_power": {
+        "hr_rate": 0.25,
+        "n": 20,
+        "baseline_hr_rate": 0.138,
+        "lift": 1.81,
+        "label": "small-sample tracking reference; separate from live locked record"
+      }
+    },
+    "tiers": {
+      "hr_overlay": {
+        "label": "HR Overlay",
+        "rule": "Air% > 50 + Avg EV > 87",
+        "all": {
+          "n": 57,
+          "hrs": 12,
+          "hr_rate": 0.21052631578947367,
+          "ci_95": [
+            0.12474548303034581,
+            0.33286121083190506
+          ],
+          "lift_vs_overall": 1.3518005540166205
+        },
+        "rolling": {
+          "7": {
+            "days": 7,
+            "start": "2026-09-06",
+            "end": "2026-09-12",
+            "n": 11,
+            "hrs": 2,
+            "hr_rate": 0.18181818181818182,
+            "ci_95": [
+              0.05136768974608512,
+              0.4769805619608442
+            ],
+            "lift_vs_overall": 1.1674641148325358
+          },
+          "30": {
+            "days": 30,
+            "start": "2026-08-14",
+            "end": "2026-09-12",
+            "n": 57,
+            "hrs": 12,
+            "hr_rate": 0.21052631578947367,
+            "ci_95": [
+              0.12474548303034581,
+              0.33286121083190506
+            ],
+            "lift_vs_overall": 1.3518005540166205
+          }
+        },
+        "status": "tracking"
+      },
+      "power_overlay": {
+        "label": "Power Overlay",
+        "rule": "HR Overlay + ISO \u2265 .230",
+        "all": {
+          "n": 15,
+          "hrs": 5,
+          "hr_rate": 0.3333333333333333,
+          "ci_95": [
+            0.15176324439714728,
+            0.5828645226148023
+          ],
+          "lift_vs_overall": 2.1403508771929824
+        },
+        "rolling": {
+          "7": {
+            "days": 7,
+            "start": "2026-09-06",
+            "end": "2026-09-12",
+            "n": 2,
+            "hrs": 0,
+            "hr_rate": 0.0,
+            "ci_95": [
+              0.0,
+              0.6576197724933469
+            ],
+            "lift_vs_overall": 0.0
+          },
+          "30": {
+            "days": 30,
+            "start": "2026-08-14",
+            "end": "2026-09-12",
+            "n": 15,
+            "hrs": 5,
+            "hr_rate": 0.3333333333333333,
+            "ci_95": [
+              0.15176324439714728,
+              0.5828645226148023
+            ],
+            "lift_vs_overall": 2.1403508771929824
+          }
+        },
+        "status": "tracking"
+      },
+      "premium_power": {
+        "label": "Premium Power",
+        "rule": "Power Overlay + HRW \u2265 60",
+        "all": {
+          "n": 9,
+          "hrs": 2,
+          "hr_rate": 0.2222222222222222,
+          "ci_95": [
+            0.06322510711784671,
+            0.5474110308930111
+          ],
+          "lift_vs_overall": 1.4269005847953216
+        },
+        "rolling": {
+          "7": {
+            "days": 7,
+            "start": "2026-09-06",
+            "end": "2026-09-12",
+            "n": 2,
+            "hrs": 0,
+            "hr_rate": 0.0,
+            "ci_95": [
+              0.0,
+              0.6576197724933469
+            ],
+            "lift_vs_overall": 0.0
+          },
+          "30": {
+            "days": 30,
+            "start": "2026-08-14",
+            "end": "2026-09-12",
+            "n": 9,
+            "hrs": 2,
+            "hr_rate": 0.2222222222222222,
+            "ci_95": [
+              0.06322510711784671,
+              0.5474110308930111
+            ],
+            "lift_vs_overall": 1.4269005847953216
+          }
+        },
+        "status": "tracking"
+      }
+    }
+  },
+  "by_model_version": {
+    "mlb_hr_v4": {
+      "n": 122,
+      "hrs": 19,
+      "hr_rate": 0.1557377049180328
+    }
+  },
+  "config_hashes_by_model_version": {
+    "mlb_hr_v4": {
+      "n": 122,
+      "hashes": {
+        "sha256:0cf5b0230819da041843b0b316673431a00f1d8c83d4db926fc35bbc6ecacb86": 104,
+        "sha256:b0639430bd37655d6e383e6f896d84e9f13bfa1324c6543478a8ff5344b4a7d0": 18
+      },
+      "n_unknown": 0
+    }
+  },
+  "config_hash_warnings": [
+    {
+      "model_version": "mlb_hr_v4",
+      "hashes": [
+        "sha256:0cf5b0230819da041843b0b316673431a00f1d8c83d4db926fc35bbc6ecacb86",
+        "sha256:b0639430bd37655d6e383e6f896d84e9f13bfa1324c6543478a8ff5344b4a7d0"
+      ],
+      "n_by_hash": {
+        "sha256:0cf5b0230819da041843b0b316673431a00f1d8c83d4db926fc35bbc6ecacb86": 104,
+        "sha256:b0639430bd37655d6e383e6f896d84e9f13bfa1324c6543478a8ff5344b4a7d0": 18
+      }
+    }
+  ]
+}

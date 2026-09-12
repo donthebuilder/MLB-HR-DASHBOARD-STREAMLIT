@@ -1,0 +1,177 @@
+RESULTS TRACKER - 2026-09-09
+------------------------------------------
+BETTABLE RESULTS
+Top 15 HR: 4/14 (28.6%)
+HR Picks: 2/14 (14.3%)
+Top Picks: 5/14 (35.7%)
+
+FULL SHEET BASE HIT PERFORMANCE
+Base Hit Accuracy: 64.3%
+
+HR CAPTURE (BETTABLE)
+Total Slate HRs: 45
+Caught in Top 15: 4
+Caught in HR Picks: 2
+Top 15 Capture Rate: 8.9%
+HR Pick Capture Rate: 4.4%
+
+MODEL VISION (Top 40)
+Model Caught HRs: 9 / 45
+Vision Rate: 20.0%
+
+UNIQUE PLAYER HR ACCURACY
+Unique Players Tracked: 61
+Players Who Homered: 12
+Unique HR Accuracy: 19.7%
+
+HR CATEGORY BREAKDOWN
+------------------------------------------
+🏆 TOP 15 BOARD → 4 HR
+🔥 TOP PICKS → 5 HR
+🧨 HR PICKS → 2 HR
+🏁 HRR PICKS → 1 HR
+💠 HIT PICKS → 3 HR
+⚾ CONTACT PICKS → 4 HR
+Best HR-producing category: 🔥 TOP PICKS
+
+LONGEST HR (BOARD)
+------------------------------------------
+- Jackson Chourio — 436 ft · 108.5 mph · 28.0°
+- Carter Jensen — 416 ft · 108.6 mph · 29.0°
+- Chase DeLauter — 410 ft · 106.7 mph · 22.0°
+- Kyle Schwarber — 408 ft · 105.7 mph · 30.0°
+- Coby Mayo — 407 ft · 106.6 mph · 28.0°
+Longest on the board: Jackson Chourio (436 ft)
+
+
+HR RESULTS BY PLAYER
+------------------------------------------
+- Carter Jensen — 🏆#10 + 🧨 + ⚾ + ⭐
+- Coby Mayo — 🏆#6 + 🔥 + ⭐
+- Corey Seager — 🏆#7 + 🔥
+- Kyle Schwarber — 🏆#2 + 🔥
+- Kody Clemens — 🧨
+- Francisco Lindor — 🔥 + ⭐
+- Zach Neto — 🔥 + ⚾
+- Cody Bellinger — 🏁
+- Bobby Witt Jr. — 💠 + ⭐
+- Chase DeLauter — 💠 + ⚾
+- Jackson Chourio — 💠
+- Trea Turner — ⚾
+
+POOL PERFORMANCE
+------------------------------------------
+4-MAN Pool A — Strongest → 2/4 HR (Elly De La Cruz, Corey Seager)
+4-MAN Pool B — HRR+Power → 1/4 HR (Carter Jensen)
+4-MAN Pool C — Balanced → 2/4 HR (Francisco Lindor, Jackson Chourio)
+4-MAN Pool D — Variance → 1/4 HR (Esmerlyn Valdez)
+3-MAN Pool A — Strongest → 0/3 HR (none)
+3-MAN Pool B — HRR+Var → 0/3 HR (none)
+3-MAN Pool C — Balanced → 1/3 HR (Mookie Betts)
+3-MAN Pool D — Variance → 0/3 HR (none)
+
+PAIR PERFORMANCE
+------------------------------------------
+Pair 1 → 1/2 HR (Kyle Schwarber) | Pete Crow-Armstrong + Kyle Schwarber
+Pair 2 → 0/2 HR (none) | Junior Caminero + Juan Soto
+Pair 3 → 0/2 HR (none) | Ben Rice + Griffin Conine
+Pair 4 → 0/2 HR (none) | Ben Rice + Rafael Flores Jr.
+Pair 5 → 1/2 HR (Munetaka Murakami) | Heriberto Hernández + Munetaka Murakami
+Pair 6 → 1/2 HR (Munetaka Murakami) | Colson Montgomery + Munetaka Murakami
+Pair 7 → 0/2 HR (none) | Pete Alonso + Yohandy Morales
+Pair 8 → 1/2 HR (Corey Seager) | Corey Seager + Justin Foscue
+Pair 9 → 1/2 HR (Coby Mayo) | Coby Mayo + Heriberto Hernández
+Pair 10 → 0/2 HR (none) | Colson Montgomery + Aaron Judge
+
+PLAYER TYPE PERFORMANCE
+------------------------------------------
+🏆 TOP 15 BOARD (14)
+HR: 28.6% | 1+ Hit: 57.1% | XBH: 28.6% | 2+ TB: 28.6% | 2+ HRR: 42.9% | 3+ HRR: 42.9%
+
+🔥 TOP PICKS (14)
+HR: 35.7% | 1+ Hit: 64.3% | XBH: 42.9% | 2+ TB: 42.9% | 2+ HRR: 57.1% | 3+ HRR: 42.9%
+
+🧨 HR PICKS (14)
+HR: 14.3% | 1+ Hit: 71.4% | XBH: 28.6% | 2+ TB: 50.0% | 2+ HRR: 57.1% | 3+ HRR: 35.7%
+
+🏁 HRR PICKS (14)
+HR: 7.1% | 1+ Hit: 42.9% | XBH: 21.4% | 2+ TB: 28.6% | 2+ HRR: 35.7% | 3+ HRR: 28.6%
+
+💠 HIT PICKS (14)
+HR: 21.4% | 1+ Hit: 85.7% | XBH: 50.0% | 2+ TB: 57.1% | 2+ HRR: 64.3% | 3+ HRR: 42.9%
+
+⚾ CONTACT PICKS (14)
+HR: 28.6% | 1+ Hit: 64.3% | XBH: 28.6% | 2+ TB: 42.9% | 2+ HRR: 64.3% | 3+ HRR: 50.0%
+
+
+DESIGNED OUTCOME (did the pick do its job)
+------------------------------------------
+🏆 TOP 15 BOARD (14) -> 4/14 (28.6%)  ·  needs: HR
+🔥 TOP PICKS (14) -> 6/14 (42.9%)  ·  needs: most productive of our picks in his game (HRR or TB)
+🧨 HR PICKS (14) -> 2/14 (14.3%)  ·  needs: HR
+🏁 HRR PICKS (14) -> 5/14 (35.7%)  ·  needs: 2+ hits+runs+RBI
+💠 HIT PICKS (14) -> 12/14 (85.7%)  ·  needs: 1+ hit
+⚾ CONTACT PICKS (14) -> 6/14 (42.9%)  ·  needs: 2+ TB or XBH
+ALL PICKS -> 35/84 (41.7%)
+
+HIT RESULTS BY CATEGORY
+------------------------------------------
+
+🔥 TOP PICKS (1+ Hit)
+- Corey Seager — 2H ⭐
+- Zach Neto — 2H ⭐
+- Coby Mayo — 1H
+- Francisco Lindor — 1H
+- John Rave — 1H
+- Joshua Báez — 1H
+- Junior Caminero — 1H
+- Kyle Schwarber — 1H
+- Pete Crow-Armstrong — 1H
+
+🧨 HR PICKS (1+ Hit)
+- Fernando Tatis Jr. — 3H 🔥
+- Bryce Eldridge — 2H ⭐
+- Randal Grichuk — 2H ⭐
+- Carter Jensen — 1H
+- Jake McCarthy — 1H
+- Justin Foscue — 1H
+- Kody Clemens — 1H
+- Kyle Stowers — 1H
+- Michael Conforto — 1H
+- Pete Alonso — 1H
+
+🏁 HRR PICKS (1+ Hit)
+- Steven Kwan — 2H ⭐
+- Yordan Alvarez — 2H ⭐
+- Cody Bellinger — 1H
+- Luis Campusano — 1H
+- Mike Trout — 1H
+- Nick Gonzales — 1H
+
+💠 HIT PICKS (1+ Hit)
+- Jackson Chourio — 3H 🔥
+- Ty France — 3H 🔥
+- Bobby Witt Jr. — 2H ⭐
+- Chase DeLauter — 2H ⭐
+- Javier Sanoja — 2H ⭐
+- Luis Arraez — 2H ⭐
+- Alejandro Kirk — 1H
+- Iván Herrera — 1H
+- Kevin McGonigle — 1H
+- Nick Sogard — 1H
+- Randy Arozarena — 1H
+- Yandy Díaz — 1H
+
+⚾ CONTACT PICKS (1+ Hit)
+- A.J. Ewing — 3H 🔥
+- Bryce Eldridge — 2H ⭐
+- Chase DeLauter — 2H ⭐
+- Trea Turner — 2H ⭐
+- Zach Neto — 2H ⭐
+- Carter Jensen — 1H
+- Dylan Crews — 1H
+- Pete Crow-Armstrong — 1H
+- Yandy Díaz — 1H
+
+MODEL DIAGNOSTIC (LOW PRIORITY)
+Full Sheet HR Coverage: 45 / 45 (100.0%)

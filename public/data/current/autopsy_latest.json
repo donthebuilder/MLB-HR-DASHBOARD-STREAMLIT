@@ -1,0 +1,114 @@
+{
+ "built": "2026-08-27T08:32:03+00:00",
+ "window": {
+  "from": "2026-08-21",
+  "to": "2026-08-27",
+  "nights": 7
+ },
+ "worst_misses": [
+  {
+   "date": "2026-08-24",
+   "name": "Pete Crow-Armstrong",
+   "role": "TOP",
+   "score": 82.3,
+   "line": "0-for-5",
+   "why": [
+    "lineup spot 1",
+    "HR score 82",
+    "fly-ball rate 48%"
+   ]
+  },
+  {
+   "date": "2026-08-22",
+   "name": "Max Muncy",
+   "role": "TOP",
+   "score": 80.1,
+   "line": "3-for-3, 5 TB",
+   "why": [
+    "HR score 80",
+    "fly-ball rate 44%",
+    "HR-weather 88"
+   ]
+  },
+  {
+   "date": "2026-08-22",
+   "name": "Pete Crow-Armstrong",
+   "role": "TOP",
+   "score": 79.0,
+   "line": "1-for-4, 2 TB",
+   "why": [
+    "lineup spot 1",
+    "HR score 79",
+    "HR-weather 88"
+   ]
+  },
+  {
+   "date": "2026-08-21",
+   "name": "Rafael Flores Jr.",
+   "role": "TOP",
+   "score": 78.1,
+   "line": "0-for-4, 2 K",
+   "why": [
+    "ISO 0.400",
+    "barrel rate 18.8%",
+    "HR score 78"
+   ]
+  },
+  {
+   "date": "2026-08-25",
+   "name": "Pete Crow-Armstrong",
+   "role": "TOP",
+   "score": 77.8,
+   "line": "0-for-3",
+   "why": [
+    "lineup spot 1",
+    "HR score 78",
+    "pitch match 120"
+   ]
+  }
+ ],
+ "missed_homers": [
+  {
+   "date": "2026-08-23",
+   "name": "Kevin McGonigle",
+   "score": 15.7,
+   "line": "2-for-4, 1 HR, 1 K",
+   "role": "HRR"
+  },
+  {
+   "date": "2026-08-23",
+   "name": "Ezequiel Duran",
+   "score": 19.9,
+   "line": "1-for-3, 1 HR, 2 K",
+   "role": "HIT"
+  },
+  {
+   "date": "2026-08-25",
+   "name": "Sal Stewart",
+   "score": 24.0,
+   "line": "1-for-4, 1 HR",
+   "role": "HRR"
+  },
+  {
+   "date": "2026-08-23",
+   "name": "Isaac Paredes",
+   "score": 31.1,
+   "line": "1-for-3, 1 HR",
+   "role": "HIT"
+  },
+  {
+   "date": "2026-08-23",
+   "name": "Nick Sogard",
+   "score": 31.5,
+   "line": "2-for-3, 1 HR",
+   "role": "HRR"
+  }
+ ],
+ "pattern": {
+  "found": false,
+  "n_failed": 6,
+  "n_cleared": 4,
+  "reading": "Not enough high-scored picks graded this week to compare (6 failed, 4 cleared; 15 of each needed)."
+ },
+ "method": "Worst misses are the highest-scored designated picks that failed their own category bar. 'Why' lists the inputs that sat in the top 15% of everyone graded that same night \u2014 the model's own reasoning, recovered from the file. Void legs (no at-bat) are excluded everywhere. Nothing here changes a weight."
+}

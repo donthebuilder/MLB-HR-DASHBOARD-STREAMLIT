@@ -1,0 +1,186 @@
+RESULTS TRACKER - 2026-09-02
+------------------------------------------
+BETTABLE RESULTS
+Top 15 HR: 3/15 (20.0%)
+HR Picks: 5/15 (33.3%)
+Top Picks: 1/15 (6.7%)
+
+FULL SHEET BASE HIT PERFORMANCE
+Base Hit Accuracy: 63.3%
+
+HR CAPTURE (BETTABLE)
+Total Slate HRs: 35
+Caught in Top 15: 3
+Caught in HR Picks: 5
+Top 15 Capture Rate: 8.6%
+HR Pick Capture Rate: 14.3%
+
+MODEL VISION (Top 40)
+Model Caught HRs: 12 / 35
+Vision Rate: 34.3%
+
+UNIQUE PLAYER HR ACCURACY
+Unique Players Tracked: 66
+Players Who Homered: 15
+Unique HR Accuracy: 22.7%
+
+HR CATEGORY BREAKDOWN
+------------------------------------------
+🏆 TOP 15 BOARD → 3 HR
+🔥 TOP PICKS → 1 HR
+🧨 HR PICKS → 5 HR
+🏁 HRR PICKS → 2 HR
+💠 HIT PICKS → 3 HR
+⚾ CONTACT PICKS → 5 HR
+Best HR-producing category: 🧨 HR PICKS
+
+LONGEST HR (BOARD)
+------------------------------------------
+- Justin Foscue — 424 ft · 107.3 mph · 22.0°
+- Freddie Freeman — 416 ft · 105.2 mph · 26.0°
+- Rafael Devers — 415 ft · 103.8 mph · 33.0°
+- Carter Jensen — 414 ft · 110.0 mph · 23.0°
+- Vaughn Grissom — 408 ft · 105.6 mph · 35.0°
+Longest on the board: Justin Foscue (424 ft)
+
+
+HR RESULTS BY PLAYER
+------------------------------------------
+- Alex Bregman — 🏆#11
+- Rafael Devers — 🏆#2 + 🔥 + ⚾
+- Thomas Saggese — 🏆#12 + 🧨
+- Carter Jensen — 🧨
+- Juan Soto — 🧨 + ⭐
+- Justin Foscue — 🧨
+- Ty France — 🧨
+- Mookie Betts — 🏁 + ⚾
+- Ronald Acuña Jr. — 🏁
+- Ezequiel Duran — 💠 + ⭐
+- Freddie Freeman — 💠
+- Jackson Chourio — 💠
+- Roman Anthony — ⚾ + ⭐
+- Sean Murphy — ⚾
+- Vaughn Grissom — ⚾
+
+MISSED HRs (NOT IN MODEL SHEET)
+------------------------------------------
+- Leo Bernal (STL) — not in model sheet / lineup pool
+
+POOL PERFORMANCE
+------------------------------------------
+4-MAN Pool A — Strongest → 0/4 HR (none)
+4-MAN Pool B — HRR+Power → 0/4 HR (none)
+4-MAN Pool C — Balanced → 1/4 HR (Alex Bregman)
+4-MAN Pool D — Variance → 1/4 HR (Alex Bregman)
+3-MAN Pool A — Strongest → 0/3 HR (none)
+3-MAN Pool B — HRR+Var → 1/3 HR (Justin Foscue)
+3-MAN Pool C — Balanced → 0/3 HR (none)
+3-MAN Pool D — Variance → 0/3 HR (none)
+
+PAIR PERFORMANCE
+------------------------------------------
+Pair 1 → 0/2 HR (none) | Pete Crow-Armstrong + Yordan Alvarez
+Pair 2 → 2/2 HR (Rafael Devers, Juan Soto) | Rafael Devers + Juan Soto
+Pair 3 → 0/2 HR (none) | Junior Caminero + Dominic Canzone
+Pair 4 → 0/2 HR (none) | Kody Clemens + Brandon Lowe
+Pair 5 → 0/2 HR (none) | Joshua Báez + Matt Olson
+Pair 6 → 0/2 HR (none) | Joshua Báez + Kyle Schwarber
+Pair 7 → 0/2 HR (none) | Kody Clemens + Paul Goldschmidt
+Pair 8 → 1/2 HR (Juan Soto) | Juan Soto + Paul Goldschmidt
+Pair 9 → 0/2 HR (none) | Heriberto Hernández + Kazuma Okamoto
+Pair 10 → 0/2 HR (none) | Adael Amador + Colson Montgomery
+
+PLAYER TYPE PERFORMANCE
+------------------------------------------
+🏆 TOP 15 BOARD (15)
+HR: 20.0% | 1+ Hit: 60.0% | XBH: 53.3% | 2+ TB: 53.3% | 2+ HRR: 60.0% | 3+ HRR: 46.7%
+
+🔥 TOP PICKS (15)
+HR: 6.7% | 1+ Hit: 40.0% | XBH: 33.3% | 2+ TB: 33.3% | 2+ HRR: 46.7% | 3+ HRR: 26.7%
+
+🧨 HR PICKS (15)
+HR: 33.3% | 1+ Hit: 60.0% | XBH: 53.3% | 2+ TB: 53.3% | 2+ HRR: 53.3% | 3+ HRR: 46.7%
+
+🏁 HRR PICKS (15)
+HR: 13.3% | 1+ Hit: 66.7% | XBH: 20.0% | 2+ TB: 40.0% | 2+ HRR: 60.0% | 3+ HRR: 53.3%
+
+💠 HIT PICKS (15)
+HR: 20.0% | 1+ Hit: 80.0% | XBH: 40.0% | 2+ TB: 46.7% | 2+ HRR: 60.0% | 3+ HRR: 46.7%
+
+⚾ CONTACT PICKS (15)
+HR: 33.3% | 1+ Hit: 73.3% | XBH: 40.0% | 2+ TB: 46.7% | 2+ HRR: 60.0% | 3+ HRR: 53.3%
+
+
+DESIGNED OUTCOME (did the pick do its job)
+------------------------------------------
+🏆 TOP 15 BOARD (15) -> 3/15 (20.0%)  ·  needs: HR
+🔥 TOP PICKS (15) -> 1/15 (6.7%)  ·  needs: most productive of our picks in his game (HRR or TB)
+🧨 HR PICKS (15) -> 5/15 (33.3%)  ·  needs: HR
+🏁 HRR PICKS (15) -> 9/15 (60.0%)  ·  needs: 2+ hits+runs+RBI
+💠 HIT PICKS (15) -> 12/15 (80.0%)  ·  needs: 1+ hit
+⚾ CONTACT PICKS (15) -> 7/15 (46.7%)  ·  needs: 2+ TB or XBH
+ALL PICKS -> 37/90 (41.1%)
+
+HIT RESULTS BY CATEGORY
+------------------------------------------
+
+🔥 TOP PICKS (1+ Hit)
+- Heriberto Hernández — 2H ⭐
+- Mickey Gasper — 2H ⭐
+- Rafael Devers — 2H ⭐
+- Brian Serven — 1H
+- Jordan Walker — 1H
+- Pete Crow-Armstrong — 1H
+
+🧨 HR PICKS (1+ Hit)
+- Adael Amador — 2H ⭐
+- Carter Jensen — 2H ⭐
+- Juan Soto — 2H ⭐
+- Thomas Saggese — 2H ⭐
+- Ty France — 2H ⭐
+- Brandon Lowe — 1H
+- Justin Foscue — 1H
+- Randy Arozarena — 1H
+- Ryan Jeffers — 1H
+
+🏁 HRR PICKS (1+ Hit)
+- Brooks Lee — 3H 🔥
+- Cody Bellinger — 3H 🔥
+- Ronald Acuña Jr. — 3H 🔥
+- Jake McCarthy — 2H ⭐
+- Mookie Betts — 2H ⭐
+- William Contreras — 2H ⭐
+- Bobby Witt Jr. — 1H
+- Brett Bateman — 1H
+- Michael Stefanic — 1H
+- Turner Hill — 1H
+
+💠 HIT PICKS (1+ Hit)
+- Jackson Chourio — 4H 🔥
+- Blaze Alexander — 3H 🔥
+- Chase DeLauter — 3H 🔥
+- Ezequiel Duran — 3H 🔥
+- Freddie Freeman — 2H ⭐
+- Dominic Canzone — 1H
+- Geraldo Perdomo — 1H
+- Jac Caglianone — 1H
+- Jeremy Peña — 1H
+- Luke Keaschall — 1H
+- Nick Gonzales — 1H
+- Yandy Díaz — 1H
+
+⚾ CONTACT PICKS (1+ Hit)
+- Roman Anthony — 3H 🔥
+- Mookie Betts — 2H ⭐
+- Nathan Lukes — 2H ⭐
+- Rafael Devers — 2H ⭐
+- Sean Murphy — 2H ⭐
+- Vaughn Grissom — 2H ⭐
+- Elias Díaz — 1H
+- Nick Loftin — 1H
+- Pete Crow-Armstrong — 1H
+- Ryan Jeffers — 1H
+- Yandy Díaz — 1H
+
+MODEL DIAGNOSTIC (LOW PRIORITY)
+Full Sheet HR Coverage: 34 / 35 (97.1%)

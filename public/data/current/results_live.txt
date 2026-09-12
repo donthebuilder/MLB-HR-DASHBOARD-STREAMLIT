@@ -1,0 +1,197 @@
+LIVE RESULTS TRACKER - 2026-09-12
+------------------------------------------
+Game status: 3/15 graded games final
+Note: live results can change until every game is final.
+
+BETTABLE RESULTS
+Top 15 HR: 3/15 (20.0%)
+HR Picks: 3/15 (20.0%)
+Top Picks: 5/15 (33.3%)
+
+FULL SHEET BASE HIT PERFORMANCE
+Base Hit Accuracy: 41.1%
+
+HR CAPTURE (BETTABLE)
+Total Slate HRs: 24
+Caught in Top 15: 3
+Caught in HR Picks: 3
+Top 15 Capture Rate: 12.5%
+HR Pick Capture Rate: 12.5%
+
+MODEL VISION (Top 40)
+Model Caught HRs: 11 / 24
+Vision Rate: 45.8%
+
+UNIQUE PLAYER HR ACCURACY
+Unique Players Tracked: 65
+Players Who Homered: 12
+Unique HR Accuracy: 18.5%
+
+HR CATEGORY BREAKDOWN
+------------------------------------------
+🏆 TOP 15 BOARD → 3 HR
+🔥 TOP PICKS → 5 HR
+🧨 HR PICKS → 3 HR
+🏁 HRR PICKS → 3 HR
+💠 HIT PICKS → 1 HR
+⚾ CONTACT PICKS → 3 HR
+Best HR-producing category: 🔥 TOP PICKS
+
+LONGEST HR (BOARD)
+------------------------------------------
+- Jackson Merrill — 405 ft · 102.2 mph · 31.0°
+- Brett Bateman — 403 ft · 102.7 mph · 30.0°
+- Juan Soto — 400 ft · 106.7 mph · 34.0°
+- Mookie Betts — 399 ft · 103.5 mph · 28.0°
+- Max Muncy — 393 ft · 105.6 mph · 34.0°
+Longest on the board: Jackson Merrill (405 ft)
+
+
+HR RESULTS BY PLAYER
+------------------------------------------
+- Carter Jensen — 🏆#10 + 🔥 + ⚾
+- Jackson Merrill — 🏆#15 + 🧨
+- Rafael Devers — 🏆#1 + 🔥 + ⚾
+- Juan Soto — 🧨
+- Kevin McGonigle — 🧨
+- Francisco Lindor — 🔥
+- Hunter Goodman — 🔥
+- Max Muncy — 🔥
+- Cody Bellinger — 🏁 + ⚾
+- Mookie Betts — 🏁
+- Pete Alonso — 🏁
+- Brett Bateman — 💠
+
+MISSED HRs (NOT IN MODEL SHEET)
+------------------------------------------
+- Emmanuel Rodriguez (MIN) — not in model sheet / lineup pool
+
+POOL PERFORMANCE
+------------------------------------------
+4-MAN Pool A — Strongest → 1/2 HR (Francisco Lindor)
+4-MAN Pool B — HRR+Power → 2/3 HR (Carter Jensen, Jackson Merrill)
+4-MAN Pool C — Balanced → 3/3 HR (Mookie Betts, Carter Jensen, Pete Alonso)
+4-MAN Pool D — Variance → 0/2 HR (none)
+3-MAN Pool A — Strongest → 0/2 HR (none)
+3-MAN Pool B — HRR+Var → 0/3 HR (none)
+3-MAN Pool C — Balanced → 0/1 HR (none)
+3-MAN Pool D — Variance → 0/2 HR (none)
+
+PAIR PERFORMANCE
+------------------------------------------
+Pair 1 → 0/2 HR (none) | Kyle Schwarber + Junior Caminero
+Pair 2 → 1/2 HR (Rafael Devers) | Rafael Devers + Junior Caminero
+Pair 3 → 0/2 HR (none) | Victor Mesa Jr. + Elly De La Cruz
+Pair 4 → 1/2 HR (Max Muncy) | Elly De La Cruz + Max Muncy
+Pair 5 → 0/2 HR (none) | Joc Pederson + Munetaka Murakami
+Pair 6 → 1/2 HR (Hunter Goodman) | Hunter Goodman + Lazaro Montes
+Pair 7 → 1/2 HR (Max Muncy) | Max Muncy + Coby Mayo
+Pair 8 → 0/2 HR (none) | Randal Grichuk + Joshua Báez
+Pair 9 → 0/2 HR (none) | Matt Olson + Lazaro Montes
+Pair 10 → 1/2 HR (Juan Soto) | Juan Soto + Esmerlyn Valdez
+
+PLAYER TYPE PERFORMANCE
+------------------------------------------
+🏆 TOP 15 BOARD (15)
+HR: 20.0% | 1+ Hit: 33.3% | XBH: 20.0% | 2+ TB: 20.0% | 2+ HRR: 20.0% | 3+ HRR: 20.0%
+
+🔥 TOP PICKS (15)
+HR: 33.3% | 1+ Hit: 46.7% | XBH: 33.3% | 2+ TB: 33.3% | 2+ HRR: 40.0% | 3+ HRR: 40.0%
+
+🧨 HR PICKS (15)
+HR: 20.0% | 1+ Hit: 46.7% | XBH: 26.7% | 2+ TB: 26.7% | 2+ HRR: 33.3% | 3+ HRR: 20.0%
+
+🏁 HRR PICKS (15)
+HR: 20.0% | 1+ Hit: 40.0% | XBH: 26.7% | 2+ TB: 26.7% | 2+ HRR: 33.3% | 3+ HRR: 26.7%
+
+💠 HIT PICKS (15)
+HR: 6.7% | 1+ Hit: 40.0% | XBH: 6.7% | 2+ TB: 6.7% | 2+ HRR: 26.7% | 3+ HRR: 13.3%
+
+⚾ CONTACT PICKS (15)
+HR: 20.0% | 1+ Hit: 40.0% | XBH: 26.7% | 2+ TB: 26.7% | 2+ HRR: 33.3% | 3+ HRR: 26.7%
+
+
+DESIGNED OUTCOME (did the pick do its job)
+------------------------------------------
+🏆 TOP 15 BOARD (1) -> 0/1 (0.0%)  ·  needs: HR
+🔥 TOP PICKS (3) -> 2/3 (66.7%)  ·  needs: most productive of our picks in his game (HRR or TB)
+🧨 HR PICKS (3) -> 2/3 (66.7%)  ·  needs: HR
+🏁 HRR PICKS (3) -> 2/3 (66.7%)  ·  needs: 2+ hits+runs+RBI
+💠 HIT PICKS (3) -> 2/3 (66.7%)  ·  needs: 1+ hit
+⚾ CONTACT PICKS (3) -> 2/3 (66.7%)  ·  needs: 2+ TB or XBH
+ALL PICKS -> 10/16 (62.5%)
+
+HIT RESULTS BY CATEGORY
+------------------------------------------
+
+🔥 TOP PICKS (1+ Hit)
+- Francisco Lindor — 3H 🔥
+- Carter Jensen — 1H
+- Coby Mayo — 1H
+- Hunter Goodman — 1H
+- Kody Clemens — 1H
+- Max Muncy — 1H
+- Rafael Devers — 1H
+
+🧨 HR PICKS (1+ Hit)
+- Juan Soto — 2H ⭐
+- Kevin McGonigle — 2H ⭐
+- Alex Bregman — 1H
+- Angel Martínez — 1H
+- CJ Abrams — 1H
+- Jackson Merrill — 1H
+- Kazuma Okamoto — 1H
+
+🏁 HRR PICKS (1+ Hit)
+- TJ Rumfield — 3H 🔥
+- Cody Bellinger — 2H ⭐
+- Bobby Witt Jr. — 1H
+- James Wood — 1H
+- Mookie Betts — 1H
+- Pete Alonso — 1H
+
+💠 HIT PICKS (1+ Hit)
+- Brett Bateman — 1H
+- Bryan Reynolds — 1H
+- Fernando Tatis Jr. — 1H
+- Jake McCarthy — 1H
+- Otto Lopez — 1H
+- Salvador Perez — 1H
+
+⚾ CONTACT PICKS (1+ Hit)
+- Eduardo Valencia — 3H 🔥
+- Cody Bellinger — 2H ⭐
+- Bryan Reynolds — 1H
+- Carter Jensen — 1H
+- Kazuma Okamoto — 1H
+- Rafael Devers — 1H
+
+MODEL DIAGNOSTIC (LOW PRIORITY)
+Full Sheet HR Coverage: 23 / 24 (95.8%)
+
+LIVE / IN-PROGRESS PICKS WITH ACTION
+- Brett Bateman (TOR) | HIT | 1H/1HR/R2/RBI1 | In Progress
+- Carter Jensen (KC) | TOP15 | 1H/1HR/R1/RBI1 | In Progress
+- Carter Jensen (KC) | TOP | 1H/1HR/R1/RBI1 | In Progress
+- Carter Jensen (KC) | CONTACT | 1H/1HR/R1/RBI1 | In Progress
+- Jackson Merrill (SD) | TOP15 | 1H/1HR/R1/RBI1 | In Progress
+- Jackson Merrill (SD) | HR | 1H/1HR/R1/RBI1 | In Progress
+- Max Muncy (LAD) | TOP | 1H/1HR/R1/RBI1 | In Progress
+- Mookie Betts (LAD) | HRR | 1H/1HR/R1/RBI1 | In Progress
+- Pete Alonso (BAL) | HRR | 1H/1HR/R1/RBI2 | In Progress
+- Rafael Devers (SF) | TOP15 | 1H/1HR/R1/RBI2 | In Progress
+- Rafael Devers (SF) | TOP | 1H/1HR/R1/RBI2 | In Progress
+- Rafael Devers (SF) | CONTACT | 1H/1HR/R1/RBI2 | In Progress
+- Angel Martínez (CLE) | HR | 1H/0HR/R0/RBI0 | In Progress
+- Bobby Witt Jr. (KC) | HRR | 1H/0HR/R0/RBI0 | In Progress
+- CJ Abrams (WSH) | HR | 1H/0HR/R0/RBI1 | In Progress
+- Coby Mayo (BAL) | TOP15 | 1H/0HR/R0/RBI0 | In Progress
+- Coby Mayo (BAL) | TOP | 1H/0HR/R0/RBI0 | In Progress
+- Fernando Tatis Jr. (SD) | HIT | 1H/0HR/R0/RBI0 | In Progress
+- James Wood (WSH) | HRR | 1H/0HR/R1/RBI0 | In Progress
+- Kazuma Okamoto (TOR) | TOP15 | 1H/0HR/R0/RBI0 | In Progress
+- Kazuma Okamoto (TOR) | HR | 1H/0HR/R0/RBI0 | In Progress
+- Kazuma Okamoto (TOR) | CONTACT | 1H/0HR/R0/RBI0 | In Progress
+- Kody Clemens (MIN) | TOP | 1H/0HR/R1/RBI1 | In Progress
+- Otto Lopez (MIA) | HIT | 1H/0HR/R0/RBI1 | In Progress
+- Salvador Perez (KC) | HIT | 1H/0HR/R0/RBI0 | In Progress

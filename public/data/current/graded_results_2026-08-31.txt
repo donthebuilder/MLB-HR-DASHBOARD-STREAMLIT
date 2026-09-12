@@ -1,0 +1,175 @@
+RESULTS TRACKER - 2026-08-31
+------------------------------------------
+BETTABLE RESULTS
+Top 15 HR: 5/15 (33.3%)
+HR Picks: 3/12 (25.0%)
+Top Picks: 2/12 (16.7%)
+
+FULL SHEET BASE HIT PERFORMANCE
+Base Hit Accuracy: 70.7%
+
+HR CAPTURE (BETTABLE)
+Total Slate HRs: 31
+Caught in Top 15: 5
+Caught in HR Picks: 3
+Top 15 Capture Rate: 16.1%
+HR Pick Capture Rate: 9.7%
+
+MODEL VISION (Top 40)
+Model Caught HRs: 13 / 31
+Vision Rate: 41.9%
+
+UNIQUE PLAYER HR ACCURACY
+Unique Players Tracked: 54
+Players Who Homered: 10
+Unique HR Accuracy: 18.5%
+
+HR CATEGORY BREAKDOWN
+------------------------------------------
+🏆 TOP 15 BOARD → 5 HR
+🔥 TOP PICKS → 2 HR
+🧨 HR PICKS → 3 HR
+🏁 HRR PICKS → 2 HR
+💠 HIT PICKS → 1 HR
+⚾ CONTACT PICKS → 4 HR
+Best HR-producing category: 🏆 TOP 15 BOARD
+
+LONGEST HR (BOARD)
+------------------------------------------
+- Tyrone Taylor — 419 ft · 101.8 mph · 32.0°
+- Seiya Suzuki — 408 ft · 103.4 mph · 30.0°
+- Daylen Lile — 406 ft · 106.7 mph · 27.0°
+- Rafael Devers — 403 ft · 107.3 mph · 31.0°
+- Michael Harris II — 401 ft · 103.6 mph · 30.0°
+Longest on the board: Tyrone Taylor (419 ft)
+
+
+HR RESULTS BY PLAYER
+------------------------------------------
+- Cal Raleigh — 🏆#3 + 🧨
+- Daylen Lile — 🏆#12 + 🏁 + ⚾
+- Michael Conforto — 🏆#4 + ⚾ + ⭐
+- Mickey Gasper — 🏆#2 + 🔥 + ⚾ + ⭐
+- Rafael Devers — 🏆#13 + 🧨
+- Colson Montgomery — 🧨 + ⭐
+- Alex Bregman — 🔥
+- Seiya Suzuki — 🏁
+- Tyrone Taylor — 💠
+- Michael Harris II — ⚾
+
+MISSED HRs (NOT IN MODEL SHEET)
+------------------------------------------
+- Walker Jenkins (MIN) — not in model sheet / lineup pool
+
+POOL PERFORMANCE
+------------------------------------------
+4-MAN Pool A — Strongest → 1/4 HR (Michael Harris II)
+4-MAN Pool B — HRR+Power → 2/4 HR (Seiya Suzuki, Mickey Gasper)
+4-MAN Pool C — Balanced → 0/4 HR (none)
+4-MAN Pool D — Variance → 1/4 HR (Colson Montgomery)
+3-MAN Pool A — Strongest → 0/3 HR (none)
+3-MAN Pool B — HRR+Var → 0/3 HR (none)
+3-MAN Pool C — Balanced → 1/3 HR (Daylen Lile)
+3-MAN Pool D — Variance → 0/3 HR (none)
+
+PAIR PERFORMANCE
+------------------------------------------
+Pair 1 → 0/2 HR (none) | Pete Crow-Armstrong + Kyle Schwarber
+Pair 2 → 0/2 HR (none) | Ben Rice + Yordan Alvarez
+Pair 3 → 0/2 HR (none) | Hunter Goodman + Junior Caminero
+Pair 4 → 0/2 HR (none) | Yordan Alvarez + Luis García Jr.
+Pair 5 → 0/2 HR (none) | Luis García Jr. + Coby Mayo
+Pair 6 → 0/2 HR (none) | Sal Stewart + Pete Alonso
+Pair 7 → 1/2 HR (Rafael Devers) | Rafael Devers + Bryce Harper
+Pair 8 → 0/2 HR (none) | Héctor Rodríguez + Jeremy Peña
+Pair 9 → 0/2 HR (none) | Andrés Chaparro + Eugenio Suárez
+Pair 10 → 0/2 HR (none) | Jackson Chourio + Munetaka Murakami
+
+PLAYER TYPE PERFORMANCE
+------------------------------------------
+🏆 TOP 15 BOARD (15)
+HR: 33.3% | 1+ Hit: 73.3% | XBH: 60.0% | 2+ TB: 60.0% | 2+ HRR: 60.0% | 3+ HRR: 53.3%
+
+🔥 TOP PICKS (12)
+HR: 16.7% | 1+ Hit: 66.7% | XBH: 33.3% | 2+ TB: 33.3% | 2+ HRR: 41.7% | 3+ HRR: 33.3%
+
+🧨 HR PICKS (12)
+HR: 25.0% | 1+ Hit: 75.0% | XBH: 58.3% | 2+ TB: 58.3% | 2+ HRR: 75.0% | 3+ HRR: 41.7%
+
+🏁 HRR PICKS (12)
+HR: 16.7% | 1+ Hit: 66.7% | XBH: 25.0% | 2+ TB: 33.3% | 2+ HRR: 50.0% | 3+ HRR: 33.3%
+
+💠 HIT PICKS (12)
+HR: 8.3% | 1+ Hit: 58.3% | XBH: 8.3% | 2+ TB: 33.3% | 2+ HRR: 41.7% | 3+ HRR: 33.3%
+
+⚾ CONTACT PICKS (12)
+HR: 33.3% | 1+ Hit: 83.3% | XBH: 41.7% | 2+ TB: 41.7% | 2+ HRR: 66.7% | 3+ HRR: 58.3%
+
+
+DESIGNED OUTCOME (did the pick do its job)
+------------------------------------------
+🏆 TOP 15 BOARD (15) -> 5/15 (33.3%)  ·  needs: HR
+🔥 TOP PICKS (12) -> 7/12 (58.3%)  ·  needs: most productive of our picks in his game (HRR or TB)
+🧨 HR PICKS (12) -> 3/12 (25.0%)  ·  needs: HR
+🏁 HRR PICKS (12) -> 6/12 (50.0%)  ·  needs: 2+ hits+runs+RBI
+💠 HIT PICKS (12) -> 7/12 (58.3%)  ·  needs: 1+ hit
+⚾ CONTACT PICKS (12) -> 5/12 (41.7%)  ·  needs: 2+ TB or XBH
+ALL PICKS -> 33/75 (44.0%)
+
+HIT RESULTS BY CATEGORY
+------------------------------------------
+
+🔥 TOP PICKS (1+ Hit)
+- Alex Bregman — 3H 🔥
+- Jake Burger — 2H ⭐
+- Brooks Lee — 1H
+- Coby Mayo — 1H
+- Jeremy Peña — 1H
+- Junior Caminero — 1H
+- Mickey Gasper — 1H
+- Sal Stewart — 1H
+
+🧨 HR PICKS (1+ Hit)
+- Bryce Harper — 2H ⭐
+- Colson Montgomery — 2H ⭐
+- Andrés Chaparro — 1H
+- Cal Raleigh — 1H
+- Hunter Goodman — 1H
+- Jackson Chourio — 1H
+- Kaelen Culpepper — 1H
+- Rafael Devers — 1H
+- Zach Neto — 1H
+
+🏁 HRR PICKS (1+ Hit)
+- Daylen Lile — 3H 🔥
+- Seiya Suzuki — 3H 🔥
+- Cody Bellinger — 2H ⭐
+- Nick Sogard — 2H ⭐
+- Ezequiel Duran — 1H
+- TJ Rumfield — 1H
+- Trevor Larnach — 1H
+- Yordan Alvarez — 1H
+
+💠 HIT PICKS (1+ Hit)
+- Tyrone Taylor — 4H 🔥
+- Bryce Eldridge — 2H ⭐
+- Ceddanne Rafaela — 2H ⭐
+- Jackson Merrill — 2H ⭐
+- Geraldo Perdomo — 1H
+- Miguel Vargas — 1H
+- Otto Lopez — 1H
+
+⚾ CONTACT PICKS (1+ Hit)
+- Daylen Lile — 3H 🔥
+- Bryce Harper — 2H ⭐
+- Michael Harris II — 2H ⭐
+- Brooks Lee — 1H
+- Ezequiel Duran — 1H
+- Gunnar Henderson — 1H
+- Héctor Rodríguez — 1H
+- Michael Conforto — 1H
+- Mickey Gasper — 1H
+- Zach Neto — 1H
+
+MODEL DIAGNOSTIC (LOW PRIORITY)
+Full Sheet HR Coverage: 30 / 31 (96.8%)

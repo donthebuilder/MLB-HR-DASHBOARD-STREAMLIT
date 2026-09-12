@@ -1,0 +1,89 @@
+RESULTS TRACKER — 2026-05-16
+------------------------------------------
+HR Picks: 15 | HR Accuracy: 6.7%
+Base Hit Picks: 60 | Base Hit Accuracy: 73.3%
+HRR Picks: 30 | HRR 2+ Accuracy: 66.7%
+HRR Picks: 30 | HRR 3+ Accuracy: 40.0%
+
+HR PICKS THAT HOMERED
+- Colson Montgomery (CWS) | HR Score 82.95
+
+TRACKED PICKS THAT GOT A BASE HIT
+- Lenyn Sosa (TOR) | HR | 1 H
+- Riley Greene (DET) | HIT | 1 H
+- Kevin McGonigle (DET) | HIT | 2 H
+- Matt Vierling (DET) | HRR | 2 H
+- Jordan Walker (STL) | TOP | 1 H
+- Michael Massey (KC) | HR | 1 H
+- Bobby Witt Jr. (KC) | HIT | 1 H
+- Alec Burleson (STL) | HIT | 1 H
+- Iván Herrera (STL) | HRR | 1 H
+- Jac Caglianone (KC) | CONTACT | 2 H
+- Corbin Carroll (ARI) | TOP | 1 H
+- Mickey Moniak (COL) | HR | 1 H
+- TJ Rumfield (COL) | HRR | 1 H
+- Ezequiel Tovar (COL) | HRR | 1 H
+- Daylen Lile (WSH) | TOP | 1 H
+- Coby Mayo (BAL) | HR | 1 H
+- CJ Abrams (WSH) | HIT | 3 H
+- Samuel Basallo (BAL) | HIT | 1 H
+- Keibert Ruiz (WSH) | HRR | 3 H
+- Brady House (WSH) | HRR | 2 H
+- James Wood (WSH) | CONTACT | 1 H
+- Kyle Schwarber (PHI) | TOP | 1 H
+- Brandon Marsh (PHI) | HIT | 1 H
+- Bryce Harper (PHI) | HIT | 1 H
+- Alec Bohm (PHI) | HRR | 2 H
+- Konnor Griffin (PIT) | HRR | 2 H
+- Jonathan Aranda (TB) | TOP | 1 H
+- Junior Caminero (TB) | HR | 2 H
+- Chandler Simpson (TB) | HIT | 1 H
+- Yandy Díaz (TB) | HIT | 1 H
+- Liam Hicks (MIA) | HRR | 2 H
+- Cedric Mullins (TB) | HRR | 1 H
+- Jakob Marsee (MIA) | CONTACT | 3 H
+- Spencer Steer (CIN) | TOP | 1 H
+- Elly De La Cruz (CIN) | HIT | 1 H
+- Angel Martínez (CLE) | HRR | 2 H
+- Kyle Manzardo (CLE) | CONTACT | 2 H
+- Yordan Alvarez (HOU) | TOP | 1 H
+- Ezequiel Duran (TEX) | HR | 1 H
+- Christian Walker (HOU) | HRR | 1 H
+- Jake Burger (TEX) | HRR | 1 H
+- Joc Pederson (TEX) | CONTACT | 1 H
+- Miguel Vargas (CWS) | TOP | 1 H
+- Colson Montgomery (CWS) | HR | 1 H
+- Sam Antonacci (CWS) | HIT | 2 H
+- Alex Bregman (CHC) | HIT | 2 H
+- Munetaka Murakami (CWS) | HRR | 2 H
+- Michael Busch (CHC) | CONTACT | 1 H
+- Ryan Jeffers (MIN) | TOP | 1 H
+- Kody Clemens (MIN) | HR | 2 H
+- Brice Turang (MIL) | HIT | 1 H
+- William Contreras (MIL) | HRR | 1 H
+- Miguel Andujar (SD) | TOP | 1 H
+- Randy Arozarena (SEA) | HIT | 1 H
+- Josh Naylor (SEA) | HIT | 2 H
+- Luke Raley (SEA) | HRR | 1 H
+- J.P. Crawford (SEA) | HRR | 2 H
+- Gavin Sheets (SD) | CONTACT | 1 H
+- Drake Baldwin (ATL) | TOP | 2 H
+- Wilyer Abreu (BOS) | HR | 2 H
+- Ceddanne Rafaela (BOS) | HIT | 1 H
+- Mark Vientos (NYM) | TOP | 1 H
+- Juan Soto (NYM) | HR | 2 H
+- Carson Benge (NYM) | HIT | 3 H
+- Aaron Judge (NYY) | HRR | 2 H
+- Brett Baty (NYM) | CONTACT | 1 H
+- Max Muncy (LAD) | TOP | 1 H
+- Jo Adell (LAA) | HR | 1 H
+- Andy Pages (LAD) | HIT | 1 H
+- Teoscar Hernández (LAD) | HIT | 1 H
+- Will Smith (LAD) | HRR | 1 H
+- Shohei Ohtani (LAD) | HRR | 2 H
+- Vaughn Grissom (LAA) | CONTACT | 1 H
+- Shea Langeliers (ATH) | TOP | 1 H
+- Rafael Devers (SF) | HR | 2 H
+- Luis Arraez (SF) | HIT | 1 H
+- Casey Schmitt (SF) | HRR | 4 H
+- Jung Hoo Lee (SF) | HRR | 1 H

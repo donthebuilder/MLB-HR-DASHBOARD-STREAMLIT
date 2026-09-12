@@ -1,0 +1,59 @@
+precision study — 2026-09-01T17:20:37Z
+run: https://github.com/donthebuilder/MLB-HR-DASHBOARD-STREAMLIT/actions/runs/33537162984
+
+==========================================================================
+🎯 PRECISION STUDY — would fewer picks have been better picks?
+==========================================================================
+archive: 83 nights 2026-04-16..2026-09-01 (83 nights from _data/public/data/current)
+nights: 35  (2026-07-28 .. 2026-08-31)
+
+Every pick graded on ITS OWN bar (designed_hit), ranked across markets
+by percentile within its own market on its own night.
+
+BOARD                   PICKS     RATE  MIX BASE    SKILL      RAW   95% CI
+--------------------------------------------------------------------------
+every designation        2770    40.3%      40.3%     +0.0     +0.0   38–42
+top 4 a night             140    50.7%      41.5%     +9.2    +10.5   43–59
+top 6 a night             210    51.4%      40.6%    +10.9    +11.2   45–58
+top 8 a night             280    49.6%      41.2%     +8.4     +9.4   44–55
+top 10 a night            350    49.7%      41.5%     +8.2     +9.5   45–55
+top 15 a night            525    47.2%      40.9%     +6.4     +7.0   43–52
+top 20 a night            700    46.0%      40.7%     +5.3     +5.7   42–50
+top 30 a night           1050    45.5%      40.4%     +5.1     +5.3   43–49
+best of each lane         175    56.6%      44.4%    +12.1    +16.3   49–64
+THE FOUR (as shipped)     140    60.0%      47.1%    +12.9    +19.7   52–68
+
+MIX BASE is what a board of THIS EXACT LANE SHAPE would have scored
+with no ordering skill at all, using the full board's own per-lane
+rates. SKILL is the board minus its own baseline — the only column
+here that is about the ranking. RAW is the naive comparison against
+the whole board, and it flatters every short board by however much
+less HR it happens to hold.
+
+PER-LANE RATES ON THE FULL BOARD — the reason MIX BASE exists.
+  BASES      454 picks    41.9%
+  HIT        454 picks    72.5%
+  HR         954 picks    21.3%
+  HRR        454 picks    52.6%
+  TOP        454 picks    33.9%
+
+WHAT THE TOP 4 ACTUALLY ARE, by lane: HR 45, HIT 35, TOP 35, BASES 17, HRR 8
+
+--------------------------------------------------------------------------
+HOW TO READ THIS
+--------------------------------------------------------------------------
+Read the SKILL column, not RAW. A shorter board is EXPECTED to score
+higher for two reasons that are not skill: it drops the model's own
+least-confident calls, and it usually holds less HR — the hardest bar
+on the site. MIX BASE prices the second one out; SKILL is what is left.
+The findings are:
+  1. how big SKILL is, against an interval that says whether it is real;
+  2. how fast it decays as the board grows — that is where the honest
+     cut-off lives;
+  3. whether the top of the board is one market wearing a disguise (the
+     lane mix above), in which case a 'precision' board is really a
+     base-hit board and should be called one.
+
+This measures the bot's OWN picks. It cannot see the hitters it never
+designated, so it cannot tell you a better four existed among them —
+that is the prediction_log join in bots/slate_eval.py, a separate study.
