@@ -198,11 +198,13 @@ jobs:
           # Optional: set the DISCORD_WEBHOOK repo secret to get pool/pair
           # transition alerts (one-away, cashed) in Discord. Absent = no-op.
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
-          # 2026-08-22: same transition detector also queues a "pick cashed"
-          # social draft (bots/social/pick_cashed.py) — needs this to get
-          # captions written; absent it still queues, just with blank
-          # captions for manual entry, same fallback as every other social
-          # entrypoint.
+          # 2026-09-13: this used to feed captions to bots/social/pick_cashed.py.
+          # That whole pipeline was deleted on purpose in a68822f7 ("never
+          # linked to Called It, approval-queue-only") and live_results_tracker
+          # has no social references left — confirmed by grep, not assumed — so
+          # the key is vestigial here. Left in place rather than removed: it is
+          # harmless, and a secret that stops being passed is the kind of thing
+          # that is painful to rediscover if any of this ever comes back.
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: python bots/live_results_tracker.py --date auto --live
 
