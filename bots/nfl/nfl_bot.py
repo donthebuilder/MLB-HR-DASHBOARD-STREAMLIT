@@ -42,6 +42,7 @@ import nfl_gamelog
 import nfl_coverage
 import nfl_explosive
 import nfl_field
+import nfl_disruption
 import nfl_picks
 from nfl_features import (build, season_baseline, upcoming_rows, stats_season_for,
                           current_roster, newcomer_rows, played_weeks,
@@ -773,6 +774,8 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
         ("player_explosive", nfl_explosive.player_explosive),
         ("usage", nfl_explosive.team_usage),
         ("field", nfl_field.build),
+        ("disruption", nfl_disruption.player_grades),
+        ("disruption_team", nfl_disruption.team_context),
     ):
         try:
             extras[name] = fn(stat_season)
@@ -1085,7 +1088,7 @@ def main() -> int:
         for k in ("player_pass", "player_rush"):
             if extras["field"].get(k):
                 extras["field"][k] = {i: v for i, v in extras["field"][k].items() if i in on_slate}
-    for k in ("coverage_player", "player_explosive", "roles"):
+    for k in ("coverage_player", "player_explosive", "roles", "disruption"):
         if extras.get(k):
             extras[k] = {i: v for i, v in extras[k].items() if i in on_slate}
     if extras.get("usage"):
@@ -1107,6 +1110,11 @@ def main() -> int:
         "player_explosive": extras.get("player_explosive", {}),
         "usage": extras.get("usage", {}),
         "field": extras.get("field", {}),
+        "disruption": extras.get("disruption", {}),
+        "disruption_team": extras.get("disruption_team", {}),
+        "disruption_groups": nfl_disruption.GROUP_ORDER,
+        "disruption_stats": nfl_disruption.STATS,
+        "disruption_labels": nfl_disruption.STAT_LABELS,
         "zones_pass": nfl_field.ZONES_PASS,
         "zones_rush": nfl_field.ZONES_RUSH,
         "rush_labels": nfl_field.RUSH_LABEL,
