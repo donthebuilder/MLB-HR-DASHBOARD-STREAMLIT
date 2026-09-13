@@ -345,6 +345,29 @@ checkTrue("nfl_results.py's main() calls preseason_week_from_date()",
           "preseason_week_from_date" in nfl_results_src)
 
 
+# ── 6. THE CONDITION TEXT, WHICHEVER KEY ESPN PUT IT UNDER (2026-09-13) ─────
+# ESPN's live scoreboard ships {"displayValue": "2", "conditionId": "Mostly
+# sunny"} -- the numeric AccuWeather code under the name that reads like text
+# and the text under the name that reads like an id, the opposite of both.
+# The parser used to read displayValue, so weather_condition published as a
+# bare "2" and the Games card printed it under the temperature on every
+# outdoor game for the whole of Week 1. _condition_text() takes whichever key
+# holds WORDS, so it is right whichever way round ESPN ships them.
+check("condition: swapped, as ESPN actually ships it today",
+      nfl_espn._condition_text({"displayValue": "2", "conditionId": "Mostly sunny"}),
+      "Mostly sunny")
+check("condition: the documented (unswapped) shape still works",
+      nfl_espn._condition_text({"displayValue": "Intermittent clouds", "conditionId": "7"}),
+      "Intermittent clouds")
+check("condition: both numeric -> None, never a bare code on the card",
+      nfl_espn._condition_text({"displayValue": "2", "conditionId": "7"}), None)
+check("condition: no weather key at all", nfl_espn._condition_text({}), None)
+check("condition: both None", nfl_espn._condition_text({"displayValue": None, "conditionId": None}), None)
+check("condition: whitespace trimmed", nfl_espn._condition_text({"conditionId": "  Partly sunny "}),
+      "Partly sunny")
+check("condition: a decimal code is still a code", nfl_espn._condition_text({"displayValue": "3.0"}), None)
+
+
 print(f"{CHECKS - len(FAILED)}/{CHECKS} checks passed")
 if FAILED:
     print("FAILED:")

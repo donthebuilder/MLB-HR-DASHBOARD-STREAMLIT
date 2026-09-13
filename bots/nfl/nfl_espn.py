@@ -91,6 +91,25 @@ def _abbr(x: str) -> str:
     return FIX.get(x, x)
 
 
+
+def _condition_text(wx):
+    """The human-readable weather condition, whichever key ESPN put it under.
+
+    ESPN ships the numeric AccuWeather code and the word form under
+    `displayValue`/`conditionId`, and as of 2026-09-13 has them the wrong way
+    round. Anything that is purely digits is a code, not a condition, so it is
+    rejected from both keys; None when neither key holds words.
+    """
+    for key in ("conditionId", "displayValue"):
+        v = wx.get(key)
+        if v is None:
+            continue
+        t = str(v).strip()
+        if t and not t.replace(".", "", 1).isdigit():
+            return t
+    return None
+
+
 def fetch(seasontype: int = 1, week: int | None = None,
           year: int | None = None) -> list[dict[str, Any]]:
     """Games for a scoreboard slice. Returns [] on any failure, never raises."""
@@ -141,9 +160,21 @@ def fetch(seasontype: int = 1, week: int | None = None,
             # games and games ESPN hasn't priced weather for simply carry no
             # "weather" key; `.get()` leaves both fields None rather than
             # guessing a fallback value.
+            #
+            # 2026-09-13: ESPN HAS THESE TWO FIELDS SWAPPED, and has for at
+            # least the whole of Week 1. The live response now reads
+            # {"displayValue": "2", "conditionId": "Mostly sunny", ...} —
+            # displayValue carries the numeric AccuWeather condition CODE and
+            # conditionId carries the human text, the exact opposite of both
+            # their names and of the comment above. The site printed the bare
+            # "2" under every outdoor game's temperature for it. Rather than
+            # swap the field names (and break again if ESPN ever fixes theirs),
+            # take whichever of the two is not a bare number: a condition is
+            # words, a code is digits, and that test holds whichever way round
+            # they ship it.
             wx = ev.get("weather") or {}
             row["weather_temp_f"] = wx.get("temperature")
-            row["weather_condition"] = wx.get("displayValue")
+            row["weather_condition"] = _condition_text(wx)
             # DRIVE STATE (2026-08-28, B7). ESPN's scoreboard competition
             # object carries a "situation" block ONLY while a game is
             # actually live (down/distance/possession) — confirmed absent on
