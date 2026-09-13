@@ -212,6 +212,79 @@ check("AAA's offense allowed pressure on 1 of 2 REG pass plays",
 checkClose("AAA allowed pressure 50% of those pass plays", tc["AAA"]["pressure"]["allowed_pct"], 50.0)
 
 
+# -- pass_rush_efficiency(): fake PFR advanced-def rows + a pfr_id<->gsis_id
+# crosswalk from load_players() ----------------------------------------------
+def _pfr_row(pfr_id, team, week, pressures, sacks, game_type="REG"):
+    return {"pfr_player_id": pfr_id, "team": team, "week": week,
+            "game_type": game_type, "def_pressures": pressures, "def_sacks": sacks}
+
+PFR_ROWS = []
+# DL_LOW: 25 pressures, 2 sacks across 5 weeks on one team -- clears
+# MIN_PRESSURES(20), low end of the DL rate group
+for w in range(1, 6):
+    PFR_ROWS.append(_pfr_row("PLOW00", "AAA", w, 5, 0.4))
+# DL_HIGH: 30 pressures, 15 sacks -- top of the DL rate group. Traded
+# mid-season: weeks 1-3 on team AAA, weeks 4-5 on team CCC -- pressures/sacks
+# must SUM across both, and the reported team should be the LATER one (CCC).
+for w in range(1, 4):
+    PFR_ROWS.append(_pfr_row("PHIGH0", "AAA", w, 6, 3.0))
+for w in range(4, 6):
+    PFR_ROWS.append(_pfr_row("PHIGH0", "CCC", w, 6, 3.0))
+# LB_LONE: the only LB -- group-of-one percentile guard
+for w in range(1, 6):
+    PFR_ROWS.append(_pfr_row("PLB000", "DDD", w, 5, 1.0))
+# TINY: only 10 pressures total -- below MIN_PRESSURES(20)
+for w in range(1, 3):
+    PFR_ROWS.append(_pfr_row("PTINY0", "EEE", w, 5, 3.0))
+# a pfr_player_id with no entry in the crosswalk at all -- must be dropped
+# silently, never a KeyError
+for w in range(1, 6):
+    PFR_ROWS.append(_pfr_row("PGHOST", "FFF", w, 6, 3.0))
+# DL_HIGH also has a huge PRESEASON total that must not leak into his real rate
+PFR_ROWS.append(_pfr_row("PHIGH0", "CCC", 0, 999, 999, game_type="PRE"))
+
+PLAYERS_ROWS = [
+    {"gsis_id": "DL_LOW", "pfr_id": "PLOW00", "display_name": "Low DL Rate", "position": "DE"},
+    {"gsis_id": "DL_HIGH", "pfr_id": "PHIGH0", "display_name": "High DL Rate", "position": "DT"},
+    {"gsis_id": "LB_LONE", "pfr_id": "PLB000", "display_name": "Lone LB Rate", "position": "OLB"},
+    {"gsis_id": "TINY", "pfr_id": "PTINY0", "display_name": "Under Sample", "position": "DE"},
+]
+
+
+def _fake_pfr_def():
+    return pl.DataFrame(PFR_ROWS)
+
+
+def _fake_pfr_players():
+    return pl.DataFrame(PLAYERS_ROWS)
+
+
+nfl_disruption._pfr_def.cache_clear()
+nfl_disruption._pfr_to_gsis.cache_clear()
+with mock.patch.object(nfl_disruption.nfl, "load_pfr_advstats", return_value=_fake_pfr_def()), \
+     mock.patch.object(nfl_disruption.nfl, "load_players", return_value=_fake_pfr_players()):
+    pr = nfl_disruption.pass_rush_efficiency(2026)
+
+check("under-MIN_PRESSURES player excluded", "TINY" in pr, False)
+check("a pfr_player_id with no crosswalk entry never crashes the call and is simply absent",
+      "PGHOST" in pr, False)
+checkTrue("qualifying DL and LB present", "DL_LOW" in pr and "DL_HIGH" in pr and "LB_LONE" in pr)
+
+check("DL_HIGH's pressures sum across his mid-season trade (18+12), excluding the preseason row",
+      pr["DL_HIGH"]["pressures"], 30)
+checkClose("DL_HIGH's sacks sum across the trade too, preseason excluded", pr["DL_HIGH"]["sacks"], 15.0)
+check("DL_HIGH is labeled with his LATER team (CCC), not his original team (AAA)",
+      pr["DL_HIGH"]["team"], "CCC")
+
+check("lowest-rate DL sits at percentile 0 within the DL group", pr["DL_LOW"]["percentile"], 0.0)
+check("highest-rate DL sits at percentile 100 within the DL group", pr["DL_HIGH"]["percentile"], 100.0)
+check("a position group of exactly one (the lone LB) scores 50, not a crash",
+      pr["LB_LONE"]["percentile"], 50.0)
+
+checkClose("DL_LOW's sack_rate is sacks/pressures*100 (2/25*100)", pr["DL_LOW"]["sack_rate"], 8.0)
+checkClose("DL_HIGH's sack_rate (15/30*100)", pr["DL_HIGH"]["sack_rate"], 50.0)
+
+
 # ── fails soft: a broken nflreadpy call must never take the module down ────
 
 nfl_disruption._weekly.cache_clear()
@@ -237,5 +310,8 @@ else:
           "percentile even when GROUP_STATS excludes it from that group's grade; team_context() "
           "resolves formation mix off its own charted-snap denominator and splits pressure by "
           "role (created vs allowed) off one was_pressure column, both via the same "
-          "participation-to-pbp join nfl_coverage.py already established.")
+          "participation-to-pbp join nfl_coverage.py already established; pass_rush_efficiency() "
+          "sums PFR's player-level pressures/sacks across a mid-season trade, filters by "
+          "MIN_PRESSURES and REG game_type, drops an unmapped pfr_player_id without crashing, "
+          "and grades sack-conversion percentile within DL/LB separately.")
     sys.exit(0)

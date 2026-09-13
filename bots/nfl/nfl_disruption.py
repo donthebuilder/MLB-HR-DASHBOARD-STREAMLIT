@@ -208,6 +208,107 @@ def team_context(season: int) -> dict:
     return out
 
 
+MIN_PRESSURES = 20  # checked the real distribution before picking this: PFR's
+                     # own pressure column across every defender in the league
+                     # (most of whom barely rush the passer at all) has a
+                     # median of 2 and a 90th percentile of 14 for a full
+                     # season -- 10 still lets in players a single cheap sack
+                     # would swing 10+ points of rate. 20 sits just past that
+                     # 90th percentile: real pass-rush volume, not a token
+                     # snap count.
+
+
+@functools.lru_cache(maxsize=4)
+def _pfr_def(season: int) -> pl.DataFrame:
+    """Player-level pass-rush counts PFR charts by hand -- not derivable
+    from play-by-play alone, since "a pressure" isn't a play-by-play event
+    type the way a sack or a completion is. Confirmed live: def_pressures
+    and def_sacks are BOTH real, per-player-per-week columns here -- the
+    only nflverse loader with pressure counts at the player level.
+    load_participation()'s was_pressure (used by team_context() above) is a
+    play-level flag with no player attached, which is why that function can
+    only report team rates, never "who generated it." PFR's own column is
+    game_type, not season_type like every other loader in this file --
+    confirmed by inspection, not assumed consistent.
+    """
+    return (nfl.load_pfr_advstats(seasons=[season], stat_type="def", summary_level="week")
+              .filter(pl.col("game_type") == "REG"))
+
+
+@functools.lru_cache(maxsize=4)
+def _pfr_to_gsis(season: int) -> dict:
+    """pfr_player_id -> gsis player_id, the id player_grades() already keys
+    by. load_players() is nflverse's full roster history, not scoped to one
+    season -- fine here, a player's id mapping doesn't change year to year.
+    """
+    p = nfl.load_players().filter(pl.col("pfr_id").is_not_null())
+    return dict(zip(p["pfr_id"].to_list(), p["gsis_id"].to_list()))
+
+
+def pass_rush_efficiency(season: int) -> dict:
+    """{player_id: {name, team, position, pos_group, pressures, sacks,
+    sack_rate, percentile}} for DL/LB who cleared MIN_PRESSURES.
+
+    The question player_grades()'s raw sack count can't answer on its own:
+    not "how many sacks" (volume) but "of the pressures he actually
+    generated, how many did he finish" -- a rusher who beats his blocker 30
+    times and finishes 3 sacks is a different problem than one who beats
+    his blocker 10 times and finishes 3. Percentile computed within DL vs
+    LB separately, same reasoning as player_grades()' own position groups.
+
+    Team-trade handling is a deliberate simplification, not an oversight:
+    a mid-season trade sums pressures/sacks across both teams (the rate is
+    still meaningful combined) and labels the player with whichever team
+    shows up last in PFR's own week ordering -- the other team's snap isn't
+    lost from the RATE, only from the team LABEL.
+    """
+    pfr = _pfr_def(season).sort("week")
+    xwalk = _pfr_to_gsis(season)
+    agg = pfr.group_by("pfr_player_id").agg(
+        pl.col("def_pressures").fill_null(0).sum().alias("pressures"),
+        pl.col("def_sacks").fill_null(0).sum().alias("sacks"),
+        pl.col("team").last().alias("team"),
+    ).filter(pl.col("pressures") >= MIN_PRESSURES)
+    if agg.height == 0:
+        return {}
+
+    agg = agg.with_columns(
+        pl.col("pfr_player_id").replace_strict(xwalk, default=None, return_dtype=pl.Utf8).alias("player_id"))
+    agg = agg.filter(pl.col("player_id").is_not_null())
+    if agg.height == 0:
+        return {}
+
+    plist = nfl.load_players().select(["gsis_id", "display_name", "position"])
+    agg = agg.join(plist, left_on="player_id", right_on="gsis_id", how="inner")
+    agg = agg.filter(pl.col("position").is_in(list(POS_GROUP)))
+    if agg.height == 0:
+        return {}
+    agg = agg.with_columns(
+        pl.col("position").replace(POS_GROUP).alias("pos_group"),
+        (pl.col("sacks") / pl.col("pressures") * 100).alias("sack_rate"))
+
+    n_by_group = agg.group_by("pos_group").agg(pl.len().alias("n_group"))
+    agg = agg.join(n_by_group, on="pos_group")
+    agg = agg.with_columns(
+        pl.col("sack_rate").rank("average", descending=False).over("pos_group").alias("_rk"))
+    agg = agg.with_columns(
+        pl.when(pl.col("n_group") > 1)
+          .then((pl.col("_rk") - 1) / (pl.col("n_group") - 1) * 100)
+          .otherwise(50.0)
+          .alias("percentile"))
+
+    out: dict = {}
+    for r in agg.iter_rows(named=True):
+        out[r["player_id"]] = {
+            "name": r["display_name"], "team": r["team"],
+            "position": r["position"], "pos_group": r["pos_group"],
+            "pressures": int(r["pressures"]), "sacks": round(float(r["sacks"]), 1),
+            "sack_rate": round(float(r["sack_rate"]), 1),
+            "percentile": round(float(r["percentile"]), 1),
+        }
+    return out
+
+
 if __name__ == "__main__":
     g = player_grades(2025)
     print("defenders graded:", len(g))
@@ -221,3 +322,11 @@ if __name__ == "__main__":
     for team in ("PIT", "LA"):
         if team in tc:
             print(f"  {team}: {tc[team]}")
+
+    pr = pass_rush_efficiency(2025)
+    print("\npass rushers graded:", len(pr))
+    top_pr = sorted(pr.items(), key=lambda kv: -kv[1]["sack_rate"])[:5]
+    for pid, row in top_pr:
+        print(f"  {row['name']:<22} {row['position']:<4} {row['pos_group']:<3} "
+              f"pressures={row['pressures']:>3} sacks={row['sacks']:>4.1f} "
+              f"rate={row['sack_rate']:>5.1f}% pctl={row['percentile']:>5.1f}")
