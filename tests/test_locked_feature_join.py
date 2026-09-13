@@ -101,6 +101,7 @@ PRED_ROWS = [
         "game_pk": 900001, "team": "AAA", "opp": "BBB", "run_id": LOCKED_RUN,
         "generated_at": "2026-08-22T07:00:00+00:00",
         "config_hash": "sha256:LOCKEDHASH",
+        "game_pick_role": "TOP/HR",         # the designation OF RECORD
         "scores": {"hr": 71.4, "overall": 60.0, "hit": 55.0, "hrr": 40.0,
                     "contact": 30.0, "hrw": 20.0, "multi_hit": 10.0},
         "components": {
@@ -133,6 +134,12 @@ CURRENT_ROWS = [
         "player_id": 500100, "name": "Locked Hitter", "game_pk": 900001,
         "team": "AAA", "hr_score": 95.0, "last5_hr": 2, "last5_xbh": 2,
         "games_since_last_hr": 0, "config_hash": "sha256:POSTGAMEHASH",
+        "game_pick_role": "HIT",           # the rebuild moved his role...
+    },
+    # ...onto a player the locked run never rated (added by a late rebuild).
+    {
+        "player_id": 500555, "name": "Late Add", "game_pk": 900001,
+        "team": "AAA", "hr_score": 88.0, "game_pick_role": "TOP/HR",
     },
     {
         "player_id": 700200, "name": "Not Yet Locked", "game_pk": 900002,
@@ -188,6 +195,12 @@ def run():
               locked_hitter["feature_snapshot"], "locked")
         check("locked row carries the run_id its overlay came from",
               locked_hitter["locked_run_id"], LOCKED_RUN)
+        check("GUARD (0a): game_pick_role is the LOCKED designation, not the rebuild's",
+              locked_hitter["game_pick_role"], "TOP/HR")
+        check("GUARD (0a): a late-added player in a locked game holds no designation",
+              by_pid[500555]["game_pick_role"], "")
+        check("late-added player is stamped unavailable, not locked",
+              by_pid[500555]["feature_snapshot"], "unavailable")
         # the caller's original dict must be untouched -- apply_locked_features
         # returns new dicts, it does not mutate in place
         check("input row is not mutated by apply_locked_features (caller safety)",

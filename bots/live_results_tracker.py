@@ -327,6 +327,17 @@ def apply_locked_features(
             dst["hr_tiers"] = overlay.get("qualified_tiers")
         if locked.get("config_hash"):
             dst["config_hash"] = locked["config_hash"]
+        # THE DESIGNATION IS PART OF THE PREDICTION OF RECORD (2026-09-13,
+        # Path to Victory 0a). build_tracking_slots() picks the TOP/HR/HIT/
+        # HRR/CONTACT slot by game_pick_role, and until now that role came
+        # off the REBUILT slate while every score beside it came off the
+        # locked run. Measured on 249 locked games (08-24 -> 09-13): the
+        # role holder changed after lock in 12-16% of games per lane, and
+        # the drift favoured the archive by +1-2pp on TOP/HIT/HRR/CONTACT
+        # (HR: -0.8pp). Small, but the graded slot must be the one the
+        # locked run named, not the one a later rebuild would have named.
+        if locked.get("game_pick_role") is not None:
+            dst["game_pick_role"] = locked["game_pick_role"]
         dst["feature_snapshot"] = "locked"
         dst["locked_run_id"] = locked.get("run_id") or run_id_by_game.get(gp)
 
@@ -344,6 +355,12 @@ def apply_locked_features(
         if locked is None:
             row = dict(row)
             row["feature_snapshot"] = "unavailable"
+            # A player the locked run never rated cannot hold a designation
+            # in a game that DID lock -- a rebuild added him with a role
+            # after the prediction of record was written. Games that never
+            # locked keep their roles (nothing honest to replace them with).
+            if gp in run_id_by_game and row.get("game_pick_role"):
+                row["game_pick_role"] = ""
             out.append(row)
             continue
         row = dict(row)
