@@ -2285,7 +2285,7 @@ SLOT_FIELDS = {
     # the lift terms the model selects on -- needed to test whether its
     # moonshot skew (+8.9pp vs the rest of the slate) is weather-fragile
     "l20pa_fb_rate", "l20pa_barrel_rate", "l20pa_ideal_hr_contact",
-    "l20pa_hard_hit_rate", "recent_ev", "pitcher_trend_direction",
+    "l20pa_hard_hit_rate", "pitcher_trend_direction",
     # ── MATCHUP AUDIT TRAIL (2026-08-12) ────────────────────────────────
     #
     # Caught live, mid-game: the site showed "WEAK SIDE -- none published"
@@ -2417,10 +2417,9 @@ SLOT_FIELDS = {
     # Launch angle is the batted-ball signal that separates homers (FB% z=+4.02
     # on 2,275 rows) and exit velocity is not (barrel z=-0.01 on 1,790); neither
     # statement can be properly checked until these are kept.
-    "recent_hard_hit_rate", "recent_sweet_spot_rate",
     "recent_avg_hr_distance", "recent_max_distance",
     "recent_distance_tracked", "season_max_distance", "recent_xwoba",
-    "l20pa_bbe", "l20pa_pull_rate", "l25pa_air_rate",
+    "l20pa_bbe", "l20pa_pull_rate",
     "l25pa_sweet_spot_rate", "l25pa_barrel_rate", "l25pa_gb_rate",
     "l25pa_ld_rate", "l25pa_popup_rate", "l25pa_fb_rate", "l25pa_avg_ev",
     "l25pa_bbe", "l25pa_hard_hit_rate", "l5_barrel_rate",
@@ -2447,7 +2446,13 @@ SLOT_FIELDS = {
     # tests/test_capture_completeness.py now asserts the two cannot drift apart
     # again.
     "l20pa_hr", "l20pa_xbh", "last10_hr", "recent_ideal_hr_contact",
-    "recent_pull_rate", "season_ab", "season_tb",
+    "season_ab", "season_tb",
+    # ── POWER-3 (2026-09-13) ─────────────────────────────────────────────
+    # Snapshotted pre-game since the Power-3 score shipped, never archived, so
+    # the one signal family with a measured AUC split (.776 crushed / .549
+    # scrapers) could not be evaluated against outcomes. Path to Victory 0b.
+    "power3_score", "power3_rank", "power3_flag",
+    "season_max_ev", "season_avg_ev", "season_bbe_n", "season_hr_per_bbe",
     # ── THE RUNNING GAME (2026-08-23) ───────────────────────────────────────
     # Donovan: "wild pitches, pickoffs, pitcher SB-against, catcher CS%, team
     # defense." Four of those came off a blob the bot was already fetching and

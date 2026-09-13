@@ -49,6 +49,11 @@ def check(cond, msg):
         return
     FAILS.append(msg)
     print("  RED  " + msg)
+    # Under pytest a collected failure is not a failure -- this file sat "6
+    # passed" for weeks while the script mode printed 2 RED. Raise so both
+    # runners agree.
+    if "pytest" in sys.modules:
+        raise AssertionError(msg)
 
 
 def _pregame() -> list[str]:
