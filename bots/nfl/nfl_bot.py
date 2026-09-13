@@ -39,6 +39,7 @@ import nfl_pbp
 from nfl_splits import splits_for, SPLIT_PAIRS, SPLIT_LABELS
 import nfl_dvp
 import nfl_gamelog
+import nfl_charting
 import nfl_coverage
 import nfl_explosive
 import nfl_field
@@ -765,24 +766,35 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
     # so every research tab would have shipped empty. stats_season_for() asks
     # the data -- three played weeks and it switches over on its own.
     stat_season = season - 1 if mode == "preseason" else stats_season_for(season, week)
+    # AND WHICH SEASON THE CHARTING TABLES COME FROM, which is not the same
+    # clock (2026-09-13). nflverse publishes participation once a year, after
+    # the postseason -- so on the week stat_season flips to the current season,
+    # the four participation-backed tables below would start asking for a file
+    # that does not exist and will not exist until ~February. See
+    # nfl_charting.py for the full finding. These four keep last completed
+    # season's charting until nflverse actually ships the new one.
+    chart_season = nfl_charting.charting_season(stat_season)
+    if chart_season != stat_season:
+        print(f"  charting: participation has no {stat_season} file yet -- "
+              f"coverage/formation/route tables stay on {chart_season}")
     extras: dict = {}
-    for name, fn in (
-        ("dvp", nfl_dvp.build),
-        ("roles", nfl_dvp.current_roles),
-        ("coverage_team", nfl_coverage.team_profile),
-        ("coverage_player", nfl_coverage.player_vs_coverage),
-        ("def_explosive", nfl_explosive.defense_explosive),
-        ("player_explosive", nfl_explosive.player_explosive),
-        ("usage", nfl_explosive.team_usage),
-        ("field", nfl_field.build),
-        ("disruption", nfl_disruption.player_grades),
-        ("disruption_team", nfl_disruption.team_context),
-        ("pass_rush", nfl_disruption.pass_rush_efficiency),
-        ("red_zone", nfl_offense_value.red_zone_conversion),
-        ("route_value", nfl_offense_value.route_value),
+    for name, fn, src in (
+        ("dvp", nfl_dvp.build, stat_season),
+        ("roles", nfl_dvp.current_roles, stat_season),
+        ("coverage_team", nfl_coverage.team_profile, chart_season),
+        ("coverage_player", nfl_coverage.player_vs_coverage, chart_season),
+        ("def_explosive", nfl_explosive.defense_explosive, stat_season),
+        ("player_explosive", nfl_explosive.player_explosive, stat_season),
+        ("usage", nfl_explosive.team_usage, stat_season),
+        ("field", nfl_field.build, stat_season),
+        ("disruption", nfl_disruption.player_grades, stat_season),
+        ("disruption_team", nfl_disruption.team_context, chart_season),
+        ("pass_rush", nfl_disruption.pass_rush_efficiency, stat_season),
+        ("red_zone", nfl_offense_value.red_zone_conversion, stat_season),
+        ("route_value", nfl_offense_value.route_value, chart_season),
     ):
         try:
-            extras[name] = fn(stat_season)
+            extras[name] = fn(src)
         except Exception as exc:
             print(f"{name} unavailable ({type(exc).__name__}: {exc})")
             extras[name] = {}
@@ -810,6 +822,7 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
     return {
         "extras": extras,
         "stat_season": stat_season,
+        "chart_season": chart_season,
         "mode": mode,
         "season": season,
         "week": week,
@@ -1081,6 +1094,9 @@ def main() -> int:
 
     extras = payload.pop("extras", {})
     stat_season = payload.get("stat_season")
+    # May legitimately be older than stat_season; falls back to it for any
+    # payload written before chart_season existed.
+    chart_season = payload.get("chart_season", stat_season)
 
     # Player-level research is filtered to the slate. Team-level (defence vs
     # position, coverage shells, explosive allowed) is NOT: you look up any
@@ -1102,6 +1118,12 @@ def main() -> int:
     # Defence-vs-position, coverage, explosive and usage: one file, one tab.
     (out / f"{a.prefix}matchup.json").write_text(json.dumps({
         "season": stat_season,
+        # The four charting tables (coverage_team, coverage_player,
+        # disruption_team, route_value) can legitimately be a season older
+        # than the rest of this file -- participation publishes once a year.
+        # Published so the tab can say which year it is showing instead of
+        # implying it is `season`.
+        "chart_season": chart_season,
         "dvp": extras.get("dvp", {}),
         "dvp_roles": nfl_dvp.ROLE_ORDER,
         "dvp_stats": nfl_dvp.DVP_STATS,
