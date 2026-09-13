@@ -190,6 +190,91 @@ def build(season: int) -> dict:
     return out
 
 
+def trend(season: int, win: int = 4, stats: tuple[str, ...] = ("td", "recyd_g", "rshyd_g")) -> dict:
+    """{stat: {defense_team: {role: [rank_by_week, ...]}}} — a REAL series.
+
+    WHY THIS EXISTS. build() above returns four windows — season, L10, L5, L3 —
+    and the drift chart on the Matchups page plots them left to right as if
+    they were a timeline. They are not. They are NESTED: L3 is inside L5 is
+    inside L10 is inside the season. A defense that got soft late is monotone
+    across them BY CONSTRUCTION, so "the rank is falling" is the shape you get
+    whether or not anything changed, and corroboration between the windows is
+    much weaker evidence than it looks. The chart's own header already says so.
+
+    This is the honest version: a fixed `win`-game rolling window ending at
+    each week, so the series can fall AND rise, and two adjacent points are
+    genuinely different samples rather than one containing the other.
+
+    DISPLAY ONLY, deliberately. Each point uses the games played THROUGH that
+    week, including that week — which is right for a history you are looking
+    at, and would be leakage if anything scored off it. Nothing does: this is
+    published under its own key and read by the drift chart. If a future
+    component ever wants to SCORE off defensive trend, it needs a trailing
+    version built the way nfl_features._roll does it, not this.
+
+    Ranks only, and only the three stats the signal actually uses. The full
+    cross-product (32 teams x 11 roles x 7 stats x 18 weeks) is a payload
+    problem for a picture nobody reads seven stats off.
+    """
+    wk = _weekly(season).select(
+        ["player_id", "position", "team", "opponent_team", "week",
+         "receiving_tds", "rushing_tds", "receiving_yards", "rushing_yards"])
+    for c in ("receiving_tds", "rushing_tds", "receiving_yards", "rushing_yards"):
+        wk = wk.with_columns(pl.col(c).fill_null(0))
+    wk = wk.join(depth_roles(season), on=["player_id", "team", "week"], how="inner")
+    if wk.height == 0:
+        return {}
+
+    weeks = sorted(wk["week"].unique().to_list())
+    # A window needs to be full before it means anything, so the series starts
+    # at week `win` rather than drawing three points off one game each.
+    weeks = [w for w in weeks if w >= win]
+    if not weeks:
+        return {}
+
+    out: dict = {s: {} for s in stats}
+    for i, w in enumerate(weeks):
+        sub = wk.filter(pl.col("week").is_between(w - win + 1, w))
+        if sub.height == 0:
+            continue
+        games = (sub.group_by("opponent_team")
+                    .agg(pl.col("week").n_unique().alias("g"))
+                    .rename({"opponent_team": "def_team"}))
+        agg = (sub.group_by(["opponent_team", "role"]).agg(
+                    (pl.col("receiving_tds") + pl.col("rushing_tds")).sum().alias("td"),
+                    pl.col("receiving_yards").sum().alias("recyd"),
+                    pl.col("rushing_yards").sum().alias("rshyd"))
+                 .rename({"opponent_team": "def_team"})
+                 .join(games, on="def_team", how="left")
+                 .with_columns(
+                     (pl.col("recyd") / pl.col("g").clip(1)).alias("recyd_g"),
+                     (pl.col("rshyd") / pl.col("g").clip(1)).alias("rshyd_g")))
+        for st in stats:
+            if st not in agg.columns:
+                continue
+            ranked = agg.with_columns(
+                pl.col(st).rank("min", descending=True).over("role").cast(pl.Int32).alias("rk"))
+            for r in ranked.iter_rows(named=True):
+                if st not in STATS_FOR_ROLE(r["role"]):
+                    continue
+                lane = out[st].setdefault(r["def_team"], {}).setdefault(r["role"], [])
+                # Pad, so index == position in `weeks` for every team, even one
+                # on a bye in the middle of the series.
+                while len(lane) < i:
+                    lane.append(None)
+                lane.append(int(r["rk"]))
+    # Square the ends off the same way, so the site can zip a series against
+    # `weeks` without bounds-checking every lane.
+    for st in out:
+        for team in out[st].values():
+            for lane in team.values():
+                while len(lane) < len(weeks):
+                    lane.append(None)
+    out["weeks"] = weeks
+    out["window"] = win
+    return out
+
+
 def current_roles(season: int) -> dict:
     """{player_id: role} as of the freshest week we have usage for.
 

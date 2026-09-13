@@ -822,6 +822,11 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
     extras: dict = {}
     for name, fn, src in (
         ("dvp", nfl_dvp.build, stat_season),
+        # A REAL WEEKLY SERIES, not the four nested windows. See nfl_dvp.trend's
+        # docstring: L3 sits inside L5 sits inside L10 sits inside the season,
+        # so plotting them as a timeline draws a monotone line whether or not
+        # anything changed. Display only, and named so.
+        ("dvp_trend", nfl_dvp.trend, stat_season),
         ("roles", nfl_dvp.current_roles, stat_season),
         ("coverage_team", nfl_coverage.team_profile, chart_season),
         ("coverage_player", nfl_coverage.player_vs_coverage, chart_season),
@@ -1171,6 +1176,7 @@ def main() -> int:
         # implying it is `season`.
         "chart_season": chart_season,
         "dvp": extras.get("dvp", {}),
+        "dvp_trend": extras.get("dvp_trend", {}),
         "dvp_roles": nfl_dvp.ROLE_ORDER,
         "dvp_stats": nfl_dvp.DVP_STATS,
         "dvp_labels": nfl_dvp.STAT_LABELS,
