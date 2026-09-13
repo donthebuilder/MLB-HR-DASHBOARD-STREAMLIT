@@ -231,12 +231,32 @@ check("attach_rest_days does not mutate the games it's given", season_games[2], 
 
 # -- 4: season_schedule_for_rest() ------------------------------------------
 
-# 4a. nflreadpy/polars genuinely are not installed in this test environment
-# (confirmed: no network to PyPI from here) -- so calling the real function
-# with no mocking exercises its actual fails-soft path for real, not as a
-# simulation of what would happen if the import failed.
+# 4a. THE REAL FUNCTION, WHICHEVER ENVIRONMENT THIS IS (rewritten 2026-09-13).
+#
+# This used to assert the result was [] because nflreadpy was not installed
+# here and there was no network to PyPI to change that. Both facts stopped
+# being true -- nflreadpy went in to do the TD model work -- and the check
+# then failed on every run while testing nothing, which is worse than no
+# check: it trains whoever runs the suite to ignore a red line.
+#
+# The real contract is not "returns []". It is "never raises, and returns rows
+# only when it genuinely has them". So: assert that, either way round.
+try:
+    import nflreadpy  # noqa: F401
+    HAVE_NFLREADPY = True
+except Exception:
+    HAVE_NFLREADPY = False
+
 real_result = nfl_espn.season_schedule_for_rest(2026)
-check("real environment has no nflreadpy: fails soft to [], not a crash", real_result, [])
+checkTrue("season_schedule_for_rest never raises, installed or not",
+          isinstance(real_result, list))
+if HAVE_NFLREADPY:
+    checkTrue("with nflreadpy present it returns real scheduled games",
+              len(real_result) > 100)
+    checkTrue("every row carries the three fields attach_rest_days needs",
+              all({"home", "away", "kickoff"} <= set(g) for g in real_result[:50]))
+else:
+    check("without nflreadpy it fails soft to [], not a crash", real_result, [])
 
 # 4b. With nflreadpy mocked to a plausible polars-shaped return, the row
 # mapping and season filter are the only real logic left to check --

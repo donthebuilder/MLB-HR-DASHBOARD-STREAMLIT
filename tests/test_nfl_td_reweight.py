@@ -129,6 +129,65 @@ try:
 finally:
     nfl_snaps._snaps = real
 
+
+# ── 6. A COMPUTED COMPONENT MUST SURVIVE A MISSING INPUT (2026-09-13) ────────
+# The live Week 1 payload was scoring TD on FOUR of eight components. Two
+# reasons, and the second had been true all season:
+#   · nfl_bot checked `col in tbl.columns` before calling derive(), and derive
+#     is what creates opp_td_soft, td_regression and f_touches
+#   · derive() itself raised on a week-1 table, which has no opponent-allowed
+#     roll, so nfl_bot's fallback dropped every derived component at once
+# These assert the contract that fixes both: derive never raises on a thin
+# table, the components whose inputs ARE present still compute, and the one
+# that is genuinely unavailable comes back constant so nfl_bot can drop it
+# alone.
+thin = pl.DataFrame({           # a week-1 shaped table: no f_opp_* anything
+    "f_tgt_n": [4.0, 0.0, 9.0],
+    "f_car_n": [1.0, 12.0, 0.0],
+    "f_xtd": [0.5, 0.7, 0.3],
+    "f_td_actual": [0.2, 0.9, 0.1],
+    "f_receptions": [3.0, 0.0, 6.0],
+    "f_targets": [4.0, 0.0, 9.0],
+})
+try:
+    dv = ns.derive(thin)
+    ok = True
+except Exception as exc:                                   # pragma: no cover
+    ok = False
+    FAILED.append(f"derive raised on a week-1 shaped table: {exc!r}")
+CHECKS += 1
+
+if ok:
+    check("f_touches computes without the opponent roll", dv["f_touches"].to_list(),
+          [5.0, 12.0, 9.0])
+    check("td_regression computes without the opponent roll",
+          [round(v, 6) for v in dv["td_regression"].to_list()], [0.3, -0.2, 0.2])
+    # The genuinely-absent one is present but flat, which is exactly what lets
+    # nfl_bot drop it on its own instead of taking the others down with it.
+    check("opp_td_soft is constant when its inputs are missing",
+          dv["opp_td_soft"].n_unique(), 1)
+    check_true("a constant column is what nfl_bot's availability test rejects",
+               dv["opp_td_soft"].n_unique() <= 1 and dv["f_touches"].n_unique() > 1)
+
+# nfl_bot must check availability against the DERIVED frame, not the raw one.
+bot_src = open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                            "..", "bots", "nfl", "nfl_bot.py"), encoding="utf-8").read()
+check_true("availability is checked on the derived frame",
+           "has = (col in dv.columns" in bot_src)
+check_true("a constant column counts as unavailable",
+           "dv[col].n_unique() > 1" in bot_src)
+check_true("the raw-column check is gone",
+           "col in tbl.columns and tbl[col].null_count()" not in bot_src)
+
+# ── 7. SNAP SHARE HAS A CARRYOVER LIKE EVERY OTHER FEATURE ───────────────────
+# Without it f_snap_pct is null for every player in week 1, nfl_bot correctly
+# drops it, and the model silently reverts to its old shape for a month.
+feat_src = open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                             "..", "bots", "nfl", "nfl_features.py"), encoding="utf-8").read()
+check_true("season_baseline publishes b_snap_pct", 'alias("b_snap_pct")' in feat_src)
+check_true("build() carries snap_pct over like the rest",
+           'form_cols + ["snap_pct"]' in feat_src)
+
 print(f"{CHECKS - len(FAILED)}/{CHECKS} checks passed")
 if FAILED:
     print("FAILED:")

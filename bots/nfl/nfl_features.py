@@ -259,9 +259,25 @@ def season_baseline(season: int) -> pl.DataFrame:
     wk = wk.join(u, on=["player_id", "week"], how="left")
     cols = [c for c in PLAYER_FORM + USAGE_FORM if c in wk.columns]
     wk = wk.with_columns([pl.col(c).fill_null(0) for c in cols])
-    return wk.group_by("player_id").agg(
+    base = wk.group_by("player_id").agg(
         [pl.col(c).mean().alias(f"b_{c}") for c in cols] + [pl.len().alias("b_gp")]
     ).filter(pl.col("b_gp") >= 4)
+
+    # SNAP SHARE NEEDS A CARRYOVER LIKE EVERYTHING ELSE (2026-09-13). It is not
+    # in the weekly player-stats table, so without this it is the one scored
+    # component with no last-season fallback — and in Week 1 that means the
+    # whole term is null for every player, which nfl_bot correctly drops, which
+    # silently reverts the model to its old shape for the first month of the
+    # season. Measured on the live Week 1 payload: f_snap_pct was in `dropped`.
+    try:
+        sn = snap_share(season)
+        if not sn.is_empty():
+            base = base.join(
+                sn.group_by("player_id").agg(pl.col("snap_pct").mean().alias("b_snap_pct")),
+                on="player_id", how="left")
+    except Exception:
+        pass
+    return base
 
 
 def build(season: int, carryover: bool = True) -> pl.DataFrame:
@@ -326,7 +342,10 @@ def build(season: int, carryover: bool = True) -> pl.DataFrame:
         try:
             base = season_baseline(season - 1)
             out = out.join(base, on="player_id", how="left")
-            for c in form_cols:
+            # snap_pct is not in PLAYER_FORM/USAGE_FORM (it comes from a
+            # different loader), so it has to be named here or it is the one
+            # scored feature with no carryover — see season_baseline's note.
+            for c in form_cols + ["snap_pct"]:
                 f, b = f"f_{c}", f"b_{c}"
                 if f in out.columns and b in out.columns:
                     out = out.with_columns(

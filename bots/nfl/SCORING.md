@@ -89,6 +89,20 @@ The model contained no volume term at all. Red-zone touches are rare and noisy o
 
 vs FORM went from −0.4 to **+1.9** in 2024 and from +6.3 to **+7.0** in 2025.
 
+**And the reweight was inert for a day, which is its own lesson.** The live
+Week 1 payload came back scoring TD on FOUR of eight components. Two causes:
+`f_snap_pct` had no last-season carryover (every other feature has one), and —
+older and worse — `nfl_bot` checked component availability against the raw
+table *before* calling `derive()`, which is what creates `opp_td_soft`,
+`td_regression` and `f_touches`. Those were dropped on every run this season
+while the weights renormalised around them, so **the board shipped four
+components while this document described six, and the backtest measured six**
+because it goes through `score()`, which derives properly. Availability is now
+checked against the derived frame, `derive()` no longer raises on a thin
+week-1 table, and a constant column counts as unavailable so the genuinely
+missing term falls out alone. Week 1 now scores seven of eight, with
+`opp_td_soft` correctly absent — there is no opponent history in week 1.
+
 One more thing measured rather than argued: a player with no snap row percentile-ranks as **zero**, not as the week's median. The median sounds fairer — a missing row means nflverse did not publish one, not that he sat — and it is worse in both seasons (top-15 47.0% vs 51.1% in 2024). A player with no snap row is a fringe player. Ranking him last is the correct prior.
 
 `td_regression` is the BABIP port. It's deliberately small at 7% — it's a tiebreaker between two players with similar opportunity, not a thesis. In 2025 it would have flagged Justin Jefferson (2 actual TDs on 6.8 expected) and faded Dallas Goedert (11 on 5.6).

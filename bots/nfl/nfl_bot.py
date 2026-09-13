@@ -260,12 +260,53 @@ def score_all(tbl: pl.DataFrame, context_ok: bool, ref: pl.DataFrame | None = No
     `ref` is the league population every component is ranked against. Without
     it the slate ranks against itself and the top row is always ~100.
     """
+    # ── A COMPUTED COMPONENT CANNOT BE FOUND IN THE TABLE IT IS COMPUTED FROM
+    #
+    # This checked `col in tbl.columns` BEFORE calling derive() — and derive()
+    # is what creates opp_td_soft, opp_pass_soft, opp_rush_soft, td_regression,
+    # pass_script, run_script, kick_env, catch_rate and f_touches. None of them
+    # exist at check time, so every one was dropped on every run this season
+    # while the weights renormalised around them.
+    #
+    # Caught 2026-09-13 by reading the live payload rather than the code: the
+    # published TD market listed `dropped: [opp_td_soft, td_regression]` long
+    # before either of today's new terms existed, and td_regression is not a
+    # CONTEXT_COL, so nothing else explains it. The site has been showing a
+    # four-component TD score while SCORING.md documented six.
+    #
+    # It also means the backtest and production have never agreed: nfl_backtest
+    # goes through score(), which calls derive() properly, so it measured all
+    # six while the board shipped four.
+    #
+    # Derive once, up front, and check against THAT. derive() can raise when an
+    # upstream column is missing (an early-season table, a failed loader), so
+    # it falls back to the old behaviour rather than taking the run down.
+    try:
+        dv = derive(tbl)
+    except Exception as e:
+        print(f"  ! derive() failed, component availability falls back to raw columns: {e}")
+        dv = tbl
+    rdv = None
+    if ref is not None:
+        try:
+            rdv = derive(ref)
+        except Exception:
+            rdv = ref
+
     out = {}
     for key, m in MODELS.items():
         avail, missing = {}, []
         for raw, w in m["w"].items():
             col = raw.lstrip("-")
-            has = col in tbl.columns and tbl[col].null_count() < tbl.height
+            # A CONSTANT COLUMN IS NOT AVAILABLE EITHER. derive() fills its
+            # inputs with 0, so a component whose source is entirely missing
+            # arrives as a column of zeros rather than a column of nulls —
+            # present, rankable, and carrying no information at all. Every row
+            # would get the same percentile and the weight would be spent on
+            # nothing. f_touches in Week 1, before carryover, is exactly this.
+            has = (col in dv.columns
+                   and dv[col].null_count() < dv.height
+                   and dv[col].n_unique() > 1)
             if has and (context_ok or not col in CONTEXT_COLS):
                 avail[raw] = w
             else:
@@ -274,14 +315,14 @@ def score_all(tbl: pl.DataFrame, context_ok: bool, ref: pl.DataFrame | None = No
             continue
         total = sum(avail.values())
         avail = {k: v / total for k, v in avail.items()}   # renormalise to 1.0
-        d = derive(tbl).filter(pl.col("position").is_in(m["pos"]))
+        d = dv.filter(pl.col("position").is_in(m["pos"]))
         if d.height == 0:
             continue
         # The reference is the same positions, league-wide — comparing a tight
         # end's red-zone work against quarterbacks would be meaningless.
         rd = None
-        if ref is not None:
-            rd = derive(ref).filter(pl.col("position").is_in(m["pos"]))
+        if rdv is not None:
+            rd = rdv.filter(pl.col("position").is_in(m["pos"]))
             # HOW THIN IS TOO THIN. This floor exists to stop a handful of rows
             # being treated as a league. It was 30, which is fine for the skill
             # positions (300+ rows) and quietly wrong for kickers: the NFL has

@@ -113,26 +113,42 @@ OUTCOME = {
 
 
 def derive(df: pl.DataFrame) -> pl.DataFrame:
-    """Composite inputs that aren't raw columns."""
+    """Composite inputs that aren't raw columns.
+
+    MISSING-COLUMN SAFE, and that is load-bearing rather than defensive
+    (2026-09-13). The week-1 table has no opponent-allowed roll — there are no
+    prior weeks to average — so `f_opp_d_rec_td` simply does not exist, and a
+    bare pl.col() raised. nfl_bot caught that and fell back to checking raw
+    columns, which silently dropped EVERY derived component: td_regression and
+    f_touches, whose inputs were all present and fine, went down with the one
+    that was actually missing.
+
+    An absent input reads as zero here, which makes its component a constant
+    column — and nfl_bot drops constant columns, so the thing that is genuinely
+    unavailable still falls out. The difference is that it falls out alone.
+    """
+    def c(name: str) -> pl.Expr:
+        return pl.col(name) if name in df.columns else pl.lit(0.0)
+
     return df.with_columns(
         # softness of the defense he faces (more allowed = better matchup)
-        (pl.col("f_opp_d_rec_td").fill_null(0) + pl.col("f_opp_d_rush_td").fill_null(0)).alias("opp_td_soft"),
-        pl.col("f_opp_d_pass_yds").fill_null(0).alias("opp_pass_soft"),
-        pl.col("f_opp_d_rush_yds").fill_null(0).alias("opp_rush_soft"),
+        (c("f_opp_d_rec_td").fill_null(0) + c("f_opp_d_rush_td").fill_null(0)).alias("opp_td_soft"),
+        c("f_opp_d_pass_yds").fill_null(0).alias("opp_pass_soft"),
+        c("f_opp_d_rush_yds").fill_null(0).alias("opp_rush_soft"),
         # regression: expected TDs above what he's actually scored = due
-        (pl.col("f_xtd") - pl.col("f_td_actual")).alias("td_regression"),
+        (c("f_xtd").fill_null(0) - c("f_td_actual").fill_null(0)).alias("td_regression"),
         # game script. negative spread = underdog = pass volume; positive = run volume
-        (-pl.col("spread")).fill_null(0).alias("pass_script"),
-        pl.col("spread").fill_null(0).alias("run_script"),
-        (pl.col("f_receptions") / pl.col("f_targets").clip(0.5)).alias("catch_rate"),
+        (-c("spread")).fill_null(0).alias("pass_script"),
+        c("spread").fill_null(0).alias("run_script"),
+        (c("f_receptions").fill_null(0) / c("f_targets").fill_null(0).clip(0.5)).alias("catch_rate"),
         # TOUCH VOLUME. The TD pool is running backs and receivers together, so
         # a targets-only term ranks every back last for a reason that has
         # nothing to do with touchdowns — measured, it cost 3-5 points of
         # top-15 hit rate in 2024. Carries + targets is the position-fair
         # version and is the one that shipped.
-        (pl.col("f_tgt_n").fill_null(0) + pl.col("f_car_n").fill_null(0)).alias("f_touches"),
+        (c("f_tgt_n").fill_null(0) + c("f_car_n").fill_null(0)).alias("f_touches"),
         # kicking environment: indoors is clean, wind is the enemy
-        (pl.col("indoors").fill_null(0) * 10 - pl.col("wind_mph").fill_null(0)).alias("kick_env"),
+        (c("indoors").fill_null(0) * 10 - c("wind_mph").fill_null(0)).alias("kick_env"),
     )
 
 
