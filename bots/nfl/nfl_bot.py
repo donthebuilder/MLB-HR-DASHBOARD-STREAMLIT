@@ -46,6 +46,7 @@ import nfl_field
 import nfl_disruption
 import nfl_offense_value
 import nfl_picks
+import nfl_snaps
 from nfl_features import (build, season_baseline, upcoming_rows, stats_season_for,
                           current_roster, newcomer_rows, played_weeks,
                           schedule_weeks, PLAYER_FORM, USAGE_FORM)
@@ -792,6 +793,10 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
         ("pass_rush", nfl_disruption.pass_rush_efficiency, stat_season),
         ("red_zone", nfl_offense_value.red_zone_conversion, stat_season),
         ("route_value", nfl_offense_value.route_value, chart_season),
+        # Snap counts ARE an in-season dataset (nflverse refreshes 4x/day),
+        # so these run on stat_season -- no charting clamp.
+        ("snaps", nfl_snaps.player_snaps, stat_season),
+        ("snap_movers", nfl_snaps.movers, stat_season),
     ):
         try:
             extras[name] = fn(src)
@@ -1108,7 +1113,7 @@ def main() -> int:
         for k in ("player_pass", "player_rush"):
             if extras["field"].get(k):
                 extras["field"][k] = {i: v for i, v in extras["field"][k].items() if i in on_slate}
-    for k in ("coverage_player", "player_explosive", "roles", "disruption", "pass_rush", "red_zone", "route_value"):
+    for k in ("coverage_player", "player_explosive", "roles", "disruption", "pass_rush", "red_zone", "route_value", "snaps"):
         if extras.get(k):
             extras[k] = {i: v for i, v in extras[k].items() if i in on_slate}
     if extras.get("usage"):
@@ -1144,6 +1149,15 @@ def main() -> int:
         "pass_rush": extras.get("pass_rush", {}),
         "red_zone": extras.get("red_zone", {}),
         "route_value": extras.get("route_value", {}),
+        # Snap share for the players on this card, and separately the league's
+        # role changes -- NOT filtered to the slate, because a receiver whose
+        # snap share just jumped is exactly the name the board does not have
+        # yet. `snap_movers` is what the cold board should read before it puts
+        # up a low-volume name with no stated reason.
+        "snaps": extras.get("snaps", {}),
+        "snap_movers": extras.get("snap_movers", {}),
+        "snap_rising": nfl_snaps.RISING,
+        "snap_falling": nfl_snaps.FALLING,
         "zones_pass": nfl_field.ZONES_PASS,
         "zones_rush": nfl_field.ZONES_RUSH,
         "rush_labels": nfl_field.RUSH_LABEL,
