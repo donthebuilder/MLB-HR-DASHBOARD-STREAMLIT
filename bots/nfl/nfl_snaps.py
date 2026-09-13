@@ -77,6 +77,28 @@ def _side(position: str) -> str | None:
     return None
 
 
+def weekly_pct(season: int) -> pl.DataFrame:
+    """Per player-week offensive snap share, keyed to gsis — for the MODEL.
+
+    `player_snaps()` above answers "where does he stand now", which is a
+    display question, so it aggregates to one row per player. Scoring needs
+    the opposite shape: one row per player-WEEK, so nfl_features can put it
+    through the same trailing roll as everything else and never see week w
+    while scoring week w.
+
+    Offence only. A defender's offense_pct is 0 by construction and a column
+    that is 0 for half the table would percentile-rank every defender
+    identically.
+    """
+    df = _snaps(season)
+    if df.height == 0:
+        return pl.DataFrame({"player_id": [], "week": [], "snap_pct": []})
+    return (df.filter(pl.col("position").is_in(OFFENSE))
+              .filter(pl.col("offense_pct").is_not_null())
+              .select(pl.col("gsis_id").alias("player_id"), "week",
+                      pl.col("offense_pct").alias("snap_pct")))
+
+
 def player_snaps(season: int) -> dict:
     """{gsis_id: {name, team, position, side, games, snap_pct, recent_pct,
     trend, snaps, st_pct, percentile}}

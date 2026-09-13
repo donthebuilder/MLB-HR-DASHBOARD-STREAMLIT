@@ -20,13 +20,18 @@ import polars as pl
 MODELS = {
     "TD": {
         "label": "Anytime TD", "pos": ["RB", "WR", "TE"], "bar": 1,
+        # REWEIGHTED 2026-09-13. Two terms added, both found by the residual
+        # scan in nfl_td_lab.py rather than by anyone's hunch, and both
+        # measured on two seasons before shipping — see SCORING.md.
         "w": {
-            "f_gl_opp":       0.30,   # inside-10 targets + inside-5 carries
-            "f_rz_opp":       0.22,   # all red-zone touches
-            "implied_total":  0.18,   # how many points his team is expected to score
-            "f_xtd":          0.15,   # expected TDs from field position
-            "opp_td_soft":    0.08,   # defense that gives up TDs
-            "td_regression":  0.07,   # xTD minus actual — buy the cold guy
+            "f_gl_opp":       0.23,   # inside-10 targets + inside-5 carries
+            "f_rz_opp":       0.17,   # all red-zone touches
+            "implied_total":  0.14,   # how many points his team is expected to score
+            "f_touches":      0.12,   # targets + carries — he gets the ball at all
+            "f_xtd":          0.12,   # expected TDs from field position
+            "f_snap_pct":     0.10,   # share of snaps — the opportunity denominator
+            "opp_td_soft":    0.06,   # defense that gives up TDs
+            "td_regression":  0.06,   # xTD minus actual — buy the cold guy
         },
     },
     # ── volume markets ────────────────────────────────────────────────────────
@@ -120,12 +125,26 @@ def derive(df: pl.DataFrame) -> pl.DataFrame:
         (-pl.col("spread")).fill_null(0).alias("pass_script"),
         pl.col("spread").fill_null(0).alias("run_script"),
         (pl.col("f_receptions") / pl.col("f_targets").clip(0.5)).alias("catch_rate"),
+        # TOUCH VOLUME. The TD pool is running backs and receivers together, so
+        # a targets-only term ranks every back last for a reason that has
+        # nothing to do with touchdowns — measured, it cost 3-5 points of
+        # top-15 hit rate in 2024. Carries + targets is the position-fair
+        # version and is the one that shipped.
+        (pl.col("f_tgt_n").fill_null(0) + pl.col("f_car_n").fill_null(0)).alias("f_touches"),
         # kicking environment: indoors is clean, wind is the enemy
         (pl.col("indoors").fill_null(0) * 10 - pl.col("wind_mph").fill_null(0)).alias("kick_env"),
     )
 
 
 def _pctile(df: pl.DataFrame, col: str, invert: bool) -> pl.Expr:
+    # NULL IS ZERO, INCLUDING FOR SNAP SHARE — and that was measured, not
+    # assumed. The reasonable-sounding argument is that a missing snap row
+    # means nflverse has not published one rather than that he did not play,
+    # so the week's median would say "unknown" instead of "worst". Tried it:
+    # it is WORSE in both seasons (top-15 2024 47.0% vs 51.1%, 2025 49.6% vs
+    # 50.4%). A player with no snap row is a fringe player, so ranking him
+    # last is not a slander, it is the correct prior — about 8% of the TD
+    # pool, and they are the right 8% to bury.
     e = pl.col(col).fill_null(0)
     if invert:
         e = -e

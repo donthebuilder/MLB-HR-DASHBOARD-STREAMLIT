@@ -41,14 +41,55 @@ The headline market. The only one where the bar is genuinely hard.
 
 | Component | Weight | What it is |
 |---|---|---|
-| `f_gl_opp` | **30%** | Goal-line opportunity — inside-10 targets + inside-5 carries |
-| `f_rz_opp` | **22%** | All red-zone touches |
-| `implied_total` | **18%** | Points his team is expected to score |
-| `f_xtd` | **15%** | Expected TDs from field position |
-| `opp_td_soft` | 8% | TDs the defense has been giving up |
-| `td_regression` | 7% | xTD minus actual — buy the cold guy |
+| `f_gl_opp` | **23%** | Goal-line opportunity — inside-10 targets + inside-5 carries |
+| `f_rz_opp` | **17%** | All red-zone touches |
+| `implied_total` | **14%** | Points his team is expected to score |
+| `f_touches` | **12%** | Carries + targets — does the offence give him the ball at all |
+| `f_xtd` | **12%** | Expected TDs from field position |
+| `f_snap_pct` | **10%** | Share of his side's snaps — the opportunity denominator |
+| `opp_td_soft` | 6% | TDs the defense has been giving up |
+| `td_regression` | 6% | xTD minus actual — buy the cold guy |
 
-**Why this shape.** TDs are won at the goal line, so proximity-weighted opportunity carries over half the score. `implied_total` gets an unusually high 18% here because unlike a yardage prop, a TD *requires* the team to score — context is causally upstream, not just correlated.
+**Why this shape.** TDs are won at the goal line, so proximity-weighted opportunity still carries the most weight. `implied_total` stays unusually high for a non-QB market because unlike a yardage prop, a TD *requires* the team to score — context is causally upstream, not just correlated.
+
+### The 2026-09-13 reweight, and the five things that failed first
+
+`f_touches` and `f_snap_pct` were added after the model's own admission below — that its 2025 edge was mostly overfit — was taken seriously. Tool: `nfl_td_lab.py`. Protocol: tune on one season, report on the other; ship only what improves the season it was not tuned on.
+
+**Five candidates were tried by hunch and all five failed**, including the one that looked most obviously right:
+
+| Candidate | 2024 | 2025 | verdict |
+|---|---|---|---|
+| defence: red-zone TD rate allowed | +0.7 | −1.1 | dead |
+| defence: goal-line TD rate allowed | −1.1 | −0.4 | dead |
+| defence: TDs allowed to HIS position | +0.0 | −1.9 | dead |
+| snap share TREND (rising/falling) | +1.9 | −1.5 | dead — tuned on one season, gone in the other |
+| targets alone | −1.1 | +0.0 | dead — ranks every RB last |
+
+That the defensive candidates all failed is not a data problem. It is SCORING.md's own rule holding: **context modulates, volume selects.** A team-level defensive rate says something true about the game and nothing about which of the twenty eligible players in it to pick, so adding it can only dilute the terms that do select. Making it position-specific did not rescue it.
+
+**What worked came from the residual scan instead** — a port of the HR side's `missed_signals.py`, which asks the open question rather than testing a hunch: *among players the model scored the same, what still separates the ones who scored?* Inside a score band, in both seasons:
+
+| Field | 2024 lift | 2025 lift | q |
+|---|---|---|---|
+| `f_snap_pct` | **+8.7** | **+8.5** | 0.010 |
+| targets / receptions / target share | +7.4 to +7.9 | +8.3 to +8.5 | ≤0.07 |
+
+The model contained no volume term at all. Red-zone touches are rare and noisy over a four-week window; carries + targets is the much better-sampled statement of *the offence looks for him*, and offences look for their focal points near the end zone too. `f_touches` rather than targets because this pool is running backs and receivers together.
+
+**Measured result, both seasons, every cut:**
+
+| | 2024 (holdout) | 2025 |
+|---|---|---|
+| top-15 hit rate | 48.9% → **51.1%** | 49.3% → **50.4%** |
+| top-25 hit rate | 43.3% → **44.9%** | 47.1% → **48.7%** |
+| whole-board AUC | 68.8 → **71.2** | 70.4 → **72.5** |
+| D10 | 43.0% → **45.5%** | 45.9% → **47.3%** |
+| D1 (lower is better) | 6.4% → **3.8%** | 4.5% → **3.7%** |
+
+vs FORM went from −0.4 to **+1.9** in 2024 and from +6.3 to **+7.0** in 2025.
+
+One more thing measured rather than argued: a player with no snap row percentile-ranks as **zero**, not as the week's median. The median sounds fairer — a missing row means nflverse did not publish one, not that he sat — and it is worse in both seasons (top-15 47.0% vs 51.1% in 2024). A player with no snap row is a fringe player. Ranking him last is the correct prior.
 
 `td_regression` is the BABIP port. It's deliberately small at 7% — it's a tiebreaker between two players with similar opportunity, not a thesis. In 2025 it would have flagged Justin Jefferson (2 actual TDs on 6.8 expected) and faded Dallas Goedert (11 on 5.6).
 

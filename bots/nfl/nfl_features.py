@@ -125,6 +125,25 @@ def usage(season: int) -> pl.DataFrame:
     )
 
 
+
+# ── SNAP SHARE (2026-09-13) ──────────────────────────────────────────────────
+# Added to the TD model after the residual scan (bots/nfl/nfl_td_lab.py) found
+# it separating touchdown scorers by +8.7 / +8.5 points INSIDE a score band in
+# 2024 and 2025 — i.e. among players the model already considered
+# interchangeable. It is the denominator under both opportunity terms and had
+# no weight anywhere before this.
+#
+# It goes through the same trailing roll as every other feature, so week w is
+# scored on weeks w-4..w-1 and never on itself.
+def snap_share(season: int) -> pl.DataFrame:
+    # Imported HERE, not at module scope. tests/ imports this file with a
+    # different sys.path and a bare top-level `import nfl_snaps` broke
+    # test_nfl_season_has_ended.py, which only ever wanted the calendar
+    # helpers at the bottom of this file and should not need the whole data
+    # stack to load. Same fail-soft contract as every other loader here.
+    import nfl_snaps
+    return nfl_snaps.weekly_pct(season)
+
 def team_stall(season: int) -> pl.DataFrame:
     """Per team-week: drives, RZ trips, and how often a drive ended in a FG.
 
@@ -268,6 +287,11 @@ def build(season: int, carryover: bool = True) -> pl.DataFrame:
     form_cols = [c for c in PLAYER_FORM + USAGE_FORM if c in wk.columns] + ngs_cols
     form = _roll(wk.select(["player_id", "week", *form_cols]), form_cols)
 
+    sn = _try(lambda: snap_share(season), f"{season} snaps")
+    snform = (_roll(sn.select(["player_id", "week", "snap_pct"]), ["snap_pct"],
+                    prefix="f_", gp="f_snap_gp")
+              if not sn.is_empty() else sn)
+
     stall = team_stall(season)
     sform = _roll(stall.select(["team", "week", "fg_drive_rate", "rz_td_rate", "drives"]),
                   ["fg_drive_rate", "rz_td_rate", "drives"], by="team",
@@ -288,6 +312,11 @@ def build(season: int, carryover: bool = True) -> pl.DataFrame:
            .join(sform, on=["team", "week"], how="left")
            .join(dform, left_on=["opponent_team", "week"], right_on=["team", "week"], how="left")
            .join(injuries(season), on=["player_id", "week"], how="left"))
+    if not snform.is_empty():
+        out = out.join(snform.select(["player_id", "week", "f_snap_pct"]),
+                       on=["player_id", "week"], how="left")
+    if "f_snap_pct" not in out.columns:
+        out = out.with_columns(pl.lit(None, dtype=pl.Float64).alias("f_snap_pct"))
 
     out = out.with_columns(pl.col("f_gp").fill_null(0),
                            pl.col("inj_out").fill_null(0), pl.col("inj_q").fill_null(0))
@@ -627,6 +656,7 @@ def upcoming_rows(season: int, week: int) -> tuple[pl.DataFrame, pl.DataFrame]:
                         .filter(pl.col("week") < week),
               f"{season} form")
     form = sform = dform = _empty()
+    snform = _empty()
     if not wk.is_empty():
         for c in PLAYER_FORM:
             if c in wk.columns:
@@ -641,6 +671,11 @@ def upcoming_rows(season: int, week: int) -> tuple[pl.DataFrame, pl.DataFrame]:
             wk = wk.join(ng, on=["player_id", "week"], how="left")
         form_cols = [c for c in PLAYER_FORM + USAGE_FORM if c in wk.columns] + ngs_cols
         form = _roll(wk.select(["player_id", "week", *form_cols]), form_cols, weeks=[week])
+
+        sn = _try(lambda: snap_share(season), f"{season} snaps")
+        if not sn.is_empty():
+            snform = _roll(sn.select(["player_id", "week", "snap_pct"]), ["snap_pct"],
+                           prefix="f_", gp="f_snap_gp", weeks=[week])
 
         stall = _try(lambda: team_stall(season), f"{season} drives")
         if not stall.is_empty():
@@ -658,6 +693,11 @@ def upcoming_rows(season: int, week: int) -> tuple[pl.DataFrame, pl.DataFrame]:
 
     if not form.is_empty():
         rows = rows.join(form.drop("week"), on="player_id", how="left")
+    if not snform.is_empty():
+        rows = rows.join(snform.select(["player_id", "f_snap_pct"]),
+                         on="player_id", how="left")
+    if "f_snap_pct" not in rows.columns:
+        rows = rows.with_columns(pl.lit(None, dtype=pl.Float64).alias("f_snap_pct"))
     if "f_gp" not in rows.columns:
         rows = rows.with_columns(pl.lit(0.0).alias("f_gp"))
     rows = rows.with_columns(pl.col("f_gp").cast(pl.Float64).fill_null(0))
