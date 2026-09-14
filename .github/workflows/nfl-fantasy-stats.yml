@@ -1,0 +1,76 @@
+name: NFL fantasy stats (FRANCHISE live scoring)
+
+# WHY THIS IS SEPARATE FROM nfl.yml (2026-09-14)
+#
+# FRANCHISE scores a week off a per-player box-score line that this repo
+# never published -- every player scored 0 for all of Week 1. nfl.yml is the
+# right home for the model, not for live scoring: it rebuilds the whole slate
+# (~minutes, nflverse cache, seven models) about five times on a Sunday, and
+# a fantasy score that moves five times a day is not live.
+#
+# This job does one thing: ESPN summary -> nfl_fantasy_stats.json, in
+# seconds, with `requests` as its only dependency, every 15 minutes inside
+# the windows a football game can be on. The site's /api/fantasy/scoring
+# (called every 10 min by dash-endpoints.yml) merges the file over the slate.
+#
+# Best-effort cadence, same caveat as dash-endpoints.yml: GitHub often runs a
+# few minutes late and can skip a busy slot. A skipped run costs 15 minutes
+# of staleness, never a wrong number -- the next run republishes the full
+# week, not a diff.
+
+on:
+  schedule:
+    # Phoenix is UTC-7 year-round. Windows, in UTC:
+    #   Thu night (TNF)   Fri 00:00-05:59Z
+    #   Sat (late season) Sat 17:00-23:59Z + Sun 00:00-05:59Z
+    #   Sunday            Sun 17:00-23:59Z + Mon 00:00-05:59Z
+    #   Mon night (MNF)   Tue 00:00-05:59Z
+    - cron: '*/15 17-23 * * 0,6'
+    - cron: '*/15 0-5 * * 0,1,2,5'
+    # One pass Tuesday noon Phoenix, so a stat correction ESPN posts after
+    # the game lands before the week closes.
+    - cron: '0 19 * * 2'
+  workflow_dispatch:
+    inputs:
+      week:
+        description: "regular-season week (blank = ESPN's current week)"
+        required: false
+        default: ""
+
+concurrency:
+  group: nfl-fantasy-stats
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  stats:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install deps
+        run: pip install requests
+
+      - name: Build fantasy stats
+        run: |
+          set -euo pipefail
+          ARGS="--season 2026"
+          if [ -n "${{ github.event.inputs.week }}" ]; then
+            ARGS="$ARGS --week ${{ github.event.inputs.week }}"
+          fi
+          cd bots/nfl && python nfl_fantasy_stats.py $ARGS --out "$GITHUB_WORKSPACE/public/data/current"
+
+      - name: Publish to data branch
+        run: bash .github/scripts/publish_data.sh "NFL fantasy stats"

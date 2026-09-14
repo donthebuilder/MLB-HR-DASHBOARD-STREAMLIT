@@ -115,6 +115,13 @@ PUBLISH_FILES=(
   # no NFL_ODDS_GLOB/KEEP pair to add to the accumulate-and-cap loop below.
   nfl_odds_latest.json
   nfl_odds_status.json
+  # FRANCHISE LIVE SCORING (2026-09-14). Per-player box-score lines for the
+  # current week, written by bots/nfl/nfl_fantasy_stats.py every 15 min in
+  # game windows (nfl-fantasy-stats.yml). ~60 KB. Until this file existed
+  # every fantasy player scored 0: the site reads a game_stats block nothing
+  # here ever published. Fourth instance of "a real file with no line here
+  # dies with the runner" -- see pick_lock.json above -- added on day one.
+  nfl_fantasy_stats.json
   # MODEL FOUNDATION (2026-08-21, Task 2). One run identity per bot
   # execution -- see docs/MODELS.md and bots/model_registry.py. Small,
   # regenerated every run, so it belongs with the rest of PUBLISH_FILES
