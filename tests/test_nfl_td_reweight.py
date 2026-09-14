@@ -49,12 +49,16 @@ for market, m in ns.MODELS.items():
 td = ns.MODELS["TD"]["w"]
 check_true("TD scores snap share", "f_snap_pct" in td)
 check_true("TD scores touch volume", "f_touches" in td)
-check("TD has 8 components", len(td), 8)
+check("TD has 6 components (candidate C, 2026-09-14)", len(td), 6)
+check_true("td_regression is retired", "td_regression" not in td)
+check_true("opp_td_soft is retired", "opp_td_soft" not in td)
 # The two new terms are a fifth of the score between them. Much more and they
 # start selecting rather than modulating, which is the failure SCORING.md's own
 # "context modulates, volume selects" rule exists to prevent.
+# Candidate C lifted them to 0.29 between them, on a true holdout in both
+# directions -- the cap moves to 0.30, not away. Past that they select.
 check_true("the two new terms stay a minority of the score",
-           td["f_snap_pct"] + td["f_touches"] <= 0.25)
+           td["f_snap_pct"] + td["f_touches"] <= 0.30)
 
 # ── 2. f_touches is position-fair ────────────────────────────────────────────
 row = {

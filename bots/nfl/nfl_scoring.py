@@ -20,18 +20,28 @@ import polars as pl
 MODELS = {
     "TD": {
         "label": "Anytime TD", "pos": ["RB", "WR", "TE"], "bar": 1,
-        # REWEIGHTED 2026-09-13. Two terms added, both found by the residual
-        # scan in nfl_td_lab.py rather than by anyone's hunch, and both
-        # measured on two seasons before shipping — see SCORING.md.
+        # REWEIGHTED 2026-09-13 (snap share + touch volume added, from the
+        # residual scan in nfl_td_lab.py), then CANDIDATE C 2026-09-14: the
+        # one-at-a-time sweep found td_regression and opp_td_soft hurting in
+        # BOTH seasons and f_gl_opp over-weighted; C zeroes the first two,
+        # halves the third, renormalises. True holdout, tuned on one season
+        # and reported on the other, both directions: t15 50.0→51.1 /
+        # 51.1→55.2, t30 45.7→46.7 / 44.4→48.1, AUC .7252→.7341 / .7117→.7223.
+        # Beats live on all six. Noise floor is ~2 pts t15, so t30 + AUC are
+        # the numbers that decided it — see SCORING.md and
+        # claude/tuddy-td-weight-sweep-holdout-2026-09-13.md. nfl_td_v2.
         "w": {
-            "f_gl_opp":       0.23,   # inside-10 targets + inside-5 carries
-            "f_rz_opp":       0.17,   # all red-zone touches
-            "implied_total":  0.14,   # how many points his team is expected to score
-            "f_touches":      0.12,   # targets + carries — he gets the ball at all
-            "f_xtd":          0.12,   # expected TDs from field position
-            "f_snap_pct":     0.10,   # share of snaps — the opportunity denominator
-            "opp_td_soft":    0.06,   # defense that gives up TDs
-            "td_regression":  0.06,   # xTD minus actual — buy the cold guy
+            "f_rz_opp":       0.2222,   # all red-zone touches
+            "implied_total":  0.1830,   # how many points his team is expected to score
+            "f_touches":      0.1569,   # targets + carries — he gets the ball at all
+            "f_xtd":          0.1569,   # expected TDs from field position
+            "f_gl_opp":       0.1503,   # inside-10 targets + inside-5 carries
+            "f_snap_pct":     0.1307,   # share of snaps — the opportunity denominator
+            # RETIRED by measurement (not by hunch), 2026-09-14:
+            #   opp_td_soft    zeroing gained AUC in both seasons
+            #   td_regression  removing it improved all six numbers; raising
+            #                  it hurt monotonically in both seasons
+            # derive() still computes both; the modal can show them as context.
         },
     },
     # ── volume markets ────────────────────────────────────────────────────────

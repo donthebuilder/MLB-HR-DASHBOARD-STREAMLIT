@@ -41,14 +41,23 @@ The headline market. The only one where the bar is genuinely hard.
 
 | Component | Weight | What it is |
 |---|---|---|
-| `f_gl_opp` | **23%** | Goal-line opportunity — inside-10 targets + inside-5 carries |
-| `f_rz_opp` | **17%** | All red-zone touches |
-| `implied_total` | **14%** | Points his team is expected to score |
-| `f_touches` | **12%** | Carries + targets — does the offence give him the ball at all |
-| `f_xtd` | **12%** | Expected TDs from field position |
-| `f_snap_pct` | **10%** | Share of his side's snaps — the opportunity denominator |
-| `opp_td_soft` | 6% | TDs the defense has been giving up |
-| `td_regression` | 6% | xTD minus actual — buy the cold guy |
+| `f_rz_opp` | **22%** | All red-zone touches |
+| `implied_total` | **18%** | Points his team is expected to score |
+| `f_touches` | **16%** | Carries + targets — does the offence give him the ball at all |
+| `f_xtd` | **16%** | Expected TDs from field position |
+| `f_gl_opp` | **15%** | Goal-line opportunity — inside-10 targets + inside-5 carries |
+| `f_snap_pct` | **13%** | Share of his side's snaps — the opportunity denominator |
+
+`nfl_td_v2` (2026-09-14, "candidate C"). Retired by measurement: `opp_td_soft`
+(zeroing gained AUC in both seasons) and `td_regression` (removing it improved
+all six holdout numbers; raising it hurt monotonically). `f_gl_opp` — the old
+heaviest weight — never beat plain `f_touches` solo at any depth in either
+season, so it was halved. True holdout, tuned on one season and reported on the
+other: t15 50.0→51.1 / 51.1→55.2, t30 45.7→46.7 / 44.4→48.1, AUC .7252→.7341 /
+.7117→.7223 — better than live on all six. The noise floor on t15 is ~2 points
+(40 jitter draws), so t30 and AUC are what decided it. A 600-draw random search
+won AUC in both directions and LOST t15/t30 in both — never ship on AUC alone.
+Full table: `claude/tuddy-td-weight-sweep-holdout-2026-09-13.md`.
 
 **Why this shape.** TDs are won at the goal line, so proximity-weighted opportunity still carries the most weight. `implied_total` stays unusually high for a non-QB market because unlike a yardage prop, a TD *requires* the team to score — context is causally upstream, not just correlated.
 
@@ -105,7 +114,7 @@ missing term falls out alone. Week 1 now scores seven of eight, with
 
 One more thing measured rather than argued: a player with no snap row percentile-ranks as **zero**, not as the week's median. The median sounds fairer — a missing row means nflverse did not publish one, not that he sat — and it is worse in both seasons (top-15 47.0% vs 51.1% in 2024). A player with no snap row is a fringe player. Ranking him last is the correct prior.
 
-`td_regression` is the BABIP port. It's deliberately small at 7% — it's a tiebreaker between two players with similar opportunity, not a thesis. In 2025 it would have flagged Justin Jefferson (2 actual TDs on 6.8 expected) and faded Dallas Goedert (11 on 5.6).
+`td_regression` was the BABIP port — a tiebreaker between two players with similar opportunity, never a thesis. It would have flagged Justin Jefferson in 2025 (2 actual TDs on 6.8 expected) and faded Dallas Goedert (11 on 5.6) — and measured across both seasons it cost more than it bought, so it is retired from the score. `derive()` still computes it for the modal.
 
 **The xTD curve** — league TD rate per target, by distance from the end zone:
 

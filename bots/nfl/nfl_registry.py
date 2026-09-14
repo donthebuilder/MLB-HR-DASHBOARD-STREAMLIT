@@ -90,7 +90,7 @@ MODEL_FAMILY = "moonshot-nfl"
 # Bump the integer per the rule above; never reuse a retired version
 # string, never rewrite a version string in place.
 MODEL_VERSIONS: Dict[str, str] = {
-    "TD":       "nfl_td_v1",
+    "TD":       "nfl_td_v2",   # v2 2026-09-14: candidate C weights (see nfl_scoring.py)
     "REC_YDS":  "nfl_recyds_v1",
     "REC":      "nfl_rec_v1",
     "RUSH_YDS": "nfl_rushyds_v1",
