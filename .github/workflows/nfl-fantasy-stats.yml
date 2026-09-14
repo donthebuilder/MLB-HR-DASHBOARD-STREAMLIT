@@ -27,9 +27,10 @@ on:
     #   Mon night (MNF)   Tue 00:00-05:59Z
     - cron: '*/15 17-23 * * 0,6'
     - cron: '*/15 0-5 * * 0,1,2,5'
-    # One pass Tuesday noon Phoenix, so a stat correction ESPN posts after
-    # the game lands before the week closes.
-    - cron: '0 19 * * 2'
+    # No Tuesday "correction" pass: the slate rolls to next week Tue 13:00Z
+    # and the site only merges a stats file whose week matches the slate's,
+    # so a Tuesday rebuild of last week could never reach a page. The last
+    # useful pass for a week is the Monday-night window above.
   workflow_dispatch:
     inputs:
       week:
