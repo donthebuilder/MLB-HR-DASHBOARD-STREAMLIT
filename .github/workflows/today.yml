@@ -223,6 +223,15 @@ jobs:
             mkdir -p public/data/current
             cp /tmp/por-restore/public/data/current/por_log_*.jsonl public/data/current/ 2>/dev/null || true
             echo "Restored $(ls public/data/current/por_log_*.jsonl 2>/dev/null | wc -l) por_log file(s)."
+            # THE PREGAME RUNS (2026-09-14). pick_lock.py now locks a game to
+            # the latest prediction_log written BEFORE its first pitch, read
+            # from disk -- so every earlier run's log has to be here, not just
+            # this run's. Never overwrite the one this run just wrote.
+            for f in /tmp/por-restore/public/data/current/prediction_log_*.jsonl; do
+              [ -e "$f" ] || continue
+              [ -e "public/data/current/$(basename "$f")" ] || cp "$f" public/data/current/
+            done
+            echo "Prediction logs on disk for the lock: $(ls public/data/current/prediction_log_*.jsonl 2>/dev/null | wc -l)."
           fi
 
       - name: Verify today's own por_log restored cleanly (if it exists on the data branch)

@@ -348,6 +348,96 @@ def read_current_run_meta(current_dir: Path, public_dir: Path) -> dict | None:
     return None
 
 
+# ── THE PREGAME RUN, FROM DISK (2026-09-14) ───────────────────────────────────
+#
+# Measured on 24 nights (claude/record-is-leaked-2026-09-14.md): the run this
+# file stamped as prediction_of_record was GENERATED AFTER FIRST PITCH for
+# ~95% of games since 08-21 -- median 20-120 minutes into the game -- because
+# "the run standing on the rows" at the first pick_lock after first pitch is
+# that same execution's rebuild, and MLB season stats update live. On
+# 2026-09-13, 10 of 30 homer hitters' "locked" hr_score already contained the
+# homer (Kwan 10.5 -> 23.6, Torkelson 35.0 -> 44.8). The record was scoring a
+# man on a ball he had already hit.
+#
+# The rule stays exactly what the block comment above says -- the run standing
+# at first pitch -- it is just read honestly now: the LATEST prediction_log
+# on disk whose generated_at is BEFORE the game's first pitch and which
+# carries a row for that game. today.yml restores every run's prediction_log
+# from the data branch before this file runs. Measured on 74 games: the
+# pregame run covers MORE homers (94.3% vs 92.2%) and its picks hit more
+# (18.8% vs 17.7%), because a post-pitch rebuild of a game drops players.
+#
+# Fallback, when no pregame log for the game exists on disk (first run of a
+# day that started after first pitch, a restore that failed): the old
+# behaviour, rows standing now, honestly flagged locked_late.
+_PL_HEADER_CACHE: dict[str, tuple[dict, set]] = {}
+
+
+def _prediction_log_index(current_dir: Path, slate_date: str = "") -> dict[str, tuple[dict, set]]:
+    """path -> (header dict, {game_pk str,...}) for every prediction_log_*.jsonl
+    in current_dir for this slate date (the filename embeds the SLATE date --
+    a game's pregame runs, including the previous evening's "tomorrow" build,
+    all carry it). Cached per path for the life of the process. The data
+    branch keeps ~300 of these; reading every one would be minutes of I/O for
+    files that cannot contain today's games."""
+    out: dict[str, tuple[dict, set]] = {}
+    pattern = f"prediction_log_{slate_date}.*.jsonl" if slate_date else "prediction_log_*.jsonl"
+    for p in sorted(current_dir.glob(pattern)):
+        key = str(p)
+        if key in _PL_HEADER_CACHE:
+            out[key] = _PL_HEADER_CACHE[key]
+            continue
+        header: dict = {}
+        games: set = set()
+        try:
+            with p.open(encoding="utf-8") as fh:
+                for i, line in enumerate(fh):
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        obj = json.loads(line)
+                    except Exception:
+                        continue
+                    if not isinstance(obj, dict):
+                        continue
+                    if i == 0 and obj.get("player_id") is None and obj.get("run_id"):
+                        header = obj
+                        continue
+                    gp = obj.get("game_pk")
+                    if gp is not None:
+                        games.add(str(gp))
+        except Exception:
+            continue
+        if not header.get("run_id") or not header.get("generated_at"):
+            continue
+        _PL_HEADER_CACHE[key] = (header, games)
+        out[key] = _PL_HEADER_CACHE[key]
+    return out
+
+
+def pregame_run_for_game(gp: str, fp_time: dt.datetime, current_dir: Path, slate_date: str = "") -> dict | None:
+    """The latest run generated BEFORE fp_time that rated game gp, or None.
+    Returns {run_id, model_version, config_hash, generated_at}."""
+    best: tuple[dt.datetime, dict] | None = None
+    for _path, (header, games) in _prediction_log_index(current_dir, slate_date).items():
+        if str(gp) not in games:
+            continue
+        gen = parse_ts(header.get("generated_at"))
+        if gen is None or gen >= fp_time:
+            continue
+        if best is None or gen > best[0]:
+            mv = (header.get("model_versions") or {}).get("hr") if isinstance(header.get("model_versions"), dict) else None
+            ch = (header.get("config_hashes") or {}).get("hr") if isinstance(header.get("config_hashes"), dict) else None
+            best = (gen, {
+                "run_id": header["run_id"],
+                "model_version": mv or None,
+                "config_hash": ch or None,
+                "generated_at": header["generated_at"],
+            })
+    return best[1] if best else None
+
+
 # ── ticket helpers ───────────────────────────────────────────────────────────
 
 def append_por_log(date: str, newly_locked: list[tuple[str, dict]], current_dir: Path) -> int:
@@ -569,14 +659,24 @@ def main() -> int:
             continue  # already locked by an earlier run -- immutable from here
         if now < fp_time:
             continue  # still pregame; no record yet, correctly
-        info = rid_by_game.get(gp) or {"run_id": None, "model_version": None, "config_hash": None}
-        # Only trust run_meta_now's generated_at for THIS game if it is
-        # verifiably the metadata for the exact run stamped on this game's
-        # own rows -- a defensive check, not an assumption, since it is a
-        # different file read independently of the rows themselves.
-        generated_at = None
-        if run_meta_now and info["run_id"] and run_meta_now.get("run_id") == info["run_id"]:
-            generated_at = run_meta_now.get("generated_at")
+        # THE PREGAME RUN FIRST (2026-09-14, see pregame_run_for_game). The
+        # rows standing now are this execution's post-first-pitch rebuild;
+        # the record is the last run that was written BEFORE the pitch.
+        pre = pregame_run_for_game(gp, fp_time, CURRENT, date)
+        if pre is not None:
+            info = {"run_id": pre["run_id"], "model_version": pre["model_version"], "config_hash": pre["config_hash"]}
+            generated_at = pre["generated_at"]
+            por_source = "pregame_log"
+        else:
+            info = rid_by_game.get(gp) or {"run_id": None, "model_version": None, "config_hash": None}
+            # Only trust run_meta_now's generated_at for THIS game if it is
+            # verifiably the metadata for the exact run stamped on this game's
+            # own rows -- a defensive check, not an assumption, since it is a
+            # different file read independently of the rows themselves.
+            generated_at = None
+            if run_meta_now and info["run_id"] and run_meta_now.get("run_id") == info["run_id"]:
+                generated_at = run_meta_now.get("generated_at")
+            por_source = "rows_standing"
         generated_at_dt = parse_ts(generated_at) if generated_at else None
         por[gp] = {
             "run_id": info["run_id"],
@@ -605,6 +705,9 @@ def main() -> int:
             # "unknown" is never silently read as "on time."
             "locked_late": (bool(generated_at_dt and generated_at_dt > fp_time)
                              if generated_at_dt is not None else None),
+            # Which path chose the run: "pregame_log" (the honest one) or
+            # "rows_standing" (the pre-2026-09-14 behaviour, fallback only).
+            "por_source": por_source,
         }
         por_newly_locked.append((gp, por[gp]))
         por_new += 1
