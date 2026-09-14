@@ -3187,6 +3187,56 @@ def regrade_stale_dates(
             continue
 
 
+# ── CRUSHED-HOMER LABEL (2026-09-14) ─────────────────────────────────────
+# claude/park-is-not-dead-scrapers-2026-09-08.md §5, Donovan's question 3
+# ("how would the record split by HR type"): "Write four booleans on the
+# graded row: nodoubt (>=425 ft), scraper (<=380 ft), crushed (>=108 mph),
+# soft (<=100 mph)." The one measurement taken so far (watch-rebuild-band-
+# rates-and-shape-split, 2026-09-13) used a DISTANCE-ONLY proxy ("crushed
+# 410ft+, scraper <370ft") because nothing joined real exit velocity onto a
+# graded outcome -- this is that join.
+#
+# No new fetch, no new file: get_player_batting_line() (JOB 1, 2026-08-11)
+# already reads launch_speed and total_distance for every homer straight off
+# the live feed's hitData -- the same Statcast fields bots/backfill_bbe_
+# history.py persists into bbe_history for the batter-feature side. That
+# data has been sitting on every graded row as hr_events this whole time; it
+# just was never labeled.
+#
+# Independent booleans, not a single category -- a ball can be both a
+# no-doubter AND crushed, or neither. None (not False) whenever Statcast
+# didn't track that measurement, matching hr_distances_from_game's own
+# "None, not 0" rule a few hundred lines up -- an untracked ball must never
+# read as "confirmed not crushed".
+NODOUBT_DISTANCE_FT = 425.0
+SCRAPER_DISTANCE_FT = 380.0
+CRUSHED_EV_MPH = 108.0
+SOFT_EV_MPH = 100.0
+
+
+def classify_hr_type(launch_speed: Optional[float], total_distance: Optional[float]) -> Dict[str, Optional[bool]]:
+    """EV/distance labels for one home run. See the CRUSHED-HOMER LABEL note
+    above for the thresholds and why unmeasured is None, not False."""
+    ev = launch_speed if (launch_speed is not None and launch_speed > 0) else None
+    dist = total_distance if (total_distance is not None and total_distance > 0) else None
+    return {
+        "nodoubt": (dist >= NODOUBT_DISTANCE_FT) if dist is not None else None,
+        "scraper": (dist <= SCRAPER_DISTANCE_FT) if dist is not None else None,
+        "crushed": (ev >= CRUSHED_EV_MPH) if ev is not None else None,
+        "soft": (ev <= SOFT_EV_MPH) if ev is not None else None,
+    }
+
+
+def _hr_event_any_flag(events: List[Dict[str, Any]], key: str) -> Optional[bool]:
+    """True if ANY homer this player hit that game clears the flag, False if
+    every tracked homer's value is known and none clears it, None if nothing
+    on the row was tracked -- same any-of aggregation build_hr_capture_report
+    already uses for longest_ft/max_ev_mph (most rows are exactly one homer;
+    a two-homer night gets the loudest/cheapest read of the two)."""
+    known = [e.get("hr_type", {}).get(key) for e in events if e.get("hr_type", {}).get(key) is not None]
+    return any(known) if known else None
+
+
 def grade_slot(slot: Dict[str, Any], actual: Dict[str, Any]) -> Dict[str, Any]:
     hrr_total = actual["hits"] + actual["runs"] + actual["rbi"]
     graded = {
@@ -3253,9 +3303,20 @@ def grade_slot(slot: Dict[str, Any], actual: Dict[str, Any]) -> Dict[str, Any]:
         graded["fair_test_void"] = 0
         graded["fair_test_void_reason"] = None
     # JOB 1: per-homer batted-ball capture (2026-08-11)
-    # Include homer events if present in actual
+    # Include homer events if present in actual. CRUSHED-HOMER LABEL
+    # (2026-09-14): label each event with classify_hr_type() and roll the
+    # per-player-per-game flags up onto the row itself, so a night's record
+    # can be sliced by HR type without re-deriving it from hr_events every
+    # time. Unscored -- these four flags touch no score, no pick, no rank.
     if actual.get("hr_events"):
-        graded["hr_events"] = actual["hr_events"]
+        events = actual["hr_events"]
+        for ev_row in events:
+            ev_row["hr_type"] = classify_hr_type(ev_row.get("launch_speed"), ev_row.get("total_distance"))
+        graded["hr_events"] = events
+        graded["hr_nodoubt"] = _hr_event_any_flag(events, "nodoubt")
+        graded["hr_scraper"] = _hr_event_any_flag(events, "scraper")
+        graded["hr_crushed"] = _hr_event_any_flag(events, "crushed")
+        graded["hr_soft"] = _hr_event_any_flag(events, "soft")
     return graded
 
 
