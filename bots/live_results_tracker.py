@@ -1496,6 +1496,61 @@ def fetch_game_feed(game_pk: int) -> Dict[str, Any]:
     return resp.json()
 
 
+def _extract_hr_plays(game_feed: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """One pass over liveData.plays.allPlays pulling the raw batted-ball and
+    context data for every home run in this game. get_player_batting_line()
+    (per-player grading) and hr_distances_from_game() (per-game board
+    display) each used to run this exact same scan independently -- same
+    home_run filter, same "last playEvent with hitData" search, same
+    matchup/about digging -- just to build two different final shapes. That
+    duplication is why a fix to one could silently miss the other. This is
+    now the one place that reads the raw play; each caller still does its
+    own rounding/defaulting/shaping on top, so neither caller's output
+    changes.
+
+    Returns one dict per home-run PLAY (not per player -- a multi-homer game
+    yields multiple entries for the same player_id), holding the raw MLB
+    feed fragments a caller needs:
+      player_id     the batter's MLB id (plays with no resolvable id are
+                    dropped -- neither caller can do anything with one)
+      about         play.about (inning, halfInning, endTime)
+      pitcher       matchup.pitcher (id, fullName)
+      hit           the hitData dict off the last playEvent that has one
+                    (launchSpeed, launchAngle, totalDistance)
+      pitch_event   that same playEvent, kept separately for its pitchData/
+                    details (pitch type, velo, spin) -- hit and pitch_event
+                    come from one scan, not two
+      result_event  result.event, the human label ("Home Run")
+    """
+    out: List[Dict[str, Any]] = []
+    plays = ((game_feed.get("liveData") or {}).get("plays") or {}).get("allPlays") or []
+    for play in plays:
+        result = play.get("result") or {}
+        if str(result.get("eventType") or result.get("event") or "").lower() not in (
+                "home_run", "home run"):
+            continue
+        batter = ((play.get("matchup") or {}).get("batter") or {})
+        pid = safe_int(batter.get("id"), 0)
+        if not pid:
+            continue
+        hit_event = None
+        for ev in reversed(play.get("playEvents") or []):
+            if ev.get("hitData"):
+                hit_event = ev
+                break
+        pitcher = ((play.get("matchup") or {}).get("pitcher") or {})
+        about = play.get("about") or {}
+        out.append({
+            "player_id": pid,
+            "about": about,
+            "pitcher": pitcher,
+            "hit": (hit_event or {}).get("hitData") or {},
+            "pitch_event": hit_event,
+            "result_event": result.get("event", ""),
+        })
+    return out
+
+
 def get_player_batting_line(game_feed: Dict[str, Any], player_id: int) -> Dict[str, Any]:
     teams = game_feed.get("liveData", {}).get("boxscore", {}).get("teams", {})
     for side in ("home", "away"):
@@ -1534,32 +1589,18 @@ def get_player_batting_line(game_feed: Dict[str, Any], player_id: int) -> Dict[s
                     if len(o) == 3 and o[:-2] == _order[:-2] and not o.endswith("00"):
                         was_replaced = True
                         break
-            # Extract homer events for this player (2026-08-11: JOB 1)
+            # Extract homer events for this player (2026-08-11: JOB 1).
+            # CONSOLIDATED (2026-09-14): sourced from the shared
+            # _extract_hr_plays() scan instead of re-scanning allPlays here
+            # -- see that function's docstring. Shape and values below are
+            # unchanged from before the consolidation.
             hr_events = []
-            plays = ((game_feed.get("liveData") or {}).get("plays") or {}).get("allPlays") or []
-            for play in plays:
-                result = play.get("result") or {}
-                if str(result.get("eventType") or result.get("event") or "").lower() not in (
-                        "home_run", "home run"):
+            for hr in _extract_hr_plays(game_feed):
+                if hr["player_id"] != player_id:
                     continue
-                batter = ((play.get("matchup") or {}).get("batter") or {})
-                if safe_int(batter.get("id"), 0) != player_id:
-                    continue
-                # Extract homer details
-                hit = {}
-                for ev in reversed(play.get("playEvents") or []):
-                    if ev.get("hitData"):
-                        hit = ev["hitData"]
-                        break
-                pitcher = ((play.get("matchup") or {}).get("pitcher") or {})
-                # end_time is the wall clock ON the homer -- the moment the
-                # ball leaves. It has been sitting unread in about.endTime
-                # since this block was written; without it there is no way to
-                # ask what the price was when a pick actually cashed, only
-                # what it was at first pitch. Kept raw (ISO-8601 UTC, as MLB
-                # sends it) so the site can align it against the odds
-                # movement history without guessing a timezone here.
-                about = play.get("about") or {}
+                about = hr["about"]
+                pitcher = hr["pitcher"]
+                hit = hr["hit"]
                 hr_events.append({
                     "inning": safe_int(about.get("inning"), None),
                     "half_inning": str(about.get("halfInning") or ""),
@@ -1570,7 +1611,7 @@ def get_player_batting_line(game_feed: Dict[str, Any], player_id: int) -> Dict[s
                     "launch_angle": safe_float(hit.get("launchAngle"), None) if hit.get("launchAngle") is not None else None,
                     "total_distance": safe_float(hit.get("totalDistance"), None) if hit.get("totalDistance") is not None else None,
                     "pitch_type": "",
-                    "event": result.get("event", ""),
+                    "event": hr["result_event"],
                 })
             return {
                 "hits": safe_int(batting.get("hits"), 0),
@@ -1606,8 +1647,6 @@ def get_player_batting_line(game_feed: Dict[str, Any], player_id: int) -> Dict[s
     }
 
 
-
-
 def hr_distances_from_game(game_feed: Dict[str, Any]) -> Dict[int, Dict[str, Any]]:
     """{batter_id: {"longest": ft, "distances": [...], "max_ev": mph}} for HRs.
 
@@ -1616,24 +1655,18 @@ def hr_distances_from_game(game_feed: Dict[str, Any]) -> Dict[int, Dict[str, Any
     download, so this costs no extra request. Statcast occasionally omits
     hitData on a play (tracking gap); those homers simply have no distance
     rather than a zero, so they can't drag a leaderboard down.
+
+    CONSOLIDATED (2026-09-14): the per-play extraction (home-run filter,
+    hitData lookup, pitchData/details lookup) now comes from the shared
+    _extract_hr_plays() scan instead of a second independent pass over
+    allPlays -- see that function's docstring. The rounding/defaulting
+    below is unchanged.
     """
     out: Dict[int, Dict[str, Any]] = {}
-    plays = ((game_feed.get("liveData") or {}).get("plays") or {}).get("allPlays") or []
-    for play in plays:
-        result = play.get("result") or {}
-        if str(result.get("eventType") or result.get("event") or "").lower() not in (
-                "home_run", "home run"):
-            continue
-        batter = ((play.get("matchup") or {}).get("batter") or {})
-        pid = safe_int(batter.get("id"), 0)
-        if not pid:
-            continue
-        # hitData sits on the last playEvent of the at-bat.
-        hit = {}
-        for ev in reversed(play.get("playEvents") or []):
-            if ev.get("hitData"):
-                hit = ev["hitData"]
-                break
+    for hr in _extract_hr_plays(game_feed):
+        pid = hr["player_id"]
+        hit = hr["hit"]
+        pitch_ev = hr["pitch_event"]
         dist = safe_float(hit.get("totalDistance"), 0.0)
         ev_mph = safe_float(hit.get("launchSpeed"), 0.0)
         # PITCH CAPTURE (2026-07-31). pitchData sits on the same playEvent as
@@ -1642,11 +1675,6 @@ def hr_distances_from_game(game_feed: Dict[str, Any]) -> Dict[int, Dict[str, Any
         # they are thrown -- and crucially, storing EVERY homer here gives the
         # short ones too, which is the comparison group a highlight feed can
         # never provide.
-        pitch_ev = None
-        for evt in reversed(play.get("playEvents") or []):
-            if evt.get("hitData"):
-                pitch_ev = evt
-                break
         pd_ = (pitch_ev or {}).get("pitchData") or {}
         details = (pitch_ev or {}).get("details") or {}
         ptype = ((details.get("type") or {}).get("description")
