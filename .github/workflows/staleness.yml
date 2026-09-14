@@ -1,0 +1,62 @@
+# 🚨 Silent-skip alarm — is the published board older than its own cadence?
+#
+# GitHub drops scheduled runs silently under load; it has hit nfl.yml and
+# today.yml both. Since 2026-09-14 the prediction of record is the last run
+# written before first pitch (claude/record-is-leaked-2026-09-14.md), so a
+# skipped pregame slot is a stale record. This job reads the generated_at on
+# the published meta files (the OUTPUT, not GitHub's run history, which is the
+# thing that lies when a slot is skipped) and pings Discord when the freshest
+# file is older than the gap a skip would open. See bots/staleness_watch.py.
+#
+# It is itself a cron and can itself be skipped -- two schedules dropped in the
+# same window is far less likely than one, so this catches the common case; it
+# is not a watchdog that watches itself. Never writes, never goes red on its
+# own account (a monitor that fails is one more red X to ignore).
+name: Staleness watch
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    # Every 30 min through the MLB refresh window (UTC 12:00-07:59). This is
+    # its own schedule, deliberately offset from today.yml's, so the two are
+    # unlikely to be dropped together.
+    - cron: "15,45 12-23 * * *"
+    - cron: "15,45 0-7 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: staleness-watch
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # The published timestamps live on the data branch, not on main.
+      - name: Checkout the data branch
+        uses: actions/checkout@v4
+        with:
+          ref: data
+          path: _data
+          fetch-depth: 1
+
+      - uses: actions/checkout@v4
+        with:
+          path: _main
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # stdlib only -- no pip install, so a run is seconds of compute.
+      - name: Check board freshness
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        run: |
+          python _main/bots/staleness_watch.py \
+            --dir _data/public/data/current \
+            --post
