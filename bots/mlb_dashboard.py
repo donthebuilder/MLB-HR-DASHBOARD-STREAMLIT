@@ -1758,6 +1758,16 @@ class HitterRecord:
     # row, so a row saved before this field existed is correctly treated as
     # "not yet refreshed" rather than silently dropped.
     built_after_lock: bool = False
+    # PATH TO VICTORY A2 (2026-09-15): last-known HR moneyline, American
+    # odds, as of the START of this run. This run's own odds_fetch.py
+    # invocation happens LATER in the pipeline (see today.yml: mlb_dashboard.py
+    # runs before odds_fetch.py), so this is deliberately the PREVIOUS
+    # cycle's snapshot -- the same staleness every other pre-lock input in
+    # this file already tolerates on an hourly rebuild. None means no
+    # market coverage for this player (odds_latest.json's own match_rate
+    # runs ~69% on real slates) -- treated as eligible, never as a signal
+    # either way. See load_hr_prices() / _price_ok().
+    hr_price: Optional[int] = None
 
 
 class CacheDB:
@@ -11120,6 +11130,59 @@ def build_pool(rows: List[HitterRecord], size: int, variant: str, used_players=N
 
 
 
+def load_hr_prices() -> Dict[int, int]:
+    """PATH TO VICTORY A2: per-player American odds for the HR prop, from
+    the last odds_fetch.py run (public/data/current/odds_latest.json --
+    THIS run's own odds_fetch.py step runs AFTER mlb_dashboard.py in
+    today.yml, so this is always the previous cycle's snapshot, same
+    staleness tolerance every other pre-lock input already has). A missing
+    file, a missing player, or a malformed entry all resolve to "no price
+    known" (absent from the returned dict) -- callers must treat that as
+    eligible, never as a reason to exclude: odds_latest's own match_rate
+    runs ~69% on real slates, and treating a coverage gap as a positive HR
+    signal or as automatic exclusion would both be inventing data that
+    isn't there.
+    """
+    path = DASHBOARD_REPO / "public" / "data" / "current" / "odds_latest.json"
+    try:
+        raw = json.loads(path.read_text())
+    except Exception as exc:
+        print(f"A2 odds cutoff: no odds_latest.json to read ({exc}); price cutoff inactive this run", file=sys.stderr)
+        return {}
+    out: Dict[int, int] = {}
+    for pid_s, markets in (raw.get("by_player_id") or {}).items():
+        try:
+            pid = int(pid_s)
+        except (TypeError, ValueError):
+            continue
+        m = (markets or {}).get("batter_home_runs")
+        if not m:
+            continue
+        price = m.get("best_over")
+        if price is None:
+            price = m.get("over")
+        if price is None:
+            continue
+        try:
+            out[pid] = int(price)
+        except (TypeError, ValueError):
+            continue
+    return out
+
+
+def _price_ok(h: "HitterRecord") -> bool:
+    """PATH TO VICTORY A2: True unless this hitter has a KNOWN HR price of
+    +901 or worse. Measured: the +901-and-up band hit 3.8% vs 7.1% implied,
+    ROI -34%, across two samples (claude/PATH-TO-VICTORY-2026-09-13.md, A2)
+    -- bad enough on its own that TOP/HR should never be handed to a hitter
+    priced there. No price on file is NOT the same as a bad price, and
+    returns True (eligible) -- see load_hr_prices()."""
+    price = getattr(h, "hr_price", None)
+    if price is None:
+        return True
+    return price < 901
+
+
 def _top_and_hr_slots(hitters: List[HitterRecord]) -> Tuple[HitterRecord, HitterRecord]:
     """ONE definition of a game's TOP and HR, shared (2026-09-01).
 
@@ -11139,11 +11202,30 @@ def _top_and_hr_slots(hitters: List[HitterRecord]) -> Tuple[HitterRecord, Hitter
                 + 10.0 * safe_float(getattr(h, "last5_hr", 0.0), 0.0)
                 + 0.35 * safe_float(getattr(h, "hr_score", 0.0), 0.0))
 
+    def _priced(seq: List[HitterRecord]) -> List[HitterRecord]:
+        # PATH TO VICTORY A2: prefer the subset with no known +901-or-worse
+        # price; if that empties the tier entirely (every candidate here IS
+        # priced as a longshot -- rare, but a real slate could do it for a
+        # blowout), fall back to the tier unfiltered rather than discard
+        # real candidates. A hitter with no price on file always passes
+        # (_price_ok treats unknown as OK), so with zero price coverage
+        # this is a no-op and every tier is byte-identical to pre-A2.
+        ok = [h for h in seq if _price_ok(h)]
+        return ok if ok else seq
+
     def _pool(exclude: set) -> List[HitterRecord]:
-        pool = [h for h in hitters if h.player_id not in exclude and getattr(h, "season_pa", 0) >= 15]
-        if not pool:
-            pool = [h for h in hitters if h.player_id not in exclude] or list(hitters)
-        return pool
+        # Same three-tier shape as before A2 (PA-eligible minus excluded ->
+        # any minus excluded -> everyone, exclude ignored, the single-hitter
+        # safety net) -- A2 only adds a price preference INSIDE each tier
+        # via _priced(), it never removes a tier or changes what happens
+        # when a tier is empty for non-price reasons.
+        tier1 = _priced([h for h in hitters if h.player_id not in exclude and getattr(h, "season_pa", 0) >= 15])
+        if tier1:
+            return tier1
+        tier2 = _priced([h for h in hitters if h.player_id not in exclude])
+        if tier2:
+            return tier2
+        return _priced(list(hitters)) or list(hitters)
 
     def _slot(exclude: set, key) -> HitterRecord:
         pool = _pool(exclude)
@@ -14764,6 +14846,24 @@ Use ALT LOOKS as quality variance, not primary plays.
             finalize_xhr_fields(all_rows, db)
         except Exception as _xexc:
             print(f"xHR finalize skipped: {_xexc}", file=sys.stderr)
+
+        # PATH TO VICTORY A2 (2026-09-15): stamp last-known HR price onto
+        # every row BEFORE role selection, so _top_and_hr_slots (via
+        # _price_ok) can refuse to hand TOP or HR to a hitter priced
+        # +901-or-worse. Best-effort and silent by design -- see
+        # load_hr_prices() for why a missing file or missing player never
+        # raises and never blocks the run.
+        try:
+            _hr_prices = load_hr_prices()
+            if _hr_prices:
+                for _r in all_rows:
+                    _r.hr_price = _hr_prices.get(_r.player_id)
+                print(f"A2 odds cutoff: {len(_hr_prices)} HR prices loaded, "
+                      f"{sum(1 for _r in all_rows if _r.hr_price is not None)}/{len(all_rows)} rows matched",
+                      file=sys.stderr)
+        except Exception as _price_exc:
+            print(f"A2 odds cutoff skipped ({_price_exc}); price filter inactive this run", file=sys.stderr)
+
         rows_payload = enrich_weather_payload_for_website([dataclasses.asdict(r) for r in all_rows])
         # Slate-level, so it can rank. See mark_hidden_hr_value for why the
         # per-hitter version could never fire.
