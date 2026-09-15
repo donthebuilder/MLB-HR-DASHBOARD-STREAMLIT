@@ -149,13 +149,43 @@ jobs:
           python export_report.py --seasons 2024 2025 \
             --out "$GITHUB_WORKSPACE/public/data/current" --prefix nfl_
 
+      # LOCK. B10(b)/(e) plumbing, 2026-09-15 — TUDDY's sibling of
+      # bots/pick_lock.py (see that script's own module docstring for the
+      # full design). Freezes each market's 5-rung ladder the instant its
+      # occupant's own game kicks off (nfl_picks.py's own header names the
+      # bug this closes: "the last one wins" on a week-wide recompute), and
+      # separately locks prediction_of_record per game_id to the last
+      # PREGAME nfl_prediction_log — never a post-kickoff rebuild. A no-op,
+      # safely, in preseason: the script reads mode straight off nfl_week.json
+      # and exits cleanly when it isn't "week".
+      #
+      # Runs after the card exists (Build slate) and after odds/report-card
+      # steps that don't touch nfl_picks.json, and BEFORE grading reads it —
+      # so grading always grades the locked ladder, not a later recompute.
+      # continue-on-error for the same reason as the other data steps: a bug
+      # in the lock must never cost the whole slate publish.
+      - name: Lock the card
+        continue-on-error: true
+        working-directory: bots/nfl
+        run: |
+          set -euo pipefail
+          ARGS="--season 2026"
+          if [ -n "${{ github.event.inputs.week }}" ]; then
+            ARGS="$ARGS --week ${{ github.event.inputs.week }}"
+          fi
+          python nfl_pick_lock.py $ARGS --apply \
+            --dir "$GITHUB_WORKSPACE/public/data/current" --prefix nfl_
+
       # GRADE. Separate step, and it runs on every firing rather than only on
       # the post-game crons: a Sunday-night run should grade the 1pm wave even
       # though the night game is still going, and grading is idempotent — it
       # rewrites the same file from whatever is final so far.
       #
-      # It reads the card this run just wrote, so the picks being graded are
-      # always the picks that were published, never a re-derivation.
+      # It reads the card THE LOCK STEP just wrote (the locked ladder when a
+      # game has started, the live recompute otherwise), so the picks being
+      # graded are always the picks that were published, never a bare
+      # re-derivation that a late-week rebuild could silently change out from
+      # under an already-decided rung.
       - name: Grade the card
         continue-on-error: true
         working-directory: bots/nfl

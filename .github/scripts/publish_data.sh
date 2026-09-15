@@ -108,6 +108,15 @@ PUBLISH_FILES=(
   nfl_logs.json
   nfl_picks.json
   nfl_results.json
+  # nfl_pick_lock.json (B10(b)/(e), 2026-09-15) -- TUDDY's sibling of
+  # pick_lock.json above, same reason, same failure mode already documented
+  # twice on this file for MLB: it is fetched back over HTTPS next run
+  # because the runner checks out `main` and last run's ledger only exists
+  # on `data`. Freezes each market's 5-rung card ladder the instant its
+  # occupant's own game kicks off, and locks prediction_of_record per
+  # game_id to the last PREGAME nfl_prediction_log. Written by
+  # bots/nfl/nfl_pick_lock.py.
+  nfl_pick_lock.json
   # NFL ODDS (2026-08-24). bots/nfl/nfl_odds_fetch.py's own two regenerated-
   # every-run outputs, the nfl_ analog of odds_latest.json/odds_status.json
   # above. No nfl_odds_history.json yet -- see that script's module docstring
@@ -272,6 +281,17 @@ NFL_ODDS_KEEP=90
 # them. ~7 KB a week; 60 is three seasons.
 NFL_PICKS_GLOB="nfl_picks_20*.json"
 NFL_PICKS_KEEP=60
+
+# nfl_por_log_<season>_w03.jsonl (B10(b)/(e), 2026-09-15): ONE FILE PER WEEK,
+# written by bots/nfl/nfl_pick_lock.py's append_por_log() the instant each
+# game_id's prediction_of_record locks -- the NFL sibling of POR_LOG_GLOB
+# above, but keyed by week (NFL's slate unit) rather than by date, because
+# nfl_pick_lock.json's own "prediction_of_record" key resets to {} the
+# instant (season, week) changes. Without this file a future eval pass could
+# only ever see the current week. Same per-week cadence as NFL_RESULTS_GLOB/
+# NFL_PICKS_GLOB immediately above, so the same KEEP=60 (three seasons).
+NFL_POR_LOG_GLOB="nfl_por_log_*.jsonl"
+NFL_POR_LOG_KEEP=60
 
 
 # ── READING THE BRANCH, AND NOT PUBLISHING BACKWARDS ────────────────────────
@@ -471,9 +491,22 @@ stage_local() {
            "$SRC"/data/$NFL_PRED_LOG_GLOB "$SRC"/data/current/$NFL_PRED_LOG_GLOB \
            "$SRC"/data/$NFL_OUTCOME_LOG_GLOB "$SRC"/data/current/$NFL_OUTCOME_LOG_GLOB \
            "$SRC"/data/$NFL_RESULTS_GLOB "$SRC"/data/current/$NFL_RESULTS_GLOB \
-           "$SRC"/data/$NFL_ODDS_GLOB "$SRC"/data/current/$NFL_ODDS_GLOB; do
+           "$SRC"/data/$NFL_ODDS_GLOB "$SRC"/data/current/$NFL_ODDS_GLOB \
+           "$SRC"/data/$NFL_PICKS_GLOB "$SRC"/data/current/$NFL_PICKS_GLOB \
+           "$SRC"/data/$NFL_POR_LOG_GLOB "$SRC"/data/current/$NFL_POR_LOG_GLOB; do
     [ -f "$g" ] && cp "$g" "$STAGE/public/data/current/"
   done
+  # NFL_PICKS_GLOB was declared above (and already in carry_forward()'s trim
+  # spec below) but missing from this copy loop until 2026-09-15 -- the exact
+  # "real file, green step, no line here to carry it" failure this file has
+  # now named three times for other files (see PUBLISH_FILES' pick_lock.json/
+  # pick_matrix.json/nfl_odds_20*.json comments). nfl_bot.py has been writing
+  # nfl_picks_<season>_w<week>.json to public/data/current/ every run since
+  # 2026-09-06; without this line it was copied nowhere, so nfl_results.py's
+  # fetch-back-from-the-branch path for grading a rolled-over week has had
+  # nothing to fetch. Confirmed missing on the data branch via the GitHub API
+  # on 2026-09-15. Fixed here because B10(b)/(e)'s card lock (this same
+  # patch) depends on this exact file actually publishing.
 
   [ -f "$SRC/data/index.json" ] && cp "$SRC/data/index.json" "$STAGE/public/data/" || true
 
@@ -538,6 +571,7 @@ carry_forward() {
               "$NFL_PRED_LOG_GLOB:$NFL_PRED_LOG_KEEP" "$NFL_OUTCOME_LOG_GLOB:$NFL_OUTCOME_LOG_KEEP" \
               "$NFL_RESULTS_GLOB:$NFL_RESULTS_KEEP" \
               "$NFL_PICKS_GLOB:$NFL_PICKS_KEEP" \
+              "$NFL_POR_LOG_GLOB:$NFL_POR_LOG_KEEP" \
               "$NFL_ODDS_GLOB:$NFL_ODDS_KEEP"; do
     glob="${spec%:*}"; keep="${spec##*:}"
     n=$(find "$STAGE/public/data/current" -maxdepth 1 -type f -name "$glob" | wc -l)
