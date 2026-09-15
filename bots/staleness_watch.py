@@ -115,6 +115,25 @@ def nfl_age(current: Path):
     return newest_prediction_log(current, "nfl_")
 
 
+def nfl_fantasy_stats_age(current: Path):
+    """2026-09-15. FRANCHISE's live scoring reads nfl_fantasy_stats.json, a
+    SEPARATE publish from nfl.yml's own board (nfl_meta.json, checked by
+    nfl_age above) -- nfl-fantasy-stats.yml is its own cron, on its own
+    schedule, and can be silently skipped independently of nfl.yml. Nothing
+    on file checked it. It went stale for 2+ hours during the 2026-09-15 MNF
+    window (built_at stuck at 02:47Z while the game ran past 04:45Z) with no
+    alert, because this function did not exist -- Week 1 stayed 'live',
+    win/loss never tallied, and the Tue 13:00Z Week 2 roll ran the risk of
+    firing against an unfinished week. Same read-the-OUTPUT discipline as
+    nfl_age: this is generated_at off the published file, not GitHub's own
+    run history (the thing that lies when a slot is skipped).
+    """
+    meta = read_json(current / "nfl_fantasy_stats.json")
+    if isinstance(meta, dict):
+        return parse_ts(meta.get("built_at"))
+    return None
+
+
 def post_discord(lines: list[str]) -> None:
     hook = os.environ.get("DISCORD_WEBHOOK", "")
     if not hook or not lines:
@@ -144,7 +163,10 @@ def main() -> int:
          env_int("MLB_STALE_MIN", 120), None),
         ("NFL board (nfl.yml)", nfl_age,
          env_int("NFL_WINDOW_START", 13), env_int("NFL_WINDOW_END", 6),
-         env_int("NFL_STALE_MIN", 240), {3, 6, 0}),  # Thu, Sun, Mon (Mon=0)
+         env_int("NFL_STALE_MIN", 240), {3, 4, 6, 0, 1}),  # Thu+Fri, Sun+Mon, Mon+Tue (Mon=0)
+        ("NFL fantasy stats (FRANCHISE live scoring)", nfl_fantasy_stats_age,
+         env_int("NFLFS_WINDOW_START", 17), env_int("NFLFS_WINDOW_END", 6),
+         env_int("NFLFS_STALE_MIN", 45), {3, 4, 6, 0, 1}),
     ]
 
     alerts, report = [], []
