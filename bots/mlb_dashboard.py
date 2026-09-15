@@ -2895,6 +2895,49 @@ def find_catcher(team_box: Dict[str, Any]) -> Tuple[int, str, str]:
 def build_projected_lineup(client: MLBClient, team_box: Dict[str, Any], team_id: int) -> List[Tuple[int, int]]:
     players = team_box.get("players", {}) or {}
     candidates: List[Dict[str, Any]] = []
+    _career_cache: Dict[int, Optional[Tuple[int, float, float, float, float, int]]] = {}
+
+    def _career3_fallback(pid: int) -> Optional[Tuple[int, float, float, float, float, int]]:
+        # PATH TO VICTORY A3 (2026-09-15). A hitter with ZERO plate
+        # appearances THIS season -- a September call-up, or a bench bat
+        # making his season debut in this exact game -- used to be dropped
+        # from the candidate pool outright by the pa<=0/ops<=0/avg<=0 guard
+        # below: the model had nothing to rank him on, so if he started (or
+        # was the bench bat who got the late spot start), any homer he hit
+        # was an automatic coverage miss with no HitterRecord on file at
+        # all. CAREER-3: look back up to 3 prior MLB seasons and use the
+        # most recent one with a real sample, so a real big leaguer with a
+        # track record still enters the pool and gets scored (honestly, on
+        # his own real numbers -- this only affects who is CONSIDERED a
+        # lineup candidate, never the season stats actually stamped on his
+        # HitterRecord, which still and correctly read zero for this year).
+        # A true rookie debut with no prior MLB season at all has nothing to
+        # fall back to and stays excluded exactly as before -- never invented.
+        if pid in _career_cache:
+            return _career_cache[pid]
+        result = None
+        for back in (1, 2, 3):
+            try:
+                blob = client.person_stats(pid, group="hitting", stat_type="season", season=SEASON - back)
+            except Exception:
+                continue
+            stats_list = blob.get("stats") or []
+            splits = (stats_list[0].get("splits") if stats_list else []) or []
+            stat = (splits[0].get("stat") if splits else {}) or {}
+            c_pa = safe_int(stat.get("plateAppearances"), 0)
+            if c_pa <= 0:
+                continue
+            result = (
+                c_pa,
+                safe_float(stat.get("avg"), 0.0),
+                safe_float(stat.get("ops"), 0.0),
+                safe_float(stat.get("obp"), 0.0),
+                safe_float(stat.get("slg"), 0.0),
+                safe_int(stat.get("homeRuns"), 0),
+            )
+            break
+        _career_cache[pid] = result
+        return result
 
     def add(pid: int, pos: str, stat: Dict[str, Any]):
         if not pid or (pos or "").upper() in {"P", "TWP"}:
@@ -2905,6 +2948,10 @@ def build_projected_lineup(client: MLBClient, team_box: Dict[str, Any], team_id:
         obp = safe_float(stat.get("obp"), 0.0)
         slg = safe_float(stat.get("slg"), 0.0)
         hr = safe_int(stat.get("homeRuns"), 0)
+        if pa <= 0 and ops <= 0 and avg <= 0:
+            fallback = _career3_fallback(pid)
+            if fallback:
+                pa, avg, ops, obp, slg, hr = fallback
         if pa <= 0 and ops <= 0 and avg <= 0:
             return
         candidates.append({"player_id": pid, "avg": avg, "ops": ops, "obp": obp, "slg": slg, "hr": hr, "pa": pa})
@@ -10703,7 +10750,14 @@ def build_top10_alt_board(rows: List[HitterRecord]) -> str:
     LAST_ALT_TAGS = {}
     MIN_TOP10_PA = 40
     MIN_TOP10_BBE = 10
-    POWER3_MIN_BBE = 60    # season balls in play before the flag can fire
+    # PATH TO VICTORY A3 (2026-09-15): was 60, dropped to 10. A hitter with
+    # 10-59 season BBE was ranked by power3_score but never allowed to carry
+    # the power3_flag badge -- excluded from coverage of exactly the
+    # thin-sample bench/call-up bats this track item targets. 10 BBE is
+    # still a real (if noisy) EV sample, not a single-swing fluke; nothing
+    # about the score or ranking changes, only who is eligible to be
+    # flagged among the top 10.
+    POWER3_MIN_BBE = 10   # season balls in play before the flag can fire
     POWER3_FLAG_TOP = 10   # the audit's "top ten by Power-3 homer at 21.4%"
 
     def trusted_sample(r: HitterRecord) -> bool:
