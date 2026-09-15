@@ -49,7 +49,19 @@ on:
     # slate mid-publish. Each run is ~40s, so ~32 min of Actions time a day.
     # GitHub delays scheduled runs by a few minutes under load; the spacing
     # absorbs that.
-    - cron: "10,40 * * * *"
+    # SLATE-AWARE SPLIT (2026-09-15, Donovan: "up-tick the results crons ...
+    # during slate times" -- the flat 30-minute cadence above ran the same
+    # rate at 4am as it did at 8pm, when nothing is happening overnight.
+    # Two entries instead of one: every 20 minutes from noon ET through
+    # ~2am ET (16:00-23:59 UTC and 00:00-05:59 UTC -- the actual MLB window,
+    # covering a West-Coast extra-innings game), every 30 minutes the rest
+    # of the day exactly as before. :00/:20/:40 during the slate keeps a run
+    # close to :10 (40 minutes after today.yml's 10:30 UTC rollover, per the
+    # 2026-08-14 note above) while adding one more pass an hour; :10/:40
+    # off-slate is untouched.
+    - cron: "0,20,40 16-23 * * *"
+    - cron: "0,20,40 0-5 * * *"
+    - cron: "10,40 6-15 * * *"
   workflow_dispatch: {}
 
 # One group PER WORKFLOW, not one shared across all of them.
