@@ -43,6 +43,7 @@ import nfl_charting
 import nfl_coverage
 import nfl_explosive
 import nfl_field
+import nfl_numerology
 import nfl_disruption
 import nfl_offense_value
 import nfl_picks
@@ -869,6 +870,29 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
         # Never let the injury feed take the slate down; the board is correct
         # without tags, only less informed.
         print(f"  injuries: skipped ({type(_exc).__name__}: {_exc})")
+
+    # B10(d), 2026-09-15: real jersey/birthdate/season-TD, for the NFL side
+    # of the Numerology/Alignments feature (see nfl_numerology.py's header
+    # for what this is and is not). Attached here, same one place every row
+    # shape converges, same never-take-down-the-slate shape as the injuries
+    # block above.
+    try:
+        _num_fields = nfl_numerology.numerology_fields(season, week)
+        _tagged_num = 0
+        for r in rows:
+            nf = _num_fields.get(r["player_id"])
+            if not nf:
+                continue
+            if nf.get("jersey_number"):
+                r["jersey_number"] = nf["jersey_number"]
+            if nf.get("birth_date"):
+                r["birth_date"] = nf["birth_date"]
+            if "season_td" in nf:
+                r["season_td"] = nf["season_td"]
+            _tagged_num += 1
+        print(f"  numerology: {_tagged_num} of {len(rows)} published rows carry jersey/birth/season-TD")
+    except Exception as _exc:  # noqa: BLE001
+        print(f"  numerology: skipped ({type(_exc).__name__}: {_exc})")
 
     return {
         "extras": extras,
