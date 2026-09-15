@@ -9659,6 +9659,28 @@ def score_hitter(h: HitterRecord) -> HitterRecord:
     apply_matchup_center_fields(h)
     return h
 
+# SCHEDULE-FIRST PROBABLE PITCHER (2026-09-15, Donovan: the pregame post
+# "showing yesterday['s pitcher] today" -- traced here). build_hitter_records
+# used to take its probable pitcher straight off the game's own LIVE FEED
+# (gameData.probablePitchers on /game/{pk}/feed/live), never looking at the
+# hydrated probablePitcher that client.schedule(slate_date) already carries
+# on `game.teams.{home,away}.probablePitcher` -- fetched once for the whole
+# run and passed in as `game`. The live feed is built for an IN-PROGRESS
+# game; hours before first pitch it can still be carrying the team's
+# PREVIOUS game's starter as a placeholder. Confirmed 2026-09-15: LAD @ CIN's
+# live feed still had Tarik Skubal (LAD's 09-14 starter) while MLB's own
+# schedule endpoint already listed Yoshinobu Yamamoto for the 09-15 game.
+# The schedule value is free here (already fetched) and goes first; the live
+# feed is kept only as a fallback for a game the schedule hasn't posted a
+# name for yet, ahead of resolve_probable_pitcher's own two TBD fallbacks.
+def probable_pitcher_id(game: Dict[str, Any], game_data: Dict[str, Any], side: str) -> int:
+    sched_side = ((game.get("teams", {}) or {}).get(side, {}) or {})
+    sched_id = safe_int((sched_side.get("probablePitcher") or {}).get("id"), 0)
+    if sched_id:
+        return sched_id
+    live_side = ((game_data.get("probablePitchers", {}) or {}).get(side) or {})
+    return safe_int(live_side.get("id"), 0)
+
 def build_hitter_records(client: MLBClient, db: CacheDB, game: Dict[str, Any], slate_date: dt.date) -> List[HitterRecord]:
     game_pk = safe_int(game.get("gamePk"), 0)
     live = client.live_game(game_pk)
@@ -9696,9 +9718,12 @@ def build_hitter_records(client: MLBClient, db: CacheDB, game: Dict[str, Any], s
     else:
         weather = WeatherSummary(roof=roof)
 
-    probable = game_data.get("probablePitchers", {}) or {}
-    probable_home_id = safe_int((probable.get("home") or {}).get("id"), 0)
-    probable_away_id = safe_int((probable.get("away") or {}).get("id"), 0)
+    # SCHEDULE-FIRST PROBABLE PITCHER (2026-09-15) -- see
+    # probable_pitcher_id()'s own docstring for why. `game` is the same
+    # schedule row client.schedule(slate_date) already fetched once for the
+    # whole run; `game_data` is this game's separate live-feed payload.
+    probable_home_id = probable_pitcher_id(game, game_data, "home")
+    probable_away_id = probable_pitcher_id(game, game_data, "away")
     # TBD? Chase it before settling (live feed, then rotation inference).
     _tmp_home_tid = safe_int((game_data.get("teams", {}).get("home", {}) or {}).get("id"), 0)
     _tmp_away_tid = safe_int((game_data.get("teams", {}).get("away", {}) or {}).get("id"), 0)
