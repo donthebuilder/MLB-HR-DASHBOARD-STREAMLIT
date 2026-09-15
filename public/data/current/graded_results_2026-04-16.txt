@@ -1,0 +1,65 @@
+RESULTS TRACKER — 2026-04-16
+------------------------------------------
+HR Picks: 10 | HR Accuracy: 30.0%
+Base Hit Picks: 40 | Base Hit Accuracy: 67.5%
+HRR Picks: 20 | HRR 2+ Accuracy: 65.0%
+HRR Picks: 20 | HRR 3+ Accuracy: 65.0%
+
+HR PICKS THAT HOMERED
+- Aaron Judge (NYY) | HR Score 61.64
+- Junior Caminero (TB) | HR Score 44.29
+- José Ramírez (CLE) | HR Score 41.78
+
+TRACKED PICKS THAT GOT A BASE HIT
+- CJ Abrams (WSH) | TOP | 1 H
+- Oneil Cruz (PIT) | HR | 2 H
+- Jorbit Vivas (WSH) | HIT | 1 H
+- Brandon Lowe (PIT) | HRR | 2 H
+- James Wood (WSH) | HRR | 2 H
+- Jake Mangum (PIT) | CONTACT | 3 H
+- Willy Adames (SF) | HR | 1 H
+- Casey Schmitt (SF) | HIT | 1 H
+- Jung Hoo Lee (SF) | HRR | 3 H
+- Matt Chapman (SF) | CONTACT | 1 H
+- Kevin McGonigle (DET) | TOP | 1 H
+- Jac Caglianone (KC) | HIT | 1 H
+- Dillon Dingler (DET) | HRR | 2 H
+- Riley Greene (DET) | HRR | 3 H
+- Colt Keith (DET) | CONTACT | 1 H
+- Mike Trout (LAA) | TOP | 1 H
+- Aaron Judge (NYY) | HR | 1 H
+- Jo Adell (LAA) | HIT | 2 H
+- Ben Rice (NYY) | HRR | 1 H
+- Oswald Peraza (LAA) | HRR | 2 H
+- Brice Turang (MIL) | TOP | 1 H
+- Vladimir Guerrero Jr. (TOR) | HIT | 1 H
+- William Contreras (MIL) | HIT | 2 H
+- Daulton Varsho (TOR) | HRR | 1 H
+- Andrés Giménez (TOR) | HRR | 2 H
+- Everson Pereira (CWS) | TOP | 2 H
+- Junior Caminero (TB) | HR | 2 H
+- Yandy Díaz (TB) | HIT | 2 H
+- Richie Palacios (TB) | HRR | 2 H
+- Taylor Walls (TB) | HRR | 1 H
+- Shea Langeliers (ATH) | TOP | 2 H
+- Jake Burger (TEX) | HR | 1 H
+- Brandon Nimmo (TEX) | HIT | 1 H
+- Josh Jung (TEX) | HRR | 3 H
+- Jacob Wilson (ATH) | HRR | 2 H
+- Ezequiel Duran (TEX) | CONTACT | 2 H
+- José Ramírez (CLE) | HR | 2 H
+- George Valera (CLE) | HIT | 2 H
+- Leody Taveras (BAL) | HIT | 1 H
+- Taylor Ward (BAL) | HRR | 1 H
+- Yordan Alvarez (HOU) | TOP | 1 H
+- Mickey Moniak (COL) | HR | 1 H
+- Carlos Correa (HOU) | HIT | 1 H
+- Jose Altuve (HOU) | HIT | 2 H
+- Hunter Goodman (COL) | HRR | 2 H
+- Troy Johnston (COL) | CONTACT | 1 H
+- Ramón Laureano (SD) | TOP | 1 H
+- Luis Campusano (SD) | HR | 1 H
+- Miguel Andujar (SD) | HIT | 2 H
+- Brendan Donovan (SEA) | HIT | 2 H
+- Randy Arozarena (SEA) | HRR | 1 H
+- Jackson Merrill (SD) | HRR | 1 H

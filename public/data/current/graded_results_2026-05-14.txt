@@ -1,0 +1,56 @@
+RESULTS TRACKER — 2026-05-14
+------------------------------------------
+HR Picks: 11 | HR Accuracy: 18.2%
+Base Hit Picks: 44 | Base Hit Accuracy: 56.8%
+HRR Picks: 22 | HRR 2+ Accuracy: 45.5%
+HRR Picks: 22 | HRR 3+ Accuracy: 27.3%
+
+HR PICKS THAT HOMERED
+- Juan Soto (NYM) | HR Score 62.71
+- Ian Happ (CHC) | HR Score 66.25
+
+TRACKED PICKS THAT GOT A BASE HIT
+- TJ Rumfield (COL) | TOP | 1 H
+- Konnor Griffin (PIT) | HR | 2 H
+- Oneil Cruz (PIT) | HIT | 1 H
+- Spencer Horwitz (PIT) | HRR | 1 H
+- Elly De La Cruz (CIN) | HIT | 2 H
+- Spencer Steer (CIN) | HRR | 2 H
+- Mark Vientos (NYM) | TOP | 1 H
+- Juan Soto (NYM) | HR | 2 H
+- Riley Greene (DET) | HIT | 2 H
+- Dillon Dingler (DET) | HRR | 1 H
+- Carson Benge (NYM) | HRR | 2 H
+- Liam Hicks (MIA) | HR | 1 H
+- Otto Lopez (MIA) | HIT | 2 H
+- Austin Martin (MIN) | HIT | 2 H
+- Gavin Sheets (SD) | HR | 1 H
+- Brice Turang (MIL) | HIT | 1 H
+- Gary Sánchez (MIL) | HRR | 1 H
+- Sal Frelick (MIL) | HRR | 1 H
+- Miguel Andujar (SD) | CONTACT | 1 H
+- Luke Raley (SEA) | TOP | 2 H
+- Dominic Canzone (SEA) | HRR | 1 H
+- J.P. Crawford (SEA) | HRR | 2 H
+- Yordan Alvarez (HOU) | CONTACT | 3 H
+- Shea Langeliers (ATH) | TOP | 3 H
+- Brent Rooker (ATH) | HR | 1 H
+- Iván Herrera (STL) | HIT | 1 H
+- Nick Kurtz (ATH) | HIT | 2 H
+- Masyn Winn (STL) | HRR | 1 H
+- Kyle Schwarber (PHI) | TOP | 1 H
+- Wilyer Abreu (BOS) | HR | 2 H
+- Brandon Marsh (PHI) | HIT | 1 H
+- Willson Contreras (BOS) | HRR | 1 H
+- Bryce Harper (PHI) | CONTACT | 1 H
+- Drake Baldwin (ATL) | TOP | 1 H
+- Ian Happ (CHC) | HR | 2 H
+- Dominic Smith (ATL) | HIT | 1 H
+- Matt Olson (ATL) | HIT | 1 H
+- Michael Harris II (ATL) | HRR | 1 H
+- Michael Busch (CHC) | CONTACT | 1 H
+- Bobby Witt Jr. (KC) | TOP | 1 H
+- Maikel Garcia (KC) | HIT | 1 H
+- Miguel Vargas (CWS) | HIT | 1 H
+- Chase Meidroth (CWS) | HRR | 2 H
+- Rafael Devers (SF) | TOP | 1 H

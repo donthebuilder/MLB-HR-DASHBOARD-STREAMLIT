@@ -1,0 +1,12 @@
+RESULTS TRACKER — 2026-05-12
+------------------------------------------
+HR Picks: 15 | HR Accuracy: 0.0%
+Base Hit Picks: 60 | Base Hit Accuracy: 0.0%
+HRR Picks: 30 | HRR 2+ Accuracy: 0.0%
+HRR Picks: 30 | HRR 3+ Accuracy: 0.0%
+
+HR PICKS THAT HOMERED
+- none
+
+TRACKED PICKS THAT GOT A BASE HIT
+- none

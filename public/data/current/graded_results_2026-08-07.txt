@@ -1,0 +1,173 @@
+RESULTS TRACKER - 2026-08-07
+------------------------------------------
+BETTABLE RESULTS
+Top 15 HR: 2/15 (13.3%)
+HR Picks: 1/15 (6.7%)
+Top Picks: 1/15 (6.7%)
+
+FULL SHEET BASE HIT PERFORMANCE
+Base Hit Accuracy: 56.7%
+
+HR CAPTURE (BETTABLE)
+Total Slate HRs: 36
+Caught in Top 15: 2
+Caught in HR Picks: 1
+Top 15 Capture Rate: 5.6%
+HR Pick Capture Rate: 2.8%
+
+MODEL VISION (Top 40)
+Model Caught HRs: 6 / 36
+Vision Rate: 16.7%
+
+UNIQUE PLAYER HR ACCURACY
+Unique Players Tracked: 75
+Players Who Homered: 11
+Unique HR Accuracy: 14.7%
+
+HR CATEGORY BREAKDOWN
+------------------------------------------
+🏆 TOP 15 BOARD → 2 HR
+🔥 TOP PICKS → 1 HR
+🧨 HR PICKS → 1 HR
+🏁 HRR PICKS → 5 HR
+💠 HIT PICKS → 0 HR
+⚾ CONTACT PICKS → 4 HR
+Best HR-producing category: 🏁 HRR PICKS
+
+LONGEST HR (BOARD)
+------------------------------------------
+- Andy Pages — 425 ft · 108.1 mph · 35.0°
+- Jackson Chourio — 423 ft · 107.6 mph · 30.0°
+- Matt Olson — 407 ft · 109.8 mph · 19.0°
+- Josh Bell — 406 ft · 103.6 mph · 29.0°
+- Munetaka Murakami — 406 ft · 110.5 mph · 42.0°
+Longest on the board: Andy Pages (425 ft)
+
+
+HR RESULTS BY PLAYER
+------------------------------------------
+- Jackson Chourio — 🏆#12 + 🏁
+- Matt Olson — 🏆#3 + 🔥
+- Jarren Duran — 🧨
+- Andy Pages — 🏁 + ⭐
+- Elly De La Cruz — 🏁
+- Jonathan Aranda — 🏁
+- Steven Kwan — 🏁
+- Austin Riley — ⚾
+- Josh Bell — ⚾
+- Munetaka Murakami — ⚾ + ⭐
+- Tyler Soderstrom — ⚾
+
+MISSED HRs (NOT IN MODEL SHEET)
+------------------------------------------
+- Kaelen Culpepper (MIN) — not in model sheet / lineup pool
+
+POOL PERFORMANCE
+------------------------------------------
+4-MAN HR POOL A → 1/4 HR (Jackson Chourio)
+4-MAN HR POOL B → 0/4 HR (none)
+4-MAN HR POOL C → 0/4 HR (none)
+4-MAN HR POOL D → 1/4 HR (Jarren Duran)
+6-MAN HR POOL A → 0/6 HR (none)
+6-MAN HR POOL B → 2/6 HR (Daylen Lile, Josh Bell)
+6-MAN HR POOL C → 2/6 HR (Nolan Arenado, Rafael Devers)
+6-MAN HR POOL D → 1/6 HR (Munetaka Murakami)
+
+PAIR PERFORMANCE
+------------------------------------------
+Pair 1 → 0/2 HR (none) | Osleivis Basabe + Junior Caminero
+Pair 2 → 1/2 HR (Matt Olson) | Tyler O'Neill + Matt Olson
+Pair 3 → 0/2 HR (none) | Alec Burleson + Dillon Dingler
+Pair 4 → 0/2 HR (none) | Hunter Goodman + Royce Lewis
+
+PLAYER TYPE PERFORMANCE
+------------------------------------------
+🏆 TOP 15 BOARD (15)
+HR: 13.3% | 1+ Hit: 40.0% | XBH: 26.7% | 2+ TB: 33.3% | 2+ HRR: 33.3% | 3+ HRR: 26.7%
+
+🔥 TOP PICKS (15)
+HR: 6.7% | 1+ Hit: 53.3% | XBH: 6.7% | 2+ TB: 26.7% | 2+ HRR: 46.7% | 3+ HRR: 40.0%
+
+🧨 HR PICKS (15)
+HR: 6.7% | 1+ Hit: 46.7% | XBH: 26.7% | 2+ TB: 33.3% | 2+ HRR: 46.7% | 3+ HRR: 20.0%
+
+🏁 HRR PICKS (15)
+HR: 33.3% | 1+ Hit: 73.3% | XBH: 53.3% | 2+ TB: 66.7% | 2+ HRR: 60.0% | 3+ HRR: 46.7%
+
+💠 HIT PICKS (15)
+HR: 0.0% | 1+ Hit: 60.0% | XBH: 20.0% | 2+ TB: 26.7% | 2+ HRR: 40.0% | 3+ HRR: 33.3%
+
+⚾ CONTACT PICKS (15)
+HR: 26.7% | 1+ Hit: 66.7% | XBH: 33.3% | 2+ TB: 33.3% | 2+ HRR: 60.0% | 3+ HRR: 46.7%
+
+
+DESIGNED OUTCOME (did the pick do its job)
+------------------------------------------
+🏆 TOP 15 BOARD (15) -> 2/15 (13.3%)  ·  needs: HR
+🔥 TOP PICKS (15) -> 7/15 (46.7%)  ·  needs: most productive of our picks in his game (HRR or TB)
+🧨 HR PICKS (15) -> 1/15 (6.7%)  ·  needs: HR
+🏁 HRR PICKS (15) -> 9/15 (60.0%)  ·  needs: 2+ hits+runs+RBI
+💠 HIT PICKS (15) -> 9/15 (60.0%)  ·  needs: 1+ hit
+⚾ CONTACT PICKS (15) -> 5/15 (33.3%)  ·  needs: 2+ TB or XBH
+ALL PICKS -> 33/90 (36.7%)
+
+HIT RESULTS BY CATEGORY
+------------------------------------------
+
+🔥 TOP PICKS (1+ Hit)
+- Kyle Stowers — 4H 🔥
+- Bryce Harper — 2H ⭐
+- Ceddanne Rafaela — 2H ⭐
+- Brandon Lowe — 1H
+- Brandon Nimmo — 1H
+- Matt Olson — 1H
+- Pete Crow-Armstrong — 1H
+- Yordan Alvarez — 1H
+
+🧨 HR PICKS (1+ Hit)
+- Jac Caglianone — 2H ⭐
+- Osleivis Basabe — 2H ⭐
+- Royce Lewis — 2H ⭐
+- Jarren Duran — 1H
+- Kyle Schwarber — 1H
+- Luis García Jr. — 1H
+- Rhys Hoskins — 1H
+
+🏁 HRR PICKS (1+ Hit)
+- Steven Kwan — 3H 🔥
+- Bryan Reynolds — 2H ⭐
+- Drake Baldwin — 2H ⭐
+- Jonathan Aranda — 2H ⭐
+- Masataka Yoshida — 2H ⭐
+- Seiya Suzuki — 2H ⭐
+- Andy Pages — 1H
+- Elly De La Cruz — 1H
+- Gleyber Torres — 1H
+- Jackson Chourio — 1H
+- Jose Altuve — 1H
+
+💠 HIT PICKS (1+ Hit)
+- A.J. Ewing — 3H 🔥
+- Jake McCarthy — 3H 🔥
+- Chase DeLauter — 2H ⭐
+- Bobby Witt Jr. — 1H
+- CJ Abrams — 1H
+- Caleb Durbin — 1H
+- Cole Young — 1H
+- Luis Campusano — 1H
+- Mauricio Dubón — 1H
+
+⚾ CONTACT PICKS (1+ Hit)
+- Josh Bell — 4H 🔥
+- Alex Bregman — 1H
+- Austin Riley — 1H
+- Christian Walker — 1H
+- Coby Mayo — 1H
+- Francisco Lindor — 1H
+- Jung Hoo Lee — 1H
+- Mickey Moniak — 1H
+- Munetaka Murakami — 1H
+- Tyler Soderstrom — 1H
+
+MODEL DIAGNOSTIC (LOW PRIORITY)
+Full Sheet HR Coverage: 35 / 36 (97.2%)

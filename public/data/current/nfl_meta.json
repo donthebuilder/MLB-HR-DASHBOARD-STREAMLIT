@@ -1,0 +1,37 @@
+{
+  "built_at": "2026-09-15T10:25:38.475574-07:00",
+  "built_at_human": "Sep 15, 10:25 AM PHX",
+  "mode": "week",
+  "label": "Week 2",
+  "counts": {
+    "players": 526,
+    "games": 16
+  },
+  "run_meta": {
+    "run_id": "2026-wk02.172543Z.gha-35001164687",
+    "generated_at": "2026-09-15T17:25:43.673718+00:00",
+    "mode": "week",
+    "season": 2026,
+    "week": 2,
+    "trigger": "NFL Bot \u2014 slate + report card (data branch only)",
+    "git_sha": "f370200fc7cc507cd01035afa59e4ec7ba470f27",
+    "model_family": "moonshot-nfl",
+    "model_versions": {
+      "TD": "nfl_td_v2",
+      "REC_YDS": "nfl_recyds_v1",
+      "REC": "nfl_rec_v1",
+      "RUSH_YDS": "nfl_rushyds_v1",
+      "RUSH_ATT": "nfl_rushatt_v1",
+      "PASS_YDS": "nfl_passyds_v1",
+      "KICK_PTS": "nfl_kickpts_v1"
+    },
+    "config_hashes": {
+      "nfl": "sha256:74184e00e4255304c21a4f39cd70635b32f10daacf1d93becc4b977b2b696a9b"
+    },
+    "schema_version": 1,
+    "env": {
+      "python": "3.11.16",
+      "nflreadpy": "0.1.5"
+    }
+  }
+}
