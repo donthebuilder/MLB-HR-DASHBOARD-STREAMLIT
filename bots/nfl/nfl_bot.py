@@ -1281,6 +1281,26 @@ def main() -> int:
     #   "A+") is that same single top label for TD, so this flag is nothing
     #   more than that cutoff applied to the score this run already
     #   computed -- no new data, no new grading logic.
+    #   coverage_mismatch_tag -- MLB's pitch_type_match_flag (does the
+    #   batter's own contact profile match THIS pitcher's specific mix), for
+    #   receivers: does his own zone-vs-man performance split match the
+    #   specific scheme his opponent leans on. Real fields only --
+    #   coverage_team's man_pct/zone_pct (opponent scheme tendency) and
+    #   coverage_player's zone/man splits (his own ypt facing each) both
+    #   ship today in this same `extras`. Thresholds measured off this
+    #   run's own real distribution, not guessed: team scheme gap ranges
+    #   10-63 pts (median 39) across all 32 teams, so 20 is a real lean,
+    #   not a coin flip; qualified receivers' ypt gap between splits ranges
+    #   0.1-7.7 (median 1.9), so 2.0 sits just past the middle -- a real
+    #   split difference, not two-decimal noise. A team with no real lean,
+    #   or a player without >=15 targets in BOTH splits (114 of 261
+    #   receivers with any split data clear that bar), gets no tag rather
+    #   than a guess dressed up as one.
+    LEAN_GAP = 20.0
+    YPT_GAP = 2.0
+    MIN_SPLIT_TGTS = 15
+    coverage_team = extras.get("coverage_team", {})
+    coverage_player = extras.get("coverage_player", {})
     for p in payload["players"]:
         log = (logs.get(p["player_id"]) or {}).get("log") or []
         if not log:
@@ -1294,6 +1314,39 @@ def main() -> int:
             p["games_since_last_td"] = n_games
         td_score = p["scores"].get("TD")
         p["high_confidence_td_flag"] = bool(td_score is not None and td_score >= 78)
+
+        p["coverage_mismatch_tag"] = None
+        p["coverage_mismatch_detail"] = None
+        tc = coverage_team.get(p.get("opp") or "")
+        pc = coverage_player.get(p["player_id"])
+        if tc and pc:
+            zone_pct, man_pct = tc.get("zone_pct"), tc.get("man_pct")
+            zone_split, man_split = pc.get("zone"), pc.get("man")
+            if (zone_pct is not None and man_pct is not None
+                    and zone_split and man_split
+                    and zone_split.get("tgts", 0) >= MIN_SPLIT_TGTS
+                    and man_split.get("tgts", 0) >= MIN_SPLIT_TGTS):
+                if zone_pct - man_pct >= LEAN_GAP:
+                    lean, leaned_split, other_split = "zone", zone_split, man_split
+                elif man_pct - zone_pct >= LEAN_GAP:
+                    lean, leaned_split, other_split = "man", man_split, zone_split
+                else:
+                    lean = None
+                if lean:
+                    gap = (leaned_split.get("ypt") or 0) - (other_split.get("ypt") or 0)
+                    if gap >= YPT_GAP:
+                        tag = "TARGET"
+                    elif gap <= -YPT_GAP:
+                        tag = "AVOID"
+                    else:
+                        tag = None
+                    if tag:
+                        p["coverage_mismatch_tag"] = tag
+                        p["coverage_mismatch_detail"] = {
+                            "opp_lean": lean,
+                            "leaned_ypt": round(leaned_split.get("ypt") or 0, 1),
+                            "other_ypt": round(other_split.get("ypt") or 0, 1),
+                        }
 
     # ── the pick card ─────────────────────────────────────────────────────────
     # Built from the FINISHED payload rows, not re-scored. The MLB side learned
