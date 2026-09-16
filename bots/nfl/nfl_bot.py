@@ -1183,7 +1183,19 @@ def main() -> int:
         for k in ("player_pass", "player_rush"):
             if extras["field"].get(k):
                 extras["field"][k] = {i: v for i, v in extras["field"][k].items() if i in on_slate}
-    for k in ("coverage_player", "player_explosive", "roles", "disruption", "pass_rush", "red_zone", "route_value", "snaps"):
+    # disruption/pass_rush are keyed by DEFENSIVE player_id (DL/LB/DB from
+    # nfl_disruption.py) -- a fundamentally different id space than on_slate,
+    # which is built from MODELS' own eligible positions (RB/WR/TE/QB, see
+    # nfl_scoring.py) and never contains a defender. Intersecting them here
+    # like the offense-side extras below zeroed both out on every run since
+    # they shipped 2026-09-13: dvpSignal.js's passRushThreat() (matchup.
+    # pass_rush) has been silently returning null for every PASS_YDS badge
+    # ever since, because there was never anything in the dict to find.
+    # Left unfiltered (like disruption_team, roles' own list is scoped by
+    # nfl_disruption.py itself via MIN_GAMES/MIN_PRESSURES) -- these describe
+    # the OPPOSING defense, not the slate, so there is no slate id to filter
+    # them down to.
+    for k in ("coverage_player", "player_explosive", "roles", "red_zone", "route_value", "snaps"):
         if extras.get(k):
             extras[k] = {i: v for i, v in extras[k].items() if i in on_slate}
     if extras.get("usage"):
