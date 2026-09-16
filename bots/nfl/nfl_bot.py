@@ -1259,6 +1259,42 @@ def main() -> int:
     (out / f"{a.prefix}logs.json").write_text(json.dumps({
         "bars": nfl_gamelog.MARKET_VALUE, "logs": logs}, separators=(",", ":")))
 
+    # SIGNAL FLAGS (B10(b)/(e), 2026-09-16). NFL has had zero flags like
+    # MLB's SignalAudit.js grades (weak_spot_flag, hrw_score, ...) -- these
+    # are the first two, chosen because both are honest with data this run
+    # already has, not because they were the easiest to fake:
+    #
+    #   games_since_last_td -- MLB's games_since_last_hr, ported directly.
+    #   Computed from `logs` above, once, here -- NOT left for the client to
+    #   recompute from the live, ever-growing log file. nflreadpy only has
+    #   stats for games already played, so this run can never see a result
+    #   from the week it is pricing (leak-free by construction), but a
+    #   client-side recompute next month would walk the SAME player's log
+    #   further back as more games get appended, silently changing what a
+    #   past week's flag "was" after the fact. SignalAudit-style grading
+    #   needs the number as it stood the day of the pick, so it is frozen
+    #   into the row here.
+    #
+    #   high_confidence_td_flag -- MLB's high_confidence_hr_flag is one
+    #   exact top label (bool(beginner_label == "Strong HR Look")), not a
+    #   range. gradeFor()'s own top cutoff (lib/nfl/theme.js: score >= 78 =
+    #   "A+") is that same single top label for TD, so this flag is nothing
+    #   more than that cutoff applied to the score this run already
+    #   computed -- no new data, no new grading logic.
+    for p in payload["players"]:
+        log = (logs.get(p["player_id"]) or {}).get("log") or []
+        if not log:
+            p["games_since_last_td"] = None
+        else:
+            n_games = 0
+            for row in reversed(log):
+                if (row.get("g_td") or 0) >= 1:
+                    break
+                n_games += 1
+            p["games_since_last_td"] = n_games
+        td_score = p["scores"].get("TD")
+        p["high_confidence_td_flag"] = bool(td_score is not None and td_score >= 78)
+
     # ── the pick card ─────────────────────────────────────────────────────────
     # Built from the FINISHED payload rows, not re-scored. The MLB side learned
     # that two surfaces deriving "the pick" separately eventually name different
