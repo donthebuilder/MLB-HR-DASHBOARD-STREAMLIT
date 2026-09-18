@@ -108,6 +108,15 @@ PUBLISH_FILES=(
   nfl_logs.json
   nfl_picks.json
   nfl_results.json
+  # NEXT WEEK (2026-09-18). The same four payloads the dashboard reads, one
+  # week ahead, written by nfl.yml's "Build next week" step under the
+  # nfl_next_ prefix. The site's This week / Next week switch swaps which set
+  # it fetches; everything historical (report card, results, the graded record)
+  # stays single-copy because a future week has no history to show.
+  nfl_next_week.json
+  nfl_next_matchup.json
+  nfl_next_logs.json
+  nfl_next_picks.json
   # nfl_pick_lock.json (B10(b)/(e), 2026-09-15) -- TUDDY's sibling of
   # pick_lock.json above, same reason, same failure mode already documented
   # twice on this file for MLB: it is fetched back over HTTPS next run

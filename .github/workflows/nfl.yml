@@ -113,6 +113,46 @@ jobs:
           python nfl_bot.py $ARGS \
             --out "$GITHUB_WORKSPACE/public/data/current" --prefix nfl_
 
+      # NEXT WEEK, EVERY RUN (2026-09-18). Donovan: "every time the nfl bot
+      # run it just runs for both this week and next week." TUDDY's header
+      # gains a This week / Next week switch to match MOONSHOT's Today / Tmrw,
+      # and MOONSHOT's Tmrw is a full board, not a schedule stub -- so this is
+      # the same build, one week ahead, under its own nfl_next_ prefix.
+      #
+      # No bot code changed: --week and --prefix already exist, which is why
+      # the prediction log this run writes is nfl_next_prediction_log_*.jsonl
+      # and does NOT match publish_data.sh's NFL_PRED_LOG_GLOB. That matters:
+      # next week's numbers must never enter the graded record. Same for the
+      # picks archive (nfl_next_picks_<season>_w<NN>.json, unmatched) and the
+      # card lock, which only ever reads nfl_picks.json.
+      #
+      # continue-on-error on purpose: a look-ahead board is the least
+      # important thing this workflow produces, and it must never cost the
+      # real slate a publish.
+      - name: Build next week
+        continue-on-error: true
+        if: steps.mode.outputs.mode == 'week'
+        working-directory: bots/nfl
+        run: |
+          set -euo pipefail
+          CUR="$GITHUB_WORKSPACE/public/data/current/nfl_week.json"
+          WEEK=$(python -c "import json;d=json.load(open('$CUR'));w=d.get('week');print(w if isinstance(w,int) else '')")
+          if [ -z "$WEEK" ]; then
+            echo "this run priced no numbered week -- nothing to look ahead from"
+            exit 0
+          fi
+          NEXT=$((WEEK + 1))
+          # 18 is the regular season. Past it the schedule itself stops
+          # answering (see nfl_bot.main's "nothing left to price" branch), so
+          # stop here rather than publish a board for a week that doesn't exist.
+          if [ "$NEXT" -gt 18 ]; then
+            echo "week $WEEK is the last regular-season week -- no next week to build"
+            exit 0
+          fi
+          echo "building week $NEXT as the look-ahead board"
+          python nfl_bot.py --mode week --season 2026 --week "$NEXT" \
+            --out "$GITHUB_WORKSPACE/public/data/current" --prefix nfl_next_
+
       # ODDS. Runs right after the slate build so nfl_week.json exists for the
       # name join, same ordering rule today.yml uses for the MLB fetch.
       # continue-on-error and a soft-fail inside the script both: a book
