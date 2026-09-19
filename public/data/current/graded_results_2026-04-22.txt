@@ -1,0 +1,161 @@
+RESULTS TRACKER - 2026-04-22
+------------------------------------------
+FULL SHEET TRACKED PICKS: 120 | HR Accuracy: 24.2%
+FULL SHEET BASE HIT PICKS: 120 | Base Hit Accuracy: 76.7%
+
+PAIRS TRACKED: 4 | HR Accuracy: 0.0%
+4-MAN POOLS TRACKED: 4 | HR Accuracy: 0.0%
+6-MAN POOLS TRACKED: 4 | HR Accuracy: 0.0%
+
+TOP 15 TRACKED: 15 | HR Accuracy: 40.0%
+HR PICKS TRACKED: 15 | HR Accuracy: 33.3%
+TOP PICKS TRACKED: 15 | HR Accuracy: 26.7%
+
+HRR PICKS TRACKED: 30 | 2+ HRR Accuracy: 56.7% | 3+ HRR Accuracy: 36.7%
+HIT PICKS TRACKED: 30 | Hit Accuracy: 76.7% | HR Accuracy: 10.0%
+CONTACT PICKS TRACKED: 15 | XBH Accuracy: 60.0% | 2+ TB Accuracy: 60.0% | HR Accuracy: 33.3%
+
+TRACKED PICKS THAT HOMERED
+- 🏆#14 🔥 Drake Baldwin - HR 36.0
+  BA(S) 0.310 | BA vs RHP 0.302 | ISO 0.220 | 350+ 3/25 | L5 6H/1HR/2XBH
+- 🏆#9 ⚾ James Wood - HR 39.8
+  BA(S) 0.242 | BA vs RHP 0.277 | ISO 0.316 | 350+ 7/17 | L5 3H/3HR/3XBH
+- 🏆#4 🧨 Matt Olson - HR 42.4
+  BA(S) 0.266 | BA vs RHP 0.300 | ISO 0.298 | 350+ 6/25 | L5 3H/1HR/2XBH
+- 🏆#3 🔥 Mike Trout - HR 42.7
+  BA(S) 0.239 | BA vs LHP 0.308 | ISO 0.318 | 350+ 3/20 | L5 4H/1HR/2XBH
+- 🏆#6 🧨 Munetaka Murakami - HR 40.7
+  BA(S) 0.234 | BA vs LHP 0.077 | ISO 0.350 | 350+ 6/15 | L5 8H/4HR/4XBH
+- 🏆#1 🔥 Yordan Alvarez - HR 49.9
+  BA(S) 0.347 | BA vs RHP 0.220 | ISO 0.432 | 350+ 9/32 | L5 9H/3HR/5XBH
+- 🧨 Byron Buxton - HR 27.7
+  BA(S) 0.233 | BA vs RHP 0.294 | ISO 0.197 | 350+ 6/26 | L5 4H/1HR/1XBH
+- 🧨 Carter Jensen - HR 25.3
+  BA(S) 0.275 | BA vs RHP 0.200 | ISO 0.290 | 350+ 3/22 | L5 7H/2HR/3XBH
+- 🧨 Oneil Cruz - HR 29.1
+  BA(S) 0.290 | BA vs RHP 0.275 | ISO 0.248 | 350+ 5/21 | L5 5H/1HR/3XBH
+- 🔥 Ildemaro Vargas - HR 27.7
+  BA(S) 0.361 | BA vs LHP 0.381 | ISO 0.262 | 350+ 3/27 | L5 6H/1HR/2XBH
+- 🏁 Daylen Lile - HR 13.5
+  BA(S) 0.276 | BA vs RHP 0.255 | ISO 0.122 | 350+ 2/25 | L5 6H/2HR/4XBH
+- 🏁 Iván Herrera - HR 15.7
+  BA(S) 0.230 | BA vs RHP 0.200 | ISO 0.149 | 350+ 3/25 | L5 6H/1HR/2XBH
+- 🏁 Junior Caminero - HR 23.3
+  BA(S) 0.260 | BA vs LHP 0.286 | ISO 0.219 | 350+ 3/31 | L5 7H/2HR/3XBH
+- 🏁 Michael Harris II - HR 27.5
+  BA(S) 0.286 | BA vs RHP 0.271 | ISO 0.182 | 350+ 3/21 | L5 8H/2HR/3XBH
+- 🏁 Nick Kurtz - HR 20.4
+  BA(S) 0.232 | BA vs RHP 0.175 | ISO 0.146 | 350+ 3/19 | L5 5H/2HR/2XBH
+- 🏁 Pete Alonso - HR 10.4
+  BA(S) 0.213 | BA vs RHP 0.218 | ISO 0.159 | 350+ 0/19 | L5 4H/1HR/2XBH
+- 💠 Josh Jung - HR 20.8
+  BA(S) 0.292 | BA vs RHP 0.289 | ISO 0.194 | 350+ 4/28 | L5 9H/2HR/7XBH
+- 💠 Luis Campusano - HR 27.1
+  BA(S) 0.281 | BA vs RHP 0.333 | ISO 0.219 | 350+ 3/18 | L5 3H/0HR/0XBH
+- 💠 Seiya Suzuki - HR 18.9
+  BA(S) 0.256 | BA vs LHP 0.500 | ISO 0.103 | 350+ 1/20 | L5 4H/1HR/2XBH
+- ⚾ Amed Rosario - HR 20.7
+  BA(S) 0.250 | BA vs LHP 0.231 | ISO 0.250 | 350+ 5/23 | L5 3H/1HR/1XBH
+- ⚾ Cal Raleigh - HR 20.1
+  BA(S) 0.190 | BA vs RHP 0.182 | ISO 0.190 | 350+ 5/23 | L5 6H/3HR/4XBH
+- ⚾ Colson Montgomery - HR 32.7
+  BA(S) 0.213 | BA vs LHP 0.294 | ISO 0.287 | 350+ 4/18 | L5 6H/3HR/5XBH
+- ⚾ Hunter Goodman - HR 28.0
+  BA(S) 0.241 | BA vs RHP 0.255 | ISO 0.229 | 350+ 5/18 | L5 5H/1HR/4XBH
+
+TRACKED PICKS THAT GOT A BASE HIT
+- Munetaka Murakami (CWS) | TOP15#6 | 3 H
+- Yordan Alvarez (HOU) | TOP15#1 | 3 H
+- Drake Baldwin (ATL) | TOP15#14 | 2 H
+- Freddie Freeman (LAD) | TOP15#13 | 2 H
+- James Wood (WSH) | TOP15#9 | 2 H
+- Aaron Judge (NYY) | TOP15#2 | 1 H
+- Brandon Lowe (PIT) | TOP15#7 | 1 H
+- Matt Olson (ATL) | TOP15#4 | 1 H
+- Max Muncy (LAD) | TOP15#5 | 1 H
+- Mike Trout (LAA) | TOP15#3 | 1 H
+- Nico Hoerner (CHC) | TOP15#12 | 1 H
+- Sal Stewart (CIN) | TOP15#8 | 1 H
+- Munetaka Murakami (CWS) | HR | 3 H
+- Carlos Cortes (ATH) | HR | 2 H
+- Carter Jensen (KC) | HR | 2 H
+- Giancarlo Stanton (NYY) | HR | 2 H
+- Byron Buxton (MIN) | HR | 1 H
+- Ian Happ (CHC) | HR | 1 H
+- José Ramírez (CLE) | HR | 1 H
+- Matt Olson (ATL) | HR | 1 H
+- Max Muncy (LAD) | HR | 1 H
+- Oneil Cruz (PIT) | HR | 1 H
+- Zach Neto (LAA) | HR | 1 H
+- Yordan Alvarez (HOU) | TOP | 3 H
+- Drake Baldwin (ATL) | TOP | 2 H
+- Freddie Freeman (LAD) | TOP | 2 H
+- Ildemaro Vargas (ARI) | TOP | 2 H
+- Leody Taveras (BAL) | TOP | 2 H
+- Mickey Moniak (COL) | TOP | 2 H
+- Aaron Judge (NYY) | TOP | 1 H
+- Brandon Lowe (PIT) | TOP | 1 H
+- Juan Soto (NYM) | TOP | 1 H
+- Liam Hicks (MIA) | TOP | 1 H
+- Mike Trout (LAA) | TOP | 1 H
+- Nico Hoerner (CHC) | TOP | 1 H
+- Sal Stewart (CIN) | TOP | 1 H
+- Shea Langeliers (ATH) | TOP | 1 H
+- Alex Bregman (CHC) | HRR | 3 H
+- Bryan Reynolds (PIT) | HRR | 2 H
+- Daylen Lile (WSH) | HRR | 2 H
+- Everson Pereira (CWS) | HRR | 2 H
+- Michael Harris II (ATL) | HRR | 2 H
+- Nathan Lukes (TOR) | HRR | 2 H
+- Nick Kurtz (ATH) | HRR | 2 H
+- Brandon Nimmo (TEX) | HRR | 1 H
+- Chase Meidroth (CWS) | HRR | 1 H
+- Christian Walker (HOU) | HRR | 1 H
+- Daniel Schneemann (CLE) | HRR | 1 H
+- Gleyber Torres (DET) | HRR | 1 H
+- Iván Herrera (STL) | HRR | 1 H
+- Jake Bauers (MIL) | HRR | 1 H
+- Jakob Marsee (MIA) | HRR | 1 H
+- Jo Adell (LAA) | HRR | 1 H
+- Josh Bell (MIN) | HRR | 1 H
+- Junior Caminero (TB) | HRR | 1 H
+- Matt Chapman (SF) | HRR | 1 H
+- Pete Alonso (BAL) | HRR | 1 H
+- Taylor Ward (BAL) | HRR | 1 H
+- Tyler Freeman (COL) | HRR | 1 H
+- Corbin Carroll (ARI) | HIT | 3 H
+- Ernie Clement (TOR) | HIT | 3 H
+- Javier Sanoja (MIA) | HIT | 3 H
+- Luis Campusano (SD) | HIT | 3 H
+- Yandy Díaz (TB) | HIT | 3 H
+- Jacob Wilson (ATH) | HIT | 2 H
+- Jose Fernandez (ARI) | HIT | 2 H
+- Josh Jung (TEX) | HIT | 2 H
+- Randy Arozarena (SEA) | HIT | 2 H
+- Seiya Suzuki (CHC) | HIT | 2 H
+- Bobby Witt Jr. (KC) | HIT | 1 H
+- CJ Abrams (WSH) | HIT | 1 H
+- Carlos Correa (HOU) | HIT | 1 H
+- Chandler Simpson (TB) | HIT | 1 H
+- Kevin McGonigle (DET) | HIT | 1 H
+- Luis Arraez (SF) | HIT | 1 H
+- Miguel Rojas (LAD) | HIT | 1 H
+- Moisés Ballesteros (CHC) | HIT | 1 H
+- Otto Lopez (MIA) | HIT | 1 H
+- Ryan O'Hearn (PIT) | HIT | 1 H
+- Trevor Larnach (MIN) | HIT | 1 H
+- Troy Johnston (COL) | HIT | 1 H
+- William Contreras (MIL) | HIT | 1 H
+- Cal Raleigh (SEA) | CONTACT | 3 H
+- Hunter Goodman (COL) | CONTACT | 3 H
+- Andrés Giménez (TOR) | CONTACT | 2 H
+- Chase DeLauter (CLE) | CONTACT | 2 H
+- James Wood (WSH) | CONTACT | 2 H
+- Michael Massey (KC) | CONTACT | 2 H
+- Amed Rosario (NYY) | CONTACT | 1 H
+- Colson Montgomery (CWS) | CONTACT | 1 H
+- Royce Lewis (MIN) | CONTACT | 1 H
+- Spencer Steer (CIN) | CONTACT | 1 H
+
+PAIRS / POOLS THAT CLEARED
+- none

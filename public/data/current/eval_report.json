@@ -1,0 +1,384 @@
+{
+  "as_of": "2026-09-19",
+  "model_version_filter": null,
+  "model_versions_present": [
+    "mlb_hr_v4"
+  ],
+  "warnings": [],
+  "config_hash_filter": null,
+  "n_por_entries": 383,
+  "n_candidates": 9167,
+  "n_included": 1278,
+  "n_excluded": 7889,
+  "excluded_by_reason": {
+    "missing_prediction_log": 124,
+    "missing_score_row": 4429,
+    "locked_late": 3261,
+    "void": 3,
+    "no_outcome_yet": 72
+  },
+  "provenance_valid_pct": 1.0,
+  "provenance_scope_n": 9167,
+  "tier_table": {
+    "tiers": {
+      "90+": {
+        "n": 0,
+        "hrs": 0,
+        "hr_rate": null,
+        "ci_95": null,
+        "lift": null
+      },
+      "80-89": {
+        "n": 2,
+        "hrs": 0,
+        "hr_rate": 0.0,
+        "ci_95": [
+          0.0,
+          0.6576197724933469
+        ],
+        "lift": 0.0
+      },
+      "70-79": {
+        "n": 14,
+        "hrs": 3,
+        "hr_rate": 0.21428571428571427,
+        "ci_95": [
+          0.07571386712693182,
+          0.47589230586600295
+        ],
+        "lift": 1.8257142857142856
+      },
+      "60-69": {
+        "n": 74,
+        "hrs": 7,
+        "hr_rate": 0.0945945945945946,
+        "ci_95": [
+          0.0465799379842249,
+          0.18262258585068275
+        ],
+        "lift": 0.8059459459459459
+      },
+      "50-59": {
+        "n": 122,
+        "hrs": 23,
+        "hr_rate": 0.1885245901639344,
+        "ci_95": [
+          0.12903713953343293,
+          0.26702834864332914
+        ],
+        "lift": 1.6062295081967213
+      },
+      "<50": {
+        "n": 1066,
+        "hrs": 117,
+        "hr_rate": 0.10975609756097561,
+        "ci_95": [
+          0.09237416073473295,
+          0.12994051669688492
+        ],
+        "lift": 0.9351219512195121
+      }
+    },
+    "overall": {
+      "n": 1278,
+      "hrs": 150,
+      "hr_rate": 0.11737089201877934,
+      "ci_95": [
+        0.1008605221209124,
+        0.1361746094313398
+      ]
+    },
+    "unbucketed_n": 0,
+    "unbucketed_hrs": 0
+  },
+  "monotonicity": {
+    "pairs": [
+      {
+        "higher": "90+",
+        "lower": "80-89",
+        "status": "no_data"
+      },
+      {
+        "higher": "80-89",
+        "lower": "70-79",
+        "higher_rate": 0.0,
+        "lower_rate": 0.21428571428571427,
+        "inverted": true,
+        "status": "low_confidence"
+      },
+      {
+        "higher": "70-79",
+        "lower": "60-69",
+        "higher_rate": 0.21428571428571427,
+        "lower_rate": 0.0945945945945946,
+        "inverted": false,
+        "status": "low_confidence"
+      },
+      {
+        "higher": "60-69",
+        "lower": "50-59",
+        "higher_rate": 0.0945945945945946,
+        "lower_rate": 0.1885245901639344,
+        "inverted": true,
+        "status": "inverted"
+      },
+      {
+        "higher": "50-59",
+        "lower": "<50",
+        "higher_rate": 0.1885245901639344,
+        "lower_rate": 0.10975609756097561,
+        "inverted": false,
+        "status": "ok"
+      }
+    ],
+    "monotonic": false,
+    "violations": [
+      {
+        "higher": "60-69",
+        "lower": "50-59",
+        "higher_rate": 0.0945945945945946,
+        "lower_rate": 0.1885245901639344,
+        "inverted": true,
+        "status": "inverted"
+      }
+    ]
+  },
+  "rolling": [
+    {
+      "days": 7,
+      "start": "2026-09-13",
+      "end": "2026-09-19",
+      "n": 1138,
+      "hrs": 130,
+      "hr_rate": 0.11423550087873462,
+      "ci_95": [
+        0.09703736605406611,
+        0.13402926476628643
+      ]
+    },
+    {
+      "days": 14,
+      "start": "2026-09-06",
+      "end": "2026-09-19",
+      "n": 1174,
+      "hrs": 133,
+      "hr_rate": 0.11328790459965929,
+      "ci_95": [
+        0.09640487145945857,
+        0.13269341405247367
+      ]
+    },
+    {
+      "days": 30,
+      "start": "2026-08-21",
+      "end": "2026-09-19",
+      "n": 1278,
+      "hrs": 150,
+      "hr_rate": 0.11737089201877934,
+      "ci_95": [
+        0.1008605221209124,
+        0.1361746094313398
+      ]
+    }
+  ],
+  "hr_overlay": {
+    "version": "hr_overlay_v2",
+    "method": "locked pregame prediction-of-record only; no historical backfill",
+    "eligible_schema_n": 1278,
+    "legacy_without_overlay_n": 0,
+    "overall": {
+      "n": 1278,
+      "hrs": 150,
+      "hr_rate": 0.11737089201877934,
+      "ci_95": [
+        0.1008605221209124,
+        0.1361746094313398
+      ],
+      "lift_vs_overall": 1.0
+    },
+    "reference": {
+      "hr_overlay": {
+        "hr_rate": 0.177,
+        "n": 130,
+        "baseline_hr_rate": 0.138,
+        "lift": 1.29,
+        "label": "newest clean locked-slice reference; separate from live locked record"
+      },
+      "power_overlay": {
+        "hr_rate": 0.212,
+        "n": 33,
+        "baseline_hr_rate": 0.138,
+        "lift": 1.54,
+        "label": "small-sample tracking reference; separate from live locked record"
+      },
+      "premium_power": {
+        "hr_rate": 0.25,
+        "n": 20,
+        "baseline_hr_rate": 0.138,
+        "lift": 1.81,
+        "label": "small-sample tracking reference; separate from live locked record"
+      }
+    },
+    "tiers": {
+      "hr_overlay": {
+        "label": "HR Overlay",
+        "rule": "Air% > 50 + Avg EV > 87",
+        "all": {
+          "n": 580,
+          "hrs": 88,
+          "hr_rate": 0.15172413793103448,
+          "ci_95": [
+            0.12482534182047213,
+            0.18320598432748125
+          ],
+          "lift_vs_overall": 1.2926896551724139
+        },
+        "rolling": {
+          "7": {
+            "days": 7,
+            "start": "2026-09-13",
+            "end": "2026-09-19",
+            "n": 513,
+            "hrs": 76,
+            "hr_rate": 0.14814814814814814,
+            "ci_95": [
+              0.12002520592915109,
+              0.18150141536064687
+            ],
+            "lift_vs_overall": 1.2622222222222221
+          },
+          "30": {
+            "days": 30,
+            "start": "2026-08-21",
+            "end": "2026-09-19",
+            "n": 580,
+            "hrs": 88,
+            "hr_rate": 0.15172413793103448,
+            "ci_95": [
+              0.12482534182047213,
+              0.18320598432748125
+            ],
+            "lift_vs_overall": 1.2926896551724139
+          }
+        },
+        "status": "measured"
+      },
+      "power_overlay": {
+        "label": "Power Overlay",
+        "rule": "HR Overlay + ISO \u2265 .230",
+        "all": {
+          "n": 94,
+          "hrs": 20,
+          "hr_rate": 0.2127659574468085,
+          "ci_95": [
+            0.14216879768507776,
+            0.30591792699304365
+          ],
+          "lift_vs_overall": 1.8127659574468085
+        },
+        "rolling": {
+          "7": {
+            "days": 7,
+            "start": "2026-09-13",
+            "end": "2026-09-19",
+            "n": 78,
+            "hrs": 15,
+            "hr_rate": 0.19230769230769232,
+            "ci_95": [
+              0.12015206340148434,
+              0.29334812719063524
+            ],
+            "lift_vs_overall": 1.6384615384615386
+          },
+          "30": {
+            "days": 30,
+            "start": "2026-08-21",
+            "end": "2026-09-19",
+            "n": 94,
+            "hrs": 20,
+            "hr_rate": 0.2127659574468085,
+            "ci_95": [
+              0.14216879768507776,
+              0.30591792699304365
+            ],
+            "lift_vs_overall": 1.8127659574468085
+          }
+        },
+        "status": "tracking"
+      },
+      "premium_power": {
+        "label": "Premium Power",
+        "rule": "Power Overlay + HRW \u2265 60",
+        "all": {
+          "n": 51,
+          "hrs": 8,
+          "hr_rate": 0.1568627450980392,
+          "ci_95": [
+            0.08169223220048707,
+            0.2801044677298776
+          ],
+          "lift_vs_overall": 1.336470588235294
+        },
+        "rolling": {
+          "7": {
+            "days": 7,
+            "start": "2026-09-13",
+            "end": "2026-09-19",
+            "n": 41,
+            "hrs": 6,
+            "hr_rate": 0.14634146341463414,
+            "ci_95": [
+              0.0688424814129593,
+              0.28443458042480957
+            ],
+            "lift_vs_overall": 1.246829268292683
+          },
+          "30": {
+            "days": 30,
+            "start": "2026-08-21",
+            "end": "2026-09-19",
+            "n": 51,
+            "hrs": 8,
+            "hr_rate": 0.1568627450980392,
+            "ci_95": [
+              0.08169223220048707,
+              0.2801044677298776
+            ],
+            "lift_vs_overall": 1.336470588235294
+          }
+        },
+        "status": "tracking"
+      }
+    }
+  },
+  "by_model_version": {
+    "mlb_hr_v4": {
+      "n": 1278,
+      "hrs": 150,
+      "hr_rate": 0.11737089201877934
+    }
+  },
+  "config_hashes_by_model_version": {
+    "mlb_hr_v4": {
+      "n": 1278,
+      "hashes": {
+        "sha256:0cf5b0230819da041843b0b316673431a00f1d8c83d4db926fc35bbc6ecacb86": 104,
+        "sha256:b0639430bd37655d6e383e6f896d84e9f13bfa1324c6543478a8ff5344b4a7d0": 1174
+      },
+      "n_unknown": 0
+    }
+  },
+  "config_hash_warnings": [
+    {
+      "model_version": "mlb_hr_v4",
+      "hashes": [
+        "sha256:0cf5b0230819da041843b0b316673431a00f1d8c83d4db926fc35bbc6ecacb86",
+        "sha256:b0639430bd37655d6e383e6f896d84e9f13bfa1324c6543478a8ff5344b4a7d0"
+      ],
+      "n_by_hash": {
+        "sha256:0cf5b0230819da041843b0b316673431a00f1d8c83d4db926fc35bbc6ecacb86": 104,
+        "sha256:b0639430bd37655d6e383e6f896d84e9f13bfa1324c6543478a8ff5344b4a7d0": 1174
+      }
+    }
+  ]
+}

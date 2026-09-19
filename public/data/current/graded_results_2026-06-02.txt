@@ -1,0 +1,171 @@
+RESULTS TRACKER - 2026-06-02
+------------------------------------------
+BETTABLE RESULTS
+Top 15 HR: 2/15 (13.3%)
+HR Picks: 1/15 (6.7%)
+Top Picks: 3/15 (20.0%)
+
+FULL SHEET BASE HIT PERFORMANCE
+Base Hit Accuracy: 61.7%
+
+HR CAPTURE (BETTABLE)
+Total Slate HRs: 36
+Caught in Top 15: 2
+Caught in HR Picks: 1
+Top 15 Capture Rate: 5.6%
+HR Pick Capture Rate: 2.8%
+
+MODEL VISION (Top 40)
+Model Caught HRs: 4 / 36
+Vision Rate: 11.1%
+
+UNIQUE PLAYER HR ACCURACY
+Unique Players Tracked: 105
+Players Who Homered: 14
+Unique HR Accuracy: 13.3%
+
+HR CATEGORY BREAKDOWN
+------------------------------------------
+🏆 TOP 15 BOARD → 2 HR
+🔥 TOP PICKS → 3 HR
+🧨 HR PICKS → 1 HR
+🏁 HRR PICKS → 4 HR
+💠 HIT PICKS → 3 HR
+⚾ CONTACT PICKS → 3 HR
+Best HR-producing category: 🏁 HRR PICKS
+
+HR RESULTS BY PLAYER
+------------------------------------------
+- Matt Olson — 🏆#11 + 🔥 + ⭐
+- Yordan Alvarez — 🏆#2 + 🔥
+- Hunter Goodman — 🧨
+- Willy Adames — 🔥
+- Freddie Freeman — 🏁
+- Heriberto Hernández — 🏁
+- Nick Kurtz — 🏁 + ⭐
+- Paul Goldschmidt — 🏁
+- Julio Rodríguez — 💠
+- Otto Lopez — 💠
+- Spencer Steer — 💠
+- Bryce Harper — ⚾ + ⭐
+- Corbin Carroll — ⚾ + ⭐
+- Oneil Cruz — ⚾
+
+MISSED HRs (NOT IN MODEL SHEET)
+------------------------------------------
+- Will Benson (CIN) — not in model sheet / lineup pool
+- Joe Mack (MIA) — not in model sheet / lineup pool
+- Endy Rodríguez (PIT) — not in model sheet / lineup pool
+- Jhonny Pereda (SEA) — not in model sheet / lineup pool
+- Patrick Wisdom (SEA) — not in model sheet / lineup pool
+
+POOL PERFORMANCE
+------------------------------------------
+4-MAN HR POOL A → 1/4 HR (Matt Olson)
+4-MAN HR POOL B → 0/4 HR (none)
+4-MAN HR POOL C → 1/4 HR (Willy Adames)
+4-MAN HR POOL D → 0/4 HR (none)
+6-MAN HR POOL A → 1/6 HR (Kazuma Okamoto)
+6-MAN HR POOL B → 1/6 HR (Oneil Cruz)
+6-MAN HR POOL C → 1/6 HR (Coby Mayo)
+6-MAN HR POOL D → 1/6 HR (Hunter Goodman)
+
+PAIR PERFORMANCE
+------------------------------------------
+Pair 1 → 1/2 HR (Yordan Alvarez) | Curtis Mead + Yordan Alvarez
+Pair 2 → 0/2 HR (none) | Dillon Dingler + Bobby Witt Jr.
+Pair 3 → 0/2 HR (none) | Eugenio Suárez + Miguel Vargas
+Pair 4 → 0/2 HR (none) | JJ Bleday + Andy Pages
+
+PLAYER TYPE PERFORMANCE
+------------------------------------------
+🏁 HRR PICKS (30)
+2+ HRR: 46.7% | 3+ HRR: 26.7%
+
+💠 HIT PICKS (30)
+1+ Hit: 56.7% | HR: 10.0%
+
+⚾ CONTACT PICKS (15)
+XBH: 46.7% | 2+ TB: 46.7% | HR: 20.0%
+
+HIT RESULTS BY CATEGORY
+------------------------------------------
+
+🔥 TOP PICKS (1+ Hit)
+- Brandon Marsh — 4H 🔥
+- Jake McCarthy — 2H ⭐
+- Matt Olson — 2H ⭐
+- Pete Crow-Armstrong — 2H ⭐
+- Willy Adames — 2H ⭐
+- Yordan Alvarez — 2H ⭐
+- Andy Pages — 1H
+- Ben Rice — 1H
+- Jarren Duran — 1H
+- Josh Jung — 1H
+- Juan Soto — 1H
+- Miguel Vargas — 1H
+
+🧨 HR PICKS (1+ Hit)
+- Kyle Higashioka — 3H 🔥
+- Cody Bellinger — 2H ⭐
+- Hunter Goodman — 2H ⭐
+- Yohendrick Piñango — 2H ⭐
+- Edgar Quero — 1H
+- Gunnar Henderson — 1H
+- Kyle Stowers — 1H
+- Nolan Arenado — 1H
+
+🏁 HRR PICKS (1+ Hit)
+- Freddie Freeman — 3H 🔥
+- Nick Gonzales — 3H 🔥
+- Paul Goldschmidt — 3H 🔥
+- Heriberto Hernández — 2H ⭐
+- Jackson Chourio — 2H ⭐
+- Ozzie Albies — 2H ⭐
+- Richie Palacios — 2H ⭐
+- Trea Turner — 2H ⭐
+- Gabriel Moreno — 1H
+- Josh Bell — 1H
+- Luis García Jr. — 1H
+- Michael Busch — 1H
+- Mike Trout — 1H
+- Nick Kurtz — 1H
+- Ryan O'Hearn — 1H
+- Ryan Vilade — 1H
+- Vaughn Grissom — 1H
+- William Contreras — 1H
+
+💠 HIT PICKS (1+ Hit)
+- Fernando Tatis Jr. — 3H 🔥
+- Chase Meidroth — 2H ⭐
+- JJ Wetherholt — 2H ⭐
+- Jeremy Peña — 2H ⭐
+- Luis Arraez — 2H ⭐
+- Otto Lopez — 2H ⭐
+- Shohei Ohtani — 2H ⭐
+- Spencer Steer — 2H ⭐
+- Troy Johnston — 2H ⭐
+- Cole Young — 1H
+- Julio Rodríguez — 1H
+- Junior Caminero — 1H
+- Michael Harris II — 1H
+- Travis Bazzana — 1H
+- Trent Grisham — 1H
+- Tyler Soderstrom — 1H
+- Vladimir Guerrero Jr. — 1H
+
+⚾ CONTACT PICKS (1+ Hit)
+- Dominic Canzone — 3H 🔥
+- Joc Pederson — 3H 🔥
+- Brice Turang — 2H ⭐
+- Corbin Carroll — 2H ⭐
+- Oneil Cruz — 2H ⭐
+- Spencer Torkelson — 2H ⭐
+- Blaze Alexander — 1H
+- Bryce Harper — 1H
+- Jazz Chisholm Jr. — 1H
+- Kyle Karros — 1H
+- Michael Massey — 1H
+
+MODEL DIAGNOSTIC (LOW PRIORITY)
+Full Sheet HR Coverage: 31 / 36 (86.1%)

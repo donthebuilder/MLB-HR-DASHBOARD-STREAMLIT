@@ -1,0 +1,129 @@
+RESULTS TRACKER - 2026-04-26
+------------------------------------------
+FULL SHEET TRACKED PICKS: 127 | HR Accuracy: 13.4%
+FULL SHEET BASE HIT PICKS: 127 | Base Hit Accuracy: 59.8%
+
+PAIRS TRACKED: 4 | HR Accuracy: 0.0%
+4-MAN POOLS TRACKED: 4 | HR Accuracy: 0.0%
+6-MAN POOLS TRACKED: 4 | HR Accuracy: 0.0%
+
+TOP 15 TRACKED: 15 | HR Accuracy: 13.3%
+HR PICKS TRACKED: 16 | HR Accuracy: 25.0%
+TOP PICKS TRACKED: 16 | HR Accuracy: 6.2%
+
+HRR PICKS TRACKED: 32 | 2+ HRR Accuracy: 34.4% | 3+ HRR Accuracy: 21.9%
+HIT PICKS TRACKED: 32 | Hit Accuracy: 65.6% | HR Accuracy: 6.2%
+CONTACT PICKS TRACKED: 16 | XBH Accuracy: 62.5% | 2+ TB Accuracy: 62.5% | HR Accuracy: 31.2%
+
+TRACKED PICKS THAT HOMERED
+- 🏆#13 🧨 Hunter Goodman - HR 36.1
+  BA(S) 0.264 | BA vs RHP 0.279 | ISO 0.263 | 350+ 5/20 | L5 6H/1HR/4XBH
+- 🏆#12 🧨 Luis Campusano - HR 36.7
+  BA(S) 0.333 | BA vs RHP 0.345 | ISO 0.334 | 350+ 4/19 | L5 5H/1HR/3XBH
+- 🧨 Matt Olson - HR 33.4
+  BA(S) 0.297 | BA vs RHP 0.303 | ISO 0.298 | 350+ 5/29 | L5 8H/1HR/3XBH
+- 🧨 Mike Trout - HR 19.2
+  BA(S) 0.234 | BA vs RHP 0.232 | ISO 0.298 | 350+ 1/17 | L5 4H/1HR/1XBH
+- 🔥 Ildemaro Vargas - HR 26.3
+  BA(S) 0.351 | BA vs RHP 0.318 | ISO 0.298 | 350+ 3/30 | L5 6H/3HR/3XBH
+- 🏁 Christian Walker - HR 32.5
+  BA(S) 0.273 | BA vs RHP 0.290 | ISO 0.252 | 350+ 3/22 | L5 7H/2HR/3XBH
+- 🏁 Jose Fernandez - HR 9.6
+  BA(S) 0.319 | BA vs RHP 0.271 | ISO 0.125 | 350+ 0/23 | L5 6H/0HR/1XBH
+- 🏁 Nathaniel Lowe - HR 26.4
+  BA(S) 0.256 | BA vs RHP 0.250 | ISO 0.308 | 350+ 4/21 | L5 6H/3HR/4XBH
+- 💠 Bobby Witt Jr. - HR 16.5
+  BA(S) 0.288 | BA vs LHP 0.400 | ISO 0.087 | 350+ 3/28 | L5 7H/0HR/3XBH
+- 💠 Yandy Díaz - HR 18.7
+  BA(S) 0.337 | BA vs RHP 0.338 | ISO 0.138 | 350+ 0/25 | L5 6H/0HR/0XBH
+- ⚾ Aaron Judge - HR 24.1
+  BA(S) 0.229 | BA vs RHP 0.224 | ISO 0.313 | 350+ 2/15 | L5 3H/0HR/0XBH
+- ⚾ Cal Raleigh - HR 25.8
+  BA(S) 0.202 | BA vs RHP 0.213 | ISO 0.174 | 350+ 4/26 | L5 8H/3HR/4XBH
+- ⚾ Casey Schmitt - HR 22.9
+  BA(S) 0.295 | BA vs RHP 0.224 | ISO 0.218 | 350+ 4/30 | L5 4H/1HR/3XBH
+- ⚾ Kyle Schwarber - HR 26.7
+  BA(S) 0.192 | BA vs LHP 0.159 | ISO 0.303 | 350+ 2/23 | L5 2H/1HR/2XBH
+- ⚾ Spencer Torkelson - HR 19.9
+  BA(S) 0.212 | BA vs RHP 0.190 | ISO 0.188 | 350+ 3/17 | L5 6H/4HR/5XBH
+
+TRACKED PICKS THAT GOT A BASE HIT
+- Luis Campusano (SD) | TOP15#12 | 2 H
+- Yordan Alvarez (HOU) | TOP15#2 | 2 H
+- Dalton Rushing (LAD) | TOP15#6 | 1 H
+- Hunter Goodman (COL) | TOP15#13 | 1 H
+- James Wood (WSH) | TOP15#3 | 1 H
+- Mickey Moniak (COL) | TOP15#4 | 1 H
+- Mickey Moniak (COL) | TOP15#10 | 1 H
+- Josh Jung (TEX) | HR | 2 H
+- Luis Campusano (SD) | HR | 2 H
+- Hunter Goodman (COL) | HR | 1 H
+- Iván Herrera (STL) | HR | 1 H
+- James Wood (WSH) | HR | 1 H
+- Jonathan Aranda (TB) | HR | 1 H
+- Matt Olson (ATL) | HR | 1 H
+- Mike Trout (LAA) | HR | 1 H
+- Carlos Cortes (ATH) | TOP | 3 H
+- Ildemaro Vargas (ARI) | TOP | 3 H
+- Yordan Alvarez (HOU) | TOP | 2 H
+- Adley Rutschman (BAL) | TOP | 1 H
+- Dalton Rushing (LAD) | TOP | 1 H
+- Daniel Schneemann (CLE) | TOP | 1 H
+- Dominic Canzone (SEA) | TOP | 1 H
+- Kevin McGonigle (DET) | TOP | 1 H
+- Mickey Moniak (COL) | TOP | 1 H
+- Mickey Moniak (COL) | TOP | 1 H
+- Christian Walker (HOU) | HRR | 3 H
+- Jose Fernandez (ARI) | HRR | 3 H
+- Angel Martínez (CLE) | HRR | 2 H
+- Ceddanne Rafaela (BOS) | HRR | 2 H
+- Nolan Arenado (ARI) | HRR | 2 H
+- Ronald Acuña Jr. (ATL) | HRR | 2 H
+- Bo Bichette (NYM) | HRR | 1 H
+- Edouard Julien (COL) | HRR | 1 H
+- Elly De La Cruz (CIN) | HRR | 1 H
+- Gary Sánchez (MIL) | HRR | 1 H
+- Jordan Walker (STL) | HRR | 1 H
+- Julio Rodríguez (SEA) | HRR | 1 H
+- Liam Hicks (MIA) | HRR | 1 H
+- Nathaniel Lowe (CIN) | HRR | 1 H
+- Nick Kurtz (ATH) | HRR | 1 H
+- Ryan Jeffers (MIN) | HRR | 1 H
+- William Contreras (MIL) | HRR | 1 H
+- Chandler Simpson (TB) | HIT | 3 H
+- Vladimir Guerrero Jr. (TOR) | HIT | 3 H
+- Bobby Witt Jr. (KC) | HIT | 2 H
+- Drake Baldwin (ATL) | HIT | 2 H
+- Edouard Julien (COL) | HIT | 2 H
+- Shea Langeliers (ATH) | HIT | 2 H
+- Chase Meidroth (CWS) | HIT | 1 H
+- Ernie Clement (TOR) | HIT | 1 H
+- Jacob Wilson (ATH) | HIT | 1 H
+- Juan Soto (NYM) | HIT | 1 H
+- Miguel Andujar (SD) | HIT | 1 H
+- Miguel Rojas (LAD) | HIT | 1 H
+- Nick Gonzales (PIT) | HIT | 1 H
+- Nick Loftin (KC) | HIT | 1 H
+- Ozzie Albies (ATL) | HIT | 1 H
+- Riley Greene (DET) | HIT | 1 H
+- Troy Johnston (COL) | HIT | 1 H
+- Troy Johnston (COL) | HIT | 1 H
+- Wilyer Abreu (BOS) | HIT | 1 H
+- Xander Bogaerts (SD) | HIT | 1 H
+- Yandy Díaz (TB) | HIT | 1 H
+- Spencer Torkelson (DET) | CONTACT | 3 H
+- Alek Thomas (ARI) | CONTACT | 2 H
+- Jake Bauers (MIL) | CONTACT | 2 H
+- Aaron Judge (NYY) | CONTACT | 1 H
+- Andruw Monasterio (BOS) | CONTACT | 1 H
+- Brayan Rocchio (CLE) | CONTACT | 1 H
+- Cal Raleigh (SEA) | CONTACT | 1 H
+- Casey Schmitt (SF) | CONTACT | 1 H
+- Everson Pereira (CWS) | CONTACT | 1 H
+- Jake Fraley (TB) | CONTACT | 1 H
+- Kyle Schwarber (PHI) | CONTACT | 1 H
+- MJ Melendez (NYM) | CONTACT | 1 H
+- Tyler Soderstrom (ATH) | CONTACT | 1 H
+
+PAIRS / POOLS THAT CLEARED
+- none
