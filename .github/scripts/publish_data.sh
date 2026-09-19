@@ -90,6 +90,17 @@ PUBLISH_FILES=(
   # Exactly the pick_lock.json failure, second instance: a green step, a real
   # file, and no line here to carry it.
   pick_matrix.json
+  # THE THIRD TIME THIS LIST WAS THE BUG (2026-09-19). pick_changes.json is
+  # the bot's own plain-language reason for every pick that moved, and
+  # components/SlatePulse.js has fetched it since it shipped 2026-08-08 --
+  # 404 every time, so the Since panel has always shown a bare diff with no
+  # reasons. Same shape as pick_lock.json and pick_matrix.json above: a green
+  # step, a real file, and no line here to carry it.
+  #
+  # Its other half was fixed in the same pass: the writer used to sit inside
+  # the Discord slate-board block, so it only ran when a WEBHOOK was
+  # configured and had something new to post. It runs unconditionally now.
+  pick_changes.json
   # The run board -- every hitter's last 30 raw lines, written by
   # player_splits.py on the same fetch it already makes for the splits files.
   runs_latest.json
