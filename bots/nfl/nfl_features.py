@@ -328,6 +328,21 @@ def build(season: int, carryover: bool = True) -> pl.DataFrame:
            .join(sform, on=["team", "week"], how="left")
            .join(dform, left_on=["opponent_team", "week"], right_on=["team", "week"], how="left")
            .join(injuries(season), on=["player_id", "week"], how="left"))
+    # ROLE-AWARE DEFENCE (2026-09-18). The team-level roll above says how soft
+    # a defence has been; this says soft AGAINST WHOM. Role is trailing-only
+    # and the allowed table goes through the same _roll, so nothing here sees
+    # week w. Ships in RUSH_ATT alone -- see nfl_role_dvp.py for the sweep that
+    # decided which markets earned it and which did not.
+    try:
+        import nfl_role_dvp
+        _roles = nfl_role_dvp.assign_roles(wk, form)
+        _rall = nfl_role_dvp.role_allowed(wk, _roles)
+        out = out.join(_roles, on=["player_id", "week"], how="left")
+        if not _rall.is_empty():
+            out = out.join(_rall, on=["opponent_team", "role", "week"], how="left")
+    except Exception as e:
+        print(f"  {season} role defence unavailable ({type(e).__name__}: {e})")
+
     if not snform.is_empty():
         out = out.join(snform.select(["player_id", "week", "f_snap_pct"]),
                        on=["player_id", "week"], how="left")
@@ -675,7 +690,7 @@ def upcoming_rows(season: int, week: int) -> tuple[pl.DataFrame, pl.DataFrame]:
                         .filter(pl.col("week") < week),
               f"{season} form")
     form = sform = dform = _empty()
-    snform = _empty()
+    snform = rallow = roles_now = _empty()
     if not wk.is_empty():
         for c in PLAYER_FORM:
             if c in wk.columns:
@@ -709,6 +724,19 @@ def upcoming_rows(season: int, week: int) -> tuple[pl.DataFrame, pl.DataFrame]:
         ).rename({"opponent_team": "team"})
         dform = _roll(dallow, ["d_rec_td", "d_rush_td", "d_pass_yds", "d_rush_yds"],
                       by="team", prefix="f_opp_", gp="f_opp_gp", weeks=[week])
+
+        # The role-aware version of the same thing, rolled INTO week w. Without
+        # this the live board would be the one place the term is missing, the
+        # score would quietly drop a component nfl_bot then reports as dropped,
+        # and the backtest would be measuring a model the site never runs.
+        try:
+            import nfl_role_dvp
+            _roles_w = nfl_role_dvp.assign_roles(wk, form)
+            rallow = nfl_role_dvp.role_allowed(wk, _roles_w, weeks=[week])
+            roles_now = nfl_role_dvp.assign_roles(
+                wk.filter(pl.col("week") == wk["week"].max()), form)
+        except Exception as e:
+            print(f"  {season} role defence unavailable ({type(e).__name__}: {e})")
 
     if not form.is_empty():
         rows = rows.join(form.drop("week"), on="player_id", how="left")
@@ -757,6 +785,15 @@ def upcoming_rows(season: int, week: int) -> tuple[pl.DataFrame, pl.DataFrame]:
     if not dform.is_empty():
         rows = rows.join(dform.with_columns(pl.col("week").cast(pl.Int32)),
                          left_on=["opponent_team", "week"], right_on=["team", "week"], how="left")
+
+    # His role for the week being priced, then the defence's record against
+    # exactly that role. Role comes off the SAME trailing form the rest of this
+    # frame uses, so a man who has not played yet carries the deep-bucket
+    # default rather than inheriting last season's depth chart.
+    if not rallow.is_empty() and not roles_now.is_empty():
+        rows = rows.join(roles_now.select(["player_id", "role"]), on="player_id", how="left")
+        rows = rows.join(rallow.with_columns(pl.col("week").cast(pl.Int32)),
+                         on=["opponent_team", "role", "week"], how="left")
 
     inj = _try(lambda: injuries(season).filter(pl.col("week") == week)
                          .with_columns(pl.col("week").cast(pl.Int32)), f"{season} injuries")

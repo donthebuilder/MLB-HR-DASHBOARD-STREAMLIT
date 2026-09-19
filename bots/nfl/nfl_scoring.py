@@ -79,10 +79,21 @@ MODELS = {
     # of them made things worse except RYOE here — so that's the only one in.
     "RUSH_ATT": {
         "label": "Rushing attempts", "pos": ["RB"], "bar": 12,
+        # MATCHUP EARNED A SLOT HERE, and only here (2026-09-18). The score's
+        # only defensive input had been team-level, and the TD model's version
+        # of it was zeroed in September for hurting. The role-aware version --
+        # carries allowed to HIS depth role, not to running backs in general --
+        # was swept 0 to 0.32 across 2023/2024/2025: AUC +1.2 / +0.5 / +0.9 at
+        # 0.20 and up in all three seasons, t30 +1.4 / +0.3 / +0.7, also up in
+        # all three. RUSH_YDS and REC were positive but not in every season and
+        # are NOT shipped; TD and REC_YDS were flat or worse. See
+        # nfl_role_dvp.py for the whole table and why this is the one market
+        # where it works. nfl_rush_att_v2.
         "w": {
-            "f_carries":                              0.65,
-            "f_rz_car":                               0.20,
-            "f_ngs_rush_yards_over_expected_per_att": 0.15,
+            "f_carries":                              0.52,
+            "f_rz_car":                               0.16,
+            "f_ngs_rush_yards_over_expected_per_att": 0.12,
+            "oppr_rush_soft":                         0.20,
         },
     },
     # QBs are the exception: the pool is 32 starters, all of whom have volume,
@@ -145,6 +156,16 @@ def derive(df: pl.DataFrame) -> pl.DataFrame:
         (c("f_opp_d_rec_td").fill_null(0) + c("f_opp_d_rush_td").fill_null(0)).alias("opp_td_soft"),
         c("f_opp_d_pass_yds").fill_null(0).alias("opp_pass_soft"),
         c("f_opp_d_rush_yds").fill_null(0).alias("opp_rush_soft"),
+        # ROLE-AWARE SOFTNESS, GATED. Carries this defence has allowed to the
+        # role he actually occupies, damped while the trailing window is thin:
+        # full weight at three role-games, proportionally less below, zero at
+        # none. A defence that has faced one RB1 cannot select anybody, and in
+        # week 1 the column does not exist at all -- c() reads that as 0, the
+        # component goes constant, and nfl_bot drops it, so the score falls
+        # back to its other terms instead of pricing a matchup it cannot see.
+        (c("f_oppr_dr_car").fill_null(0)
+         * pl.min_horizontal(c("f_oppr_gp").fill_null(0) / 3.0, pl.lit(1.0))
+         ).alias("oppr_rush_soft"),
         # regression: expected TDs above what he's actually scored = due
         (c("f_xtd").fill_null(0) - c("f_td_actual").fill_null(0)).alias("td_regression"),
         # game script. negative spread = underdog = pass volume; positive = run volume
