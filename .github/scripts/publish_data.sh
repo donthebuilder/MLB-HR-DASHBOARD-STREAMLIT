@@ -105,6 +105,12 @@ PUBLISH_FILES=(
   # hit-rate chart. Separate files on purpose — only one tab reads each, and a
   # 300 KB payload the Games tab never opens is 300 KB it waits for.
   nfl_matchup.json
+  # The DvP toggle's other side (2026-09-18). Its own file, not a second key in
+  # matchup.json: dvp is 242 KB of that 771 KB payload, so folding in a second
+  # copy would push every visitor past a megabyte to serve a toggle most never
+  # touch. The site fetches this one only when the toggle is flipped, and only
+  # when matchup.json's alt_season says it was written.
+  nfl_matchup_prev.json
   nfl_logs.json
   nfl_picks.json
   nfl_results.json

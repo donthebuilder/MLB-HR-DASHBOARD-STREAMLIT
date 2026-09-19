@@ -820,6 +820,19 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
     if chart_season != stat_season:
         print(f"  charting: participation has no {stat_season} file yet -- "
               f"coverage/formation/route tables stay on {chart_season}")
+    # THE OTHER SEASON'S DvP, for the site's season toggle (2026-09-18).
+    # stats_season_for() serves last season until three weeks are played and
+    # then flips on its own, which is right for the DEFAULT but leaves the
+    # reader no way to ask the other question -- "what has this defence done
+    # THIS season" in week 2, or "what did it do last season" in week 12.
+    # This is that other table.
+    #
+    # IT GOES IN ITS OWN FILE, not in matchup.json. Measured on the live
+    # payload: dvp is 242 KB of a 771 KB file, so folding a second copy in
+    # would push every visitor over a megabyte to serve a toggle most of them
+    # never touch (#26). The site fetches matchup_prev.json only when the
+    # toggle is flipped.
+    alt_season = season if stat_season != season else season - 1
     extras: dict = {}
     for name, fn, src in (
         ("dvp", nfl_dvp.build, stat_season),
@@ -898,6 +911,10 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
         "extras": extras,
         "stat_season": stat_season,
         "chart_season": chart_season,
+        # The season on the other side of the site's DvP toggle. Whether its
+        # file actually got written is decided in the writer below, which is
+        # where nfl_dvp is asked for it.
+        "alt_season": alt_season,
         "mode": mode,
         "season": season,
         "week": week,
@@ -1172,6 +1189,7 @@ def main() -> int:
     # May legitimately be older than stat_season; falls back to it for any
     # payload written before chart_season existed.
     chart_season = payload.get("chart_season", stat_season)
+    alt_season = payload.get("alt_season")
 
     # Player-level research is filtered to the slate. Team-level (defence vs
     # position, coverage shells, explosive allowed) is NOT: you look up any
@@ -1202,6 +1220,26 @@ def main() -> int:
         teams_on_slate = {g[s] for g in payload.get("games", []) for s in ("home", "away")}
         extras["usage"] = {t: v for t, v in extras["usage"].items() if t in teams_on_slate}
 
+    # THE TOGGLE'S OTHER SIDE. Built and written separately so the default
+    # payload does not carry it. A season with no played weeks yet (asking for
+    # 2026 in week 1) raises or comes back empty -- nothing is written, and the
+    # site says that season has nothing graded rather than drawing an empty
+    # table (#24).
+    try:
+        alt_dvp = nfl_dvp.build(alt_season)
+    except Exception as exc:
+        alt_dvp = {}
+        print(f"  dvp_prev({alt_season}) unavailable: {type(exc).__name__}: {exc}")
+    if alt_dvp:
+        (out / f"{a.prefix}matchup_prev.json").write_text(json.dumps({
+            "season": alt_season,
+            "dvp": alt_dvp,
+            "dvp_roles": nfl_dvp.ROLE_ORDER,
+            "dvp_stats": nfl_dvp.DVP_STATS,
+            "dvp_labels": nfl_dvp.STAT_LABELS,
+        }))
+        print(f"  wrote {a.prefix}matchup_prev.json ({alt_season} defence-vs-position)")
+
     # Defence-vs-position, coverage, explosive and usage: one file, one tab.
     (out / f"{a.prefix}matchup.json").write_text(json.dumps({
         "season": stat_season,
@@ -1211,6 +1249,10 @@ def main() -> int:
         # Published so the tab can say which year it is showing instead of
         # implying it is `season`.
         "chart_season": chart_season,
+        # The season on the other side of the DvP toggle -- null when its file
+        # was not written this run, so the site never offers a toggle to a file
+        # that does not exist.
+        "alt_season": alt_season if alt_dvp else None,
         "dvp": extras.get("dvp", {}),
         "dvp_trend": extras.get("dvp_trend", {}),
         "dvp_roles": nfl_dvp.ROLE_ORDER,
