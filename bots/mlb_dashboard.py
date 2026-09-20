@@ -15285,12 +15285,38 @@ Use ALT LOOKS as quality variance, not primary plays.
                     "generated_at": dt.datetime.now(dt.timezone.utc).isoformat(),
                     "changes": _changes[:40],
                 }
+                # ── WHERE THE FILE ACTUALLY HAS TO LAND (2026-09-20) ────
+                # This wrote to OUT_DIR (= ROOT_DIR/"outputs") plus the parent
+                # of every json_alias_paths entry -- and json_alias_paths is
+                # `[]`, set once at the top of main() and never appended to
+                # ("V29 clean output: no duplicate legacy aliases"). So the
+                # only target was outputs/pick_changes.json, a directory
+                # publish_data.sh does not look at.
+                #
+                # That is why the file was STILL 404 on the branch after the
+                # two fixes on 2026-09-19 -- lifting the writer out of the
+                # Discord gate and adding the PUBLISH_FILES line were both
+                # real bugs, and neither was sufficient, because the file was
+                # never in the directory the publisher reads.
+                #
+                # Note for the publish guard: it scans data/current and warns
+                # about files written there that nothing carries. It could not
+                # have caught this one -- the file never arrived in that
+                # directory at all. Wrong-place is a different failure from
+                # not-carried, and only the second is detectable from there.
+                #
+                # public/data/current is where every other published JSON goes
+                # (see odds_latest.json's write, same constant).
                 _targets = [OUT_DIR / "pick_changes.json"]
                 try:
-                    for _ap in (json_alias_paths or []):
-                        _targets.append(Path(_ap).parent / "pick_changes.json")
-                except Exception:
-                    pass
+                    _pub = DASHBOARD_REPO / "public" / "data" / "current"
+                    if _is_dashboard_repo(DASHBOARD_REPO):
+                        _targets.append(_pub / "pick_changes.json")
+                    else:
+                        print("pick changelog: dashboard repo not found, "
+                              "wrote outputs/ copy only", file=sys.stderr)
+                except Exception as _pexc2:
+                    print(f"pick changelog publish path skipped: {_pexc2}", file=sys.stderr)
                 for _cp in _targets:
                     try:
                         _cp.parent.mkdir(parents=True, exist_ok=True)
