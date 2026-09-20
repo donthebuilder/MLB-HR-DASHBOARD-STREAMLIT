@@ -545,6 +545,73 @@ stage_local() {
   [ -d "$SRC/data/current/splits" ] && cp -r "$SRC/data/current/splits" "$STAGE/public/data/current/" || true
   # Zone profiles from spray_cache.py.
   [ -d "$SRC/data/current/zones" ] && cp -r "$SRC/data/current/zones" "$STAGE/public/data/current/" || true
+  unpublished_report
+  return 0
+}
+
+# ── THE FOURTH-INSTANCE GUARD (2026-09-19) ──────────────────────────────────
+#
+# This script has now been the bug four times, the same way each time: a bot
+# writes a real file, its step goes green, and nothing carries the file to the
+# branch because no line here names it. The site then fetches a 404 forever and
+# degrades quietly, so nobody finds out for weeks.
+#
+#   pick_lock.json     shipped 08-09, never published -- every lock lost
+#   pick_matrix.json   written nightly, never published -- frozen fallback
+#   nfl_picks_*.json   in the glob list, missing from the copy loop
+#   pick_changes.json  shipped 08-08, never published -- found 09-19
+#
+# Every one of those was found by a human reading code, months late. This is
+# the check that finds the fifth one on the run that creates it: anything the
+# bot wrote into data/current/ that nothing here staged gets named, loudly.
+#
+# IT WARNS, IT DOES NOT FAIL. A nightly data publish must not die because a bot
+# dropped a new scratch file next to its real output -- that trades a silent
+# bug for a loud outage, which is a worse deal. Set PUBLISH_STRICT=1 to make it
+# fatal on a run where you want that.
+#
+# It writes to $GITHUB_STEP_SUMMARY as well as the log, on purpose: the first
+# three hid in green logs nobody reads, and a step summary shows on the run's
+# own page.
+#
+# KNOWN-LOCAL patterns are listed rather than guessed -- an intermediate this
+# script deliberately does not publish should be named here, so the report only
+# ever contains genuine surprises.
+UNPUBLISHED_IGNORE='^(detail|splits|zones)$|\.(log|tmp|lock|part)$|^\.'
+
+unpublished_report() {
+  local d="$SRC/data/current" found=0 line=""
+  [ -d "$d" ] || return 0
+  for f in "$d"/*; do
+    [ -e "$f" ] || continue
+    local b; b="$(basename "$f")"
+    printf '%s' "$b" | grep -Eq "$UNPUBLISHED_IGNORE" && continue
+    [ -e "$STAGE/public/data/current/$b" ] && continue
+    found=$((found + 1))
+    line="${line}  - ${b}"$'\n'
+  done
+  [ "$found" -eq 0 ] && return 0
+  echo ""
+  echo "⚠️  $found file(s) written to data/current/ but NOT published:"
+  printf '%s' "$line"
+  echo "    Nothing on the branch will carry these, so anything fetching them"
+  echo "    gets a 404. Add them to PUBLISH_FILES (or to UNPUBLISHED_IGNORE if"
+  echo "    they are deliberately local). See this function's header."
+  echo ""
+  if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+    {
+      echo "### ⚠️ Unpublished files in data/current/"
+      echo ""
+      printf '%s' "$line"
+      echo ""
+      echo "Add to \`PUBLISH_FILES\` in \`.github/scripts/publish_data.sh\`, or to"
+      echo "\`UNPUBLISHED_IGNORE\` if they are deliberately local."
+    } >> "$GITHUB_STEP_SUMMARY" || true
+  fi
+  if [ "${PUBLISH_STRICT:-0}" = "1" ]; then
+    echo "PUBLISH_STRICT=1 -- failing on unpublished files." >&2
+    return 1
+  fi
   return 0
 }
 
