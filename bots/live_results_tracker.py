@@ -4307,6 +4307,24 @@ def main() -> int:
             line += " · " + ", ".join(extras)
         return line
 
+    # UNPLAYED-SLATE GUARD (2026-09-21, Power-3 grading audit finding B3):
+    # a run landing before any of today's games have actually started (every
+    # game still "Preview") was writing label="Final · date" with
+    # hr_capture_pct=0.0 -- a real 0/0, not a measured miss. Any rollup
+    # averaging hr_capture_pct across dates (lib/ledgerArchive.js) got
+    # dragged toward zero by every one of these. Detected off the real
+    # fetched game statuses, not off live_mode/--final-only (a flag choice,
+    # not a fact about the games) -- so this also corrects a
+    # not-actually-live "Live" label on a live-mode run that starts before
+    # first pitch. A genuinely completed slate with zero real home runs
+    # still reports hr_capture_pct=0.0 as before; that 0.0 is real.
+    _game_states = list(game_status_by_pk.values())
+    slate_not_started = bool(_game_states) and all(
+        str(gs.get("abstract_state", "")).lower() == "preview" for gs in _game_states
+    )
+    if slate_not_started:
+        hr_capture_report["hr_capture_pct"] = None
+
     site_results = [
         {**slot,
          "grade":        _grade_for_row(slot),
@@ -4318,7 +4336,8 @@ def main() -> int:
     payload = {
         "date": date_str,
         "live_mode": live_mode,
-        "label": ("Live" if live_mode else "Final") + " · " + date_str,
+        "label": ("Pending" if slate_not_started else ("Live" if live_mode else "Final")) + " · " + date_str,
+        "slate_status": "pending" if slate_not_started else ("live" if live_mode else "final"),
         # ── Site-friendly aliases (what Results.js looks for) ────────────
         "results": site_results,
         # ── Original (preserved so nothing downstream breaks) ────────────
