@@ -1220,6 +1220,30 @@ def main() -> int:
         teams_on_slate = {g[s] for g in payload.get("games", []) for s in ("home", "away")}
         extras["usage"] = {t: v for t, v in extras["usage"].items() if t in teams_on_slate}
 
+    # ── 437 KB NOTHING WAS READING (2026-09-20) ─────────────────────────
+    # nfl_matchup.json was 1,256 KB and every visitor to a research tab
+    # downloaded all of it. Traced every key to its consumer on the site:
+    #
+    #   disruption    316 KB   per-DEFENDER grades      ZERO readers
+    #   usage         121 KB   team usage               ZERO readers
+    #   snap_movers     small  role changes             ZERO readers
+    #
+    # That is 35% of the payload with nothing on the other end. `field`
+    # (315 KB) looks the same size and is NOT here, because MatchupMap reads
+    # matchup.field.player_pass on the Matchups tab's first paint -- it is a
+    # real consumer and deferring it is a separate, riskier change.
+    #
+    # MOVED RATHER THAN DELETED. All three are real, correctly built data and
+    # a future tab may want them; publishing them to their own file costs
+    # branch storage, which is cheap, instead of phone bandwidth, which is
+    # not. But an unread file is still #28: if nothing consumes this by the
+    # end of the season, cut it rather than carrying it forever.
+    _extra = {k: extras.get(k, {}) for k in ("disruption", "usage", "snap_movers")}
+    if any(_extra.values()):
+        (out / f"{a.prefix}matchup_extra.json").write_text(json.dumps(_extra))
+        print(f"  wrote {a.prefix}matchup_extra.json "
+              f"({', '.join(k for k, v in _extra.items() if v)} -- no site reader yet)")
+
     # THE TOGGLE'S OTHER SIDE. Built and written separately so the default
     # payload does not carry it. A season with no played weeks yet (asking for
     # 2026 in week 1) raises or comes back empty -- nothing is written, and the
@@ -1264,9 +1288,10 @@ def main() -> int:
         "coverage_player": extras.get("coverage_player", {}),
         "def_explosive": extras.get("def_explosive", {}),
         "player_explosive": extras.get("player_explosive", {}),
-        "usage": extras.get("usage", {}),
+        # `usage` and `disruption` MOVED OUT 2026-09-20 -- see the
+        # matchup_extra.json write below. `field` stays: MatchupMap on the
+        # Matchups tab reads matchup.field.player_pass on first paint.
         "field": extras.get("field", {}),
-        "disruption": extras.get("disruption", {}),
         "disruption_team": extras.get("disruption_team", {}),
         "disruption_groups": nfl_disruption.GROUP_ORDER,
         "disruption_stats": nfl_disruption.STATS,
@@ -1280,7 +1305,8 @@ def main() -> int:
         # yet. `snap_movers` is what the cold board should read before it puts
         # up a low-volume name with no stated reason.
         "snaps": extras.get("snaps", {}),
-        "snap_movers": extras.get("snap_movers", {}),
+        # `snap_movers` moved out with them -- same reason, no reader.
+
         "snap_rising": nfl_snaps.RISING,
         "snap_falling": nfl_snaps.FALLING,
         "zones_pass": nfl_field.ZONES_PASS,

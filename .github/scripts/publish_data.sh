@@ -122,6 +122,12 @@ PUBLISH_FILES=(
   # touch. The site fetches this one only when the toggle is flipped, and only
   # when matchup.json's alt_season says it was written.
   nfl_matchup_prev.json
+  # The keys nothing on the site reads yet (2026-09-20): disruption, usage,
+  # snap_movers -- 437 KB that every research-tab visitor was downloading
+  # inside nfl_matchup.json. Published here so the data is not thrown away
+  # and nobody pays for it on first paint. Listed so the new unpublished_report
+  # guard stays quiet about a file that IS deliberate.
+  nfl_matchup_extra.json
   nfl_logs.json
   nfl_picks.json
   nfl_results.json
