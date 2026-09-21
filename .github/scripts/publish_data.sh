@@ -262,6 +262,14 @@ SLATE_KEEP=14
 NFL_PRED_LOG_GLOB="nfl_prediction_log_*.jsonl"
 NFL_PRED_LOG_KEEP=300
 
+# nfl_next_prediction_log_*.jsonl (2026-09-21): write_nfl_prediction_log()'s
+# own prefix param means the next-week build writes this filename instead of
+# NFL_PRED_LOG_GLOB's, one run-id-stamped file per next-week build the same
+# way NFL_PRED_LOG_GLOB covers the current week's. Same KEEP -- same cadence,
+# just offset by a week. Found unpublished alongside NFL_NEXT_PICKS_GLOB above.
+NFL_NEXT_PRED_LOG_GLOB="nfl_next_prediction_log_*.jsonl"
+NFL_NEXT_PRED_LOG_KEEP=300
+
 # nfl_outcome_log_*.jsonl: ONE FILE PER DATE, same as OUTCOME_LOG_GLOB --
 # append_nfl_outcome_log() in bots/nfl/nfl_results.py appends a new line to
 # that date's file every grading pass rather than opening a new file. Real
@@ -313,6 +321,17 @@ NFL_ODDS_KEEP=90
 # them. ~7 KB a week; 60 is three seasons.
 NFL_PICKS_GLOB="nfl_picks_20*.json"
 NFL_PICKS_KEEP=60
+
+# nfl_next_picks_<season>_w03.json (2026-09-21): the same archive, one week
+# ahead -- nfl_bot.py's "Build next week" step calls the identical archive
+# writer with prefix="nfl_next_", so it lands under this prefix instead of
+# NFL_PICKS_GLOB above, which only matches "nfl_picks_...". Same reason this
+# is load-bearing: the week it archives is THIS week by the time nfl_results.py
+# needs to grade it, and by then nfl_next_picks.json has already rolled over to
+# the week after that. Found unpublished 2026-09-21 -- a real file, no line
+# here to carry it, same failure this script has now named four times.
+NFL_NEXT_PICKS_GLOB="nfl_next_picks_20*.json"
+NFL_NEXT_PICKS_KEEP=60
 
 # nfl_por_log_<season>_w03.jsonl (B10(b)/(e), 2026-09-15): ONE FILE PER WEEK,
 # written by bots/nfl/nfl_pick_lock.py's append_por_log() the instant each
@@ -583,7 +602,7 @@ stage_local() {
 # KNOWN-LOCAL patterns are listed rather than guessed -- an intermediate this
 # script deliberately does not publish should be named here, so the report only
 # ever contains genuine surprises.
-UNPUBLISHED_IGNORE='^(detail|splits|zones)$|\.(log|tmp|lock|part)$|^\.'
+UNPUBLISHED_IGNORE='^(detail|splits|zones)$|\.(log|tmp|lock|part)$|^\.|^nfl_next_(meta|matchup_extra|matchup_prev)\.json$'
 
 unpublished_report() {
   local d="$SRC/data/current" found=0 line=""
@@ -669,9 +688,10 @@ carry_forward() {
               "$POR_LOG_GLOB:$POR_LOG_KEEP" "$SLATE_GLOB:$SLATE_KEEP" \
               "$NFL_PRED_LOG_GLOB:$NFL_PRED_LOG_KEEP" "$NFL_OUTCOME_LOG_GLOB:$NFL_OUTCOME_LOG_KEEP" \
               "$NFL_RESULTS_GLOB:$NFL_RESULTS_KEEP" \
-              "$NFL_PICKS_GLOB:$NFL_PICKS_KEEP" \
+              "$NFL_PICKS_GLOB:$NFL_PICKS_KEEP" "$NFL_NEXT_PICKS_GLOB:$NFL_NEXT_PICKS_KEEP" \
               "$NFL_POR_LOG_GLOB:$NFL_POR_LOG_KEEP" \
-              "$NFL_ODDS_GLOB:$NFL_ODDS_KEEP"; do
+              "$NFL_ODDS_GLOB:$NFL_ODDS_KEEP" \
+              "$NFL_NEXT_PRED_LOG_GLOB:$NFL_NEXT_PRED_LOG_KEEP"; do
     glob="${spec%:*}"; keep="${spec##*:}"
     n=$(find "$STAGE/public/data/current" -maxdepth 1 -type f -name "$glob" | wc -l)
     if [ "$n" -gt "$keep" ]; then
