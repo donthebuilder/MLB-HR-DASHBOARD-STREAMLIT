@@ -92,7 +92,7 @@ def _rush_grid(df: pl.DataFrame, key: str) -> dict:
 
 
 def build(season: int, player_ids: set[str] | None = None) -> dict:
-    """{'def_pass', 'def_rush', 'player_pass', 'player_rush'} keyed by team / id."""
+    """{'def_pass', 'def_rush', 'player_pass', 'player_rush', 'qb_pass'} keyed by team / id."""
     p = _pbp(season)
     passes = p.filter(pl.col("pass_attempt") == 1)
     rushes = p.filter(pl.col("rush_attempt") == 1)
@@ -107,11 +107,21 @@ def build(season: int, player_ids: set[str] | None = None) -> dict:
                .rename({"receiver_player_id": "pid"})
     rr = rushes.filter(pl.col("rusher_player_id").is_not_null()) \
                .rename({"rusher_player_id": "pid"})
+    # QB PASSING, 2026-09-21. Same _pass_grid, same zones — just grouped by
+    # who THREW it (passer_player_id) instead of who it was thrown TO.
+    # player_pass has always been the receiver's side, and a QB never gets
+    # targeted, so picking him on the map did nothing no matter what. This
+    # is his own real zone distribution: where HE puts it, not where it was
+    # caught relative to him.
+    qp = passes.filter(pl.col("passer_player_id").is_not_null()) \
+               .rename({"passer_player_id": "pid"})
     if player_ids:
         pp = pp.filter(pl.col("pid").is_in(list(player_ids)))
         rr = rr.filter(pl.col("pid").is_in(list(player_ids)))
+        qp = qp.filter(pl.col("pid").is_in(list(player_ids)))
     out["player_pass"] = _pass_grid(pp, "pid")
     out["player_rush"] = _rush_grid(rr, "pid")
+    out["qb_pass"] = _pass_grid(qp, "pid")
 
     # League baselines, so a zone can be read as hot or cold rather than just
     # busy. Without these every grid's darkest cell is simply its own maximum.
