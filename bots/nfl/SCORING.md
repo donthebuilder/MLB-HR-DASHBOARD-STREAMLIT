@@ -255,6 +255,33 @@ Weights were tuned on 2025, then run untouched on 2024. **The 2024 column is the
 
 ---
 
+## DEF_TD (v1, not backtested) — added 2026-09-21
+
+Donovan asked for defense and special teams ranked "just like MLB." Traced
+first: there is no feature table for a defensive/ST unit the way there is
+for a player — nflverse's `def_tds` and `special_teams_tds` are already the
+outcome, not a leading indicator anyone has identified yet. Building a
+weighted model over nothing would be inventing data (rule #16), so this is
+NOT one of the seven MODELS above. It lives in `nfl_scoring.V1_MODELS`
+instead, with its own scorer (`score_def_td`), and is flagged `"v1": true`
+in the published `markets` array so the site can show it differently.
+
+**What it actually is:** each team's real `def_touchdowns`
+(`def_tds + special_teams_tds`, already computed by `team_defense()` for
+FRANCHISE's D/ST fantasy scoring — reused here, not recomputed) — this
+season's weeks-to-date average, or last season's per-game rate for a team
+with nothing played yet — percentile-ranked 0–100 against the other 31
+teams that week. One real component, no weighting, no backtest.
+
+**What "done" looks like, before this loses the v1 label:** real candidate
+leading-indicator features (opponent giveaway rate, pressure/sack rate,
+return average and starting field position, injury-thinned offensive
+lines) swept against 2023–2025 the way TD and RUSH_ATT were, with the same
+t15/t30/AUC holdout report as the table below. Until then, treat DEF_TD as
+"this unit's own recent rate," not a prediction.
+
+---
+
 ## Known gaps
 
 1. **No injury or inactive filter yet.** Every backtest above scores players who were later ruled out. Wiring `load_injuries` + the Sunday inactives run will move these numbers, probably upward.
@@ -262,3 +289,6 @@ Weights were tuned on 2025, then run untouched on 2024. **The 2024 column is the
 3. **Weeks 1–2 unscoreable.** The trailing window needs 4 weeks and a 2-game minimum, so the table starts at week 3. Week 1 needs prior-season carryover or the boards don't exist for the opener.
 4. **Two seasons is a small validation set.** 2023 and 2022 are one flag away and should be run before Week 1.
 5. **No odds.** Every bar here is a fixed threshold, not a real line. Edge-vs-line is a different and better question that needs a paid feed.
+6. **DEF_TD has no model behind it yet**, just a real trailing rate — see
+   the section above. Needs real leading-indicator features and a holdout
+   backtest before it belongs in MODELS alongside the other seven.

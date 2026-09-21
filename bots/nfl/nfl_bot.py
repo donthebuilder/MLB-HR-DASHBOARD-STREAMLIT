@@ -51,7 +51,7 @@ import nfl_snaps
 from nfl_features import (build, season_baseline, upcoming_rows, stats_season_for,
                           current_roster, newcomer_rows, played_weeks,
                           schedule_weeks, PLAYER_FORM, USAGE_FORM)
-from nfl_scoring import MODELS, OUTCOME, score, derive, _pctile
+from nfl_scoring import MODELS, OUTCOME, score, derive, _pctile, V1_MODELS, score_def_td
 
 # MODEL FOUNDATION (2026-08-24) -- the NFL side of the same provenance work
 # bots/model_registry.py / bots/config_fingerprint.py did for MLB on
@@ -833,6 +833,35 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
     # never touch (#26). The site fetches matchup_prev.json only when the
     # toggle is flipped.
     alt_season = season if stat_season != season else season - 1
+
+    # DEF_TD v1 (2026-09-21) -- see nfl_scoring.V1_MODELS's docstring. Computed
+    # once here and reused below for the payload's own "team_defense" key,
+    # rather than calling team_defense() twice for the same week.
+    _team_def = team_defense(stat_season, season)
+    _def_scored = score_def_td(_team_def, week)
+    if _def_scored:
+        _live_teams = {g["home"] for g in upcoming} | {g["away"] for g in upcoming}
+        for _team, _d in _def_scored.items():
+            if _team not in _live_teams:
+                continue  # not on this week's slate -- same bye logic as players
+            _opp = next((g["away"] if g["home"] == _team else g["home"])
+                        for g in upcoming if _team in (g["home"], g["away"]))
+            rows.append({
+                "player_id": f"DEF-{_team}",
+                "name": f"{_team} D/ST",
+                "team": _team,
+                "opp": _opp,
+                "position": "DEF",
+                "carryover": False,
+                "questionable": False,
+                "on_bye": False,
+                "low_sample": _d["sample"] != "season",
+                "scores": {"DEF_TD": _d["score"]},
+                "components": {"DEF_TD": {"def_touchdowns_rate": _d["rate"]}},
+                "stats": {},
+                "splits": {},
+            })
+
     extras: dict = {}
     for name, fn, src in (
         ("dvp", nfl_dvp.build, stat_season),
@@ -924,7 +953,7 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
         "context_available": context_ok,
         # D/ST inputs. Small (32 teams) and read by FRANCHISE on load, so it
         # rides on week.json rather than the research payload.
-        "team_defense": team_defense(stat_season, season),
+        "team_defense": _team_def,
         "games": upcoming,
         "players": rows,
         "markets": [
@@ -932,7 +961,11 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
              "weights": scored.get(k, {}).get("weights", m["w"]),
              "dropped": scored.get(k, {}).get("dropped", [])}
             for k, m in MODELS.items() if k in scored
-        ],
+        ] + ([
+            {"key": "DEF_TD", "label": V1_MODELS["DEF_TD"]["label"],
+             "bar": V1_MODELS["DEF_TD"]["bar"], "positions": V1_MODELS["DEF_TD"]["pos"],
+             "weights": None, "dropped": [], "v1": True}
+        ] if _def_scored else []),
         "research_columns": [{"key": s, "label": s, "desc": d, "dp": dp, "pct": pct}
                              for _, s, d, dp, pct in RESEARCH],
         "split_pairs": SPLIT_PAIRS,

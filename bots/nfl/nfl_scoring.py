@@ -226,6 +226,80 @@ def weight_table(market: str) -> str:
     return f"{m['label']}  —  bar {m['bar']}, positions {'/'.join(m['pos'])}\n" + "\n".join(rows)
 
 
+# ── v1 markets: one real component, not yet weighted or backtested ─────────
+#
+# Donovan, 2026-09-21: "everyone ranked, just like MLB... and special teams
+# and defense." Traced first (project rule #15): the seven MODELS above are
+# weighted composites of engineered features, each swept against a holdout
+# season before shipping (see SCORING.md). There is no equivalent feature
+# table for a defense/special-teams unit -- nflverse's def_tds and
+# special_teams_tds are already exactly the outcome being graded, not a
+# leading indicator of it, so there is nothing to build a multi-component
+# model FROM yet. Inventing weights over nothing would violate rule #16.
+#
+# So this ranks each team's own trailing rate of the exact thing it's
+# grading -- one real, already-computed number (team_defense()'s
+# def_touchdowns, built for FRANCHISE's D/ST scoring in nfl_bot.py, reused
+# here rather than recomputed), not a projection. Explicitly v1: the site
+# and SCORING.md both say so, and it does not get folded into MODELS until
+# it has been swept the way TD and RUSH_ATT were.
+V1_MODELS = {
+    "DEF_TD": {"label": "Defense/ST TD", "pos": ["DEF"], "bar": 1},
+}
+
+
+def score_def_td(team_defense: dict, week: int | None = None) -> dict[str, dict]:
+    """Percentile-rank every team by its real trailing def_touchdowns rate.
+
+    `team_defense` is nfl_bot.team_defense()'s own output: {"per_game":
+    {team: {...}}, "weeks": {"1": {team: {...}}, ...}}. Prefers this
+    season's weeks-to-date average; a team with no games logged yet this
+    season (bye, or too early in the year) falls back to last season's
+    per_game rate rather than being scored on zero real games. `week` is
+    accepted for a future per-week cutoff and unused today -- `weeks`
+    already only contains games that have actually been played.
+
+    Returns {team: {"score": 0-100, "rate": <real per-game rate>,
+    "sample": "season"|"prior"}}, or {} if team_defense carried nothing
+    (its own fetch failed) -- never a fabricated number.
+    """
+    per_game = team_defense.get("per_game") or {}
+    weeks = team_defense.get("weeks") or {}
+    teams = set(per_game) | {t for wk in weeks.values() for t in wk}
+    if not teams:
+        return {}
+
+    rate, sample = {}, {}
+    for team in teams:
+        games = [wk[team]["def_touchdowns"] for wk in weeks.values() if team in wk]
+        if games:
+            rate[team] = sum(games) / len(games)
+            sample[team] = "season"
+        else:
+            rate[team] = (per_game.get(team) or {}).get("def_touchdowns", 0.0)
+            sample[team] = "prior"
+
+    # Average-rank percentile, ties share the same percentile -- same idea as
+    # _pctile()'s rank("average") / n above, done in plain Python because this
+    # is 32 team-rows, not a polars feature table.
+    ordered = sorted(rate.values())
+    n = len(ordered)
+
+    def pct_of(v: float) -> float:
+        lo = ordered.index(v)
+        hi = lo
+        while hi + 1 < n and ordered[hi + 1] == v:
+            hi += 1
+        return ((lo + hi) / 2 + 1) / n
+
+    return {
+        team: {"score": round(pct_of(r) * 100), "rate": round(r, 3), "sample": sample[team]}
+        for team, r in rate.items()
+    }
+
+
 if __name__ == "__main__":
     for k in MODELS:
         print(weight_table(k), "\n")
+    print(f"{V1_MODELS['DEF_TD']['label']}  —  v1, single real component "
+          f"(def_touchdowns rate), not yet weighted or backtested")
