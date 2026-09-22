@@ -1157,6 +1157,95 @@ def write_nfl_prediction_log(run_meta: dict, players: list[dict], out_dir: Path,
         return None
 
 
+SIGNAL_FIELDS = (
+    "games_since_last_td",
+    "high_confidence_td_flag",
+    "coverage_mismatch_tag",
+    "coverage_mismatch_detail",
+)
+
+
+def build_nfl_signal_log_lines(run_meta: dict, players: list[dict]) -> list[dict]:
+    """One line per player carrying this run's signal flags, frozen.
+
+    WHY THIS IS NOT PART OF THE PREDICTION LOG (2026-09-21). It would rather
+    be: one archive is better than two. But write_nfl_prediction_log() is
+    called immediately after build_payload(), ~150 lines before the signal-flag
+    block runs, and it is positioned there on purpose -- early and best-effort,
+    so a run's model-foundation record is durable even if something later in
+    main() throws. Moving that call down past the flag block to pick these up
+    would trade a guaranteed prediction log for a slightly tidier one, which is
+    the wrong way round. So the flags get their own best-effort file, written
+    where they actually exist, and a throw here costs this run's flag history
+    and nothing else.
+
+    WHY IT HAS TO BE ARCHIVED AT ALL. Traced 2026-09-21 (see
+    claude/nfl-flag-grading-trace-2026-09-21.md in the DASH Network project):
+    of the four flags NFL publishes, only high_confidence_td_flag could be
+    graded historically, and only because it is exactly `TD score >= 78` and
+    the score is already in the prediction log. The other three were computed
+    every run and then lost -- games_since_last_td is frozen into
+    payload["players"] but nfl_week.json is overwritten every run and never
+    kept, and coverage_mismatch_tag's inputs live in nfl_matchup.json, same
+    story. "Frozen into the payload" stops a client-side recompute from
+    drifting; it does not give you a history to grade against. This file is
+    that history, and it starts now -- there is no backfill, because the number
+    has to be the one that stood before kickoff.
+
+    td_score rides along so a row is self-sufficient: grading a flag against
+    the score it was derived from should not need a join to a second file that
+    ages out on its own KEEP.
+
+    Only players this run actually scored for TD, or who carry a real flag
+    value, get a line -- every flag here is a TD-market or receiving concept,
+    so a kicker with three nulls is bytes that say nothing.
+    """
+    lines: list[dict] = [run_meta]
+    for pl_row in players:
+        if not isinstance(pl_row, dict):
+            continue
+        td_score = (pl_row.get("scores") or {}).get("TD")
+        flags = {k: pl_row.get(k) for k in SIGNAL_FIELDS}
+        has_flag = any(v is not None and v is not False for v in flags.values())
+        if td_score is None and not has_flag:
+            continue
+        lines.append({
+            "player_id": pl_row.get("player_id"),
+            "player": pl_row.get("name"),
+            "team": pl_row.get("team"),
+            "opp": pl_row.get("opp"),
+            "position": pl_row.get("position"),
+            "run_id": run_meta.get("run_id"),
+            "generated_at": run_meta.get("generated_at"),
+            "season": run_meta.get("season"),
+            "week": run_meta.get("week"),
+            "td_score": td_score,
+            **flags,
+        })
+    return lines
+
+
+def write_nfl_signal_log(run_meta: dict, players: list[dict], out_dir: Path, prefix: str = "") -> "Path | None":
+    """Write {out_dir}/{prefix}signal_log_{run_id}.jsonl for this run.
+
+    Same best-effort contract as write_nfl_prediction_log(): a failure here
+    prints and returns, and must never block the slate the rest of main() has
+    already written.
+    """
+    try:
+        run_id = run_meta["run_id"]
+        path = out_dir / f"{prefix}signal_log_{run_id}.jsonl"
+        lines = build_nfl_signal_log_lines(run_meta, players)
+        with path.open("w", encoding="utf-8") as f:
+            for obj in lines:
+                f.write(json.dumps(obj, default=str))
+                f.write("\n")
+        return path
+    except Exception as exc:
+        print(f"nfl signal log write failed: {exc}")
+        return None
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--mode", choices=["preseason", "week", "auto"], default="preseason")
@@ -1448,6 +1537,14 @@ def main() -> int:
                             "leaned_ypt": round(leaned_split.get("ypt") or 0, 1),
                             "other_ypt": round(other_split.get("ypt") or 0, 1),
                         }
+
+    # The flags exist on the rows for exactly as long as this process lives,
+    # and nfl_week.json gets overwritten on the next run -- so freeze them
+    # here, the instant they are real. See write_nfl_signal_log()'s docstring
+    # for why this is its own file and not part of the prediction log.
+    signal_log_path = write_nfl_signal_log(run_meta, payload["players"], out, a.prefix)
+    if signal_log_path is not None:
+        print(f"  signal log: {signal_log_path.name}")
 
     # ── the pick card ─────────────────────────────────────────────────────────
     # Built from the FINISHED payload rows, not re-scored. The MLB side learned

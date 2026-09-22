@@ -270,6 +270,30 @@ NFL_PRED_LOG_KEEP=300
 NFL_NEXT_PRED_LOG_GLOB="nfl_next_prediction_log_*.jsonl"
 NFL_NEXT_PRED_LOG_KEEP=300
 
+# nfl_signal_log_*.jsonl (2026-09-21): ONE FILE PER RUN, the signal flags
+# frozen as they stood before kickoff -- games_since_last_td,
+# high_confidence_td_flag, coverage_mismatch_tag/_detail, plus the TD score
+# they were derived from. Written by write_nfl_signal_log() in
+# bots/nfl/nfl_bot.py.
+#
+# WHY IT HAS TO BE ON THE BRANCH. Traced 2026-09-21: three of those four flags
+# were computed every run and then lost. games_since_last_td is frozen into
+# payload["players"], but nfl_week.json is overwritten by the next run and no
+# version is kept; coverage_mismatch_tag's inputs live in nfl_matchup.json,
+# same story. Only high_confidence_td_flag survived, and only because it is
+# exactly TD score >= 78 and the score is already in NFL_PRED_LOG_GLOB. Without
+# this file there is no history to grade an NFL SignalAudit page against, and
+# no way to build one after the fact -- the number has to be the one that stood
+# before the game.
+#
+# SAME KEEP AS NFL_PRED_LOG_GLOB, deliberately: the two are joined on run_id,
+# and a signal log whose matching prediction log has already aged out can no
+# longer be tied to the run that produced it. Equal caps means they age out
+# together. ~131 KB a run measured against the live week-2 slate (397 of 514
+# players carry a TD score or a real flag), so ~38 MB at this cap.
+NFL_SIGNAL_LOG_GLOB="nfl_signal_log_*.jsonl"
+NFL_SIGNAL_LOG_KEEP=300
+
 # nfl_outcome_log_*.jsonl: ONE FILE PER DATE, same as OUTCOME_LOG_GLOB --
 # append_nfl_outcome_log() in bots/nfl/nfl_results.py appends a new line to
 # that date's file every grading pass rather than opening a new file. Real
@@ -544,7 +568,8 @@ stage_local() {
            "$SRC"/data/$NFL_RESULTS_GLOB "$SRC"/data/current/$NFL_RESULTS_GLOB \
            "$SRC"/data/$NFL_ODDS_GLOB "$SRC"/data/current/$NFL_ODDS_GLOB \
            "$SRC"/data/$NFL_PICKS_GLOB "$SRC"/data/current/$NFL_PICKS_GLOB \
-           "$SRC"/data/$NFL_POR_LOG_GLOB "$SRC"/data/current/$NFL_POR_LOG_GLOB; do
+           "$SRC"/data/$NFL_POR_LOG_GLOB "$SRC"/data/current/$NFL_POR_LOG_GLOB \
+           "$SRC"/data/$NFL_SIGNAL_LOG_GLOB "$SRC"/data/current/$NFL_SIGNAL_LOG_GLOB; do
     [ -f "$g" ] && cp "$g" "$STAGE/public/data/current/"
   done
   # NFL_PICKS_GLOB was declared above (and already in carry_forward()'s trim
@@ -691,7 +716,8 @@ carry_forward() {
               "$NFL_PICKS_GLOB:$NFL_PICKS_KEEP" "$NFL_NEXT_PICKS_GLOB:$NFL_NEXT_PICKS_KEEP" \
               "$NFL_POR_LOG_GLOB:$NFL_POR_LOG_KEEP" \
               "$NFL_ODDS_GLOB:$NFL_ODDS_KEEP" \
-              "$NFL_NEXT_PRED_LOG_GLOB:$NFL_NEXT_PRED_LOG_KEEP"; do
+              "$NFL_NEXT_PRED_LOG_GLOB:$NFL_NEXT_PRED_LOG_KEEP" \
+              "$NFL_SIGNAL_LOG_GLOB:$NFL_SIGNAL_LOG_KEEP"; do
     glob="${spec%:*}"; keep="${spec##*:}"
     n=$(find "$STAGE/public/data/current" -maxdepth 1 -type f -name "$glob" | wc -l)
     if [ "$n" -gt "$keep" ]; then
