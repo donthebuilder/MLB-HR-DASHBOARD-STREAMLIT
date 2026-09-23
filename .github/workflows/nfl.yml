@@ -239,6 +239,22 @@ jobs:
             --card "$GITHUB_WORKSPACE/public/data/current/nfl_picks.json" \
             --out "$GITHUB_WORKSPACE/public/data/current" --prefix nfl_
 
+      # SIGNAL AUDIT (2026-09-23). Grades every TUDDY flag against real
+      # touchdowns, each player frozen at the last archived run before HIS
+      # game kicked off -- see nfl_signal_audit.py's docstring. Reads only
+      # what is already on the data branch (prediction/signal logs, graded
+      # weeks), so it runs after grading and never touches this run's slate.
+      # continue-on-error: an audit page must never cost a slate publish.
+      - name: Signal audit
+        continue-on-error: true
+        working-directory: bots/nfl
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          python nfl_signal_audit.py --season 2026 \
+            --out "$GITHUB_WORKSPACE/public/data/current"
+
       # A failed build must not publish an empty slate over a good one. The
       # site's fetch validates `players.length > 0` before accepting a payload,
       # but the cheaper place to stop it is here, before it ever ships.

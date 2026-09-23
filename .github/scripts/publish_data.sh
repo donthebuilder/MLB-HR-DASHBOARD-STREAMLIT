@@ -131,6 +131,11 @@ PUBLISH_FILES=(
   nfl_logs.json
   nfl_picks.json
   nfl_results.json
+  # nfl_signal_audit.json (2026-09-23) -- every TUDDY signal flag graded
+  # against real touchdowns, frozen per game at the last run before kickoff.
+  # Written by bots/nfl/nfl_signal_audit.py; read as-is by the
+  # Accountability tab's Signals view. A few KB, rewritten every run.
+  nfl_signal_audit.json
   # NEXT WEEK (2026-09-18). The same four payloads the dashboard reads, one
   # week ahead, written by nfl.yml's "Build next week" step under the
   # nfl_next_ prefix. The site's This week / Next week switch swaps which set
