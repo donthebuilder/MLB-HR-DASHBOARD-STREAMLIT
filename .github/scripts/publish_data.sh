@@ -267,8 +267,21 @@ NFL_PRED_LOG_KEEP=300
 # NFL_PRED_LOG_GLOB's, one run-id-stamped file per next-week build the same
 # way NFL_PRED_LOG_GLOB covers the current week's. Same KEEP -- same cadence,
 # just offset by a week. Found unpublished alongside NFL_NEXT_PICKS_GLOB above.
+#
+# KEEP=24, NOT 300 (2026-09-23, Donovan's call). ~868 KB a run; at 300 this
+# one glob would add ~260 MB to the branch, for a look-ahead board that is
+# never graded as the record (nfl.yml keeps it out of NFL_PRED_LOG_GLOB on
+# purpose). 24 is two weeks of the ~12 weekly firings -- long enough for the
+# week it looked ahead to be played and graded against it (~21 MB). The
+# season-long early-look record is NFL_NEXT_PICKS_GLOB above, one small file a
+# week at KEEP=60, so nothing is lost for an early-vs-final study; only the
+# full-board detail behind it ages out.
+#
+# Staged in stage_local()'s copy loop as of the same date. Before that this
+# glob, and NFL_NEXT_PICKS_GLOB, were declared and pruned but copied nowhere:
+# zero of either file ever reached the branch.
 NFL_NEXT_PRED_LOG_GLOB="nfl_next_prediction_log_*.jsonl"
-NFL_NEXT_PRED_LOG_KEEP=300
+NFL_NEXT_PRED_LOG_KEEP=24
 
 # nfl_signal_log_*.jsonl (2026-09-21): ONE FILE PER RUN, the signal flags
 # frozen as they stood before kickoff -- games_since_last_td,
@@ -569,7 +582,9 @@ stage_local() {
            "$SRC"/data/$NFL_ODDS_GLOB "$SRC"/data/current/$NFL_ODDS_GLOB \
            "$SRC"/data/$NFL_PICKS_GLOB "$SRC"/data/current/$NFL_PICKS_GLOB \
            "$SRC"/data/$NFL_POR_LOG_GLOB "$SRC"/data/current/$NFL_POR_LOG_GLOB \
-           "$SRC"/data/$NFL_SIGNAL_LOG_GLOB "$SRC"/data/current/$NFL_SIGNAL_LOG_GLOB; do
+           "$SRC"/data/$NFL_SIGNAL_LOG_GLOB "$SRC"/data/current/$NFL_SIGNAL_LOG_GLOB \
+           "$SRC"/data/$NFL_NEXT_PICKS_GLOB "$SRC"/data/current/$NFL_NEXT_PICKS_GLOB \
+           "$SRC"/data/$NFL_NEXT_PRED_LOG_GLOB "$SRC"/data/current/$NFL_NEXT_PRED_LOG_GLOB; do
     [ -f "$g" ] && cp "$g" "$STAGE/public/data/current/"
   done
   # NFL_PICKS_GLOB was declared above (and already in carry_forward()'s trim
