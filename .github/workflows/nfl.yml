@@ -101,6 +101,13 @@ jobs:
           echo "mode=$MODE" >> "$GITHUB_OUTPUT"
           echo "Running in $MODE mode"
 
+      # EVERY ROSTER (2026-09-24). Active + IR + practice squad with gsis_id,
+      # for search and for the live TD feed's name join. One nflverse call.
+      - name: Cache every roster
+        continue-on-error: true
+        working-directory: bots/nfl
+        run: python nfl_roster.py --season 2026 --out "$GITHUB_WORKSPACE/public/data/current" --prefix nfl_
+
       - name: Build slate
         working-directory: bots/nfl
         run: |

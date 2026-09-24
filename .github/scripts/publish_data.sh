@@ -52,6 +52,8 @@ PUBLISH_FILES=(
   context_pack_latest.json
   # fence-line contact board from spray_cache (2026-08-08)
   fence_board.json
+  # every 40-man roster with status + season line (2026-09-24) -- ~400 KB
+  rosters_mlb.json
   # playoff + World Series odds (2026-09-03) -- ~10 KB, rebuilt daily
   playoff_odds.json
   # comeback wins / blown leads (2026-09-03) -- ~40 KB, rebuilt daily
@@ -109,6 +111,8 @@ PUBLISH_FILES=(
   # the orphan-branch force-push and the concurrent-publisher merge below are
   # the parts worth not reimplementing per sport.
   nfl_week.json
+  # every roster: active + IR + practice squad, gsis-keyed (2026-09-24)
+  nfl_roster.json
   nfl_report_card.json
   nfl_meta.json
   # The research layer (2026-08-14): defence-vs-position by depth role,

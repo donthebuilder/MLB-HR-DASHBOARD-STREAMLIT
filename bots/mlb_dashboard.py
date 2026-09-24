@@ -2823,6 +2823,18 @@ def extract_lineup(team_box: Dict[str, Any]) -> List[Tuple[int, int]]:
             p = players.get(k)
             if p:
                 lineup.append((safe_int((p.get("person") or {}).get("id"), 0), idx))
+            else:
+                # 2026-09-24 (Donovan: "im missing players that are in the
+                # lineup"). A man in the posted battingOrder whose entry is
+                # not in the boxscore's players dict yet -- a same-day
+                # call-up, typically (Jared Serna, MIA #8, 09-24: nine in the
+                # order, eight on the slate) -- was dropped in silence. The
+                # order IS the lineup; build_hitter_records already tolerates a
+                # missing pbox (name/bats/jersey fall back and are looked up).
+                pid_int = safe_int(str(pid).replace("ID", ""), 0)
+                if pid_int:
+                    print(f"WARNING: lineup spot {idx} pid={pid_int} is in battingOrder but not in the boxscore players dict -- keeping him", file=sys.stderr)
+                    lineup.append((pid_int, idx))
         if lineup:
             return lineup
     return []
