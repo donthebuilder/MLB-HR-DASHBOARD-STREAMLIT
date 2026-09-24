@@ -189,6 +189,54 @@ jobs:
           python export_report.py --seasons 2024 2025 \
             --out "$GITHUB_WORKSPACE/public/data/current" --prefix nfl_
 
+      # RESTORE BEFORE LOCK (2026-09-24 audit, MODEL-1). today.yml has had
+      # this since 2026-08-22 ("9b-fix defect A"); nfl.yml never got it, so
+      # nfl_pick_lock.py only ever saw the prediction log THIS run wrote --
+      # on a Sunday afternoon that is a post-kickoff log, and every game
+      # locked to it as rows_standing / locked_late -- and append_por_log()
+      # started from an empty file, so each run's nfl_por_log_<season>_wNN
+      # replaced the branch copy with just its own locks. Measured on the
+      # data branch 2026-09-24: week 2 = ONE row (locked_late), week 3 = zero.
+      # Same restore-then-guard shape as today.yml: best-effort restore, then
+      # a separate hard-failing guard so a silent restore failure cannot
+      # masquerade as "no locks yet."
+      - name: Restore NFL prediction-of-record locks and pregame logs from the data branch
+        continue-on-error: true
+        run: |
+          git fetch origin data --depth 1 2>/dev/null || true
+          if git rev-parse --verify origin/data >/dev/null 2>&1; then
+            rm -rf /tmp/nfl-por-restore && mkdir -p /tmp/nfl-por-restore
+            git archive origin/data public/data 2>/dev/null | tar -x -C /tmp/nfl-por-restore || true
+            mkdir -p public/data/current
+            cp /tmp/nfl-por-restore/public/data/current/nfl_por_log_*.jsonl public/data/current/ 2>/dev/null || true
+            echo "Restored $(ls public/data/current/nfl_por_log_*.jsonl 2>/dev/null | wc -l) nfl_por_log file(s)."
+            # Every earlier run's pregame log has to be on disk for the
+            # per-game "last run before kickoff" pick. Never overwrite the
+            # one this run just wrote.
+            for f in /tmp/nfl-por-restore/public/data/current/nfl_prediction_log_*.jsonl; do
+              [ -e "$f" ] || continue
+              [ -e "public/data/current/$(basename "$f")" ] || cp "$f" public/data/current/
+            done
+            echo "NFL prediction logs on disk for the lock: $(ls public/data/current/nfl_prediction_log_*.jsonl 2>/dev/null | wc -l)."
+          fi
+
+      - name: Verify the NFL por_logs restored cleanly (if any exist on the data branch)
+        run: |
+          if ! git rev-parse --verify origin/data >/dev/null 2>&1; then
+            echo "origin/data not fetchable -- cannot verify; continuing (first-ever run shape)."
+            exit 0
+          fi
+          missing=0
+          for f in $(git ls-tree --name-only origin/data public/data/current/ | grep 'nfl_por_log_.*\.jsonl$' || true); do
+            if [ ! -f "$f" ]; then
+              echo "::error::data branch has $(basename "$f") but it did not land in public/data/current/ -- refusing to continue, which would let nfl_pick_lock.py publish a por_log holding only this run's locks over the real one."
+              missing=1
+            else
+              echo "$(basename "$f") restored ($(grep -c . "$f") lock line(s))."
+            fi
+          done
+          [ "$missing" = 0 ] || exit 1
+
       # LOCK. B10(b)/(e) plumbing, 2026-09-15 — TUDDY's sibling of
       # bots/pick_lock.py (see that script's own module docstring for the
       # full design). Freezes each market's 5-rung ladder the instant its
