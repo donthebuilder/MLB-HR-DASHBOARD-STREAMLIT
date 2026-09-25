@@ -1441,7 +1441,13 @@ def main() -> int:
     # league's full log is 2,100 players and nobody is looking at 2,000 of them.
     try:
         on_slate = {p["player_id"] for p in payload["players"]}
-        logs = nfl_gamelog.build([stat_season - 1, stat_season])
+        # THE CURRENT SEASON IS ALWAYS IN THE LOG (2026-09-25). stat_season is
+        # the BASELINE season (2025 until the week-4 context cliff), so this
+        # built [2024, 2025] and the log carried ZERO 2026 games in week 3:
+        # the hit-rate chart, the l5/l10 rates and games_since_last_td below
+        # were all reading last season -- "2 games since his last touchdown"
+        # on a man who scored in week 2 was 2025 week 18, counted backwards.
+        logs = nfl_gamelog.build(sorted({stat_season - 1, stat_season, int(payload.get("season") or a.season)}))
         logs = {k: v for k, v in logs.items() if k in on_slate}
     except Exception as exc:
         print(f"game logs unavailable ({type(exc).__name__}: {exc})")
