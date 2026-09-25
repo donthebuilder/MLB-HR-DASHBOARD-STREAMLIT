@@ -11320,7 +11320,7 @@ def _price_ok(h: "HitterRecord") -> bool:
 
 
 def _top_and_hr_slots(hitters: List[HitterRecord]) -> Tuple[HitterRecord, HitterRecord]:
-    """ONE definition of a game's TOP and HR, shared (2026-09-01).
+    """ONE definition of a game's TOP and HR, shared (2026-09-01; board order 2026-09-25).
 
     Lifted verbatim out of build_game_pick_role_map so game_pick_type_map can
     call the same thing. Nothing about the ranking changed in the move: TOP is
@@ -11370,6 +11370,32 @@ def _top_and_hr_slots(hitters: List[HitterRecord]) -> Tuple[HitterRecord, Hitter
             if tier:
                 return sorted(tier, key=key, reverse=True)[0]
         return pool[0]
+
+    # ── THE BOARD PICKS THE SLOTS (2026-09-25) ───────────────────────────
+    # Donovan asked for the measurement before touching this. On the 21
+    # truly-pregame nights (270 games, base 11.1%): TOP as shipped (the
+    # ISO-led power rank) hit 16.7%; the game's #1 by board_score hit 23.0%
+    # (62 vs 45 homers, wins 12 nights, loses 3, bootstrap CI on the gap
+    # +1.3 to +11.4 points). HR as shipped (best hr_score excluding TOP) hit
+    # 10.7% under a board TOP; the game's board #2 hit 16.7%. Together the
+    # two slots go from 87 to 107 homers on the same 540 picks. So both
+    # slots read board_score, with hr_score as the tiebreak; the ISO floor
+    # is not applied because it was not in the measured rule. The PA tiers
+    # and the price preference above are unchanged. If a run reaches here
+    # with no board_score on the slate (it is stamped by
+    # build_top10_alt_board, which runs first), the old rule stands.
+    def _board_key(h) -> tuple:
+        return (safe_float(getattr(h, "board_score", 0.0), 0.0),
+                safe_float(getattr(h, "hr_score", 0.0), 0.0))
+
+    def _board_slot(exclude: set) -> HitterRecord:
+        pool = _pool(exclude)
+        return sorted(pool, key=_board_key, reverse=True)[0] if pool else hitters[0]
+
+    if any(safe_float(getattr(h, "board_score", 0.0), 0.0) > 0 for h in hitters):
+        top_pick = _board_slot(set())
+        hr_pick = _board_slot({top_pick.player_id})
+        return top_pick, hr_pick
 
     top_pick = _slot(set(), _power_rank)
     hr_pick = _slot({top_pick.player_id}, lambda h: safe_float(getattr(h, "hr_score", 0.0), 0.0))
