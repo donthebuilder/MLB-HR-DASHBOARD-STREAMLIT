@@ -1846,11 +1846,55 @@ def build_hr_capture_report(rows: List[Dict[str, Any]], game_cache: Dict[int, Di
             "overall_score": safe_float(base.get("overall_score"), 0.0),
         })
 
+    # THE POOL NUMBER (2026-09-24, audit B6 / MODEL-2). hr_capture_pct above
+    # is measured against the SHEET -- every row the site showed at any
+    # point, including men a midday rebuild added after the prediction of
+    # record was written. Measured over 09-24's archive: 49 of 436 slate HR
+    # (11.2%) came from players absent from the pregame pool while the
+    # sheet number read 91-100%. So a second figure, measured against the
+    # POOL: only games that locked count, and a homer is caught only if the
+    # locked run rated that man in that game (apply_locked_features tags
+    # such rows feature_snapshot == "locked"; a rebuild add-on in a locked
+    # game is "unavailable"). A game with no locked row anywhere never had a
+    # prediction of record, so it is outside the denominator rather than
+    # counted as a miss or a catch. The sheet figure keeps its name and its
+    # readers; this is the honest one for /called and the front door.
+    locked_games = {
+        int(r["game_pk"]) for r in rows
+        if r.get("game_pk") is not None and r.get("feature_snapshot") == "locked"
+    }
+    locked_keys = {
+        (int(r["game_pk"]), int(r["player_id"])) for r in rows
+        if r.get("game_pk") is not None and r.get("feature_snapshot") == "locked"
+    }
+    pool_entries = [h for h in all_homer_entries if int(h.get("game_pk", 0)) in locked_games]
+    pool_total = sum(safe_int(h.get("hr"), 0) for h in pool_entries)
+    pool_caught_entries = [
+        h for h in pool_entries
+        if (int(h.get("game_pk", 0)), int(h.get("player_id", 0))) in locked_keys
+    ]
+    pool_caught = sum(safe_int(h.get("hr"), 0) for h in pool_caught_entries)
+    late_add_entries = [
+        h for h in pool_entries
+        if (int(h.get("game_pk", 0)), int(h.get("player_id", 0))) not in locked_keys
+        and int(h.get("player_id", 0)) in tracked_player_ids
+    ]
+    pool_pct = round(100 * pool_caught / pool_total, 1) if pool_total else None
+
     return {
         "total_hrs_on_slate": total_hrs,
         "caught_hrs_on_sheet": caught_hrs,
         "missed_hrs_not_on_sheet": missed_hrs,
         "hr_capture_pct": capture_pct,
+        # Pool-measured (see above). None when no game on the slate locked.
+        "pool_games_locked": len(locked_games),
+        "pool_total_hrs": pool_total,
+        "pool_caught_hrs": pool_caught,
+        "pool_capture_pct": pool_pct,
+        # On the sheet, in a locked game, NOT in that game's locked pool:
+        # the B6 gap, listed so it is inspectable rather than a percentage.
+        "late_add_hrs": sum(safe_int(h.get("hr"), 0) for h in late_add_entries),
+        "late_add_homer_entries": late_add_entries,
         "all_homer_entries": all_homer_entries,
         "caught_homer_entries": caught_details,
         "missed_homer_entries": missed_entries,
@@ -3972,6 +4016,15 @@ def build_summary_text(
         lines.append("")
         lines.append("MODEL DIAGNOSTIC (LOW PRIORITY)")
         lines.append(f"Full Sheet HR Coverage: {safe_int(hr_capture_report.get('caught_hrs_on_sheet'))} / {safe_int(hr_capture_report.get('total_hrs_on_slate'))} ({safe_float(hr_capture_report.get('hr_capture_pct')):.1f}%)")
+        # The pool number (B6): against the locked pregame board, not the sheet.
+        if hr_capture_report.get("pool_capture_pct") is not None:
+            lines.append(
+                f"Pregame Pool HR Coverage: {safe_int(hr_capture_report.get('pool_caught_hrs'))} / "
+                f"{safe_int(hr_capture_report.get('pool_total_hrs'))} "
+                f"({safe_float(hr_capture_report.get('pool_capture_pct')):.1f}%) over "
+                f"{safe_int(hr_capture_report.get('pool_games_locked'))} locked games; "
+                f"{safe_int(hr_capture_report.get('late_add_hrs'))} HR by late adds"
+            )
 
     if live_mode:
         live_active = [r for r in graded_slots if int(r.get("is_final", 0)) == 0]
