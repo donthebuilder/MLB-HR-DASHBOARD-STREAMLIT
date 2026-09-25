@@ -2541,6 +2541,7 @@ SLOT_FIELDS = {
     # the one signal family with a measured AUC split (.776 crushed / .549
     # scrapers) could not be evaluated against outcomes. Path to Victory 0b.
     "power3_score", "power3_rank", "power3_flag",
+    "board_score", "board_rank",
     "season_max_ev", "season_avg_ev", "season_bbe_n", "season_hr_per_bbe",
     # ── THE RUNNING GAME (2026-08-23) ───────────────────────────────────────
     # Donovan: "wild pitches, pickoffs, pitcher SB-against, catcher CS%, team

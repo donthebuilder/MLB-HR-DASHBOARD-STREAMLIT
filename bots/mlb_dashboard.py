@@ -1708,6 +1708,18 @@ class HitterRecord:
     power3_score: float = 0.0     # 0-100, mean of the three within-slate percentile ranks
     power3_rank: int = 0          # 1 = strongest season power on tonight's slate
     power3_flag: bool = False     # top 10 on the slate with a real sample
+    # BOARD ORDER (2026-09-25): the order the Moonshot board lists in. Equal
+    # average of three within-slate percentile ranks -- hr_score, season HR
+    # count, season avg EV. Measured on 21 truly-pregame nights (09-04 ->
+    # 09-24, 4,814 hitter-games, 532 HR, the last run before EACH game's
+    # first pitch): hr_score alone AUC .595, top-10 17.1%, top-25 15.4%;
+    # this order AUC .611, top-10 22.4%, top-25 19.2%, and it won 13 of the
+    # 21 nights at top-25 (lost 5). Every split (first/last half, odd/even
+    # nights) agreed. Recency (games since last HR, L5/L10 HR) measured at
+    # ZERO on the clean record -- the earlier "hot bat" lift was the late
+    # lock leaking the same-day homer. Re-measure at 40 nights.
+    board_score: float = 0.0      # 0-100, higher = higher on the board
+    board_rank: int = 0           # 1 = top of tonight's board
     # Docket #20: expected HRs from contact + luck (actual − expected).
     season_xhr: float = 0.0
     season_hr_luck: float = 0.0
@@ -10867,6 +10879,26 @@ def build_top10_alt_board(rows: List[HitterRecord]) -> str:
         for r in _eligible[:POWER3_FLAG_TOP]:
             r.power3_flag = True
 
+    # BOARD ORDER (2026-09-25) -- see HitterRecord.board_score. Percentile
+    # ranks are within THIS slate, like POWER-3; a hitter with no season EV
+    # (season_avg_ev 0) ranks at the bottom of that one leg, not out of the
+    # board. Ties on the score break on hr_score, then player_id, so the
+    # order is the same on every run of the same slate.
+    if rows:
+        _bo_n = len(rows)
+        def _bo_pct(key):
+            order = sorted(rows, key=lambda r: safe_float(getattr(r, key, 0.0), 0.0))
+            return {id(r): (i + 1) / _bo_n for i, r in enumerate(order)}
+        _bo_pr = [_bo_pct(k) for k in ("hr_score", "season_hr", "season_avg_ev")]
+        for r in rows:
+            r.board_score = round(100.0 * sum(p[id(r)] for p in _bo_pr) / 3.0, 1)
+        _bo_sorted = sorted(
+            rows,
+            key=lambda r: (-r.board_score, -safe_float(getattr(r, "hr_score", 0.0), 0.0), safe_int(getattr(r, "player_id", 0), 0)),
+        )
+        for _i, r in enumerate(_bo_sorted, 1):
+            r.board_rank = _i
+
     ranked_all = sorted(rows, key=top10_rank_score, reverse=True)
     ranked_trusted = [r for r in ranked_all if trusted_sample(r) and not getattr(r, "true_avoid_hr", False)]
     limited_variance = [r for r in ranked_all if not getattr(r, "true_avoid_hr", False) and not trusted_sample(r) and elite_limited_exception(r)]
@@ -12563,6 +12595,7 @@ def _s2_player_dict(r: HitterRecord) -> Dict[str, Any]:
         "season_bbe_n": getattr(r, "season_bbe_n", 0), "season_hr_per_bbe": getattr(r, "season_hr_per_bbe", 0.0),
         "power3_score": getattr(r, "power3_score", 0.0), "power3_rank": getattr(r, "power3_rank", 0),
         "power3_flag": bool(getattr(r, "power3_flag", False)),
+        "board_score": getattr(r, "board_score", 0.0), "board_rank": getattr(r, "board_rank", 0),
         "recent_ev": getattr(r, "recent_ev", None), "last5_hits": r.last5_hits,
         "last5_hr": r.last5_hr, "last5_xbh": r.last5_xbh, "last7_hr": r.last7_hr,
         "season_hr": r.season_hr, "season_pa": r.season_pa, "hr_per_pa": r.hr_per_pa,
@@ -14395,6 +14428,11 @@ PREGAME_SNAPSHOT_FIELDS = (
     "recent_distance_tracked", "season_max_distance", "recent_xwoba",
     "season_avg_ev", "season_max_ev", "season_bbe_n", "season_hr_per_bbe",
     "power3_score", "power3_rank", "power3_flag",
+    # BOARD ORDER (2026-09-25) + the batting-order slot it does not yet use.
+    # lineup_spot was on the site payload and in the graded archive but never
+    # in the pregame log, so "does spot beat the score" could only be asked
+    # of the leaked archive. Now it can be asked of the record.
+    "board_score", "board_rank", "lineup_spot",
     "l20pa_fb_rate", "l20pa_barrel_rate", "l20pa_hard_hit_rate",
     "l20pa_ideal_hr_contact", "l20pa_bbe", "l20pa_pull_rate",
     "l25pa_air_rate", "l25pa_sweet_spot_rate", "l25pa_barrel_rate",
