@@ -1,0 +1,75 @@
+name: X mention replies (@CalledItHR)
+
+# Every 10 min, 8am-midnight Phoenix (15:00-06:59 UTC) -- the MLB/NFL game
+# windows. Its own workflow on purpose: today.yml runs hourly-ish, takes up
+# to 90 min and queues behind itself, so a step there would answer a
+# mention an hour late or not at all.
+on:
+  schedule:
+    - cron: "*/10 0-6,15-23 * * *"
+  workflow_dispatch: {}
+
+concurrency:
+  group: x-replies
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  reply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - run: pip install "requests>=2.31.0"
+
+      # The reply log lives on its own one-commit branch so it never touches
+      # main or the data branch today.yml force-pushes.
+      - name: Restore reply log
+        run: |
+          if git fetch --depth 1 origin reply-state 2>/dev/null; then
+            git show FETCH_HEAD:twitter_replies.json > bots/twitter_replies.json
+            cp bots/twitter_replies.json "$RUNNER_TEMP/before.json"
+          else
+            echo "no reply-state branch yet -- first run"
+          fi
+
+      # Dry run until the repo variable REPLY_BOT_LIVE is set to 1
+      # (Settings -> Secrets and variables -> Actions -> Variables).
+      - name: Reply to mentions
+        env:
+          TWITTER_API_KEY: ${{ secrets.TWITTER_API_KEY }}
+          TWITTER_API_SECRET: ${{ secrets.TWITTER_API_SECRET }}
+          TWITTER_ACCESS_TOKEN: ${{ secrets.TWITTER_ACCESS_TOKEN }}
+          TWITTER_ACCESS_SECRET: ${{ secrets.TWITTER_ACCESS_SECRET }}
+          REPLY_BOT_LIVE: ${{ vars.REPLY_BOT_LIVE }}
+        run: python bots/twitter_reply_bot.py
+
+      # always(): a reply that went out must be logged even if a later step
+      # failed, or the next run answers it again.
+      - name: Save reply log
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [ -f bots/twitter_replies.json ] || exit 0
+          if [ -f "$RUNNER_TEMP/before.json" ] && cmp -s bots/twitter_replies.json "$RUNNER_TEMP/before.json"; then
+            echo "reply log unchanged"; exit 0
+          fi
+          mkdir -p "$RUNNER_TEMP/st" && cp bots/twitter_replies.json "$RUNNER_TEMP/st/"
+          cd "$RUNNER_TEMP/st"
+          git init -q -b reply-state
+          git config user.name "reply-bot"
+          git config user.email "reply-bot@users.noreply.github.com"
+          git add twitter_replies.json
+          git commit -qm "reply log $(date -u +%FT%TZ)"
+          git push -qf "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" reply-state

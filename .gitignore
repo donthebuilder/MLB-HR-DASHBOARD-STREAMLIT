@@ -57,3 +57,4 @@ _stale_git_locks/
 _to_delete/
 *.bundle
 *.patch
+bots/twitter_replies.json
