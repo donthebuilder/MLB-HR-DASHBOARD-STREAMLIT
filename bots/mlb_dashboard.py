@@ -10896,8 +10896,21 @@ def build_top10_alt_board(rows: List[HitterRecord]) -> str:
             rows,
             key=lambda r: (-r.board_score, -safe_float(getattr(r, "hr_score", 0.0), 0.0), safe_int(getattr(r, "player_id", 0), 0)),
         )
-        for _i, r in enumerate(_bo_sorted, 1):
-            r.board_rank = _i
+        # ONE RANK PER MAN. A doubleheader puts a hitter on the slate twice
+        # (two real rows, two games); the first live board read "#1 Pete
+        # Alonso, #2 Pete Alonso, #3 Elly De La Cruz". Both his rows carry
+        # his one rank and the next man is #2 -- the numbers count people,
+        # which is what a reader counts.
+        _bo_rank_by_pid: dict = {}
+        _bo_next = 1
+        for r in _bo_sorted:
+            _pid = safe_int(getattr(r, "player_id", 0), 0)
+            if _pid in _bo_rank_by_pid:
+                r.board_rank = _bo_rank_by_pid[_pid]
+                continue
+            _bo_rank_by_pid[_pid] = _bo_next
+            r.board_rank = _bo_next
+            _bo_next += 1
 
     ranked_all = sorted(rows, key=top10_rank_score, reverse=True)
     ranked_trusted = [r for r in ranked_all if trusted_sample(r) and not getattr(r, "true_avoid_hr", False)]
