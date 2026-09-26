@@ -1,0 +1,179 @@
+RESULTS TRACKER - 2026-09-20
+------------------------------------------
+BETTABLE RESULTS
+Top 15 HR: 1/15 (6.7%)
+HR Picks: 3/15 (20.0%)
+Top Picks: 1/15 (6.7%)
+
+FULL SHEET BASE HIT PERFORMANCE
+Base Hit Accuracy: 59.2%
+
+HR CAPTURE (BETTABLE)
+Total Slate HRs: 31
+Caught in Top 15: 1
+Caught in HR Picks: 3
+Top 15 Capture Rate: 3.2%
+HR Pick Capture Rate: 9.7%
+
+MODEL VISION (Top 40)
+Model Caught HRs: 3 / 31
+Vision Rate: 9.7%
+
+UNIQUE PLAYER HR ACCURACY
+Unique Players Tracked: 79
+Players Who Homered: 8
+Unique HR Accuracy: 10.1%
+
+HR CATEGORY BREAKDOWN
+------------------------------------------
+🏆 TOP 15 BOARD → 1 HR
+🔥 TOP PICKS → 1 HR
+🧨 HR PICKS → 3 HR
+🏁 HRR PICKS → 2 HR
+💠 HIT PICKS → 2 HR
+⚾ CONTACT PICKS → 3 HR
+Best HR-producing category: 🧨 HR PICKS
+
+LONGEST HR (BOARD)
+------------------------------------------
+- Seiya Suzuki — 440 ft · 108.9 mph · 24.0°
+- Rafael Flores Jr. — 426 ft · 110.2 mph · 29.0°
+- Leo Bernal — 424 ft · 108.5 mph · 26.0°
+- Oneil Cruz — 420 ft · 104.5 mph · 32.0°
+- Pete Crow-Armstrong — 411 ft · 105.3 mph · 33.0°
+Longest on the board: Seiya Suzuki (440 ft)
+
+
+HR RESULTS BY PLAYER
+------------------------------------------
+- Pete Crow-Armstrong — 🏆#1 + 🔥 + ⚾ + ⭐
+- CJ Abrams — 🧨 + ⚾
+- Rafael Flores Jr. — 🧨
+- Victor Mesa Jr. — 🧨
+- Oneil Cruz — 🏁
+- Seiya Suzuki — 🏁
+- Leo Bernal — 💠 + ⭐
+- William Contreras — 💠 + ⚾ + ⭐
+
+MISSED HRs (NOT IN MODEL SHEET)
+------------------------------------------
+- Vinnie Pasquantino (KC) — not in model sheet / lineup pool
+
+POOL PERFORMANCE
+------------------------------------------
+4-MAN Pool A — Strongest → 0/4 HR (none)
+4-MAN Pool B — HRR+Power → 0/4 HR (none)
+4-MAN Pool C — Balanced → 0/4 HR (none)
+4-MAN Pool D — Variance → 2/4 HR (CJ Abrams, Fernando Tatis Jr.)
+3-MAN Pool A — Strongest → 1/3 HR (Victor Mesa Jr.)
+3-MAN Pool B — HRR+Var → 0/3 HR (none)
+3-MAN Pool C — Balanced → 0/3 HR (none)
+3-MAN Pool D — Variance → 1/3 HR (Oneil Cruz)
+
+PAIR PERFORMANCE
+------------------------------------------
+Pair 1 → 1/2 HR (Pete Crow-Armstrong) | Pete Crow-Armstrong + Ben Rice
+Pair 2 → 0/2 HR (none) | Pete Alonso + Kyle Schwarber
+Pair 3 → 0/2 HR (none) | Yordan Alvarez + Junior Caminero
+Pair 4 → 0/2 HR (none) | Brandon Lowe + Matt Olson
+Pair 5 → 1/2 HR (Hunter Goodman) | Griffin Conine + Hunter Goodman
+Pair 6 → 0/2 HR (none) | Max Muncy + Elly De La Cruz
+Pair 7 → 1/2 HR (Rafael Flores Jr.) | Juan Soto + Rafael Flores Jr.
+Pair 8 → 0/2 HR (none) | Jake Bauers + Dominic Canzone
+Pair 9 → 0/2 HR (none) | Joc Pederson + Angel Martínez
+Pair 10 → 0/2 HR (none) | Miguel Vargas + Ronald Acuña Jr.
+
+PLAYER TYPE PERFORMANCE
+------------------------------------------
+🏆 TOP 15 BOARD (15)
+HR: 6.7% | 1+ Hit: 46.7% | XBH: 6.7% | 2+ TB: 13.3% | 2+ HRR: 26.7% | 3+ HRR: 13.3%
+
+🔥 TOP PICKS (15)
+HR: 6.7% | 1+ Hit: 66.7% | XBH: 13.3% | 2+ TB: 13.3% | 2+ HRR: 46.7% | 3+ HRR: 20.0%
+
+🧨 HR PICKS (15)
+HR: 20.0% | 1+ Hit: 73.3% | XBH: 33.3% | 2+ TB: 46.7% | 2+ HRR: 46.7% | 3+ HRR: 33.3%
+
+🏁 HRR PICKS (15)
+HR: 13.3% | 1+ Hit: 53.3% | XBH: 26.7% | 2+ TB: 46.7% | 2+ HRR: 46.7% | 3+ HRR: 26.7%
+
+💠 HIT PICKS (15)
+HR: 13.3% | 1+ Hit: 66.7% | XBH: 26.7% | 2+ TB: 40.0% | 2+ HRR: 40.0% | 3+ HRR: 40.0%
+
+⚾ CONTACT PICKS (15)
+HR: 20.0% | 1+ Hit: 60.0% | XBH: 26.7% | 2+ TB: 33.3% | 2+ HRR: 46.7% | 3+ HRR: 40.0%
+
+
+DESIGNED OUTCOME (did the pick do its job)
+------------------------------------------
+🏆 TOP 15 BOARD (15) -> 1/15 (6.7%)  ·  needs: HR
+🔥 TOP PICKS (15) -> 3/15 (20.0%)  ·  needs: most productive of our picks in his game (HRR or TB)
+🧨 HR PICKS (15) -> 3/15 (20.0%)  ·  needs: HR
+🏁 HRR PICKS (15) -> 7/15 (46.7%)  ·  needs: 2+ hits+runs+RBI
+💠 HIT PICKS (15) -> 10/15 (66.7%)  ·  needs: 1+ hit
+⚾ CONTACT PICKS (15) -> 5/15 (33.3%)  ·  needs: 2+ TB or XBH
+ALL PICKS -> 29/103 (28.2%)
+
+HIT RESULTS BY CATEGORY
+------------------------------------------
+
+🔥 TOP PICKS (1+ Hit)
+- Pete Crow-Armstrong — 3H 🔥
+- Daylen Lile — 2H ⭐
+- Brandon Lowe — 1H
+- Corbin Carroll — 1H
+- Griffin Conine — 1H
+- Jeremy Peña — 1H
+- Junior Caminero — 1H
+- Kazuma Okamoto — 1H
+- Miguel Vargas — 1H
+- Walker Jenkins — 1H
+
+🧨 HR PICKS (1+ Hit)
+- Ian Happ — 2H ⭐
+- Max Muncy — 2H ⭐
+- Rafael Flores Jr. — 2H ⭐
+- Zack Gelof — 2H ⭐
+- CJ Abrams — 1H
+- Coby Mayo — 1H
+- Jackson Merrill — 1H
+- Juan Soto — 1H
+- Spencer Torkelson — 1H
+- Victor Mesa Jr. — 1H
+- Wyatt Langford — 1H
+
+🏁 HRR PICKS (1+ Hit)
+- Alec Bohm — 2H ⭐
+- Freddie Freeman — 2H ⭐
+- Yordan Alvarez — 2H ⭐
+- Brett Bateman — 1H
+- Cody Bellinger — 1H
+- Oneil Cruz — 1H
+- Riley Greene — 1H
+- Seiya Suzuki — 1H
+
+💠 HIT PICKS (1+ Hit)
+- Gabriel Moreno — 2H ⭐
+- Teoscar Hernández — 2H ⭐
+- Chandler Simpson — 1H
+- Chase DeLauter — 1H
+- Drake Baldwin — 1H
+- Jake McCarthy — 1H
+- Konnor Griffin — 1H
+- Leo Bernal — 1H
+- Luis Arraez — 1H
+- William Contreras — 1H
+
+⚾ CONTACT PICKS (1+ Hit)
+- Pete Crow-Armstrong — 3H 🔥
+- Gabriel Moreno — 2H ⭐
+- José Ramírez — 2H ⭐
+- Brandon Lowe — 1H
+- CJ Abrams — 1H
+- Jeremy Peña — 1H
+- Junior Caminero — 1H
+- Luis Arraez — 1H
+- William Contreras — 1H
+
+MODEL DIAGNOSTIC (LOW PRIORITY)
+Full Sheet HR Coverage: 30 / 31 (96.8%)

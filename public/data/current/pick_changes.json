@@ -1,0 +1,48 @@
+{
+ "date": "2026-09-26",
+ "generated_at": "2026-09-26T15:41:56.843595+00:00",
+ "changes": [
+  {
+   "kind": "moved",
+   "name": "Bo Bichette",
+   "role": "HRR",
+   "reason": "category changed HIT\u2192HRR"
+  },
+  {
+   "kind": "in",
+   "name": "Carson Benge",
+   "role": "HIT",
+   "reason": "lineup confirmed him"
+  },
+  {
+   "kind": "in",
+   "name": "Kevin McGonigle",
+   "role": "HRR",
+   "reason": "lineup confirmed him \u2014 replaces James Wood"
+  },
+  {
+   "kind": "in",
+   "name": "Kazuma Okamoto",
+   "role": "HR",
+   "reason": "lineup confirmed him \u2014 replaces Eugenio Su\u00e1rez"
+  },
+  {
+   "kind": "out",
+   "name": "James Wood",
+   "role": "HRR",
+   "reason": "score moved +0.1 \u2014 someone else took the lane"
+  },
+  {
+   "kind": "out",
+   "name": "Riley Greene",
+   "role": "HRR",
+   "reason": "score moved +0.0 \u2014 someone else took the lane"
+  },
+  {
+   "kind": "out",
+   "name": "Eugenio Su\u00e1rez",
+   "role": "HR",
+   "reason": "score moved +0.0 \u2014 someone else took the lane"
+  }
+ ]
+}

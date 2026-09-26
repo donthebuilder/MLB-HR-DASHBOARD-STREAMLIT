@@ -1,0 +1,121 @@
+RESULTS TRACKER - 2026-09-22
+------------------------------------------
+BETTABLE RESULTS
+Top 15 HR: 0/1 (0.0%)
+HR Picks: 0/1 (0.0%)
+Top Picks: 0/1 (0.0%)
+
+FULL SHEET BASE HIT PERFORMANCE
+Base Hit Accuracy: 100.0%
+
+HR CAPTURE (BETTABLE)
+Total Slate HRs: 10
+Caught in Top 15: 0
+Caught in HR Picks: 0
+Top 15 Capture Rate: 0.0%
+HR Pick Capture Rate: 0.0%
+
+MODEL VISION (Top 40)
+Model Caught HRs: 1 / 10
+Vision Rate: 10.0%
+
+UNIQUE PLAYER HR ACCURACY
+Unique Players Tracked: 4
+Players Who Homered: 1
+Unique HR Accuracy: 25.0%
+
+HR CATEGORY BREAKDOWN
+------------------------------------------
+🏆 TOP 15 BOARD → 0 HR
+🔥 TOP PICKS → 0 HR
+🧨 HR PICKS → 0 HR
+🏁 HRR PICKS → 0 HR
+💠 HIT PICKS → 1 HR
+⚾ CONTACT PICKS → 0 HR
+Best HR-producing category: 💠 HIT PICKS
+
+LONGEST HR (BOARD)
+------------------------------------------
+- Cody Bellinger — 382 ft · 102.8 mph · 24.0°
+Longest on the board: Cody Bellinger (382 ft)
+
+
+HR RESULTS BY PLAYER
+------------------------------------------
+- Cody Bellinger — 💠
+
+POOL PERFORMANCE
+------------------------------------------
+4-MAN Pool A — Strongest → 0/3 HR (none)
+4-MAN Pool B — HRR+Power → 0/2 HR (none)
+4-MAN Pool C — Balanced → 0/2 HR (none)
+4-MAN Pool D — Variance → 0/2 HR (none)
+3-MAN Pool A — Strongest → 0/2 HR (none)
+3-MAN Pool B — HRR+Var → 1/3 HR (CJ Abrams)
+3-MAN Pool C — Balanced → 0/2 HR (none)
+3-MAN Pool D — Variance → 0/2 HR (none)
+
+PAIR PERFORMANCE
+------------------------------------------
+Pair 1 → 0/2 HR (none) | Pete Crow-Armstrong + Hunter Goodman
+Pair 2 → 0/2 HR (none) | Rafael Flores Jr. + Ben Rice
+Pair 3 → 0/2 HR (none) | Pete Alonso + Matt Olson
+Pair 4 → 0/2 HR (none) | Yordan Alvarez + Brandon Lowe
+Pair 5 → 0/2 HR (none) | Griffin Conine + Kyle Schwarber
+Pair 6 → 1/2 HR (Elly De La Cruz) | Munetaka Murakami + Elly De La Cruz
+Pair 7 → 0/2 HR (none) | Max Muncy + Zack Gelof
+Pair 8 → 0/2 HR (none) | Oneil Cruz + Max Muncy
+Pair 9 → 0/2 HR (none) | Griffin Conine + Coby Mayo
+Pair 10 → 0/2 HR (none) | Joc Pederson + Griffin Conine
+
+PLAYER TYPE PERFORMANCE
+------------------------------------------
+🏆 TOP 15 BOARD (1)
+HR: 0.0% | 1+ Hit: 100.0% | XBH: 100.0% | 2+ TB: 100.0% | 2+ HRR: 100.0% | 3+ HRR: 0.0%
+
+🔥 TOP PICKS (1)
+HR: 0.0% | 1+ Hit: 100.0% | XBH: 0.0% | 2+ TB: 0.0% | 2+ HRR: 0.0% | 3+ HRR: 0.0%
+
+🧨 HR PICKS (1)
+HR: 0.0% | 1+ Hit: 100.0% | XBH: 100.0% | 2+ TB: 100.0% | 2+ HRR: 100.0% | 3+ HRR: 0.0%
+
+🏁 HRR PICKS (1)
+HR: 0.0% | 1+ Hit: 100.0% | XBH: 0.0% | 2+ TB: 0.0% | 2+ HRR: 0.0% | 3+ HRR: 0.0%
+
+💠 HIT PICKS (1)
+HR: 100.0% | 1+ Hit: 100.0% | XBH: 100.0% | 2+ TB: 100.0% | 2+ HRR: 100.0% | 3+ HRR: 100.0%
+
+⚾ CONTACT PICKS (1)
+HR: 0.0% | 1+ Hit: 100.0% | XBH: 0.0% | 2+ TB: 0.0% | 2+ HRR: 0.0% | 3+ HRR: 0.0%
+
+
+DESIGNED OUTCOME (did the pick do its job)
+------------------------------------------
+🏆 TOP 15 BOARD (1) -> 0/1 (0.0%)  ·  needs: HR
+🔥 TOP PICKS (1) -> 0/1 (0.0%)  ·  needs: most productive of our picks in his game (HRR or TB)
+🧨 HR PICKS (1) -> 0/1 (0.0%)  ·  needs: HR
+🏁 HRR PICKS (1) -> 0/1 (0.0%)  ·  needs: 2+ hits+runs+RBI
+💠 HIT PICKS (1) -> 1/1 (100.0%)  ·  needs: 1+ hit
+⚾ CONTACT PICKS (1) -> 0/1 (0.0%)  ·  needs: 2+ TB or XBH
+ALL PICKS -> 1/6 (16.7%)
+
+HIT RESULTS BY CATEGORY
+------------------------------------------
+
+🔥 TOP PICKS (1+ Hit)
+- Spencer Jones — 1H
+
+🧨 HR PICKS (1+ Hit)
+- Ben Rice — 1H
+
+🏁 HRR PICKS (1+ Hit)
+- Jonathan Aranda — 1H
+
+💠 HIT PICKS (1+ Hit)
+- Cody Bellinger — 1H
+
+⚾ CONTACT PICKS (1+ Hit)
+- Jonathan Aranda — 1H
+
+MODEL DIAGNOSTIC (LOW PRIORITY)
+Full Sheet HR Coverage: 10 / 10 (100.0%)

@@ -1,0 +1,152 @@
+RESULTS TRACKER - 2026-08-13
+------------------------------------------
+BETTABLE RESULTS
+Top 15 HR: 3/15 (20.0%)
+HR Picks: 1/9 (11.1%)
+Top Picks: 3/9 (33.3%)
+
+FULL SHEET BASE HIT PERFORMANCE
+Base Hit Accuracy: 61.7%
+
+HR CAPTURE (BETTABLE)
+Total Slate HRs: 17
+Caught in Top 15: 3
+Caught in HR Picks: 1
+Top 15 Capture Rate: 17.6%
+HR Pick Capture Rate: 5.9%
+
+MODEL VISION (Top 40)
+Model Caught HRs: 8 / 17
+Vision Rate: 47.1%
+
+UNIQUE PLAYER HR ACCURACY
+Unique Players Tracked: 45
+Players Who Homered: 6
+Unique HR Accuracy: 13.3%
+
+HR CATEGORY BREAKDOWN
+------------------------------------------
+🏆 TOP 15 BOARD → 3 HR
+🔥 TOP PICKS → 3 HR
+🧨 HR PICKS → 1 HR
+🏁 HRR PICKS → 0 HR
+💠 HIT PICKS → 0 HR
+⚾ CONTACT PICKS → 2 HR
+Best HR-producing category: 🏆 TOP 15 BOARD
+
+LONGEST HR (BOARD)
+------------------------------------------
+- Max Muncy — 426 ft · 105.7 mph · 33.0°
+- Abimelec Ortiz — 414 ft · 105.2 mph · 28.0°
+- Rafael Flores Jr. — 399 ft · 106.3 mph · 31.0°
+- Tyler Stephenson — 393 ft · 103.2 mph · 34.0°
+- Kyle Schwarber — 369 ft · 108.0 mph · 28.0°
+Longest on the board: Max Muncy (426 ft)
+
+
+HR RESULTS BY PLAYER
+------------------------------------------
+- Abimelec Ortiz — 🏆#2 + 🔥
+- Eugenio Suárez — 🏆#4 + 🔥
+- Kyle Schwarber — 🏆#1 + 🔥
+- Rafael Flores Jr. — 🧨
+- Max Muncy — ⚾
+- Tyler Stephenson — ⚾
+
+MISSED HRs (NOT IN MODEL SHEET)
+------------------------------------------
+- Eduardo Valencia (DET) — not in model sheet / lineup pool
+- Jacob Gonzalez (PIT) — not in model sheet / lineup pool
+- Weston Wilson (SEA) — not in model sheet / lineup pool
+
+POOL PERFORMANCE
+------------------------------------------
+4-MAN HR POOL A → 0/4 HR (none)
+4-MAN HR POOL B → 0/4 HR (none)
+4-MAN HR POOL C → 0/4 HR (none)
+4-MAN HR POOL D → 1/4 HR (Rafael Flores Jr.)
+3-MAN HR POOL A → 1/3 HR (Owen Caissie)
+3-MAN HR POOL B → 1/3 HR (Tyler Stephenson)
+3-MAN HR POOL C → 0/3 HR (none)
+3-MAN HR POOL D → 0/3 HR (none)
+
+PAIR PERFORMANCE
+------------------------------------------
+Pair 1 → 2/2 HR (Kyle Schwarber, Abimelec Ortiz) | Kyle Schwarber + Abimelec Ortiz
+Pair 2 → 1/2 HR (Eugenio Suárez) | Eugenio Suárez + Trent Grisham
+Pair 3 → 0/2 HR (none) | Pete Crow-Armstrong + Munetaka Murakami
+Pair 4 → 0/2 HR (none) | Wilyer Abreu + Alex Bregman
+
+PLAYER TYPE PERFORMANCE
+------------------------------------------
+🏆 TOP 15 BOARD (15)
+HR: 20.0% | 1+ Hit: 66.7% | XBH: 26.7% | 2+ TB: 26.7% | 2+ HRR: 46.7% | 3+ HRR: 33.3%
+
+🔥 TOP PICKS (9)
+HR: 33.3% | 1+ Hit: 88.9% | XBH: 33.3% | 2+ TB: 33.3% | 2+ HRR: 55.6% | 3+ HRR: 44.4%
+
+🧨 HR PICKS (9)
+HR: 11.1% | 1+ Hit: 55.6% | XBH: 22.2% | 2+ TB: 22.2% | 2+ HRR: 44.4% | 3+ HRR: 22.2%
+
+🏁 HRR PICKS (9)
+HR: 0.0% | 1+ Hit: 44.4% | XBH: 11.1% | 2+ TB: 44.4% | 2+ HRR: 33.3% | 3+ HRR: 22.2%
+
+💠 HIT PICKS (9)
+HR: 0.0% | 1+ Hit: 66.7% | XBH: 11.1% | 2+ TB: 33.3% | 2+ HRR: 55.6% | 3+ HRR: 44.4%
+
+⚾ CONTACT PICKS (9)
+HR: 22.2% | 1+ Hit: 44.4% | XBH: 44.4% | 2+ TB: 44.4% | 2+ HRR: 44.4% | 3+ HRR: 33.3%
+
+
+DESIGNED OUTCOME (did the pick do its job)
+------------------------------------------
+🏆 TOP 15 BOARD (15) -> 3/15 (20.0%)  ·  needs: HR
+🔥 TOP PICKS (9) -> 3/9 (33.3%)  ·  needs: most productive of our picks in his game (HRR or TB)
+🧨 HR PICKS (9) -> 1/9 (11.1%)  ·  needs: HR
+🏁 HRR PICKS (9) -> 3/9 (33.3%)  ·  needs: 2+ hits+runs+RBI
+💠 HIT PICKS (9) -> 6/9 (66.7%)  ·  needs: 1+ hit
+⚾ CONTACT PICKS (9) -> 4/9 (44.4%)  ·  needs: 2+ TB or XBH
+ALL PICKS -> 20/60 (33.3%)
+
+HIT RESULTS BY CATEGORY
+------------------------------------------
+
+🔥 TOP PICKS (1+ Hit)
+- Abimelec Ortiz — 2H ⭐
+- Kyle Schwarber — 2H ⭐
+- Angel Martínez — 1H
+- Brandon Lowe — 1H
+- Eugenio Suárez — 1H
+- Gary Sánchez — 1H
+- Trent Grisham — 1H
+- Wilyer Abreu — 1H
+
+🧨 HR PICKS (1+ Hit)
+- Rafael Flores Jr. — 2H ⭐
+- Jake Bauers — 1H
+- Jose Siri — 1H
+- Kaelen Culpepper — 1H
+- Willson Contreras — 1H
+
+🏁 HRR PICKS (1+ Hit)
+- Mike Trout — 3H 🔥
+- Masataka Yoshida — 2H ⭐
+- Ryan Jeffers — 2H ⭐
+- Shohei Ohtani — 1H
+
+💠 HIT PICKS (1+ Hit)
+- Ceddanne Rafaela — 2H ⭐
+- Chase Meidroth — 2H ⭐
+- Nick Gonzales — 2H ⭐
+- Jackson Chourio — 1H
+- Josh Naylor — 1H
+- Kevin McGonigle — 1H
+
+⚾ CONTACT PICKS (1+ Hit)
+- Jake Mangum — 3H 🔥
+- Luis García Jr. — 2H ⭐
+- Tyler Stephenson — 2H ⭐
+- Max Muncy — 1H
+
+MODEL DIAGNOSTIC (LOW PRIORITY)
+Full Sheet HR Coverage: 14 / 17 (82.4%)

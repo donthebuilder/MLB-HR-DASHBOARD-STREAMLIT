@@ -1,0 +1,172 @@
+RESULTS TRACKER - 2026-09-16
+------------------------------------------
+BETTABLE RESULTS
+Top 15 HR: 1/11 (9.1%)
+HR Picks: 2/12 (16.7%)
+Top Picks: 1/12 (8.3%)
+
+FULL SHEET BASE HIT PERFORMANCE
+Base Hit Accuracy: 67.5%
+
+HR CAPTURE (BETTABLE)
+Total Slate HRs: 27
+Caught in Top 15: 1
+Caught in HR Picks: 2
+Top 15 Capture Rate: 3.7%
+HR Pick Capture Rate: 7.4%
+
+MODEL VISION (Top 40)
+Model Caught HRs: 4 / 27
+Vision Rate: 14.8%
+
+UNIQUE PLAYER HR ACCURACY
+Unique Players Tracked: 56
+Players Who Homered: 5
+Unique HR Accuracy: 8.9%
+
+HR CATEGORY BREAKDOWN
+------------------------------------------
+🏆 TOP 15 BOARD → 1 HR
+🔥 TOP PICKS → 1 HR
+🧨 HR PICKS → 2 HR
+🏁 HRR PICKS → 2 HR
+💠 HIT PICKS → 1 HR
+⚾ CONTACT PICKS → 0 HR
+Best HR-producing category: 🧨 HR PICKS
+
+LONGEST HR (BOARD)
+------------------------------------------
+- Drew Gilbert — 415 ft · 104.3 mph · 32.0°
+- Pete Alonso — 410 ft · 108.4 mph · 38.0°
+- Pete Crow-Armstrong — 394 ft · 105.1 mph · 25.0°
+- Elly De La Cruz — 391 ft · 106.4 mph · 24.0°
+- Michael Massey — 342 ft · 97.4 mph · 29.0°
+Longest on the board: Drew Gilbert (415 ft)
+
+
+HR RESULTS BY PLAYER
+------------------------------------------
+- Pete Crow-Armstrong — 🏆#2 + 🧨 + ⭐
+- Elly De La Cruz — 🧨 + 🔥
+- Drew Gilbert — 🏁 + ⭐
+- Pete Alonso — 🏁 + ⭐
+- Michael Massey — 💠
+
+MISSED HRs (NOT IN MODEL SHEET)
+------------------------------------------
+- Tommy Pham (CWS) — not in model sheet / lineup pool
+
+POOL PERFORMANCE
+------------------------------------------
+4-MAN Pool A — Strongest → 1/4 HR (Elly De La Cruz)
+4-MAN Pool B — HRR+Power → 0/4 HR (none)
+4-MAN Pool C — Balanced → 0/4 HR (none)
+4-MAN Pool D — Variance → 0/4 HR (none)
+3-MAN Pool A — Strongest → 0/3 HR (none)
+3-MAN Pool B — HRR+Var → 0/3 HR (none)
+3-MAN Pool C — Balanced → 1/3 HR (Oneil Cruz)
+3-MAN Pool D — Variance → 1/3 HR (Brandon Lowe)
+
+PAIR PERFORMANCE
+------------------------------------------
+Pair 1 → 1/2 HR (Pete Crow-Armstrong) | Pete Crow-Armstrong + Kyle Schwarber
+Pair 2 → 0/2 HR (none) | Coby Mayo + Matt Olson
+Pair 3 → 0/2 HR (none) | Junior Caminero + Matt Olson
+Pair 4 → 0/2 HR (none) | Luis García Jr. + Juan Soto
+Pair 5 → 1/2 HR (Pete Alonso) | Pete Alonso + Coby Mayo
+Pair 6 → 0/2 HR (none) | Yordan Alvarez + Max Muncy
+Pair 7 → 0/2 HR (none) | Victor Mesa Jr. + Manny Machado
+Pair 8 → 0/2 HR (none) | Jake Bauers + Francisco Lindor
+Pair 9 → 0/2 HR (none) | Joc Pederson + Eugenio Suárez
+Pair 10 → 0/2 HR (none) | Jake Bauers + Carter Jensen
+
+PLAYER TYPE PERFORMANCE
+------------------------------------------
+🏆 TOP 15 BOARD (11)
+HR: 9.1% | 1+ Hit: 72.7% | XBH: 27.3% | 2+ TB: 36.4% | 2+ HRR: 45.5% | 3+ HRR: 18.2%
+
+🔥 TOP PICKS (12)
+HR: 8.3% | 1+ Hit: 66.7% | XBH: 50.0% | 2+ TB: 50.0% | 2+ HRR: 58.3% | 3+ HRR: 16.7%
+
+🧨 HR PICKS (12)
+HR: 16.7% | 1+ Hit: 91.7% | XBH: 33.3% | 2+ TB: 50.0% | 2+ HRR: 66.7% | 3+ HRR: 33.3%
+
+🏁 HRR PICKS (12)
+HR: 16.7% | 1+ Hit: 58.3% | XBH: 16.7% | 2+ TB: 25.0% | 2+ HRR: 50.0% | 3+ HRR: 41.7%
+
+💠 HIT PICKS (12)
+HR: 8.3% | 1+ Hit: 75.0% | XBH: 33.3% | 2+ TB: 58.3% | 2+ HRR: 66.7% | 3+ HRR: 33.3%
+
+⚾ CONTACT PICKS (12)
+HR: 0.0% | 1+ Hit: 75.0% | XBH: 25.0% | 2+ TB: 41.7% | 2+ HRR: 50.0% | 3+ HRR: 33.3%
+
+
+DESIGNED OUTCOME (did the pick do its job)
+------------------------------------------
+🏆 TOP 15 BOARD (11) -> 1/11 (9.1%)  ·  needs: HR
+🔥 TOP PICKS (12) -> 4/12 (33.3%)  ·  needs: most productive of our picks in his game (HRR or TB)
+🧨 HR PICKS (12) -> 2/12 (16.7%)  ·  needs: HR
+🏁 HRR PICKS (12) -> 6/12 (50.0%)  ·  needs: 2+ hits+runs+RBI
+💠 HIT PICKS (12) -> 9/12 (75.0%)  ·  needs: 1+ hit
+⚾ CONTACT PICKS (12) -> 5/12 (41.7%)  ·  needs: 2+ TB or XBH
+ALL PICKS -> 27/77 (35.1%)
+
+HIT RESULTS BY CATEGORY
+------------------------------------------
+
+🔥 TOP PICKS (1+ Hit)
+- Randal Grichuk — 2H ⭐
+- Alec Burleson — 1H
+- Ben Rice — 1H
+- Carter Jensen — 1H
+- Elly De La Cruz — 1H
+- Jake Bauers — 1H
+- Junior Caminero — 1H
+- Matt Olson — 1H
+
+🧨 HR PICKS (1+ Hit)
+- Cody Bellinger — 3H 🔥
+- Pete Crow-Armstrong — 3H 🔥
+- Daylen Lile — 2H ⭐
+- Jake Burger — 2H ⭐
+- Elly De La Cruz — 1H
+- Francisco Lindor — 1H
+- Jackson Chourio — 1H
+- Leo Bernal — 1H
+- Miguel Vargas — 1H
+- Riley Greene — 1H
+- Yordan Alvarez — 1H
+
+🏁 HRR PICKS (1+ Hit)
+- Brett Bateman — 2H ⭐
+- Bryce Harper — 1H
+- Corey Seager — 1H
+- Drew Gilbert — 1H
+- Pete Alonso — 1H
+- Shea Langeliers — 1H
+- William Contreras — 1H
+
+💠 HIT PICKS (1+ Hit)
+- Jonah Cox — 3H 🔥
+- Josh Jung — 3H 🔥
+- Luke Keaschall — 3H 🔥
+- Michael Massey — 3H 🔥
+- Kevin McGonigle — 2H ⭐
+- Brice Turang — 1H
+- CJ Abrams — 1H
+- Kyle Tucker — 1H
+- Michael Harris II — 1H
+
+⚾ CONTACT PICKS (1+ Hit)
+- Andrew Knizner — 3H 🔥
+- Cody Bellinger — 3H 🔥
+- Ronald Acuña Jr. — 2H ⭐
+- CJ Abrams — 1H
+- Carter Jensen — 1H
+- Corey Seager — 1H
+- Francisco Lindor — 1H
+- Kyle Tucker — 1H
+- William Contreras — 1H
+
+MODEL DIAGNOSTIC (LOW PRIORITY)
+Full Sheet HR Coverage: 26 / 27 (96.3%)

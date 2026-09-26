@@ -1,0 +1,134 @@
+RESULTS TRACKER - 2026-06-01
+------------------------------------------
+BETTABLE RESULTS
+Top 15 HR: 2/15 (13.3%)
+HR Picks: 1/9 (11.1%)
+Top Picks: 2/9 (22.2%)
+
+FULL SHEET BASE HIT PERFORMANCE
+Base Hit Accuracy: 53.8%
+
+HR CAPTURE (BETTABLE)
+Total Slate HRs: 31
+Caught in Top 15: 2
+Caught in HR Picks: 1
+Top 15 Capture Rate: 6.5%
+HR Pick Capture Rate: 3.2%
+
+MODEL VISION (Top 40)
+Model Caught HRs: 6 / 31
+Vision Rate: 19.4%
+
+UNIQUE PLAYER HR ACCURACY
+Unique Players Tracked: 63
+Players Who Homered: 8
+Unique HR Accuracy: 12.7%
+
+HR CATEGORY BREAKDOWN
+------------------------------------------
+🏆 TOP 15 BOARD → 2 HR
+🔥 TOP PICKS → 2 HR
+🧨 HR PICKS → 1 HR
+🏁 HRR PICKS → 2 HR
+💠 HIT PICKS → 2 HR
+⚾ CONTACT PICKS → 1 HR
+Best HR-producing category: 🏆 TOP 15 BOARD
+
+HR RESULTS BY PLAYER
+------------------------------------------
+- JJ Bleday — 🏆#9 + 🔥
+- Miguel Vargas — 🏆#6 + 🔥
+- Dillon Dingler — 🧨
+- Josh Naylor — 🏁
+- Kyle Stowers — 🏁
+- Jake McCarthy — 💠
+- Junior Caminero — 💠
+- Ketel Marte — ⚾ + ⭐
+
+MISSED HRs (NOT IN MODEL SHEET)
+------------------------------------------
+- Tommy Troy (AZ) — not in model sheet / lineup pool
+- Jose Siri (LAA) — not in model sheet / lineup pool
+- Heriberto Hernández (MIA) — not in model sheet / lineup pool
+- Jared Young (NYM) — not in model sheet / lineup pool
+- Colt Emerson (SEA) — not in model sheet / lineup pool
+- Ryan Vilade (TB) — not in model sheet / lineup pool
+
+POOL PERFORMANCE
+------------------------------------------
+4-MAN HR POOL A → 1/4 HR (JJ Bleday)
+4-MAN HR POOL B → 0/4 HR (none)
+4-MAN HR POOL C → 0/4 HR (none)
+4-MAN HR POOL D → 1/4 HR (Dillon Dingler)
+6-MAN HR POOL A → 0/6 HR (none)
+6-MAN HR POOL B → 0/6 HR (none)
+6-MAN HR POOL C → 1/6 HR (Marcus Semien)
+6-MAN HR POOL D → 0/6 HR (none)
+
+PAIR PERFORMANCE
+------------------------------------------
+Pair 1 → 0/2 HR (none) | Mike Trout + Curtis Mead
+Pair 2 → 0/2 HR (none) | Willy Adames + Andy Pages
+Pair 3 → 1/2 HR (Miguel Vargas) | Casey Schmitt + Miguel Vargas
+Pair 4 → 0/2 HR (none) | Julio Rodríguez + Eugenio Suárez
+
+PLAYER TYPE PERFORMANCE
+------------------------------------------
+🏁 HRR PICKS (18)
+2+ HRR: 44.4% | 3+ HRR: 16.7%
+
+💠 HIT PICKS (18)
+1+ Hit: 55.6% | HR: 11.1%
+
+⚾ CONTACT PICKS (9)
+XBH: 33.3% | 2+ TB: 33.3% | HR: 11.1%
+
+HIT RESULTS BY CATEGORY
+------------------------------------------
+
+🔥 TOP PICKS (1+ Hit)
+- Miguel Vargas — 3H 🔥
+- Curtis Mead — 2H ⭐
+- Andy Pages — 1H
+- JJ Bleday — 1H
+- Mike Trout — 1H
+
+🧨 HR PICKS (1+ Hit)
+- Dillon Dingler — 4H 🔥
+- Eugenio Suárez — 1H
+- James Wood — 1H
+- Kody Clemens — 1H
+
+🏁 HRR PICKS (1+ Hit)
+- Cole Young — 2H ⭐
+- Brandon Nimmo — 1H
+- Brooks Lee — 1H
+- Chase Meidroth — 1H
+- Joc Pederson — 1H
+- Josh Naylor — 1H
+- Kyle Stowers — 1H
+- Luis Arraez — 1H
+- Mookie Betts — 1H
+- Sal Stewart — 1H
+- Vaughn Grissom — 1H
+
+💠 HIT PICKS (1+ Hit)
+- Shohei Ohtani — 3H 🔥
+- Yandy Díaz — 3H 🔥
+- Jake McCarthy — 2H ⭐
+- Tristan Peters — 2H ⭐
+- Bobby Witt Jr. — 1H
+- Jung Hoo Lee — 1H
+- Junior Caminero — 1H
+- Tyler Freeman — 1H
+- William Contreras — 1H
+- Xavier Edwards — 1H
+
+⚾ CONTACT PICKS (1+ Hit)
+- Jackson Chourio — 2H ⭐
+- Kyle Karros — 2H ⭐
+- Byron Buxton — 1H
+- Ketel Marte — 1H
+
+MODEL DIAGNOSTIC (LOW PRIORITY)
+Full Sheet HR Coverage: 25 / 31 (80.6%)

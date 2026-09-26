@@ -1,0 +1,157 @@
+RESULTS TRACKER - 2026-09-24
+------------------------------------------
+BETTABLE RESULTS
+Top 15 HR: 1/9 (11.1%)
+HR Picks: 1/9 (11.1%)
+Top Picks: 1/9 (11.1%)
+
+FULL SHEET BASE HIT PERFORMANCE
+Base Hit Accuracy: 59.7%
+
+HR CAPTURE (BETTABLE)
+Total Slate HRs: 25
+Caught in Top 15: 1
+Caught in HR Picks: 1
+Top 15 Capture Rate: 4.0%
+HR Pick Capture Rate: 4.0%
+
+MODEL VISION (Top 40)
+Model Caught HRs: 7 / 25
+Vision Rate: 28.0%
+
+UNIQUE PLAYER HR ACCURACY
+Unique Players Tracked: 48
+Players Who Homered: 7
+Unique HR Accuracy: 14.6%
+
+HR CATEGORY BREAKDOWN
+------------------------------------------
+🏆 TOP 15 BOARD → 1 HR
+🔥 TOP PICKS → 1 HR
+🧨 HR PICKS → 1 HR
+🏁 HRR PICKS → 1 HR
+💠 HIT PICKS → 1 HR
+⚾ CONTACT PICKS → 2 HR
+Best HR-producing category: ⚾ CONTACT PICKS
+
+LONGEST HR (BOARD)
+------------------------------------------
+- Nolan Arenado — 419 ft · 102.5 mph · 30.0°
+- Gabriel Moreno — 416 ft · 105.6 mph · 35.0°
+- Seiya Suzuki — 408 ft · 106.1 mph · 29.0°
+- James McCann — 401 ft · 108.7 mph · 22.0°
+- Corey Seager — 374 ft · 107.5 mph · 24.0°
+Longest on the board: Nolan Arenado (419 ft)
+
+
+HR RESULTS BY PLAYER
+------------------------------------------
+- Angel Martínez — 🏆#5 + 🔥 + ⚾
+- James McCann — 🧨
+- Seiya Suzuki — 🏁
+- Gabriel Moreno — 💠
+- Corey Seager — ⚾
+- Josh Jung — ⭐
+- Nolan Arenado — ⭐
+
+POOL PERFORMANCE
+------------------------------------------
+4-MAN Pool A — Strongest → 0/4 HR (none)
+4-MAN Pool B — HRR+Power → 1/4 HR (Isaac Paredes)
+4-MAN Pool C — Balanced → 0/4 HR (none)
+4-MAN Pool D — Variance → 0/4 HR (none)
+3-MAN Pool A — Strongest → 0/3 HR (none)
+3-MAN Pool B — HRR+Var → 0/3 HR (none)
+3-MAN Pool C — Balanced → 0/3 HR (none)
+3-MAN Pool D — Variance → 0/3 HR (none)
+
+PAIR PERFORMANCE
+------------------------------------------
+Pair 1 → 0/2 HR (none) | Pete Crow-Armstrong + Ben Rice
+Pair 2 → 0/2 HR (none) | Matt Olson + Yordan Alvarez
+Pair 3 → 0/2 HR (none) | Brandon Lowe + Juan Soto
+Pair 4 → 0/2 HR (none) | Willson Contreras + Oneil Cruz
+Pair 5 → 0/2 HR (none) | Hunter Goodman + Munetaka Murakami
+Pair 6 → 0/2 HR (none) | Ronald Acuña Jr. + Kyle Schwarber
+Pair 7 → 0/2 HR (none) | Willson Contreras + Michael Conforto
+Pair 8 → 0/2 HR (none) | Miguel Vargas + Max Muncy
+Pair 9 → 1/2 HR (Elly De La Cruz) | Elly De La Cruz + Eugenio Suárez
+Pair 10 → 2/2 HR (Angel Martínez, Zack Gelof) | Angel Martínez + Zack Gelof
+
+PLAYER TYPE PERFORMANCE
+------------------------------------------
+🏆 TOP 15 BOARD (9)
+HR: 11.1% | 1+ Hit: 33.3% | XBH: 11.1% | 2+ TB: 11.1% | 2+ HRR: 22.2% | 3+ HRR: 11.1%
+
+🔥 TOP PICKS (9)
+HR: 11.1% | 1+ Hit: 66.7% | XBH: 22.2% | 2+ TB: 33.3% | 2+ HRR: 55.6% | 3+ HRR: 44.4%
+
+🧨 HR PICKS (9)
+HR: 11.1% | 1+ Hit: 55.6% | XBH: 33.3% | 2+ TB: 44.4% | 2+ HRR: 44.4% | 3+ HRR: 44.4%
+
+🏁 HRR PICKS (9)
+HR: 11.1% | 1+ Hit: 88.9% | XBH: 33.3% | 2+ TB: 66.7% | 2+ HRR: 66.7% | 3+ HRR: 55.6%
+
+💠 HIT PICKS (9)
+HR: 11.1% | 1+ Hit: 66.7% | XBH: 22.2% | 2+ TB: 33.3% | 2+ HRR: 33.3% | 3+ HRR: 22.2%
+
+⚾ CONTACT PICKS (9)
+HR: 22.2% | 1+ Hit: 55.6% | XBH: 22.2% | 2+ TB: 33.3% | 2+ HRR: 44.4% | 3+ HRR: 33.3%
+
+
+DESIGNED OUTCOME (did the pick do its job)
+------------------------------------------
+🏆 TOP 15 BOARD (9) -> 1/9 (11.1%)  ·  needs: HR
+🔥 TOP PICKS (9) -> 3/9 (33.3%)  ·  needs: most productive of our picks in his game (HRR or TB)
+🧨 HR PICKS (9) -> 1/9 (11.1%)  ·  needs: HR
+🏁 HRR PICKS (9) -> 6/9 (66.7%)  ·  needs: 2+ hits+runs+RBI
+💠 HIT PICKS (9) -> 6/9 (66.7%)  ·  needs: 1+ hit
+⚾ CONTACT PICKS (9) -> 3/9 (33.3%)  ·  needs: 2+ TB or XBH
+ALL PICKS -> 20/62 (32.3%)
+
+HIT RESULTS BY CATEGORY
+------------------------------------------
+
+🔥 TOP PICKS (1+ Hit)
+- Kyle Schwarber — 2H ⭐
+- Miguel Vargas — 2H ⭐
+- Angel Martínez — 1H
+- Brandon Lowe — 1H
+- Hunter Goodman — 1H
+- Pete Crow-Armstrong — 1H
+
+🧨 HR PICKS (1+ Hit)
+- Jake Bauers — 2H ⭐
+- James McCann — 2H ⭐
+- Oneil Cruz — 2H ⭐
+- Ronald Acuña Jr. — 2H ⭐
+- Victor Mesa Jr. — 1H
+
+🏁 HRR PICKS (1+ Hit)
+- Geraldo Perdomo — 3H 🔥
+- Drake Baldwin — 2H ⭐
+- José Ramírez — 2H ⭐
+- Sam Antonacci — 2H ⭐
+- Seiya Suzuki — 2H ⭐
+- Yandy Díaz — 2H ⭐
+- Brett Baty — 1H
+- Brice Turang — 1H
+
+💠 HIT PICKS (1+ Hit)
+- Mauricio Dubón — 2H ⭐
+- Bobby Witt Jr. — 1H
+- Carson Benge — 1H
+- Gabriel Moreno — 1H
+- Iván Herrera — 1H
+- Otto Lopez — 1H
+
+⚾ CONTACT PICKS (1+ Hit)
+- Ronald Acuña Jr. — 2H ⭐
+- Angel Martínez — 1H
+- Brandon Lowe — 1H
+- Corey Seager — 1H
+- Pete Crow-Armstrong — 1H
+
+MODEL DIAGNOSTIC (LOW PRIORITY)
+Full Sheet HR Coverage: 25 / 25 (100.0%)
+Pregame Pool HR Coverage: 23 / 25 (92.0%) over 12 locked games; 2 HR by late adds
