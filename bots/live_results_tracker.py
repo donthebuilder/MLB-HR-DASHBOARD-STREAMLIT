@@ -4378,6 +4378,17 @@ def main() -> int:
     )
     if slate_not_started:
         hr_capture_report["hr_capture_pct"] = None
+    # THE OTHER END OF THE NIGHT (2026-09-27). A --live run (every scheduled
+    # cron passes --date auto --live) stamped live_mode=True even when every
+    # game it fetched was already Final, so the night's last live run left
+    # the payload saying "Live" until the next slate -- the site polled and
+    # labelled a finished night as live. Same rule as the guard above: the
+    # fetched game states decide, not the flag. Which FILE is written
+    # (results_live.json vs results_final.json) still follows the flag.
+    slate_done = bool(_game_states) and all(
+        str(gs.get("abstract_state", "")).lower() == "final" for gs in _game_states
+    )
+    payload_live = live_mode and not slate_done
 
     site_results = [
         {**slot,
@@ -4389,9 +4400,9 @@ def main() -> int:
 
     payload = {
         "date": date_str,
-        "live_mode": live_mode,
-        "label": ("Pending" if slate_not_started else ("Live" if live_mode else "Final")) + " · " + date_str,
-        "slate_status": "pending" if slate_not_started else ("live" if live_mode else "final"),
+        "live_mode": payload_live,
+        "label": ("Pending" if slate_not_started else ("Live" if payload_live else "Final")) + " · " + date_str,
+        "slate_status": "pending" if slate_not_started else ("live" if payload_live else "final"),
         # ── Site-friendly aliases (what Results.js looks for) ────────────
         "results": site_results,
         # ── Original (preserved so nothing downstream breaks) ────────────
