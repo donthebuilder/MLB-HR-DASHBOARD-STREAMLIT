@@ -370,11 +370,19 @@ jobs:
       # graded-dir order matters: later directories win, and public/data holds
       # THIS run's fresh grading (the restore above used cp -n, so it could not
       # have clobbered it).
+      # OUR PRICES FOR TRUE PRICE (2026-09-27). The props providers stopped on
+      # 09-14; the site's own SportsGameOdds prices fill every date since,
+      # written as odds_<date>.json once and archived like the old ones.
+      - name: Fetch the site's pregame prices for True Price
+        run: python bots/fetch_site_odds.py
+        continue-on-error: true
+
       - name: Build the true-price history
         run: |
           mkdir -p public/data/current
           python bots/odds_history.py \
             --odds-dir /tmp/histout/public/data/current \
+            --odds-dir public/data/current \
             --graded-dir /tmp/histout/public/data/current \
             --graded-dir bots/outputs \
             --graded-dir public/data \
