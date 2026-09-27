@@ -84,7 +84,16 @@ on:
     # first pitch, so a rebuild at 8pm cannot rewrite a pick that has already
     # started. Late games are still pre-lock and get the corrected card.
     - cron: "3 2,3 * * *"   # 7pm, 8pm Phoenix - late West-coast cards
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      tomorrow:
+        description: "also build tomorrow's slate (the run-tomorrow-bot job)"
+        required: false
+        default: "false"
+      scheduled:
+        description: "set by the site's dispatcher: this stands in for a dropped scheduled slot (obeys the offseason guard)"
+        required: false
+        default: "false"
 
 # One group PER WORKFLOW, not one shared across all of them.
 # GitHub keeps at most a single *pending* run per concurrency group, so a
@@ -100,7 +109,26 @@ permissions:
   contents: write
 
 jobs:
+  guard:
+    # OFFSEASON GUARD (bots/mlb_season_guard.py, 2026-09-27): no MLB game from
+    # 1 day(s) back to 3 ahead -> the jobs below skip. Postseason counts;
+    # a hand-started run always goes (the site's dispatcher marks its runs
+    # scheduled=true, so a backfilled slot still obeys the guard); an unreadable schedule fails OPEN.
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      active: ${{ steps.g.outputs.active }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: bots/mlb_season_guard.py
+          sparse-checkout-cone-mode: false
+      - id: g
+        run: python3 bots/mlb_season_guard.py --back 1 --ahead 3
+
   run-bot:
+    needs: [guard]
+    if: ${{ needs.guard.outputs.active == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.scheduled != 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 90
     env:
@@ -367,3 +395,106 @@ jobs:
 
       - name: Publish to data branch
         run: bash .github/scripts/publish_data.sh "Today slate"
+
+  run-tomorrow-bot:
+    needs: [guard]
+    # FOLDED IN FROM tomorrow.yml (2026-09-27, BOT-WORKFLOWS-CLEANUP): runs on the
+    # 12:05am rollover slot and its 2:05am backup -- the two slots tomorrow.yml
+    # had -- or by hand with tomorrow=true. Steps unchanged (the old file is in
+    # .github/workflows-disabled/). Its own job, so a Today failure never costs
+    # the Tomorrow slate or the other way round.
+    if: ${{ (needs.guard.outputs.active == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.scheduled != 'true')) && (github.event.schedule == '5 7 * * *' || github.event.schedule == '5 9 * * *' || github.event.inputs.tomorrow == 'true') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      OWM_API_KEY: ${{ secrets.OWM_API_KEY }}
+      RAPIDAPI_KEY: ${{ secrets.RAPIDAPI_KEY }}
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install deps
+        run: pip install -r bots/requirements.txt
+
+      - name: Restore SQLite cache
+        uses: actions/cache@v4
+        with:
+          path: bots/mlb_hr_cache.sqlite
+          key: sqlite-cache-${{ github.run_id }}
+          restore-keys: |
+            sqlite-cache-
+
+      - name: Run scoring bot (tomorrow)
+        run: python bots/mlb_dashboard.py --tomorrow
+
+      - name: Build slim payload for Streamlit
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        run: python bots/make_slim.py
+
+      # ── DID THE DETAIL ACTUALLY GET BUILT? (2026-08-29) ────────────────
+      # The per-player layer -- spray charts, contact logs, pitch profiles,
+      # pitcher arsenals and lineup-spot damage -- went stale on the live
+      # branch and nothing anywhere went red. Both detail directories held a
+      # coherent snapshot of a night that was on NEITHER slate file beside
+      # them, and the only visible symptom was a modal saying "no detail file
+      # published" for 27 of 30 starters.
+      #
+      # make_slim.py now stamps each directory it writes. This step asserts
+      # the stamp matches the slate this run just built. It is
+      # continue-on-error ON PURPOSE: a broken detail layer must be loud, but
+      # it must not cost the night its slate -- publish_data.sh drops a
+      # mismatched directory on its own, so the board still ships and the
+      # site honestly says the detail is missing.
+      - name: Verify the tomorrow detail directory matches this run's slate
+        continue-on-error: true
+        run: |
+          MAN="public/data/current/detail/tomorrow/_manifest.json"
+          META="public/data/current/tomorrow_run_meta.json"
+          if [ ! -f "$MAN" ]; then
+            echo "::error::make_slim wrote no detail manifest for the tomorrow slate -- the per-player layer was not rebuilt this run."
+            exit 1
+          fi
+          WANT="$(sed -n 's/.*"slate_date"[[:space:]]*:[[:space:]]*"\([0-9-]\{10\}\)".*/\1/p' "$META" 2>/dev/null | head -n 1)"
+          HAVE="$(sed -n 's/.*"slate_date"[[:space:]]*:[[:space:]]*"\([0-9-]\{10\}\)".*/\1/p' "$MAN" | head -n 1)"
+          PITCHERS="$(sed -n 's/.*"pitcher_count"[[:space:]]*:[[:space:]]*\([0-9]*\).*/\1/p' "$MAN" | head -n 1)"
+          BATTERS="$(sed -n 's/.*"batter_count"[[:space:]]*:[[:space:]]*\([0-9]*\).*/\1/p' "$MAN" | head -n 1)"
+          echo "detail/tomorrow: slate=$HAVE (run meta says $WANT), $BATTERS batters, $PITCHERS pitchers"
+          if [ -n "$WANT" ] && [ "$WANT" != "$HAVE" ]; then
+            echo "::error::detail/tomorrow is stamped $HAVE but this run built $WANT."
+            exit 1
+          fi
+          if [ "${PITCHERS:-0}" -lt 1 ]; then
+            echo "::error::detail/tomorrow has no pitcher files -- every arsenal and pitch-mix chart on the site will be blank for this slate."
+            exit 1
+          fi
+
+      # Day/night, home/away, day-of-week and win/loss splits. The
+      # scoring bot only carries vs-RHP/LHP, so these come from MLB's
+      # gameLog endpoint -- one request per hitter, ~2 min for a slate.
+      - name: Build situational splits
+        run: python bots/player_splits.py --slate public/data/current/tomorrow.json --label tomorrow
+        continue-on-error: true
+
+      - name: Save SQLite cache
+        uses: actions/cache/save@v4
+        with:
+          path: bots/mlb_hr_cache.sqlite
+          key: sqlite-cache-${{ github.run_id }}
+
+      # REWRITTEN: this job used to `git add -A` and push the entire slate
+      # output to `main` on every run, with a rebase-retry loop. That is what
+      # committed 20+ GB of JSON into the repo's history and broke the
+      # Streamlit Cloud clone. It now publishes the same way every other bot
+      # job does -- small files, data branch, single orphan commit, never main.
+      - name: Publish to data branch
+        run: bash .github/scripts/publish_data.sh "Tomorrow slate"

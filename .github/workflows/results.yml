@@ -65,7 +65,12 @@ on:
     - cron: "7,27,47 16-23 * * *"
     - cron: "7,27,47 0-5 * * *"
     - cron: "13,43 6-15 * * *"
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      scheduled:
+        description: "set by the site's dispatcher: this stands in for a dropped scheduled slot (obeys the offseason guard)"
+        required: false
+        default: "false"
 
 # One group PER WORKFLOW, not one shared across all of them.
 # GitHub keeps at most a single *pending* run per concurrency group, so a
@@ -81,7 +86,26 @@ permissions:
   contents: write
 
 jobs:
+  guard:
+    # OFFSEASON GUARD (bots/mlb_season_guard.py, 2026-09-27): no MLB game from
+    # 8 day(s) back to 3 ahead -> the jobs below skip. Postseason counts;
+    # a hand-started run always goes (the site's dispatcher marks its runs
+    # scheduled=true, so a backfilled slot still obeys the guard); an unreadable schedule fails OPEN.
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      active: ${{ steps.g.outputs.active }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: bots/mlb_season_guard.py
+          sparse-checkout-cone-mode: false
+      - id: g
+        run: python3 bots/mlb_season_guard.py --back 8 --ahead 3
+
   grade-results:
+    needs: [guard]
+    if: ${{ needs.guard.outputs.active == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.scheduled != 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:

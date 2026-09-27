@@ -24,7 +24,26 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  guard:
+    # OFFSEASON GUARD (bots/mlb_season_guard.py, 2026-09-27): no MLB game from
+    # 1 day(s) back to 1 ahead -> the jobs below skip. Postseason counts;
+    # a hand-started run always goes (the site's dispatcher marks its runs
+    # scheduled=true, so a backfilled slot still obeys the guard); an unreadable schedule fails OPEN.
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      active: ${{ steps.g.outputs.active }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: bots/mlb_season_guard.py
+          sparse-checkout-cone-mode: false
+      - id: g
+        run: python3 bots/mlb_season_guard.py --back 1 --ahead 1
+
   watch:
+    needs: [guard]
+    if: ${{ needs.guard.outputs.active == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.scheduled != 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:

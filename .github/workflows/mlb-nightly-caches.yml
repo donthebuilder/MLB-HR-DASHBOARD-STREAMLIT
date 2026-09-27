@@ -1,0 +1,336 @@
+name: MLB nightly caches
+
+# FOUR NIGHTLY CACHE BOTS, ONE WORKFLOW (2026-09-27, BOT-WORKFLOWS-CLEANUP):
+# Pair History -> HR Companion -> Spray Archive -> Spray Cache, in that order,
+# one schedule and one backup instead of eight. Each job is its old workflow's
+# job, steps unchanged (the four files are kept in .github/workflows-disabled/
+# for a week, then deleted). A job that fails does not stop the next one.
+# 12:23am Phoenix: after today.yml's 12:05am rollover has published the new
+# day's slate, which Spray Cache fetches (--date today) -- it used to wait
+# until 6am, which the rollover made unnecessary.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '23 7 * * *'    # 12:23am PHX
+    - cron: '23 9 * * *'    # backup 2h later -- runner-acquisition insurance
+
+permissions:
+  contents: write
+
+concurrency:
+  group: mlb-nightly-caches
+  cancel-in-progress: false
+
+jobs:
+  guard:
+    # OFFSEASON GUARD (bots/mlb_season_guard.py, 2026-09-27): no MLB game from
+    # 1 day(s) back to 3 ahead -> the jobs below skip. Postseason counts;
+    # a hand-started run always goes (the site's dispatcher marks its runs
+    # scheduled=true, so a backfilled slot still obeys the guard); an unreadable schedule fails OPEN.
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      active: ${{ steps.g.outputs.active }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: bots/mlb_season_guard.py
+          sparse-checkout-cone-mode: false
+      - id: g
+        run: python3 bots/mlb_season_guard.py --back 1 --ahead 3
+
+  # ── pair-history ──────────────────────────────────────────────
+  pair_history:
+    needs: [guard]
+    if: ${{ needs.guard.outputs.active == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.scheduled != 'true') }}
+    # from .github/workflows-disabled/pair-history.yml, steps unchanged
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r bots/requirements.txt
+
+      # STREAMLIT MIGRATION (2026-07-25): this job used to commit public/data
+      # and bots/outputs to main after every run. It now carries its cache
+      # between runs with actions/cache instead -- same incremental behavior,
+      # no repo growth, nothing pushed to main.
+      - name: Restore pair history cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            public/data/pair_history_cache.json
+            public/data/pair_history_summary.json
+            bots/pair_history_cache.json
+            bots/pair_history_summary.json
+          key: pair-history-${{ github.run_id }}
+          restore-keys: |
+            pair-history-
+
+      - name: Run pair history cache
+        run: |
+          export MLB_DASHBOARD_DIR="$GITHUB_WORKSPACE"
+          # pair_history_cache.py's copy_to_site() refuses to write unless the
+          # target looks like the website repo -- it checks for public/ or
+          # app/. Neither exists in a fresh CI checkout: app/ went away with
+          # Next.js, and public/data is gitignored so public/ isn't tracked at
+          # all. So it printed "Website repo not found", kept the summary in
+          # bots/outputs, and the publish step below found nothing to publish.
+          # Every nightly run went green and shipped nothing for two weeks.
+          mkdir -p public/data
+          python bots/pair_history_cache.py
+          echo "--- public/data after run ---"
+          ls -la public/data
+
+      - name: Save pair history cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            public/data/pair_history_cache.json
+            public/data/pair_history_summary.json
+            bots/pair_history_cache.json
+            bots/pair_history_summary.json
+          key: pair-history-${{ github.run_id }}
+
+      # The cache above only carries state between runs of THIS job -- the
+      # Streamlit app can't read it. The Pairs tab wants pair_history_summary
+      # .json, so it has to reach the data branch like everything else the app
+      # consumes. Without this the pair-history job ran green every night and
+      # its output went nowhere.
+      - name: Publish to data branch
+        run: bash .github/scripts/publish_data.sh "Pair history"
+
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pair-history-logs-${{ github.run_id }}
+          path: |
+            outputs/
+            bots/outputs/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # ── hr-companion ──────────────────────────────────────────────
+  hr_companion:
+    # from .github/workflows-disabled/hr-companion.yml, steps unchanged
+    needs: [pair_history, guard]
+    # run even when the job before failed; skip only if the run was cancelled
+    if: ${{ (needs.guard.outputs.active == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.scheduled != 'true')) && (!cancelled()) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r bots/requirements.txt
+
+      # This job reads a slate file out of bots/outputs/, which is empty in a
+      # fresh CI checkout now that bots/outputs is gitignored. Pull the
+      # published slate off the data branch first, same as the grader does.
+      - name: Fetch published slate
+        run: python bots/fetch_picks_for_grading.py --date today
+
+      - name: Restore companion cache
+        uses: actions/cache@v4
+        with:
+          path: bots/outputs/hr_companion_cache.json
+          key: hr-companion-${{ github.run_id }}
+          restore-keys: |
+            hr-companion-
+
+      # FIXED: the old `ls bots/outputs/*today*.json` glob never matched --
+      # hr_companion_cache.py's own search globs for "*-today.json" and
+      # "slate_*.json", neither of which the fetch step produces. Point it at
+      # the stable slate path explicitly instead of guessing at filenames.
+      - name: Run HR companion cache
+        run: |
+          if [ ! -s public/data/today_slate.json ]; then
+            echo "No published slate yet — skipping."
+            exit 0
+          fi
+          python bots/hr_companion_cache.py --slate public/data/today_slate.json
+
+      # STREAMLIT MIGRATION (2026-07-25): replaces the old commit+push to
+      # main, which added the whole of public/data and bots/outputs to the
+      # repo every night.
+      - name: Save companion cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: bots/outputs/hr_companion_cache.json
+          key: hr-companion-${{ github.run_id }}
+
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hr-companion-logs-${{ github.run_id }}
+          path: bots/outputs/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # ── spray-archive ──────────────────────────────────────────────
+  spray_archive:
+    # from .github/workflows-disabled/spray-archive.yml, steps unchanged
+    needs: [hr_companion, guard]
+    # run even when the job before failed; skip only if the run was cancelled
+    if: ${{ (needs.guard.outputs.active == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.scheduled != 'true')) && (!cancelled()) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 28
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r bots/requirements.txt
+
+      # WHY THIS CACHE MATTERS (see spray_archive.py's own docstring): a
+      # fresh checkout has no public/data at all (gitignored on main), so
+      # without restoring what previous runs already archived, this job
+      # would only ever cover MAX_FETCHES_PER_RUN hitters, forever, instead
+      # of accumulating. Same mechanism spray-cache.yml already uses for
+      # public/data/pitch and zone_cache.
+      - name: Restore spray archive cache
+        uses: actions/cache@v4
+        with:
+          path: public/data/current/detail/archive
+          key: spray-archive-${{ github.run_id }}
+          restore-keys: |
+            spray-archive-
+
+      # TWO PASSES IN ONE JOB, same reason spray-cache.yml runs spray_cache.py
+      # twice: pass 2 sees pass 1's on-disk output (this run's newly-written
+      # archive files) directly, so a cold cache day gets roughly double
+      # MAX_FETCHES_PER_RUN of real progress per scheduled trigger instead of
+      # needing twice as many scheduled runs to get there.
+      - name: Run spray_archive.py (pass 1)
+        run: python bots/spray_archive.py
+
+      - name: Run spray_archive.py (pass 2 — mop up any leftover cold-cache hitters)
+        run: python bots/spray_archive.py
+
+      - name: Save spray archive cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: public/data/current/detail/archive
+          key: spray-archive-${{ github.run_id }}
+
+      # publish_data.sh already copies current/detail/* as a whole
+      # (stage_local) and merges any subdirectory under it the current run
+      # didn't touch back in from the data branch (carry_forward's `for sub
+      # in detail splits zones` loop) -- current/detail/archive/ is
+      # just one more subdirectory alongside today/ and tomorrow/ to it. No
+      # changes needed there.
+      - name: Publish to data branch
+        run: bash .github/scripts/publish_data.sh "Spray archive"
+
+  # ── spray-cache ──────────────────────────────────────────────
+  # BUGFIX (kept): both passes run in ONE job with ONE checkout, so pass 2
+  # sees pass 1's on-disk output directly instead of racing it from a second
+  # checkout the way the old two-job version did.
+  #
+  # STREAMLIT MIGRATION (2026-07-25): this job used to `git add public/data/
+  # bots/outputs/` and push to main daily. Those directories hold tens of
+  # thousands of per-player cache files; committing them every day is a big
+  # part of how the repo reached 20+ GB and became too slow for Streamlit
+  # Cloud to clone. The cache now persists via actions/cache -- the bot gets
+  # the same warm-start benefit, the repo doesn't grow, and nothing is ever
+  # pushed to main.
+  spray_cache:
+    # from .github/workflows-disabled/spray-cache.yml, steps unchanged
+    needs: [spray_archive, guard]
+    # run even when the job before failed; skip only if the run was cancelled
+    if: ${{ (needs.guard.outputs.active == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.scheduled != 'true')) && (!cancelled()) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 28
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r bots/requirements.txt
+
+      - name: Restore spray/zone cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            public/data/zone_cache
+            public/data/pitch
+          key: spray-cache-${{ github.run_id }}
+          restore-keys: |
+            spray-cache-
+
+      # FIXED: this job failed every run in 29s with "No slate file found."
+      # spray_cache.py needs a slate on disk and a fresh CI checkout has none
+      # (public/data is gitignored). Pull the published slate first; it lands
+      # at public/data/today_slate.json, which find_latest_slate() checks.
+      - name: Fetch published slate
+        run: python bots/fetch_picks_for_grading.py --date today
+
+      - name: Run spray_cache.py (pass 1)
+        run: python bots/spray_cache.py --slate public/data/today_slate.json
+
+      - name: Run spray_cache.py (pass 2 — mop up any leftover cold-cache players)
+        run: python bots/spray_cache.py --slate public/data/today_slate.json
+
+      # Context pack (2026-08-08): the bot's own copy of every context stat
+      # the site computes live — venue HR + vs-self pace, xPA, rest/travel,
+      # bullpen HR/9 + fatigue, wall dimensions. If the site ever goes dark,
+      # the record lives on the data branch. continue-on-error: a bad night
+      # here must never block the zone publish below.
+      - name: Build context pack
+        continue-on-error: true
+        run: python bots/context_pack.py --slate public/data/today_slate.json
+
+      - name: Save spray/zone cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            public/data/zone_cache
+            public/data/pitch
+          key: spray-cache-${{ github.run_id }}
+
+      # Publish the zone profiles. Without this the job computes them and
+      # throws them away when the runner dies -- which is why Hot Zones was
+      # empty for months while this workflow reported success every day.
+      - name: Publish to data branch
+        run: bash .github/scripts/publish_data.sh "Spray cache"
