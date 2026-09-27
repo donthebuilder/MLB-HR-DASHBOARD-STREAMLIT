@@ -145,8 +145,21 @@ def load_nights(dirpath: str) -> List[Dict[str, Any]]:
                 blob = json.load(fh)
         except (OSError, ValueError):
             continue
-        night = str(blob.get("date") or os.path.basename(path))
-        for r in blob.get("results") or []:
+        # Early graded files are a bare list of rows, later ones an object
+        # with "date" and "results" (2026-09-27: a list crashed .get() and
+        # failed Archive health every week). Both shapes, like odds_history's
+        # rows_of().
+        if isinstance(blob, list):
+            night = os.path.basename(path)[len("graded_results_"):-len(".json")]
+            items = blob
+        elif isinstance(blob, dict):
+            night = str(blob.get("date") or os.path.basename(path))
+            items = blob.get("results") or []
+        else:
+            continue
+        for r in items:
+            if not isinstance(r, dict):
+                continue
             r = dict(r)
             r["_night"] = night
             rows.append(r)
