@@ -219,6 +219,11 @@ jobs:
           # that is painful to rediscover if any of this ever comes back.
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: python bots/live_results_tracker.py --date auto --live
+        # A crash here (2026-09-25: an IndexError in merge_homer_entries) used
+        # to skip every step below, final grading and publish included, for
+        # the rest of the night. The live grade failing must not stop the
+        # final one.
+        continue-on-error: true
 
       # The Results tab's "Final" view was permanently empty because nothing
       # ever produced results_final.json. live_results_tracker decides which
@@ -234,6 +239,48 @@ jobs:
       # --final-only skips games still in progress, so the 7pm run grades the
       # handful that are done and each later run overwrites with a fuller set;
       # by the 3am run every game is final.
+      # FINISH THE LAST WEEK'S FINAL GRADES (2026-09-27). A night's
+      # graded_results_<date>.json is only rewritten while that slate is
+      # "today"; regrade_stale_dates() fixes outcome logs, never this file. So
+      # a night whose late runs crashed or were dropped (GitHub runs ~8 of
+      # this workflow's ~64 scheduled slots a day) stayed part-graded for
+      # good: 09-22 had 1 of 15 games, 09-25 had 3 of 17. Each run now checks
+      # the last 7 slates' published files and re-grades any that are not
+      # all-Final. Complete dates cost one HTTP read each.
+      - name: Finish earlier slates' final grades
+        run: |
+          DATES=$(python - <<'PY'
+          import datetime as dt, sys, requests
+          base = "https://raw.githubusercontent.com/${{ github.repository }}/data/public/data/current"
+          today = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(hours=7)).date()   # Phoenix
+          todo = []
+          for k in range(1, 8):
+              d = (today - dt.timedelta(days=k)).isoformat()
+              try:
+                  r = requests.get(f"{base}/graded_results_{d}.json", timeout=20)
+              except Exception as exc:
+                  print(f"::warning::graded_results_{d}.json unreadable ({exc}); not checked this run", file=sys.stderr)
+                  continue
+              if r.status_code == 404:
+                  continue   # no slate that day: nothing to finish
+              if r.status_code != 200:
+                  print(f"::warning::graded_results_{d}.json HTTP {r.status_code}; not checked this run", file=sys.stderr)
+                  continue
+              g = r.json()
+              states = [str(s.get("abstract_state", "")).lower() for s in (g.get("game_status_by_pk") or {}).values()]
+              if not states or any(s != "final" for s in states):
+                  todo.append(d)
+          print(" ".join(todo))
+          PY
+          )
+          echo "Earlier slates to finish: ${DATES:-none}"
+          for D in $DATES; do
+            python bots/fetch_picks_for_grading.py --date "$D" --dated-only \
+              && python bots/live_results_tracker.py --date "$D" --final-only \
+              || echo "Could not finish $D this run."
+          done
+        continue-on-error: true
+
       - name: Grade final results
         run: |
           D=$(ls bots/outputs/mlb_breakdown_today_*.json 2>/dev/null \

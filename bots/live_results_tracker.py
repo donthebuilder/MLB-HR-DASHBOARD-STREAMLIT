@@ -3444,8 +3444,13 @@ def merge_homer_entries(graded_slots: List[Dict[str, Any]]) -> List[Dict[str, An
         out.append(item)
 
     def sort_key(item: Dict[str, Any]):
+        # first[:1], not first[0] (2026-09-27): a homer by a WATCH or untagged
+        # board pick has no tags, and ""[0] raised IndexError -- every grading
+        # run after that night's first such homer crashed, the final grade was
+        # skipped, and graded_results_<date>.json froze part-way (09-22: 1 of
+        # 15 games; 09-25: 3 of 17).
         first = item["tags"][0] if item["tags"] else ""
-        return (emoji_order.get(first[0], 99), item["name"])
+        return (emoji_order.get(first[:1], 99), item["name"])
 
     return sorted(out, key=sort_key)
 
