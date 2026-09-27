@@ -27,10 +27,13 @@ on:
         required: false
         default: 'both'
   schedule:
+    # OFF THE HOUR (2026-09-27): GitHub drops scheduled runs under load, worst at
+    # :00 and :30 (09-25: results ran 7 of ~64 slots, today 11 of 24). Minutes
+    # moved 3-7 later; the Vercel dispatcher (/api/gh/dispatch) backs them up.
     # 09:20 UTC = 5:20am ET — after the nightly grading run has settled.
     - cron: '20 9 * * *'
     # Mondays 14:00 UTC = 10am ET, for the weekly verdicts.
-    - cron: '0 14 * * 1'
+    - cron: '4 14 * * 1'
 
 permissions:
   contents: write

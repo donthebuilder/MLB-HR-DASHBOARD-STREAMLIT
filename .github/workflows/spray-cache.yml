@@ -3,14 +3,17 @@ name: Spray Cache Bot
 on:
   workflow_dispatch:
   schedule:
+    # OFF THE HOUR (2026-09-27): GitHub drops scheduled runs under load, worst at
+    # :00 and :30 (09-25: results ran 7 of ~64 slots, today 11 of 24). Minutes
+    # moved 3-7 later; the Vercel dispatcher (/api/gh/dispatch) backs them up.
     # Adjust to your existing staggered schedule alongside your other bots
-    - cron: '0 13 * * *'
+    - cron: '4 13 * * *'
     # Backup pass 2h later (2026-08-06): GitHub's hosted-runner pool
     # occasionally fails to acquire a job ("not acquired by Runner of type
     # hosted"); a single daily cron loses the whole day to that hiccup.
     # Concurrency dedups if the first run is still going; a clean second
     # run just republishes the same day's cache — harmless.
-    - cron: '0 15 * * *'
+    - cron: '4 15 * * *'
 
 # STREAMLIT MIGRATION (2026-07-25): dropped from `write` to `read`. This job
 # no longer pushes anything -- see the cache note below.

@@ -11,21 +11,24 @@ name: NFL Bot — slate + report card (data branch only)
 
 on:
   schedule:
+    # OFF THE HOUR (2026-09-27): GitHub drops scheduled runs under load, worst at
+    # :00 and :30 (09-25: results ran 7 of ~64 slots, today 11 of 24). Minutes
+    # moved 3-7 later; the Vercel dispatcher (/api/gh/dispatch) backs them up.
     # ── the weekly spine ──
-    - cron: "0 13 * * 2"    # Tue 6am PHX  — week opens, the league's data lands
-    - cron: "0 23 * * 3"    # Wed 4pm PHX  — first practice report
-    - cron: "0 21 * * 4"    # Thu 2pm PHX  — TNF lock
-    - cron: "30 4 * * 5"    # Thu 9:30pm PHX — grade TNF
-    - cron: "0 23 * * 5"    # Fri 4pm PHX  — official Q/D/O designations
+    - cron: "3 13 * * 2"    # Tue 6am PHX  — week opens, the league's data lands
+    - cron: "3 23 * * 3"    # Wed 4pm PHX  — first practice report
+    - cron: "3 21 * * 4"    # Thu 2pm PHX  — TNF lock
+    - cron: "33 4 * * 5"    # Thu 9:30pm PHX — grade TNF
+    - cron: "3 23 * * 5"    # Fri 4pm PHX  — official Q/D/O designations
     # ── Sunday ──
-    - cron: "0 15 * * 0"    # Sun 8am PHX  — main slate build
-    - cron: "30 18 * * 0"   # Sun 11:30am PHX — inactives, 90 min before the 1pm ET wave
-    - cron: "30 20,23 * * 0" # Sun 1:30pm / 4:30pm PHX — live waves
-    - cron: "30 3 * * 1"    # Sun 8:30pm PHX — night game
-    - cron: "0 7 * * 1"     # Sun midnight PHX — final grade
+    - cron: "3 15 * * 0"    # Sun 8am PHX  — main slate build
+    - cron: "33 18 * * 0"   # Sun 11:30am PHX — inactives, 90 min before the 1pm ET wave
+    - cron: "33 20,23 * * 0" # Sun 1:30pm / 4:30pm PHX — live waves
+    - cron: "33 3 * * 1"    # Sun 8:30pm PHX — night game
+    - cron: "3 7 * * 1"     # Sun midnight PHX — final grade
     # ── Monday ──
-    - cron: "0 0 * * 2"     # Mon 5pm PHX  — MNF lock
-    - cron: "30 6 * * 2"    # Mon 11:30pm PHX — close the week
+    - cron: "3 0 * * 2"     # Mon 5pm PHX  — MNF lock
+    - cron: "33 6 * * 2"    # Mon 11:30pm PHX — close the week
   workflow_dispatch:
     inputs:
       mode:
@@ -190,7 +193,7 @@ jobs:
       # a live Sunday wave where the runner should be turning a slate around
       # fast.
       - name: Rebuild report card
-        if: github.event.inputs.report == 'true' || github.event.schedule == '0 13 * * 2'
+        if: github.event.inputs.report == 'true' || github.event.schedule == '3 13 * * 2'
         working-directory: bots/nfl
         run: |
           python export_report.py --seasons 2024 2025 \
