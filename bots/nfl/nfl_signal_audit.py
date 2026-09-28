@@ -74,16 +74,16 @@ ET = ZoneInfo("America/New_York")
 SIGNALS = [
     dict(key="hiconf", icon="\U0001F512", label="High confidence (TD score 78+)",
          source="prediction_log", invert=False,
-         note="Exactly TD score >= 78 -- the A+ grade, so this grades the grade."),
+         note="TD score of 78 or higher — the same cutoff as the A+ grade, so this row grades the grade."),
     dict(key="scored_last", icon="\U0001F501", label="Scored last time out",
          source="signal_log", invert=False,
-         note="games_since_last_td == 0 as it stood before kickoff."),
+         note="He scored a touchdown in his previous game, as of the last update before kickoff."),
     dict(key="cov_target", icon="\U0001F3AF", label="Coverage mismatch: TARGET",
          source="signal_log", invert=False,
-         note="coverage_mismatch_tag == TARGET."),
+         note="His receiving matchup against the defense's coverage leaned his way."),
     dict(key="cov_avoid", icon="⚠️", label="Coverage mismatch: AVOID (expects LESS)",
          source="signal_log", invert=True,
-         note="coverage_mismatch_tag == AVOID. Lift is flipped: scoring LESS is the flag working."),
+         note="His matchup against the coverage leaned against him. This flag claims fewer touchdowns, so a rate under the baseline means it is working."),
 ]
 
 
