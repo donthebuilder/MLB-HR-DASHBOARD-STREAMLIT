@@ -379,6 +379,37 @@ def main() -> int:
         print("Published slate is empty; nothing to grade.", file=sys.stderr)
         return 1
 
+    # NEVER RELABEL ANOTHER DAY'S SLATE (2026-09-29). With no dated slate for
+    # `date`, the fallback above reads {label}_slim.json -- whatever day that
+    # file is for. On 09-28 (no MLB games: the day before the Wild Card) it
+    # was still 09-27's slate, so 09-27's picks were written as 09-28's,
+    # graded against 09-27's finished games and published as a real night
+    # (graded_results_2026-09-28, results_final, backtest, homer_feed rows),
+    # and a "pregame board" posted. The slate's own game dates decide: each
+    # row's game_time is a UTC instant; MLB dates a game by its US Eastern
+    # day. If none of the slate's games is on `date`, there is nothing to
+    # grade for `date` -- write nothing and exit 0, so the job's later steps
+    # (the re-grade of real recent nights) still run.
+    try:
+        from zoneinfo import ZoneInfo
+        et = ZoneInfo("America/New_York")
+        slate_days = set()
+        for r in rows:
+            t = str(r.get("game_time") or "")
+            if t:
+                try:
+                    slate_days.add(dt.datetime.fromisoformat(t.replace("Z", "+00:00")).astimezone(et).date())
+                except ValueError:
+                    pass
+    except Exception:  # noqa: BLE001 -- no tz data: keep the old behaviour, but say so
+        slate_days = set()
+        print("::warning::could not read the slate's game dates; date check skipped")
+    if slate_days and date not in slate_days:
+        print(f"The published slate is for {', '.join(sorted(d.isoformat() for d in slate_days))}, "
+              f"not {date.isoformat()} -- no MLB slate for {date.isoformat()} (an off day, or the "
+              f"new slate isn't built yet). Writing nothing; nothing to grade for this date.")
+        return 0
+
     blob = json.dumps(rows)
     dest.write_text(blob, encoding="utf-8")
     print(f"Wrote {len(rows)} picks to {dest}")
