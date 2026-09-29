@@ -1937,7 +1937,10 @@ class MLBClient:
             f"{MLB_BASE}/schedule",
             params={"sportId": 1, "date": date_.isoformat(), "hydrate": "probablePitcher,team,venue(timezone)"},
         )
-        return data.get("dates", [{}])[0].get("games", [])
+        # An off day (no MLB games -- the regular season's end, the gaps between
+        # postseason rounds) comes back as "dates": [], not a missing key, and
+        # [0] on it crashed the whole run (09-28, the day before the Wild Card).
+        return (data.get("dates") or [{}])[0].get("games", [])
 
     def live_game(self, game_pk: int) -> Dict[str, Any]:
         return self.get_json(f"{MLB_BASE}.1/game/{game_pk}/feed/live")
