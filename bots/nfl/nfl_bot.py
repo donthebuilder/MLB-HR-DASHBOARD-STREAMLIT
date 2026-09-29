@@ -41,6 +41,7 @@ import nfl_dvp
 import nfl_gamelog
 import nfl_charting
 import nfl_tendencies
+import nfl_pass_game
 import nfl_coverage
 import nfl_explosive
 import nfl_field
@@ -876,6 +877,13 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
     except Exception as exc:
         print(f"tendencies unavailable ({type(exc).__name__}: {exc})")
         extras["tendencies"] = {}
+    # Top targets (stats clock, like DvP) beside each defence's corners (this
+    # season's depth chart). Never paired -- see nfl_pass_game.py.
+    try:
+        extras["pass_game"] = nfl_pass_game.pass_game(stat_season, season)
+    except Exception as exc:
+        print(f"pass_game unavailable ({type(exc).__name__}: {exc})")
+        extras["pass_game"] = {}
     for name, fn, src in (
         ("dvp", nfl_dvp.build, stat_season),
         # A REAL WEEKLY SERIES, not the four nested windows. See nfl_dvp.trend's
@@ -1461,6 +1469,8 @@ def main() -> int:
         "red_zone": extras.get("red_zone", {}),
         # FTN in-season tendencies; carries its own `season` (nfl_tendencies.py).
         "tendencies": extras.get("tendencies", {}),
+        # Top targets + corners, side by side (nfl_pass_game.py).
+        "pass_game": extras.get("pass_game", {}),
         "route_value": extras.get("route_value", {}),
         # Snap share for the players on this card, and separately the league's
         # role changes -- NOT filtered to the slate, because a receiver whose
