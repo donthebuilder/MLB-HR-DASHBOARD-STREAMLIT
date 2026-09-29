@@ -69,7 +69,15 @@ def _pass_grid(df: pl.DataFrame, key: str) -> dict:
     return out
 
 
-def _rush_grid(df: pl.DataFrame, key: str) -> dict:
+# RUN LANES, WHAT HAPPENS IN THEM (2026-09-28). A stuff is a carry for zero
+# or fewer yards; an explosive run is 10+ (the usual line). Counted for the
+# defences and the league only (`outcomes=True`) -- that's the question the
+# Matchups page asks ("where do they stuff it, where do they spring leaks"),
+# and a count per lane per rusher would add ~1,600 cells nobody reads.
+EXPLOSIVE_RUN = 10
+
+
+def _rush_grid(df: pl.DataFrame, key: str, outcomes: bool = False) -> dict:
     d = df.filter(pl.col("run_location").is_in(SIDES))
     # 'middle' has no gap charted — it IS the lane.
     d = d.with_columns(
@@ -80,7 +88,9 @@ def _rush_grid(df: pl.DataFrame, key: str) -> dict:
     g = d.group_by([key, "lane"]).agg(
         pl.len().alias("att"),
         pl.col("yards_gained").fill_null(0).sum().alias("yds"),
-        pl.col("rush_touchdown").fill_null(0).sum().alias("td"))
+        pl.col("rush_touchdown").fill_null(0).sum().alias("td"),
+        (pl.col("yards_gained").fill_null(0) <= 0).sum().alias("stf"),
+        (pl.col("yards_gained").fill_null(0) >= EXPLOSIVE_RUN).sum().alias("x10"))
     out: dict = {}
     for r in g.iter_rows(named=True):
         att = max(1, int(r["att"]))
@@ -88,6 +98,9 @@ def _rush_grid(df: pl.DataFrame, key: str) -> dict:
             "att": int(r["att"]), "yds": int(r["yds"]), "td": int(r["td"]),
             "ypc": round(float(r["yds"]) / att, 1),
         }
+        if outcomes:
+            out[r[key]][r["lane"]]["stf"] = int(r["stf"])
+            out[r[key]][r["lane"]]["x10"] = int(r["x10"])
     return out
 
 
@@ -100,7 +113,7 @@ def build(season: int, player_ids: set[str] | None = None) -> dict:
     out = {
         # What each defence gives up, by zone. The headline use.
         "def_pass": _pass_grid(passes.filter(pl.col("defteam").is_not_null()), "defteam"),
-        "def_rush": _rush_grid(rushes.filter(pl.col("defteam").is_not_null()), "defteam"),
+        "def_rush": _rush_grid(rushes.filter(pl.col("defteam").is_not_null()), "defteam", outcomes=True),
     }
 
     pp = passes.filter(pl.col("receiver_player_id").is_not_null()) \
@@ -126,7 +139,7 @@ def build(season: int, player_ids: set[str] | None = None) -> dict:
     # League baselines, so a zone can be read as hot or cold rather than just
     # busy. Without these every grid's darkest cell is simply its own maximum.
     lp = _pass_grid(passes.with_columns(pl.lit("ALL").alias("_")), "_").get("ALL", {})
-    lr = _rush_grid(rushes.with_columns(pl.lit("ALL").alias("_")), "_").get("ALL", {})
+    lr = _rush_grid(rushes.with_columns(pl.lit("ALL").alias("_")), "_", outcomes=True).get("ALL", {})
     out["league_pass"] = lp
     out["league_rush"] = lr
     return out
