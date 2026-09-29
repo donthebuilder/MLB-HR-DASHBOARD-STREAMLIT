@@ -40,6 +40,7 @@ from nfl_splits import splits_for, SPLIT_PAIRS, SPLIT_LABELS
 import nfl_dvp
 import nfl_gamelog
 import nfl_charting
+import nfl_tendencies
 import nfl_coverage
 import nfl_explosive
 import nfl_field
@@ -864,6 +865,17 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
 
     extras: dict = {}
     block_seasons: dict = {}
+    # THIS season's tendencies from FTN charting (weekly, in-season) -- its own
+    # clock, like charting's: the slate season once FTN has it, else last
+    # season. See nfl_tendencies.py.
+    try:
+        _tend_season = season - 1 if mode == "preseason" else season
+        extras["tendencies"] = nfl_tendencies.team_tendencies(_tend_season)
+        if not extras["tendencies"] and _tend_season == season:
+            extras["tendencies"] = nfl_tendencies.team_tendencies(season - 1)
+    except Exception as exc:
+        print(f"tendencies unavailable ({type(exc).__name__}: {exc})")
+        extras["tendencies"] = {}
     for name, fn, src in (
         ("dvp", nfl_dvp.build, stat_season),
         # A REAL WEEKLY SERIES, not the four nested windows. See nfl_dvp.trend's
@@ -1447,6 +1459,8 @@ def main() -> int:
         "disruption_labels": nfl_disruption.STAT_LABELS,
         "pass_rush": extras.get("pass_rush", {}),
         "red_zone": extras.get("red_zone", {}),
+        # FTN in-season tendencies; carries its own `season` (nfl_tendencies.py).
+        "tendencies": extras.get("tendencies", {}),
         "route_value": extras.get("route_value", {}),
         # Snap share for the players on this card, and separately the league's
         # role changes -- NOT filtered to the slate, because a receiver whose
