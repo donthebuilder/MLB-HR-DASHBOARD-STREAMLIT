@@ -863,6 +863,7 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
             })
 
     extras: dict = {}
+    block_seasons: dict = {}
     for name, fn, src in (
         ("dvp", nfl_dvp.build, stat_season),
         # A REAL WEEKLY SERIES, not the four nested windows. See nfl_dvp.trend's
@@ -892,6 +893,28 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
         except Exception as exc:
             print(f"{name} unavailable ({type(exc).__name__}: {exc})")
             extras[name] = {}
+        # THE FLIP WEEK (Batch 3, 2026-09-28). stat_season moves to this season
+        # once three weeks are played, but several blocks keep full-season
+        # sample floors (disruption MIN_GAMES 4, pass_rush MIN_PRESSURES 20,
+        # dvp_trend's 4-week window) and come back EMPTY for the first weeks
+        # after it -- measured 09-28 on 2026 wk 1-3: dvp_trend, disruption,
+        # pass_rush, snap_movers all {}. An empty block isn't "this season's
+        # answer", it's no answer, and the site's pass-rush tags and drift
+        # chart would silently vanish. So an empty this-season block is rebuilt
+        # from last season -- real numbers, and block_seasons says which year
+        # each one is, so the tab labels it LAST SEASON instead of implying
+        # `season`. Charting blocks are on their own clock already; a thin but
+        # non-empty block (red_zone) stays this season's.
+        if (src == stat_season and stat_season == season and not extras[name]
+                and mode != "preseason"):
+            try:
+                extras[name] = fn(stat_season - 1)
+                if extras[name]:
+                    block_seasons[name] = stat_season - 1
+                    print(f"  {name}: empty for {stat_season}, using {stat_season - 1}")
+            except Exception as exc:
+                print(f"  {name} fallback unavailable ({type(exc).__name__}: {exc})")
+                extras[name] = {}
 
     # ── availability ─────────────────────────────────────────────────────────
     # Attached HERE, at the one place every row shape converges, rather than in
@@ -939,6 +962,7 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
     return {
         "extras": extras,
         "stat_season": stat_season,
+        "block_seasons": block_seasons,
         "chart_season": chart_season,
         # The season on the other side of the site's DvP toggle. Whether its
         # file actually got written is decided in the writer below, which is
@@ -1395,6 +1419,9 @@ def main() -> int:
         # Published so the tab can say which year it is showing instead of
         # implying it is `season`.
         "chart_season": chart_season,
+        # Blocks whose this-season build was empty at the flip and were served
+        # from last season instead ({name: year}); absent = `season`.
+        "block_seasons": payload.get("block_seasons", {}),
         # The season on the other side of the DvP toggle -- null when its file
         # was not written this run, so the site never offers a toggle to a file
         # that does not exist.
