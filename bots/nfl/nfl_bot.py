@@ -42,6 +42,7 @@ import nfl_gamelog
 import nfl_charting
 import nfl_tendencies
 import nfl_pass_game
+import nfl_qb_pressure
 import nfl_coverage
 import nfl_explosive
 import nfl_field
@@ -884,6 +885,15 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
     except Exception as exc:
         print(f"pass_game unavailable ({type(exc).__name__}: {exc})")
         extras["pass_game"] = {}
+    # QB pressure + blitz splits, this season's (PFR + FTN, both weekly);
+    # last season's only before this one has a game. nfl_qb_pressure.py.
+    try:
+        extras["qb_pressure"] = nfl_qb_pressure.qb_pressure(_tend_season)
+        if not extras["qb_pressure"] and _tend_season == season:
+            extras["qb_pressure"] = nfl_qb_pressure.qb_pressure(season - 1)
+    except Exception as exc:
+        print(f"qb_pressure unavailable ({type(exc).__name__}: {exc})")
+        extras["qb_pressure"] = {}
     for name, fn, src in (
         ("dvp", nfl_dvp.build, stat_season),
         # A REAL WEEKLY SERIES, not the four nested windows. See nfl_dvp.trend's
@@ -1471,6 +1481,7 @@ def main() -> int:
         "tendencies": extras.get("tendencies", {}),
         # Top targets + corners, side by side (nfl_pass_game.py).
         "pass_game": extras.get("pass_game", {}),
+        "qb_pressure": extras.get("qb_pressure", {}),
         "route_value": extras.get("route_value", {}),
         # Snap share for the players on this card, and separately the league's
         # role changes -- NOT filtered to the slate, because a receiver whose
