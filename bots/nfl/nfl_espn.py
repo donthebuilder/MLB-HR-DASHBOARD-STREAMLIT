@@ -219,6 +219,38 @@ def fetch(seasontype: int = 1, week: int | None = None,
 SHORT_WEEK_MAX_DAYS = 5
 
 
+def _et_day(kickoff: Any) -> dt.date | None:
+    """A kickoff's own date in US Eastern, whatever shape it arrives in.
+
+    The two schedules disagree on shape (fixed 2026-09-28): nflreadpy's rows
+    are the ET game date ("2026-09-24"), ESPN's are a UTC instant
+    ("2026-09-25T00:15Z" for the same Thursday 8:15 pm ET kickoff). Slicing
+    [:10] read the ESPN one as Friday, found "a prior game" the day before --
+    the same game from the other list -- and printed "1 day (short week)" for
+    every night game. An instant is converted to ET; a bare date is already
+    the game's date.
+    """
+    raw = str(kickoff or "").strip()
+    if not raw:
+        return None
+    if len(raw) <= 10:
+        try:
+            return dt.date.fromisoformat(raw[:10])
+        except ValueError:
+            return None
+    try:
+        inst = dt.datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError:
+        try:
+            return dt.date.fromisoformat(raw[:10])
+        except ValueError:
+            return None
+    if inst.tzinfo is None:
+        return inst.date()
+    from zoneinfo import ZoneInfo
+    return inst.astimezone(ZoneInfo("America/New_York")).date()
+
+
 def attach_rest_days(all_games: list[dict[str, Any]], target: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Annotate `target` games with home_rest_days/away_rest_days/
     home_short_week/away_short_week, computed from the FULL `all_games`
@@ -227,12 +259,8 @@ def attach_rest_days(all_games: list[dict[str, Any]], target: list[dict[str, Any
     """
     by_team: dict[str, list[dt.date]] = {}
     for g in all_games:
-        raw = str(g.get("kickoff") or "")[:10]
-        if not raw:
-            continue
-        try:
-            day = dt.date.fromisoformat(raw)
-        except ValueError:
+        day = _et_day(g.get("kickoff"))
+        if day is None:
             continue
         for team in (g.get("home"), g.get("away")):
             if team:
@@ -251,11 +279,7 @@ def attach_rest_days(all_games: list[dict[str, Any]], target: list[dict[str, Any
     out = []
     for g in target:
         row = dict(g)
-        raw = str(g.get("kickoff") or "")[:10]
-        try:
-            kickoff_day = dt.date.fromisoformat(raw) if raw else None
-        except ValueError:
-            kickoff_day = None
+        kickoff_day = _et_day(g.get("kickoff"))
         home_rest = _rest(g.get("home"), kickoff_day)
         away_rest = _rest(g.get("away"), kickoff_day)
         row["home_rest_days"] = home_rest
