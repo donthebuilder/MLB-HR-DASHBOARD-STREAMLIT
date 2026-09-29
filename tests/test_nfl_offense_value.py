@@ -122,6 +122,14 @@ check("RB_A's tds combine both kinds, same exclusions", rz["RB_A"]["tds"], 4)
 check("WR_A's touches are RZ targets only", rz["WR_A"]["touches"], 6)
 check("WR_A's tds", rz["WR_A"]["tds"], 3)
 checkTrue("percentile present for both qualifiers", "percentile" in rz["RB_A"] and "percentile" in rz["WR_A"])
+# per-touch plays (2026-09-29): one token per counted touch, same exclusions
+_rb = rz["RB_A"]["plays"].split(",")
+check("RB_A plays: one token per counted touch (7)", len(_rb), 7)
+check("RB_A plays: 3 goal-line rush TDs, 2 empty rushes, 1 pass TD, 1 empty pass",
+      sorted(_rb), sorted(["5rT", "5rT", "5rT", "10r", "10r", "8pT", "12p"]))
+checkTrue("the outside-the-20 and preseason carries are not in the plays", "45rT" not in _rb)
+check("WR_A plays are pass tokens only", set(t[-1] if t[-1] != "T" else t[-2] for t in rz["WR_A"]["plays"].split(",")), {"p"})
+check("plays TD count agrees with tds", sum(t.endswith("T") for t in _rb), rz["RB_A"]["tds"])
 
 
 # ── route_value() ────────────────────────────────────────────────────────────

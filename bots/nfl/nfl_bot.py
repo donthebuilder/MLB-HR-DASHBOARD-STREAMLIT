@@ -1431,12 +1431,21 @@ def main() -> int:
         alt_dvp = {}
         print(f"  dvp_prev({alt_season}) unavailable: {type(exc).__name__}: {exc}")
     if alt_dvp:
+        # The other season's red-zone touches ride along (2026-09-29) so the
+        # site's red-zone dots can flip seasons off the file it already
+        # fetches on the season toggle -- no new file, no new request.
+        try:
+            alt_rz = nfl_offense_value.red_zone_conversion(alt_season)
+        except Exception as exc:
+            alt_rz = {}
+            print(f"  red_zone_prev({alt_season}) unavailable: {type(exc).__name__}: {exc}")
         (out / f"{a.prefix}matchup_prev.json").write_text(json.dumps({
             "season": alt_season,
             "dvp": alt_dvp,
             "dvp_roles": nfl_dvp.ROLE_ORDER,
             "dvp_stats": nfl_dvp.DVP_STATS,
             "dvp_labels": nfl_dvp.STAT_LABELS,
+            "red_zone": alt_rz,
         }))
         print(f"  wrote {a.prefix}matchup_prev.json ({alt_season} defence-vs-position)")
 

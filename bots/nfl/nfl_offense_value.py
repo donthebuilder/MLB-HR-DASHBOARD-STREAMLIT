@@ -85,6 +85,27 @@ def red_zone_conversion(season: int) -> dict:
     both = (pl.concat([car, tgt]).group_by("player_id")
               .agg(pl.col("touches").sum(), pl.col("tds").sum())
               .filter(pl.col("touches") >= MIN_RZ_TOUCHES))
+
+    # EVERY TOUCH, WHERE IT HAPPENED (2026-09-29, the site's red-zone dots;
+    # Donovan approved the payload growth). One token per red-zone touch:
+    # yards to goal, r(ush) or p(ass), and "T" when it scored -- "12r,5pT".
+    # The same filtered plays the totals above count, so the dots can never
+    # disagree with touches/tds. ~5 bytes a touch.
+    per_touch = pl.concat([
+        p.filter(pl.col("rush_attempt") == 1, pl.col("rusher_player_id").is_not_null())
+         .select(pl.col("rusher_player_id").alias("player_id"), pl.col("yardline_100").alias("yl"),
+                 pl.lit("r").alias("k"), pl.col("rush_touchdown").fill_null(0).alias("td")),
+        p.filter(pl.col("pass_attempt") == 1, pl.col("receiver_player_id").is_not_null())
+         .select(pl.col("receiver_player_id").alias("player_id"), pl.col("yardline_100").alias("yl"),
+                 pl.lit("p").alias("k"), pl.col("pass_touchdown").fill_null(0).alias("td")),
+    ])
+    plays_by: dict = {}
+    for r in per_touch.iter_rows(named=True):
+        yl = r["yl"]
+        if yl is None:
+            continue
+        plays_by.setdefault(r["player_id"], []).append(
+            f"{int(round(float(yl)))}{r['k']}{'T' if r['td'] else ''}")
     if both.height == 0:
         return {}
 
@@ -111,6 +132,7 @@ def red_zone_conversion(season: int) -> dict:
             "touches": int(r["touches"]), "tds": int(r["tds"]),
             "rate": round(float(r["rate"]), 1),
             "percentile": round(float(r["percentile"]), 1),
+            "plays": ",".join(plays_by.get(r["player_id"], [])),
         }
     return out
 
