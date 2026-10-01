@@ -138,9 +138,19 @@ def build(season: int, player_ids: set[str] | None = None) -> dict:
     passes = p.filter(pl.col("pass_attempt") == 1)
     rushes = p.filter(pl.col("rush_attempt") == 1)
 
+    # TARGETS, NOT ATTEMPTS (2026-09-30, BATCH-NFL-FIELD). A defence's zone is
+    # what it allows on balls thrown TO someone there. A throwaway or a ball
+    # with no charted receiver still carries a pass_location, and counted here
+    # it was a 0-yard "target allowed": 147 of 3,104 located attempts through
+    # 2026 wk 3 (4.7%), enough to move ATL deep-right-intermediate from +10%
+    # to +9% and to push thin zones over the 8-target floor on plays nobody
+    # was covered on. The league baseline below follows the same rule, so
+    # every leak is targets against targets. qb_pass (where HE throws) keeps
+    # every attempt.
+    targets = passes.filter(pl.col("receiver_player_id").is_not_null())
     out = {
         # What each defence gives up, by zone. The headline use.
-        "def_pass": _pass_grid(passes.filter(pl.col("defteam").is_not_null()), "defteam"),
+        "def_pass": _pass_grid(targets.filter(pl.col("defteam").is_not_null()), "defteam"),
         "def_rush": _rush_grid(rushes.filter(pl.col("defteam").is_not_null()), "defteam", outcomes=True),
     }
 
@@ -166,7 +176,7 @@ def build(season: int, player_ids: set[str] | None = None) -> dict:
 
     # League baselines, so a zone can be read as hot or cold rather than just
     # busy. Without these every grid's darkest cell is simply its own maximum.
-    lp = _pass_grid(passes.with_columns(pl.lit("ALL").alias("_")), "_").get("ALL", {})
+    lp = _pass_grid(targets.with_columns(pl.lit("ALL").alias("_")), "_").get("ALL", {})
     lr = _rush_grid(rushes.with_columns(pl.lit("ALL").alias("_")), "_", outcomes=True).get("ALL", {})
     out["league_pass"] = lp
     out["league_rush"] = lr
