@@ -9,6 +9,7 @@ this file uses real pytest test functions -- the task this was written
 under asked for `pytest -v` output specifically, and pytest's per-test
 reporting is the clearer fit for that ask.
 """
+import re
 import copy
 import os
 import sys
@@ -51,12 +52,22 @@ def test_every_version_string_matches_the_declared_pattern():
         )
 
 
-def test_every_version_is_v1_first_ever_release():
-    # nfl_registry.py's own docstring: every version is v1 because this is
-    # the first time NFL scoring logic has ever been labeled. If any market
-    # drifts off v1 this test should be updated deliberately, not silently.
+def test_versions_are_pinned_deliberately():
+    # Every version started at v1 (the first time NFL scoring logic was
+    # labelled). TD moved to v2 on 2026-09-14 (the reweight). A bump must be
+    # deliberate, so this pins the current set: change it here on purpose
+    # when a market's version changes, never silently.
+    assert R.MODEL_VERSIONS == {
+        "TD": "nfl_td_v2",
+        "REC_YDS": "nfl_recyds_v1",
+        "REC": "nfl_rec_v1",
+        "RUSH_YDS": "nfl_rushyds_v1",
+        "RUSH_ATT": "nfl_rushatt_v1",
+        "PASS_YDS": "nfl_passyds_v1",
+        "KICK_PTS": "nfl_kickpts_v1",
+    }
     for market, version in R.MODEL_VERSIONS.items():
-        assert version.endswith("_v1"), f"{market}={version!r} expected to end in _v1"
+        assert re.search(r"_v\d+$", version), f"{market}={version!r} should end in _vN"
 
 
 def test_versions_are_nfl_prefixed_not_mlb():
