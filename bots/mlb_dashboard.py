@@ -14612,6 +14612,12 @@ def build_prediction_log_lines(run_meta: Dict[str, Any], rows_payload: List[Dict
                 "top_board": row.get("top_board_score_v2"),
                 "hrw": row.get("hrw_score"),
                 "multi_hit": row.get("multi_hit_score"),
+                # 2026-10-01: Power-3 and the board order were published on the
+                # board but never logged pregame, so neither could be measured
+                # from the locked record (por_rows). Now they can.
+                "power3": row.get("power3_score"),
+                "board": row.get("board_score"),
+                "board_rank": row.get("board_rank"),
             },
             # candidate / shadow -- not production signals, kept so a future
             # shadow-vs-production comparison has same-night, same-hitter
