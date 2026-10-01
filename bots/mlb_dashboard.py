@@ -11566,6 +11566,67 @@ def build_game_pick_role_map(rows: List[HitterRecord]) -> Dict[Tuple[int, int], 
 # `true_avoid_hr`, `avoid_hr_reasons`, `final_hr_role` and `beginner_label` are
 # all left untouched, so the gate stays fully auditable downstream and the site
 # can keep showing it with its record attached. Only the recommendation changes.
+# ── SHADOW PICKS: CHALLENGERS, LOGGED, NEVER PUBLISHED (2026-10-01) ─────────
+#
+# Donovan: "we need more accurate picks." Measured on the only clean data there
+# is (the locked pregame rows, Sep 9-30: 229 games, 11.5% base), TOP homered
+# 18.5% and HR 13.5%, and no simple re-ranking beat TOP by more than noise
+# (best: season power + HRW 19.2%, power + pitcher-side OPS 19.7%; one pick a
+# game over 229 games is +-2.6 points). Season-long, a pure season-HR-rate pick
+# LOST to TOP (15.8% vs 20.0% over 1,403 games). So nothing switches on that
+# evidence. Instead each challenger's per-game #1 and #2 is stamped here every
+# run, rides the prediction log's candidate block, and is frozen at first
+# pitch in por_rows_<date>.jsonl with everything else -- so in a few weeks each
+# rule has a clean pregame record beside the real picks, and the switch is a
+# measurement, not a guess. game_pick_role is not touched.
+#
+#   power_hrw     rank-average of season power and HRW
+#   power_pside   season power and the starter's OPS against this hitter's side
+#   power_hrw_pside_prob   season power, HRW, pitcher-side OPS, season HR/game
+# Same eligibility as the real picks (season_pa >= 15). Ranks are within the game.
+SHADOW_PICK_RULES = {
+    "power_hrw": ("season_power", "hrw_score"),
+    "power_pside": ("season_power", "pitcher_side_ops"),
+    "power_hrw_pside_prob": ("season_power", "hrw_score", "pitcher_side_ops", "season_hr_game_probability"),
+}
+
+
+def _shadow_input(row: Dict[str, Any], key: str) -> Optional[float]:
+    if key == "season_power":
+        v = (row.get("hr_shape_components") or {}).get("season_power_baseline") if isinstance(row.get("hr_shape_components"), dict) else None
+    else:
+        v = row.get(key)
+    try:
+        x = float(v)
+    except (TypeError, ValueError):
+        return None
+    return x if x == x else None
+
+
+def stamp_shadow_picks(rows_payload: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Stamp row['shadow_pick'] = {rule: 1 or 2} for each challenger rule whose
+    #1 / #2 in this game the row is. Mutates and returns rows_payload."""
+    by_game: Dict[Any, List[Dict[str, Any]]] = {}
+    for row in rows_payload:
+        row["shadow_pick"] = {}
+        if safe_float(row.get("season_pa"), 0.0) >= 15:
+            by_game.setdefault(row.get("game_pk"), []).append(row)
+    for _gp, rows in by_game.items():
+        for rule, keys in SHADOW_PICK_RULES.items():
+            pool = [r for r in rows if all(_shadow_input(r, k) is not None for k in keys)]
+            if len(pool) < 2:
+                continue
+            score = {id(r): 0.0 for r in pool}
+            for k in keys:
+                ranked = sorted(pool, key=lambda r: _shadow_input(r, k))
+                for i, r in enumerate(ranked):
+                    score[id(r)] += i / (len(ranked) - 1)
+            order = sorted(pool, key=lambda r: (-score[id(r)], str(r.get("player_id"))))
+            for slot, r in enumerate(order[:2], start=1):
+                r["shadow_pick"][rule] = slot
+    return rows_payload
+
+
 def reconcile_best_bet_with_designation(rows_payload: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """Stop `best_bet_type` saying "avoid" about a hitter this same run designated
     TOP or HR. Mutates and returns rows_payload.
@@ -14559,6 +14620,8 @@ def build_prediction_log_lines(run_meta: Dict[str, Any], rows_payload: List[Dict
                 "hr_score_shadow": row.get("hr_score_shadow"),
                 "best_blend_score": row.get("best_blend_score"),
                 "alt_hr_score": row.get("alt_hr_score"),
+                # SHADOW PICKS (2026-10-01): {rule: 1|2} -- see stamp_shadow_picks().
+                "shadow_pick": row.get("shadow_pick") or {},
             },
             # important components -- values that today die uncaptured past
             # the live slate (see DASH_MODEL_INVENTORY.md §3). Field names
@@ -15107,6 +15170,8 @@ Use ALT LOOKS as quality variance, not primary plays.
         # stating its invariant, and a test that can call it without standing up
         # the pipeline (tests/test_hr_gate_label.py).
         rows_payload = reconcile_best_bet_with_designation(rows_payload)
+        # Challenger picks, logged beside the real ones, never published as picks.
+        rows_payload = stamp_shadow_picks(rows_payload)
 
         # ── DISCORD SLATE BOARD (2026-08-06). Every today-bot run that CHANGES
         # the picks posts tonight's board to the webhook: top names per
