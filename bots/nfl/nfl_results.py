@@ -280,6 +280,136 @@ def grade(card: dict, actual: dict, positions: dict[str, str] | None = None) -> 
     return graded, totals
 
 
+# ── OVER THE BOOK LINE (shadow, additive -- 2026-10-01 NFL audit) ────────────
+#
+# The card's bars (REC_YDS 40, RUSH_YDS 50, RUSH_ATT 12) sit well under the
+# books' lines for the men it picks -- week 3's REC_YDS rungs were priced at
+# 57-92 yards -- so a bar hit rate is not a bettable number. This records the
+# priced line beside every rung where one existed BEFORE that player's
+# kickoff and grades "over the line" next to the bar.
+#
+# ADDITIVE ONLY. rung["hit"], rung["actual"] and `totals` are never touched;
+# the line rides in new rung keys (line, line_over, line_taken_at, line_hit,
+# line_push) and in its own payload["line_totals"]. A fetch failure leaves the
+# payload exactly as it was.
+#
+# WHERE THE PRICES COME FROM. The site's public read of its Supabase odds
+# tables (odds_snap for anytime TD, odds_lines for the yardage/volume props),
+# GET /api/odds/latest?sport=nfl&date=YYYY-MM-DD. odds_lines rows are pregame
+# by construction (a DB check: taken_at < starts_at), and the bot has no
+# Supabase credentials in the grading step, so the public route is the read.
+#
+# WHAT THAT ROUTE DOES NOT GIVE, and the guard for it. It returns ONE quote per
+# player per market -- the newest in a [date-4, date+7] window -- without the
+# game it belongs to. So: (1) the date asked for is the day before the week's
+# first game, which keeps the next week's Thursday out of the window; (2) a
+# quote only counts if it was taken inside LINE_WINDOW_H before HIS team's
+# kickoff that week, which throws out a previous week's Monday line and any
+# quote that is not this game's. A rung with no qualifying quote gets
+# line=None, never a guessed one.
+#
+# TODO(odds history): odds_lines only began 2026-09-27, so weeks 1-2 and
+# week 3's Thursday game have no yardage lines at all, and the route cannot
+# serve an older week once a newer quote for the same player supersedes it --
+# the grade must run inside the week (nfl.yml's grading cadence does). A
+# per-week read keyed on game_date (or a bot-side odds history file) would
+# make re-grading an old week possible; neither exists yet.
+ODDS_ROUTE = "https://dashnetwork.vercel.app/api/odds/latest"
+LINE_WINDOW_H = 48
+
+
+def _book_market_of() -> dict[str, str]:
+    try:
+        from nfl_odds_fetch import CATEGORY_MARKET
+        return {k: v for k, v in CATEGORY_MARKET.items() if k in MODELS}
+    except Exception:  # noqa: BLE001
+        return {}
+
+
+def fetch_book_lines(season: int, week: int, kickoffs: dict[str, dt.datetime],
+                     base: str = ODDS_ROUTE, timeout: int = 30) -> dict:
+    """{player_id: {market_key: {line, over, taken_at}}} from the site route,
+    or {} on any failure. `kickoffs` is team -> UTC kickoff for the week; the
+    earliest one picks the date asked for."""
+    import urllib.request
+    if not kickoffs:
+        return {}
+    first = min(kickoffs.values()).date()
+    ask = (first - dt.timedelta(days=1)).isoformat()
+    try:
+        with urllib.request.urlopen(f"{base}?sport=nfl&date={ask}", timeout=timeout) as r:
+            body = json.loads(r.read())
+    except Exception as exc:  # noqa: BLE001
+        print(f"  book lines unavailable ({type(exc).__name__}: {exc})")
+        return {}
+    back = {v: k for k, v in _book_market_of().items()}
+    out: dict = {}
+    for pid, mk in (body.get("by_player_id") or {}).items():
+        for name, q in (mk or {}).items():
+            key = back.get(name)
+            if key is None or not isinstance(q, dict):
+                continue
+            out.setdefault(str(pid), {})[key] = {
+                "line": q.get("line"), "over": q.get("over"), "taken_at": q.get("taken_at")}
+    return out
+
+
+def _when(s) -> "dt.datetime | None":
+    try:
+        t = dt.datetime.fromisoformat(str(s).replace("Z", "+00:00"))
+        return t if t.tzinfo else t.replace(tzinfo=dt.timezone.utc)
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def attach_book_lines(graded: dict, book: dict, kickoffs: dict[str, dt.datetime],
+                      window_h: float = LINE_WINDOW_H) -> tuple[dict, dict]:
+    """(graded card with line fields on each rung, {market: line totals}).
+
+    Never changes `hit`, `actual` or the bar totals: every rung is copied and
+    only gains line keys. A duplicate rung (dup=True, ungraded) gets nothing.
+    line_hit is actual > line; a push (actual == line, integer lines) is
+    line_hit=None, line_push=True, and is not counted."""
+    out, totals = {}, {}
+    for key, blk in (graded or {}).items():
+        rungs = []
+        priced = n = hit = pushes = 0
+        for r in blk.get("rungs", []):
+            r = dict(r)
+            if r.get("dup"):
+                rungs.append(r)
+                continue
+            q = (book.get(str(r.get("player_id"))) or {}).get(key) or {}
+            ko = kickoffs.get(str(r.get("team")))
+            at = _when(q.get("taken_at"))
+            line = q.get("line")
+            ok_time = (ko is not None and at is not None
+                       and ko - dt.timedelta(hours=window_h) <= at < ko)
+            if not isinstance(line, (int, float)) or not ok_time:
+                r.update({"line": None, "line_over": None, "line_taken_at": None, "line_hit": None})
+                rungs.append(r)
+                continue
+            priced += 1
+            r.update({"line": float(line), "line_over": q.get("over"),
+                      "line_taken_at": q.get("taken_at")})
+            act = r.get("actual")
+            if act is None:
+                r["line_hit"] = None
+            elif float(act) == float(line):
+                r["line_hit"] = None
+                r["line_push"] = True
+                pushes += 1
+            else:
+                r["line_hit"] = bool(float(act) > float(line))
+                n += 1
+                hit += 1 if r["line_hit"] else 0
+            rungs.append(r)
+        out[key] = {**blk, "rungs": rungs}
+        totals[key] = {"priced": priced, "n": n, "hit": hit, "push": pushes,
+                       "pct": round(100 * hit / n, 1) if n else None}
+    return out, totals
+
+
 # ── MODEL FOUNDATION: outcome log (2026-08-24) ───────────────────────────────
 #
 # results.json is OVERWRITTEN every single grading run (nfl.yml's "Grade the
@@ -458,6 +588,21 @@ def main() -> int:
 
     graded, totals = grade(card, actual, positions)
 
+    # OVER THE BOOK LINE -- additive, week mode only, never fatal. See
+    # attach_book_lines(): `graded`'s hit/actual and `totals` are untouched.
+    line_totals, line_source = None, None
+    if a.mode == "week" and a.week and graded:
+        try:
+            from nfl_regrade import kickoffs as _kickoffs
+            _ko = _kickoffs(a.season, int(a.week))
+            _book = fetch_book_lines(a.season, int(a.week), _ko)
+            if _book:
+                graded, line_totals = attach_book_lines(graded, _book, _ko)
+                line_source = {"route": ODDS_ROUTE, "window_h": LINE_WINDOW_H,
+                               "rule": "consensus line taken before his team's kickoff; over = actual > line"}
+        except Exception as exc:  # noqa: BLE001
+            print(f"  book-line grading skipped ({type(exc).__name__}: {exc})")
+
     now = dt.datetime.now(dt.timezone.utc)
     payload = {
         "season": a.season,
@@ -477,6 +622,9 @@ def main() -> int:
         "card": graded,
         "totals": totals,
     }
+    if line_totals is not None:
+        payload["line_totals"] = line_totals
+        payload["line_source"] = line_source
 
     out = Path(a.out); out.mkdir(parents=True, exist_ok=True)
     body = json.dumps(payload, separators=(",", ":"))
@@ -499,6 +647,9 @@ def main() -> int:
         if t["n"]:
             print(f"  {k:<9} {t['hit']}/{t['n']}  {t['pct']:.0f}%"
                   + (f"  ({t['void']} void)" if t["void"] else ""))
+    for k, t in (line_totals or {}).items():
+        if t["priced"]:
+            print(f"  {k:<9} over the book line {t['hit']}/{t['n']} ({t['priced']} priced)")
 
     log_path = append_nfl_outcome_log(payload, now, out, a.prefix)
     if log_path is not None:

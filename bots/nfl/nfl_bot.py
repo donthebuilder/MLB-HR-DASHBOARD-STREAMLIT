@@ -54,7 +54,7 @@ import nfl_snaps
 from nfl_features import (build, season_baseline, upcoming_rows, stats_season_for,
                           current_roster, newcomer_rows, played_weeks,
                           schedule_weeks, PLAYER_FORM, USAGE_FORM)
-from nfl_scoring import MODELS, OUTCOME, score, derive, _pctile, V1_MODELS, score_def_td
+from nfl_scoring import MODELS, OUTCOME, score, derive, _pctile, V1_MODELS, score_def_td, SHADOW_MODELS
 
 # MODEL FOUNDATION (2026-08-24) -- the NFL side of the same provenance work
 # bots/model_registry.py / bots/config_fingerprint.py did for MLB on
@@ -257,7 +257,8 @@ def _mlb_scale(ref_raw: list[float]):
     return to_score
 
 
-def score_all(tbl: pl.DataFrame, context_ok: bool, ref: pl.DataFrame | None = None) -> dict:
+def score_all(tbl: pl.DataFrame, context_ok: bool, ref: pl.DataFrame | None = None,
+              models: dict | None = None) -> dict:
     """Score every market. When context is missing, its weight is redistributed
     across the components that ARE present rather than scored as zero.
 
@@ -298,7 +299,11 @@ def score_all(tbl: pl.DataFrame, context_ok: bool, ref: pl.DataFrame | None = No
             rdv = ref
 
     out = {}
-    for key, m in MODELS.items():
+    # `models` defaults to the published MODELS. Passing nfl_scoring's
+    # SHADOW_MODELS scores a shadow version through the IDENTICAL pipeline
+    # (same availability rule, same league percentiles, same MLB scale), so a
+    # v2-vs-v3 difference is the weights and nothing else.
+    for key, m in (MODELS if models is None else models).items():
         avail, missing = {}, []
         for raw, w in m["w"].items():
             col = raw.lstrip("-")
@@ -407,6 +412,43 @@ def score_all(tbl: pl.DataFrame, context_ok: bool, ref: pl.DataFrame | None = No
                             .alias(f"c_{r.lstrip('-')}") for r in avail])
         out[key] = {"df": d, "dropped": missing,
                     "weights": {k.lstrip("-"): round(v, 3) for k, v in avail.items()}}
+    return out
+
+
+def score_shadow(tbl: pl.DataFrame, context_ok: bool, ref: pl.DataFrame | None = None,
+                 models: dict | None = None) -> dict:
+    """Shadow versions (nfl_scoring.SHADOW_MODELS), scored by score_all() on
+    the same table and reference as the published markets.
+
+    Returns {market: {"model_version", "weights", "dropped",
+    "scores": {player_id: {"score", "components"}}}} -- a plain dict that
+    build_payload() parks under payload["_shadow"] and main() pops before
+    anything is written, so it can only ever reach the prediction log. A
+    failure returns {} and prints: the shadow must never cost the run.
+    """
+    models = SHADOW_MODELS if models is None else models
+    try:
+        scored = score_all(tbl, context_ok, ref, models=models)
+    except Exception as exc:  # noqa: BLE001
+        print(f"  shadow scoring skipped ({type(exc).__name__}: {exc})")
+        return {}
+    out: dict = {}
+    for key, blob in scored.items():
+        d = blob["df"]
+        comp_cols = [c for c in d.columns if c.startswith("c_")]
+        per: dict = {}
+        for r in d.iter_rows(named=True):
+            sc = _num(r.get("score"))
+            if sc is None:
+                continue
+            per[str(r["player_id"])] = {
+                "score": sc,
+                "components": {c[2:]: _num(r.get(c)) for c in comp_cols
+                               if _num(r.get(c)) is not None},
+            }
+        out[key] = {"model_version": models[key].get("model_version"),
+                    "weights": blob["weights"], "dropped": blob["dropped"],
+                    "scores": per}
     return out
 
 
@@ -688,6 +730,10 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
         splits = {}
 
     scored = score_all(tbl, context_ok, ref)
+    # SHADOW (nfl_td_v3). Same inputs, same pipeline, its own dict -- never
+    # merged into the player rows below. main() pops it before any file is
+    # written; only the prediction log sees it.
+    shadow = score_shadow(tbl, context_ok, ref)
 
     # merge every market's score onto one player row
     players: dict[str, dict] = {}
@@ -994,6 +1040,8 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
 
     return {
         "extras": extras,
+        # Popped by main() right after this returns. Never published.
+        "_shadow": shadow,
         "stat_season": stat_season,
         "block_seasons": block_seasons,
         "chart_season": chart_season,
@@ -1155,14 +1203,37 @@ def build_nfl_run_meta(mode: str, season: int, week: int | None, args: "argparse
     }
 
 
-def build_nfl_prediction_log_lines(run_meta: dict, players: list[dict]) -> list[dict]:
+def build_nfl_prediction_log_lines(run_meta: dict, players: list[dict],
+                                   shadow: dict | None = None) -> list[dict]:
     """One line per player per market scored this run, mirroring
     build_prediction_log_lines() in bots/mlb_dashboard.py's shape (identity
     keys, run/version metadata, then the score) but built off the already-
     merged `payload["players"]` rows (one dict per player, `scores`/
     `components` keyed by market) rather than a flat per-market DataFrame,
-    since that is the shape build_payload() already produces here."""
-    lines: list[dict] = [run_meta]
+    since that is the shape build_payload() already produces here.
+
+    SHADOW (2026-10-01, nfl_td_v3). `shadow` is score_shadow()'s output. It is
+    purely ADDITIVE: every existing field of every line keeps its value --
+    `score` and `model_version` stay the version of record -- and the shadow
+    rides in two new places only:
+      * the header gets a `shadow` block per market: model_version, weights,
+        dropped, of_record=False, and that run's shadow top-5 (`card`) built by
+        nfl_picks.shadow_ladder() with the card's own selection rule
+      * that market's player lines get `shadow: {<model_version>: {score,
+        components}}`
+    No new line and no new market key, so every reader that walks lines by
+    `market` (regrade, signal audit, pick lock, TD backfill) sees exactly what
+    it saw before. With shadow=None the output is identical to before."""
+    header = dict(run_meta)
+    shadow = shadow or {}
+    if shadow:
+        header["shadow"] = {
+            mk: {"model_version": blk.get("model_version"), "of_record": False,
+                 "weights": blk.get("weights"), "dropped": blk.get("dropped"),
+                 "card": nfl_picks.shadow_ladder(players, blk.get("scores") or {})}
+            for mk, blk in shadow.items()
+        }
+    lines: list[dict] = [header]
     for pl_row in players:
         if not isinstance(pl_row, dict):
             continue
@@ -1186,10 +1257,14 @@ def build_nfl_prediction_log_lines(run_meta: dict, players: list[dict]) -> list[
                 "questionable": pl_row.get("questionable", False),
                 "low_sample": pl_row.get("low_sample", False),
             })
+            sh = ((shadow.get(market) or {}).get("scores") or {}).get(str(pl_row.get("player_id")))
+            if sh is not None:
+                lines[-1]["shadow"] = {shadow[market].get("model_version") or f"{market}_shadow": sh}
     return lines
 
 
-def write_nfl_prediction_log(run_meta: dict, players: list[dict], out_dir: Path, prefix: str = "") -> "Path | None":
+def write_nfl_prediction_log(run_meta: dict, players: list[dict], out_dir: Path, prefix: str = "",
+                             shadow: dict | None = None) -> "Path | None":
     """Write {out_dir}/{prefix}prediction_log_{run_id}.jsonl for this run --
     the NFL sibling of write_prediction_log() in bots/mlb_dashboard.py.
     nfl_-prefixed (via `prefix`, already "nfl_" in production per nfl.yml)
@@ -1203,7 +1278,12 @@ def write_nfl_prediction_log(run_meta: dict, players: list[dict], out_dir: Path,
     try:
         run_id = run_meta["run_id"]
         path = out_dir / f"{prefix}prediction_log_{run_id}.jsonl"
-        lines = build_nfl_prediction_log_lines(run_meta, players)
+        try:
+            lines = build_nfl_prediction_log_lines(run_meta, players, shadow)
+        except Exception as exc:  # noqa: BLE001
+            # The shadow must never cost the log of record.
+            print(f"  shadow log lines failed ({type(exc).__name__}: {exc}); writing without")
+            lines = build_nfl_prediction_log_lines(run_meta, players)
         with path.open("w", encoding="utf-8") as f:
             for obj in lines:
                 f.write(json.dumps(obj, default=str))
@@ -1358,8 +1438,13 @@ def main() -> int:
     # every player row this run scored is available to log; before the
     # extras pop below since that only touches payload["extras"], never
     # payload["players"].
+    # The shadow comes off the payload FIRST, before anything is written, so
+    # week.json and every file derived from the payload are byte-for-byte what
+    # they would be without it.
+    shadow = payload.pop("_shadow", None) or {}
     run_meta = build_nfl_run_meta(a.mode, a.season, a.week, a)
-    pred_log_path = write_nfl_prediction_log(run_meta, payload.get("players", []), out, a.prefix)
+    pred_log_path = write_nfl_prediction_log(run_meta, payload.get("players", []), out, a.prefix,
+                                             shadow=shadow)
     if pred_log_path is not None:
         print(f"  prediction log: {pred_log_path.name}")
 

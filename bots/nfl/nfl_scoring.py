@@ -121,6 +121,48 @@ MODELS = {
     },
 }
 
+# ── SHADOW MODELS: computed and logged, never published ──────────────────────
+#
+# nfl_td_v3 (2026-10-01, NFL model audit). v2 spends 53% of its weight on ONE
+# signal counted three ways: f_rz_opp, f_xtd and f_gl_opp. f_gl_opp is a subset
+# of f_rz_opp, and xTD is red-zone/goal-line opportunity weighted by field
+# position. Measured correlations: 2026 pregame weeks 2-3 rz~xtd .94, gl~xtd
+# .87, rz~gl .82; 2024 player-weeks rz~xtd .92, gl~xtd .93, rz~gl .81.
+#
+# v3 keeps ONE red-zone term and redistributes nothing by hand: the trio's
+# slot keeps the largest of its three weights (f_rz_opp's .2222) and the whole
+# vector is renormalised, so every other term keeps its v2 ratio to the rest.
+#
+# WHICH ONE TERM was chosen on 2024+2025 and then checked on 2023, which
+# neither v2's sweep nor this choice saw. xTD alone matched or beat the mean
+# of the three percentiles on both tuning seasons (t15 53.3 vs 51.9 / 50.4 vs
+# 50.4, AUC higher in both), and on 2023 held out it is t15 54.1% vs v2 52.2%
+# (n=270), AUC .7275 vs .7176. Top-5 is NOT better on 2024/2025 (56.7 vs 60.0,
+# 55.6 vs 58.9, n=90 -- the seasons v2 was tuned on); nfl_td_v3_backtest.py
+# prints the whole table. A single raw column also rides the bot's league-
+# percentile machinery unchanged, where a mean-of-percentiles would need a
+# second percentile transform that the backtest and production would compute
+# differently. See tests/test_nfl_td_v3_shadow.py.
+#
+# SHADOW MEANS: same inputs, scored next to v2 on every run, written to the
+# prediction log only (each TD line's `shadow` block and the header's shadow
+# top-5). It never touches `scores`, the card, week.json or anything the site
+# reads, and it is NOT in nfl_registry.MODEL_VERSIONS -- that registry is the
+# version OF RECORD per market. Promoting it is a separate, deliberate change.
+SHADOW_MODELS = {
+    "TD": {
+        "model_version": "nfl_td_v3",
+        "label": "Anytime TD (shadow v3)", "pos": ["RB", "WR", "TE"], "bar": 1,
+        "w": {
+            "f_xtd":          0.3207,   # the one red-zone term (was rz .2222 + xtd .1569 + gl .1503)
+            "implied_total":  0.2641,   # .1830 / .6928
+            "f_touches":      0.2265,   # .1569 / .6928
+            "f_snap_pct":     0.1887,   # .1307 / .6928
+        },
+    },
+}
+
+
 # what each market actually grades against
 OUTCOME = {
     "TD":       pl.col("rushing_tds") + pl.col("receiving_tds"),

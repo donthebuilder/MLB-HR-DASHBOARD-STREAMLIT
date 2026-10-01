@@ -67,6 +67,44 @@ def _rung(r: dict, key: str, rank: int) -> dict:
     }
 
 
+def _select(pool: list[dict], score_of, depth: int) -> list[dict]:
+    """The card's selection rule, shared by the published card and the shadow
+    ladder so the two can only differ by the score they rank on.
+
+    A headline card shouldn't be padded with rows the model itself flags as
+    unreliable — but in preseason there may not BE five solid ones, so
+    backfill rather than publish a short ladder, and let the flag ride so the
+    site can show what it is."""
+    solid = [r for r in pool if not r.get("low_sample")]
+    use = solid if len(solid) >= depth else (
+        solid + [r for r in pool if r.get("low_sample")])
+    return sorted(use, key=lambda r: -score_of(r))[:depth]
+
+
+def shadow_ladder(rows: list[dict], shadow_scores: dict, depth: int = DEPTH) -> list[dict]:
+    """Top-`depth` rungs by a SHADOW model's score (nfl_scoring.SHADOW_MODELS),
+    for the prediction log only -- never the card. `shadow_scores` is
+    {player_id: {"score": float, ...}} from nfl_bot.score_shadow(). Same pool
+    flags and same _select() rule as build(), so a v2-vs-shadow comparison is
+    the ranking and nothing else. Grading it later must use the latest log
+    generated before each player's kickoff, exactly like the real card."""
+    pool = [r for r in rows
+            if isinstance((shadow_scores.get(str(r.get("player_id"))) or {}).get("score"), (int, float))]
+    use = _select(pool, lambda r: float(shadow_scores[str(r["player_id"])]["score"]), depth)
+    return [{
+        "rank": i + 1,
+        "player_id": r.get("player_id"),
+        "name": r.get("name"),
+        "team": r.get("team"),
+        "opp": r.get("opp"),
+        "position": r.get("position"),
+        "score": round(float(shadow_scores[str(r["player_id"])]["score"]), 1),
+        "low_sample": bool(r.get("low_sample")),
+        "questionable": bool(r.get("questionable")),
+        "carryover": bool(r.get("carryover")),
+    } for i, r in enumerate(use)]
+
+
 def build(rows: list[dict], edges: dict | None = None, depth: int = DEPTH) -> dict:
     """{market_key: {label, bar, positions, edge, rungs:[...]}}
 
@@ -84,14 +122,7 @@ def build(rows: list[dict], edges: dict | None = None, depth: int = DEPTH) -> di
         if not pool:
             continue
 
-        # A headline card shouldn't be padded with rows the model itself flags
-        # as unreliable — but in preseason there may not BE five solid ones, so
-        # backfill rather than publish a short ladder, and let the flag ride so
-        # the site can show what it is.
-        solid = [r for r in pool if not r.get("low_sample")]
-        use = solid if len(solid) >= depth else (
-            solid + [r for r in pool if r.get("low_sample")])
-        use = sorted(use, key=lambda r: -float(r["scores"][key]))[:depth]
+        use = _select(pool, lambda r: float(r["scores"][key]), depth)
 
         out[key] = {
             "key": key,
