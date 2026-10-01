@@ -29,7 +29,7 @@ import os
 import sys
 import urllib.request
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 class SlateTooSmall(RuntimeError):
     """Raised when the payload we were asked to publish isn't a slate."""
@@ -420,11 +420,57 @@ def _rows_of(payload: Any) -> List[dict]:
     return out
 
 
-def slate_is_real(payload: Any) -> tuple[bool, str]:
+# A SHORT SLATE CAN BE THE REAL SCHEDULE (2026-10-01). Wild Card game 3 was
+# the only game on Oct 1, and this guard refused it as "not a slate" on every
+# run, so the site kept Sep 30's four games all day. The postseason has many
+# one- and two-game days. So when the floor fails, ask MLB's own schedule: if
+# the payload holds EVERY game scheduled on its date, and real lineups for
+# each (MIN_ROWS_PER_GAME hitters a game), it is the slate, small or not. A
+# fragment -- some of the night's games missing, or a game with a handful of
+# rows -- still fails, and so does anything when the schedule can't be read.
+MIN_ROWS_PER_GAME = 9
+SCHEDULE_API = "https://statsapi.mlb.com/api/v1/schedule"
+
+
+def _schedule_json(query: str) -> Optional[dict]:
+    try:
+        with urllib.request.urlopen(f"{SCHEDULE_API}?sportId=1&{query}", timeout=15) as r:
+            return json.loads(r.read().decode("utf-8"))
+    except Exception as exc:  # noqa: BLE001 -- unreadable schedule = stay strict
+        print(f"  schedule check unavailable ({exc}); keeping the strict floor", file=sys.stderr)
+        return None
+
+
+def _games_in(sched: Optional[dict]) -> List[dict]:
+    return [g for d in (sched or {}).get("dates") or [] for g in d.get("games") or []]
+
+
+def scheduled_pks_for(game_pks: set) -> Optional[set]:
+    """Every game_pk MLB schedules on the date(s) these games belong to, or
+    None when the schedule can't be read."""
+    found = _games_in(_schedule_json("gamePks=" + ",".join(str(p) for p in sorted(game_pks))))
+    dates = {g.get("officialDate") for g in found if g.get("officialDate")}
+    if not dates:
+        return None
+    out: set = set()
+    for d in sorted(dates):
+        sched = _schedule_json(f"date={d}")
+        if sched is None:
+            return None
+        out |= {g.get("gamePk") for g in _games_in(sched)
+                if str((g.get("status") or {}).get("detailedState") or "").lower() not in ("postponed", "cancelled")}
+    return out
+
+
+def slate_is_real(payload: Any, scheduled=scheduled_pks_for) -> tuple[bool, str]:
     rows = _rows_of(payload)
     games = {r.get("game_pk") for r in rows if r.get("game_pk") is not None}
     if len(rows) >= MIN_ROWS or len(games) >= MIN_GAMES:
         return True, f"{len(rows)} rows across {len(games)} games"
+    if games and len(rows) >= MIN_ROWS_PER_GAME * len(games):
+        sched = scheduled({int(g) for g in games})
+        if sched and {int(g) for g in games} >= sched:
+            return True, f"{len(rows)} rows across {len(games)} game(s) -- every game MLB scheduled that day"
     return False, f"only {len(rows)} rows across {len(games)} game(s)"
 
 
