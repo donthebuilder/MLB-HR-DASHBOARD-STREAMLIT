@@ -1454,6 +1454,34 @@ DATA_RAW = ("https://raw.githubusercontent.com/donthebuilder/"
             "MLB-HR-DASHBOARD-STREAMLIT/data/public/data/current")
 
 
+def freeze_snapshot(fresh: dict, prev_rows: dict, start_by_pid: dict, now) -> tuple[dict, int, int]:
+    """The dated snapshot, frozen at each hitter's first pitch (2026-10-01).
+    fresh: this run's {pid: row}; prev_rows: the last snapshot's rows for the
+    same date; start_by_pid: {pid: ISO game_time}. A started hitter keeps his
+    previous row (or is left out if he had none); everyone else takes this
+    run's. Returns (rows, frozen, dropped_late)."""
+    def started(pid) -> bool:
+        t = start_by_pid.get(str(pid))
+        if not t:
+            return False
+        try:
+            return dt.datetime.fromisoformat(str(t).replace("Z", "+00:00")) <= now
+        except ValueError:
+            return False
+    out: dict = {}
+    frozen = dropped = 0
+    for pid in set(fresh) | set(prev_rows):
+        if started(pid):
+            if pid in prev_rows:
+                out[pid] = prev_rows[pid]
+                frozen += 1
+            elif pid in fresh:
+                dropped += 1
+        elif pid in fresh:
+            out[pid] = fresh[pid]
+    return out, frozen, dropped
+
+
 def published(name: str):
     """The current published copy of a data-branch file, or None."""
     try:
@@ -1836,6 +1864,7 @@ def main() -> int:
 
     # ── join to the slate, and REPORT the miss rate ────────────────────────
     matched, unmatched = {}, []
+    start_by_pid: dict[str, str] = {}
     # BOTH LOCATIONS. mlb_dashboard writes public/data/today.json; other
     # payloads land in public/data/current/. pick_lock.py already carries the
     # same pair for the same reason, and defaulting to current/ alone would
@@ -1853,6 +1882,10 @@ def main() -> int:
                 n = norm_name(p.get("name") or p.get("player_name"))
                 if n:
                     by_norm.setdefault(n, p)
+                # Each hitter's first pitch, for the dated snapshot's freeze.
+                pid0, gt0 = p.get("player_id"), p.get("game_time")
+                if pid0 is not None and gt0:
+                    start_by_pid.setdefault(str(pid0), str(gt0))
             for norm, mkts in board.items():
                 p = by_norm.get(norm)
                 if not p:
@@ -1987,13 +2020,28 @@ def main() -> int:
     # through the evening, so the final snapshot before the branch publish is
     # the closest thing to a closing line this pipeline can get.
 
-    slim: dict[str, dict] = {}
+    # FROZEN AT FIRST PITCH (2026-10-01, model audit: "the dated odds archive
+    # is built from the unfrozen board"). Last-write-wins let a run after an
+    # early game's first pitch overwrite that game's hitters with an in-game
+    # line or a price the books had already pulled. Now a hitter whose game
+    # has started keeps the row from the last snapshot before it (read back
+    # from the data branch), and a hitter first priced after his first pitch
+    # is left out -- a price taken after the game began is not pregame.
+    prev_snap = published(f"odds_{slate_date}.json") or {}
+    prev_rows = prev_snap.get("rows") if isinstance(prev_snap, dict) and prev_snap.get("date") == slate_date else {}
+    prev_rows = prev_rows if isinstance(prev_rows, dict) else {}
+
+    fresh: dict[str, dict] = {}
     for pid, mkts in matched.items():
         row = {m: [q.get("line"), q.get("over"), q.get("implied")]
                for m, q in mkts.items()
                if isinstance(q, dict) and q.get("over") is not None and q.get("line") is not None}
         if row:
-            slim[pid] = row
+            fresh[pid] = row
+    slim, frozen, dropped_late = freeze_snapshot(fresh, prev_rows, start_by_pid, now)
+    if frozen or dropped_late:
+        print(f"  snapshot: {frozen} hitter(s) frozen at their last pre-game price; "
+              f"{dropped_late} first priced after first pitch, left out")
     snap = out / f"odds_{slate_date}.json"
     snap.write_text(json.dumps({
         "date": slate_date,
