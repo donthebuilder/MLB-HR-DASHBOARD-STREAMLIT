@@ -22,6 +22,34 @@ air_yards on ~92%; run_gap is missing on ~26% of carries (mostly scrambles and
 designed QB runs, which have no gap). Unlabelled plays are dropped from the
 grid rather than dumped into a bucket they don't belong in, and the zone total
 is published so the denominator is visible.
+
+THE FIELD, PLAY BY PLAY (2026-09-30, BATCH-NFL-FIELD). The grids above are
+totals; TUDDY's "The Field" draws every target as a dot at its real depth, so
+it needs the plays themselves. `team_plays()` publishes one file per offence,
+nfl_field_{TEAM}.json, and the site's player card and the Matchups defence
+detail both read it. The chain, end to end:
+
+  source     nflverse load_pbp(stat_season), REG only, pass_attempt == 1 with
+             a receiver_player_id (a target -- sacks have no receiver; two-
+             point tries are not targets), left-joined on (game_id, play_id)
+             to load_ftn_charting for hash / box / play action / screen.
+             Red-zone carries: rush_attempt == 1, yardline_100 <= 20.
+  transform  one row per target: week, opponent, quarter, down, distance,
+             yardline_100, lane (pass_location L/M/R), air_yards, yac, gain
+             (yards_gained on a catch, 0 otherwise), result catch / inc / int
+             / td, EPA, hash, box, play action, screen. The red-zone list is
+             every target and every carry inside the 20, result catch / inc /
+             int / carry / td.
+  state      nfl_field_{TEAM}.json on the data branch, written by nfl_bot.py
+             beside nfl_matchup.json. Columns once, rows as arrays (~45 B a
+             target; a full season's offence is ~30 KB).
+  output     components/nfl/FieldChart.js on the site: the window ("last N
+             games he was targeted in"), NORMAL (yardline_100 > 20) / RED
+             ZONE / ALL, the dots, the share rings, THE SPOT. The defence's
+             leak per cell is NOT in this file -- it is the existing
+             matchup.field.def_pass against league_pass (MatchupMap's
+             definition), so the Field and the Matchup map can never disagree
+             about a zone.
 """
 from __future__ import annotations
 import functools
@@ -151,6 +179,119 @@ ZONES_RUSH = ["left|end", "left|tackle", "left|guard", "middle|middle",
 RUSH_LABEL = {"left|end": "L End", "left|tackle": "L Tackle", "left|guard": "L Guard",
               "middle|middle": "Middle", "right|guard": "R Guard",
               "right|tackle": "R Tackle", "right|end": "R End"}
+
+
+# ── THE FIELD: every target, every red-zone touch ────────────────────────
+PLAY_COLS = ["pid", "wk", "opp", "q", "dn", "tg", "yl", "lane", "air", "yac",
+             "gain", "res", "epa", "hash", "box", "pa", "sc"]
+RZ_COLS = ["pid", "wk", "d", "kind", "res"]
+_LANE = {"left": "L", "middle": "M", "right": "R"}
+
+
+def _num(v, nd: int | None = None):
+    """int (or a rounded float with `nd`), None for null / NaN / junk."""
+    if v is None:
+        return None
+    try:
+        f = float(v)
+    except (TypeError, ValueError):
+        return None
+    if f != f:
+        return None
+    return round(f, nd) if nd is not None else int(round(f))
+
+
+def _ftn(season: int) -> pl.DataFrame:
+    """FTN per-play charting, only the four columns the Field reads. Empty --
+    never a raise -- when FTN has nothing for the season: every field it feeds
+    is null-safe on the site."""
+    try:
+        f = nfl.load_ftn_charting(seasons=[season])
+    except Exception as exc:
+        print(f"  field plays: FTN charting unavailable ({type(exc).__name__}: {exc})")
+        return pl.DataFrame()
+    if f.is_empty():
+        return pl.DataFrame()
+    box = pl.col("n_defense_box").cast(pl.Int64, strict=False)
+    hsh = pl.col("starting_hash").cast(pl.Utf8)
+    return f.select([
+        pl.col("nflverse_game_id").cast(pl.Utf8).alias("game_id"),
+        pl.col("nflverse_play_id").cast(pl.Float64).alias("play_id"),
+        # "0" is FTN's uncharted marker, never a real hash or a real box.
+        pl.when(hsh.is_in(["L", "M", "R"])).then(hsh).otherwise(None).alias("hash"),
+        pl.when(box > 0).then(box).otherwise(None).alias("box"),
+        pl.col("is_play_action").cast(pl.Utf8).str.to_uppercase().eq("TRUE").alias("pa"),
+        pl.col("is_screen_pass").cast(pl.Utf8).str.to_uppercase().eq("TRUE").alias("sc"),
+    ]).unique(subset=["game_id", "play_id"], keep="first")
+
+
+def _result(r: dict) -> str:
+    if r.get("interception") == 1:
+        return "int"
+    if r.get("complete_pass") == 1:
+        return "td" if r.get("pass_touchdown") == 1 else "catch"
+    return "inc"
+
+
+def team_plays(season: int, pbp: pl.DataFrame | None = None,
+               ftn: pl.DataFrame | None = None) -> dict:
+    """{TEAM: {season, team, weeks, cols, plays, rz_cols, redzone, names}}:
+    every target the offence threw, and every touch inside the 20.
+    `pbp` / `ftn` are injectable for the tests; the bot passes neither."""
+    p = _pbp(season) if pbp is None else pbp
+    f = _ftn(season) if ftn is None else ftn
+    p = p.with_columns(pl.col("play_id").cast(pl.Float64))
+    if "two_point_attempt" in p.columns:
+        p = p.filter(pl.col("two_point_attempt").fill_null(0) != 1)
+    tg = p.filter(pl.col("pass_attempt") == 1, pl.col("receiver_player_id").is_not_null(),
+                  pl.col("posteam").is_not_null())
+    if f.is_empty():
+        tg = tg.with_columns(*[pl.lit(None).alias(c) for c in ("hash", "box", "pa", "sc")])
+    else:
+        tg = tg.join(f, on=["game_id", "play_id"], how="left")
+    tg = tg.sort(["week", "game_id", "play_id"])
+    ca = p.filter(pl.col("rush_attempt") == 1, pl.col("rusher_player_id").is_not_null(),
+                  pl.col("posteam").is_not_null(), pl.col("yardline_100") <= 20) \
+          .sort(["week", "game_id", "play_id"])
+
+    out: dict = {}
+
+    def team(t: str) -> dict:
+        if t not in out:
+            out[t] = {"season": season, "team": t, "weeks": set(), "cols": PLAY_COLS,
+                      "plays": [], "rz_cols": RZ_COLS, "redzone": [], "names": {}}
+        return out[t]
+
+    for r in tg.iter_rows(named=True):
+        o = team(r["posteam"])
+        pid, wk = r["receiver_player_id"], int(r["week"])
+        o["names"].setdefault(pid, r.get("receiver_player_name") or pid)
+        o["weeks"].add(wk)
+        res = _result(r)
+        caught = res in ("catch", "td")
+        yl = _num(r.get("yardline_100"))
+        o["plays"].append([
+            pid, wk, r.get("defteam"), _num(r.get("qtr")), _num(r.get("down")),
+            _num(r.get("ydstogo")), yl, _LANE.get(r.get("pass_location")),
+            _num(r.get("air_yards")),
+            (_num(r.get("yards_after_catch")) or 0) if caught else 0,
+            (_num(r.get("yards_gained")) or 0) if caught else 0,
+            res, _num(r.get("epa"), 2), r.get("hash"), r.get("box"),
+            1 if r.get("pa") else 0, 1 if r.get("sc") else 0,
+        ])
+        if yl is not None and yl <= 20:
+            o["redzone"].append([pid, wk, yl, "pass", res])
+    for r in ca.iter_rows(named=True):
+        o = team(r["posteam"])
+        pid, wk = r["rusher_player_id"], int(r["week"])
+        o["names"].setdefault(pid, r.get("rusher_player_name") or pid)
+        o["weeks"].add(wk)
+        o["redzone"].append([pid, wk, _num(r.get("yardline_100")), "rush",
+                             "td" if r.get("rush_touchdown") == 1 else "carry"])
+    for o in out.values():
+        o["weeks"] = sorted(o["weeks"], reverse=True)    # most recent first
+        o["redzone"].sort(key=lambda x: (-x[1], x[2]))
+    return out
 
 
 if __name__ == "__main__":

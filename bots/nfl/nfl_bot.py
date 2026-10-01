@@ -908,6 +908,9 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
         ("player_explosive", nfl_explosive.player_explosive, stat_season),
         ("usage", nfl_explosive.team_usage, stat_season),
         ("field", nfl_field.build, stat_season),
+        # Every target and red-zone touch, per offence (The Field). Written to
+        # its own nfl_field_{TEAM}.json files below, never into matchup.json.
+        ("field_plays", nfl_field.team_plays, stat_season),
         ("disruption", nfl_disruption.player_grades, stat_season),
         ("disruption_team", nfl_disruption.team_context, chart_season),
         ("pass_rush", nfl_disruption.pass_rush_efficiency, stat_season),
@@ -1507,6 +1510,20 @@ def main() -> int:
         "rush_labels": nfl_field.RUSH_LABEL,
         "depth_labels": nfl_field.DEPTH_LABEL,
     }, separators=(",", ":")))
+
+    # THE FIELD, one file per offence (2026-09-30, BATCH-NFL-FIELD; see
+    # nfl_field.team_plays). Its own files, not matchup.json: the player card
+    # needs one team's ~30 KB, and folding all 32 in would put ~1 MB on every
+    # Matchups visitor. A run whose build came back empty writes nothing, so
+    # the site keeps the last good file instead of an empty one. Each file
+    # carries the season it was built from (the flip-week fallback included).
+    _fp = extras.get("field_plays") or {}
+    for _team, _body in _fp.items():
+        (out / f"{a.prefix}field_{_team}.json").write_text(json.dumps(_body, separators=(",", ":")))
+    if _fp:
+        print(f"  wrote {len(_fp)} {a.prefix}field_<TEAM>.json files "
+              f"({sum(len(v['plays']) for v in _fp.values())} targets, "
+              f"{sum(len(v['redzone']) for v in _fp.values())} red-zone touches)")
 
     # Game logs, for the hit-rate chart. Only the players on this slate — the
     # league's full log is 2,100 players and nobody is looking at 2,000 of them.
