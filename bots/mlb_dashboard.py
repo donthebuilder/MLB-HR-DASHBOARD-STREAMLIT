@@ -11588,10 +11588,27 @@ SHADOW_PICK_RULES = {
     "power_hrw": ("season_power", "hrw_score"),
     "power_pside": ("season_power", "pitcher_side_ops"),
     "power_hrw_pside_prob": ("season_power", "hrw_score", "pitcher_side_ops", "season_hr_game_probability"),
+    # HIT (1+) and CONTACT (2+ TB) challengers (2026-10-01). On the clean
+    # record neither pick beats its base -- HIT 64.5% vs 64.0% (220), CONTACT
+    # 32.4% vs 39.0% (213), and neither score ranks by tercile -- so these are
+    # plain-sense rules from fields already on the row, logged beside the real
+    # HIT / CONTACT picks the same way. "neg_" = lower is better.
+    "hit:avg_hand_k": ("avg_vs_hand", "neg_k_rate"),
+    "hit:avg_spot_k": ("season_avg", "neg_lineup_spot", "neg_k_rate"),
+    "tb:slg_spot": ("season_slg", "neg_lineup_spot"),
+    "tb:iso_avg_k": ("season_iso", "season_avg", "neg_k_rate"),
 }
 
 
 def _shadow_input(row: Dict[str, Any], key: str) -> Optional[float]:
+    if key.startswith("neg_"):
+        v = _shadow_input(row, key[4:])
+        return None if v is None else -v
+    if key == "k_rate":
+        key = "season_k_rate"
+    if key == "avg_vs_hand":
+        hand = str(row.get("pitcher_throws") or row.get("pitcher_hand") or "").upper()[:1]
+        key = "avg_vs_lhp" if hand == "L" else "avg_vs_rhp" if hand == "R" else "season_avg"
     if key == "season_power":
         v = (row.get("hr_shape_components") or {}).get("season_power_baseline") if isinstance(row.get("hr_shape_components"), dict) else None
     else:

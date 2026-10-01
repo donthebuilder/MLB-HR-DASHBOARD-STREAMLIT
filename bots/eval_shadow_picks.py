@@ -54,6 +54,12 @@ def main() -> int:
         if not cap or cap.get("all_homer_entries") is None:
             continue
         hit = {(str(h["player_id"]), str(h["game_pk"])) for h in cap["all_homer_entries"]}
+        # HIT (1+) and TB (2+) from the night's box lines -- only players the
+        # graded file carries a line for; anyone else is ungraded, not a miss.
+        box = {}
+        for b in (g.get("graded_slots") or g.get("results") or []):
+            if b.get("actual_hits") is not None:
+                box[(str(b.get("player_id")), str(b.get("game_pk")))] = b
         by: dict[str, list[dict]] = {}
         for r in rows:
             by.setdefault(str(r.get("game_pk")), []).append(r)
@@ -62,13 +68,23 @@ def main() -> int:
                 continue
             games += 1
             for r in rs:
-                y = 1 if (str(r.get("player_id")), gp) in hit else 0
+                key = (str(r.get("player_id")), gp)
+                y = 1 if key in hit else 0
+                b = box.get(key)
+                y_hit = None if b is None else int((b.get("actual_hits") or 0) >= 1)
+                y_tb = None if b is None or b.get("actual_tb") is None else int((b.get("actual_tb") or 0) >= 2)
                 roles = set(str(r.get("game_pick_role") or "").upper().split("/"))
                 for role in ("TOP", "HR"):
                     if role in roles:
                         slots.setdefault(role, []).append(y)
+                if "HIT" in roles and y_hit is not None:
+                    slots.setdefault("HIT (1+ hit)", []).append(y_hit)
+                if "CONTACT" in roles and y_tb is not None:
+                    slots.setdefault("CONTACT (2+ TB)", []).append(y_tb)
                 for rule, slot in ((r.get("candidate") or {}).get("shadow_pick") or {}).items():
-                    slots.setdefault(f"{rule} #{slot}", []).append(y)
+                    yy = y_hit if rule.startswith("hit:") else y_tb if rule.startswith("tb:") else y
+                    if yy is not None:
+                        slots.setdefault(f"{rule} #{slot}", []).append(yy)
     if not games:
         print("No locked games with a graded night yet.")
         return 0
