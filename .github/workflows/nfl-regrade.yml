@@ -1,0 +1,60 @@
+# NFL REGRADE (2026-10-01): correct a past week's published grade without
+# rebuilding any slate. Manual only. Restores the pregame logs and the week
+# card archives from the data branch, runs bots/nfl/nfl_regrade.py (rebuild a
+# card from the pregame record and / or regrade weeks against their archived
+# cards), then publishes through the same publish_data.sh -- which carries
+# forward every file this run didn't produce, so only the regraded weeks change.
+name: NFL regrade (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      rebuild:
+        description: "weeks whose card to rebuild from the pregame record, e.g. 1"
+        required: false
+        default: ""
+      grade:
+        description: "weeks to regrade, e.g. 1,2,3"
+        required: true
+        default: ""
+
+concurrency:
+  group: nfl-slate
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  regrade:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r bots/nfl/requirements.txt
+      - name: Restore pregame logs, cards and results from the data branch
+        run: |
+          set -euo pipefail
+          git fetch origin data --depth 1
+          rm -rf /tmp/nfl-restore && mkdir -p /tmp/nfl-restore public/data/current
+          git archive origin/data public/data | tar -x -C /tmp/nfl-restore
+          for g in 'nfl_prediction_log_*.jsonl' 'nfl_picks_*.json' 'nfl_results*.json'; do
+            cp /tmp/nfl-restore/public/data/current/$g public/data/current/ 2>/dev/null || true
+          done
+          echo "restored: $(ls public/data/current | wc -l) files"
+      - name: Regrade
+        working-directory: bots/nfl
+        run: |
+          set -euo pipefail
+          ARGS="--dir $GITHUB_WORKSPACE/public/data/current --grade ${{ github.event.inputs.grade }}"
+          for w in $(echo "${{ github.event.inputs.rebuild }}" | tr ',' ' '); do ARGS="$ARGS --rebuild-card $w"; done
+          python nfl_regrade.py $ARGS
+      - name: Publish to data branch
+        run: bash .github/scripts/publish_data.sh "NFL regrade"

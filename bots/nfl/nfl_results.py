@@ -246,8 +246,18 @@ def grade(card: dict, actual: dict, positions: dict[str, str] | None = None) -> 
         bar = float(blk.get("bar", 1))
         eligible_pos = MODELS.get(key, {}).get("pos")
         rungs, hit, n = [], 0, 0
+        seen: set[str] = set()
         for r in blk.get("rungs", []):
             pid = str(r.get("player_id"))
+            # ONE PLAYER, ONE GRADE PER MARKET (2026-10-01, Donovan: "count
+            # each player once"). The pick lock could place the same man on
+            # two rungs (w02 TD Javonte Williams #2 and #3; w03 KICK_PTS
+            # Carlson #3 and #4) and both copies were graded. A repeat rung
+            # stays visible, marked dup, and is not graded.
+            if pid in seen:
+                rungs.append({**r, "actual": None, "hit": None, "dup": True})
+                continue
+            seen.add(pid)
             line = actual.get(pid)
             # Void for either reason: no recorded line at all (did not play
             # -- inactive, cut, never dressed), or a recorded line whose
