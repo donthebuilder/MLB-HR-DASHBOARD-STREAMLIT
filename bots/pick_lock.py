@@ -492,6 +492,91 @@ def append_por_log(date: str, newly_locked: list[tuple[str, dict]], current_dir:
     return written
 
 
+# THE LOCKED ROWS, KEPT (2026-10-01, Donovan: "lets get more accurate").
+# por_log says WHICH run was standing at a game's first pitch; the run's own
+# prediction_log holds every hitter's pregame scores -- and the data branch
+# prunes those logs after ~300 runs (~3 weeks), so a lock outlived the rows
+# it pointed at (249 of 503 locks had lost theirs by 09-30). And the graded
+# files can't stand in: they are written after the games, their counting
+# stats include that night's homers and their scores are a later re-run.
+# So the moment a game locks, its rows from the locked run are copied here,
+# append-only, one block per game_pk, never rewritten -- the honest pregame
+# board for measuring and retraining. Nothing pregame is written after first
+# pitch: these are the locked run's rows, generated before it.
+POR_ROW_KEYS = ("prediction_date", "player_id", "player", "game_pk", "team", "opp",
+                "opp_pitcher_id", "game_pick_role", "run_id", "generated_at",
+                "model_versions", "config_hash", "scores", "components", "candidate",
+                "hr_overlay", "probability")
+
+
+def append_por_rows(date: str, newly_locked: list[tuple[str, dict]], current_dir: Path) -> int:
+    """Copy each newly locked game's rows from its locked run's prediction_log
+    into por_rows_<date>.jsonl. Dedup by game_pk; a run whose log is missing
+    writes nothing for that game (said in the run's output, never borrowed
+    from another run)."""
+    if not newly_locked:
+        return 0
+    path = current_dir / f"por_rows_{date}.jsonl"
+    seen: set[str] = set()
+    if path.exists():
+        for line in path.read_text(encoding="utf-8").splitlines():
+            try:
+                gp = json.loads(line).get("game_pk")
+            except Exception:
+                continue
+            if gp is not None:
+                seen.add(str(gp))
+    by_run = {header.get("run_id"): p for p, (header, _g) in _prediction_log_index(current_dir, date).items()}
+    written = 0
+    missing = 0
+    with path.open("a", encoding="utf-8") as out:
+        for gp, rec in newly_locked:
+            if str(gp) in seen:
+                continue
+            src = by_run.get(rec.get("run_id"))
+            if not src:
+                missing += 1
+                continue
+            with open(src, encoding="utf-8") as fh:
+                for line in fh:
+                    try:
+                        obj = json.loads(line)
+                    except Exception:
+                        continue
+                    if obj.get("prediction_type") != "slate_row" or str(obj.get("game_pk")) != str(gp):
+                        continue
+                    out.write(json.dumps({k: obj.get(k) for k in POR_ROW_KEYS}, default=str))
+                    out.write("\n")
+                    written += 1
+            seen.add(str(gp))
+    if missing:
+        print(f"  · por_rows {date}: {missing} locked game(s) whose run log is no longer on disk -- no rows kept for them")
+    return written
+
+
+def backfill_por_rows(current_dir: Path) -> int:
+    """Once per past date: fill por_rows_<date>.jsonl from that date's
+    por_log, for every lock whose run log is still on disk. A date with a
+    por_rows file already is skipped, so this reads each date's logs once,
+    ever -- the file is created (even empty) on the first pass."""
+    total = 0
+    for por in sorted(current_dir.glob("por_log_*.jsonl")):
+        date = por.name[len("por_log_"):-len(".jsonl")]
+        if (current_dir / f"por_rows_{date}.jsonl").exists():
+            continue
+        locks = []
+        for line in por.read_text(encoding="utf-8").splitlines():
+            try:
+                rec = json.loads(line)
+            except Exception:
+                continue
+            if rec.get("game_pk") and rec.get("run_id"):
+                locks.append((str(rec["game_pk"]), rec))
+        (current_dir / f"por_rows_{date}.jsonl").touch()
+        total += append_por_rows(date, locks, current_dir)
+    return total
+
+
 def ticket_slots(section: str, blobs: list) -> list[str]:
     """Stable slot keys for one section's blobs, in order.
 
@@ -983,6 +1068,12 @@ def main() -> int:
         # between the two leaves at worst an un-logged entry to retry next
         # run (append_por_log is dedup-safe), never a duplicate.
         n_por_logged = append_por_log(date, por_newly_locked, CURRENT)
+        n_por_rows = append_por_rows(date, por_newly_locked, CURRENT)
+        n_back = backfill_por_rows(CURRENT)
+        if n_back:
+            print(f"  por_rows: backfilled {n_back} locked pregame rows from earlier dates")
+        if n_por_rows:
+            print(f"  por_rows: kept {n_por_rows} locked pregame rows for {date}")
 
     n_locked = sum(1 for g in games.values() for s in g["cats"].values() if s.get("locked"))
     n_late = sum(1 for g in games.values() for s in g["cats"].values() if s.get("locked_late"))
