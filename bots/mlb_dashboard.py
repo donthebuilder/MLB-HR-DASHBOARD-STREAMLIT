@@ -14641,6 +14641,12 @@ def build_prediction_log_lines(run_meta: Dict[str, Any], rows_payload: List[Dict
                 "power3": row.get("power3_score"),
                 "board": row.get("board_score"),
                 "board_rank": row.get("board_rank"),
+                # PITCHER STRIKEOUTS (2026-10-01): the starter's K/9 and this
+                # hitter's own K rate, so the locked record can rank each
+                # game's starters by K/9 x the lineup he faces (offline, in
+                # eval_shadow_picks.py) -- the market is priced, never modelled.
+                "pitcher_k9": row.get("pitcher_k9"),
+                "hitter_k_rate": row.get("season_k_rate"),
             },
             # candidate / shadow -- not production signals, kept so a future
             # shadow-vs-production comparison has same-night, same-hitter
