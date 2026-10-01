@@ -29,6 +29,25 @@ on:
     # ── Monday ──
     - cron: "3 0 * * 2"     # Mon 5pm PHX  — MNF lock
     - cron: "33 6 * * 2"    # Mon 11:30pm PHX — close the week
+    # ── PREGAME CADENCE (2026-10-01, BATCH GAME CALLS) ──
+    # The game calls lock at each kickoff, and NFL inactives post ~90 min
+    # before it, so the build must run at least every 15 min from T-120 to
+    # every kickoff. The spine above does not: Sunday's "inactives" slot
+    # (18:33Z = 2:33pm EDT) is AFTER the 1pm kickoff (its comment's PHX math
+    # is off by 90 min), and TNF / SNF / MNF / London had one run, or none,
+    # inside T-120. These slots fire every 15 min on :08/:23/:38/:53 (off the
+    # spine's :03/:33 so they never double a run) across every window, both
+    # EDT and EST. The `gate` job below lets one through ONLY when a game on
+    # the published nfl_week.json kicks off within the next 125 min; every
+    # other slot ends in seconds without building. Covered: TNF, Thanksgiving
+    # Thu, Sun London 9:30am ET / 1pm / 4pm / SNF, MNF (incl. a 7pm double).
+    # Not covered yet: Saturday games (late season), Black Friday, Christmas.
+    - cron: "8,23,38,53 14-23 * * 4"   # Thu: Thanksgiving + TNF windows
+    - cron: "8,23,38,53 0-1 * * 5"     # Thu night ET (TNF in EST)
+    - cron: "8,23,38,53 11-23 * * 0"   # Sun: London, 1pm, 4pm, SNF run-up
+    - cron: "8,23,38,53 0-1 * * 1"     # Sun night ET (SNF kickoff, EST)
+    - cron: "8,23,38,53 21-23 * * 1"   # Mon: MNF run-up
+    - cron: "8,23,38,53 0-1 * * 2"     # Mon night ET (MNF kickoff, EST)
   workflow_dispatch:
     inputs:
       mode:
@@ -54,7 +73,52 @@ permissions:
   contents: write
 
 jobs:
+  # THE GATE (2026-10-01). Only the pregame-cadence crons (minute 8/23/38/53)
+  # are gated; the spine, a manual run and a Vercel-dispatched backup always
+  # go. A gated slot builds only when a published game kicks off within the
+  # next 125 min. If the week file can't be read, it builds (fail open).
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    outputs:
+      go: ${{ steps.g.outputs.go }}
+    steps:
+      - id: g
+        env:
+          EVENT: ${{ github.event_name }}
+          SCHED: ${{ github.event.schedule }}
+        run: |
+          python3 - <<'EOF'
+          import datetime as dt, json, os, urllib.request
+          ev, sched = os.environ.get("EVENT", ""), os.environ.get("SCHED", "")
+          go, why = True, "not a pregame-cadence slot"
+          if ev == "schedule" and sched.startswith("8,23,38,53 "):
+              url = ("https://raw.githubusercontent.com/donthebuilder/MLB-HR-DASHBOARD-STREAMLIT/"
+                     "data/public/data/current/nfl_week.json")
+              try:
+                  with urllib.request.urlopen(url, timeout=20) as r:
+                      games = (json.loads(r.read()) or {}).get("games") or []
+                  now = dt.datetime.now(dt.timezone.utc)
+                  soon = []
+                  for g in games:
+                      try:
+                          ko = dt.datetime.fromisoformat(str(g.get("kickoff")).replace("Z", "+00:00"))
+                      except ValueError:
+                          continue
+                      if now < ko <= now + dt.timedelta(minutes=125):
+                          soon.append(f"{g.get('away')}@{g.get('home')} {g.get('kickoff')}")
+                  go = bool(soon)
+                  why = ("kickoff within 125 min: " + ", ".join(soon)) if soon else "no kickoff within 125 min"
+              except Exception as exc:
+                  go, why = True, f"week file unreadable ({type(exc).__name__}) -- building anyway"
+          print(f"gate: {'GO' if go else 'skip'} -- {why}")
+          with open(os.environ["GITHUB_OUTPUT"], "a") as fh:
+              fh.write(f"go={'true' if go else 'false'}\n")
+          EOF
+
   run-nfl-bot:
+    needs: gate
+    if: needs.gate.outputs.go == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -110,6 +174,37 @@ jobs:
         continue-on-error: true
         working-directory: bots/nfl
         run: python nfl_roster.py --season 2026 --out "$GITHUB_WORKSPACE/public/data/current" --prefix nfl_
+
+      # GAME CALLS LOCK LOG (2026-10-01, BATCH GAME CALLS G1). Restored BEFORE
+      # the build, because the build appends to it: nfl_game_calls_log_*.jsonl
+      # is append-only, one line per game per pregame build, and a run that
+      # started from an empty file would publish only its own rows over the
+      # week's history (the por_log lesson, 2026-09-24). Graded weeks and the
+      # season totals come back too, so grading never regrades a game and the
+      # totals are summed over every week. If the branch has a file that did
+      # not land, NFL_GAME_CALLS_RESTORED=0 and nfl_game_calls.py stands down
+      # (no append, no grade) -- this run loses its rows, the history does not,
+      # and the slate still publishes.
+      - name: Restore NFL game-call logs from the data branch
+        run: |
+          set -uo pipefail
+          ok=1
+          git fetch --depth 1 --force origin '+refs/heads/data:refs/remotes/origin/data' 2>/dev/null || true
+          if git rev-parse --verify origin/data >/dev/null 2>&1; then
+            mkdir -p public/data/current
+            files=$(git ls-tree --name-only origin/data public/data/current/ | grep -E 'nfl_game_calls_(log_.*\.jsonl|graded_.*\.json|totals_.*\.json)$' || true)
+            for f in $files; do
+              git show "origin/data:$f" > "$f" 2>/dev/null || true
+              if [ ! -s "$f" ]; then
+                echo "::warning::$(basename "$f") is on the data branch but did not restore -- game calls will not append or grade this run."
+                ok=0
+              fi
+            done
+            echo "Restored $(echo "$files" | grep -c . || true) game-call file(s)."
+          else
+            echo "origin/data not fetchable -- first-run shape; nothing to restore."
+          fi
+          echo "NFL_GAME_CALLS_RESTORED=$ok" >> "$GITHUB_ENV"
 
       - name: Build slate
         working-directory: bots/nfl

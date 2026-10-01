@@ -1773,6 +1773,21 @@ def main() -> int:
         print(f"  archived {arch.name}")
     print(nfl_picks.summary(card))
 
+    # GAME CALLS (2026-10-01, BATCH GAME CALLS G1). One TD call per team,
+    # every game, off the same TD scores this payload carries -- no re-score.
+    # The current week also appends its pregame rows to the lock log
+    # (nfl_game_calls_log_<season>_w<ww>.jsonl); the nfl_next_ build writes a
+    # preview only (mode 'next', never logged, never graded). Best-effort: a
+    # bug here must never cost the slate.
+    if a.mode == "week":
+        try:
+            import nfl_game_calls
+            _gc = nfl_game_calls.write(payload, out, a.prefix, run_meta=run_meta)
+            print(f"  {a.prefix}game_calls.json: {len(_gc['games'])} game(s), "
+                  f"{sum(len(g['calls']) for g in _gc['games'])} call(s), board {_gc['board_n']}")
+        except Exception as exc:  # noqa: BLE001
+            print(f"  game calls failed ({type(exc).__name__}: {exc}) -- slate ships without them")
+
     (out / f"{a.prefix}week.json").write_text(json.dumps(payload, separators=(",", ":")))
     (out / f"{a.prefix}meta.json").write_text(json.dumps({
         "built_at": payload["built_at"],

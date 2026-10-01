@@ -654,6 +654,18 @@ def main() -> int:
     log_path = append_nfl_outcome_log(payload, now, out, a.prefix)
     if log_path is not None:
         print(f"  outcome log: {log_path.name}")
+
+    # GAME CALLS (2026-10-01, BATCH GAME CALLS G2). Grades the locked
+    # per-game TD calls against the SAME eligible lines published above
+    # (hit = lines[pid].TD >= 1). Week mode only; never fatal.
+    if a.mode == "week" and a.week:
+        try:
+            import nfl_game_calls
+            teams = {str(r.get("team") or "") for r in lines.iter_rows(named=True)} - {""}
+            nfl_game_calls.run_grading(out, a.season, int(a.week), payload["lines"],
+                                       teams, set(actual), a.prefix, now)
+        except Exception as exc:  # noqa: BLE001
+            print(f"  game-call grading skipped ({type(exc).__name__}: {exc})")
     return 0
 
 

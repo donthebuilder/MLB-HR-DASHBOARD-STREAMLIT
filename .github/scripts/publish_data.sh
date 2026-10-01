@@ -158,6 +158,11 @@ PUBLISH_FILES=(
   # game_id to the last PREGAME nfl_prediction_log. Written by
   # bots/nfl/nfl_pick_lock.py.
   nfl_pick_lock.json
+  # GAME CALLS (2026-10-01, BATCH GAME CALLS G1). One TD call per team, every
+  # game -- bots/nfl/nfl_game_calls.py. Rewritten every run; the lock log,
+  # graded weeks and season totals that accumulate are globs below.
+  nfl_game_calls.json
+  nfl_next_game_calls.json
   # NFL ODDS (2026-08-24). bots/nfl/nfl_odds_fetch.py's own two regenerated-
   # every-run outputs, the nfl_ analog of odds_latest.json/odds_status.json
   # above. No nfl_odds_history.json yet -- see that script's module docstring
@@ -407,6 +412,21 @@ NFL_NEXT_PICKS_KEEP=60
 NFL_POR_LOG_GLOB="nfl_por_log_*.jsonl"
 NFL_POR_LOG_KEEP=60
 
+# GAME CALLS (2026-10-01, BATCH GAME CALLS G1/G2). bots/nfl/nfl_game_calls.py.
+#   nfl_game_calls_log_<season>_w<ww>.jsonl  the LOCK LOG: one line per game per
+#     pregame build, append-only, never rewritten. nfl.yml restores it from this
+#     branch BEFORE the build (same reason as the por_log restore), or this run's
+#     rows alone would replace the week's history.
+#   nfl_game_calls_graded_<season>_w<ww>.json  one per graded week.
+#   nfl_game_calls_totals_<season>.json        season record, one per season.
+# Per-week files, same KEEP as NFL_POR_LOG_KEEP (three seasons).
+NFL_GAME_CALLS_LOG_GLOB="nfl_game_calls_log_*.jsonl"
+NFL_GAME_CALLS_LOG_KEEP=60
+NFL_GAME_CALLS_GRADED_GLOB="nfl_game_calls_graded_*.json"
+NFL_GAME_CALLS_GRADED_KEEP=60
+NFL_GAME_CALLS_TOTALS_GLOB="nfl_game_calls_totals_*.json"
+NFL_GAME_CALLS_TOTALS_KEEP=5
+
 
 # ── READING THE BRANCH, AND NOT PUBLISHING BACKWARDS ────────────────────────
 #
@@ -611,7 +631,10 @@ stage_local() {
            "$SRC"/data/$NFL_POR_LOG_GLOB "$SRC"/data/current/$NFL_POR_LOG_GLOB \
            "$SRC"/data/$NFL_SIGNAL_LOG_GLOB "$SRC"/data/current/$NFL_SIGNAL_LOG_GLOB \
            "$SRC"/data/$NFL_NEXT_PICKS_GLOB "$SRC"/data/current/$NFL_NEXT_PICKS_GLOB \
-           "$SRC"/data/$NFL_NEXT_PRED_LOG_GLOB "$SRC"/data/current/$NFL_NEXT_PRED_LOG_GLOB; do
+           "$SRC"/data/$NFL_NEXT_PRED_LOG_GLOB "$SRC"/data/current/$NFL_NEXT_PRED_LOG_GLOB \
+           "$SRC"/data/current/$NFL_GAME_CALLS_LOG_GLOB \
+           "$SRC"/data/current/$NFL_GAME_CALLS_GRADED_GLOB \
+           "$SRC"/data/current/$NFL_GAME_CALLS_TOTALS_GLOB; do
     [ -f "$g" ] && cp "$g" "$STAGE/public/data/current/"
   done
   # NFL_PICKS_GLOB was declared above (and already in carry_forward()'s trim
@@ -759,7 +782,10 @@ carry_forward() {
               "$NFL_POR_LOG_GLOB:$NFL_POR_LOG_KEEP" \
               "$NFL_ODDS_GLOB:$NFL_ODDS_KEEP" \
               "$NFL_NEXT_PRED_LOG_GLOB:$NFL_NEXT_PRED_LOG_KEEP" \
-              "$NFL_SIGNAL_LOG_GLOB:$NFL_SIGNAL_LOG_KEEP"; do
+              "$NFL_SIGNAL_LOG_GLOB:$NFL_SIGNAL_LOG_KEEP" \
+              "$NFL_GAME_CALLS_LOG_GLOB:$NFL_GAME_CALLS_LOG_KEEP" \
+              "$NFL_GAME_CALLS_GRADED_GLOB:$NFL_GAME_CALLS_GRADED_KEEP" \
+              "$NFL_GAME_CALLS_TOTALS_GLOB:$NFL_GAME_CALLS_TOTALS_KEEP"; do
     glob="${spec%:*}"; keep="${spec##*:}"
     n=$(find "$STAGE/public/data/current" -maxdepth 1 -type f -name "$glob" | wc -l)
     if [ "$n" -gt "$keep" ]; then
