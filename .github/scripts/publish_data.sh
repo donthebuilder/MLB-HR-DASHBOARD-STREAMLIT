@@ -186,6 +186,15 @@ PUBLISH_FILES=(
   tomorrow_run_meta.json
 )
 
+# THE FIELD (2026-09-30, BATCH-NFL-FIELD): one nfl_field_{TEAM}.json per
+# offence, every target + every red-zone touch (bots/nfl/nfl_field.py
+# team_plays, ~10-30 KB each). Named one by one like everything above -- the
+# 32 teams are a fixed list -- so nothing stale can ride along under a glob.
+for _t in ARI ATL BAL BUF CAR CHI CIN CLE DAL DEN DET GB HOU IND JAX KC \
+          LA LAC LV MIA MIN NE NO NYG NYJ PHI PIT SEA SF TB TEN WAS; do
+  PUBLISH_FILES+=("nfl_field_${_t}.json")
+done
+
 # Nightly graded files, kept so the backtest has more than one day to look at.
 # Everything else here is regenerated each run; these ACCUMULATE -- carry_forward
 # below re-copies whatever this run didn't produce, so the set grows by one file

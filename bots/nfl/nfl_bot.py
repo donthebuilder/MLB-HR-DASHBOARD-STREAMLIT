@@ -1517,7 +1517,9 @@ def main() -> int:
     # Matchups visitor. A run whose build came back empty writes nothing, so
     # the site keeps the last good file instead of an empty one. Each file
     # carries the season it was built from (the flip-week fallback included).
-    _fp = extras.get("field_plays") or {}
+    # This week's build only: the next-week build reads the same season's
+    # plays, so an nfl_next_ copy would be 32 identical files.
+    _fp = (extras.get("field_plays") or {}) if not a.prefix.endswith("next_") else {}
     for _team, _body in _fp.items():
         (out / f"{a.prefix}field_{_team}.json").write_text(json.dumps(_body, separators=(",", ":")))
     if _fp:
