@@ -11597,6 +11597,12 @@ SHADOW_PICK_RULES = {
     "hit:avg_spot_k": ("season_avg", "neg_lineup_spot", "neg_k_rate"),
     "tb:slg_spot": ("season_slg", "neg_lineup_spot"),
     "tb:iso_avg_k": ("season_iso", "season_avg", "neg_k_rate"),
+    # RUNS / RBI / SB (2026-10-01): markets the books price (odds_lines) but
+    # the bot never modelled. Logged challengers only, graded from the box
+    # (1+ run, 1+ RBI, 1+ SB) -- a first record before anything is built on them.
+    "run:rpa_obp_spot": ("season_runs_per_pa", "season_obp", "neg_lineup_spot"),
+    "rbi:rpa_iso_onbase": ("season_rbi_per_pa", "season_iso", "lineup_pre_onbase"),
+    "sb:attempts_pitcher": ("season_sb_attempt_rate", "steal_risk_score", "pitcher_sb_attempts_against"),
 }
 
 

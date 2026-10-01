@@ -73,6 +73,8 @@ def main() -> int:
                 b = box.get(key)
                 y_hit = None if b is None else int((b.get("actual_hits") or 0) >= 1)
                 y_tb = None if b is None or b.get("actual_tb") is None else int((b.get("actual_tb") or 0) >= 2)
+                y_box = {m: (None if b is None or b.get(f) is None else int((b.get(f) or 0) >= 1))
+                         for m, f in (("run", "actual_runs"), ("rbi", "actual_rbi"), ("sb", "actual_sb"))}
                 roles = set(str(r.get("game_pick_role") or "").upper().split("/"))
                 for role in ("TOP", "HR"):
                     if role in roles:
@@ -82,7 +84,8 @@ def main() -> int:
                 if "CONTACT" in roles and y_tb is not None:
                     slots.setdefault("CONTACT (2+ TB)", []).append(y_tb)
                 for rule, slot in ((r.get("candidate") or {}).get("shadow_pick") or {}).items():
-                    yy = y_hit if rule.startswith("hit:") else y_tb if rule.startswith("tb:") else y
+                    _m = rule.split(":", 1)[0] if ":" in rule else ""
+                    yy = y_hit if _m == "hit" else y_tb if _m == "tb" else y_box.get(_m) if _m in y_box else y
                     if yy is not None:
                         slots.setdefault(f"{rule} #{slot}", []).append(yy)
     if not games:

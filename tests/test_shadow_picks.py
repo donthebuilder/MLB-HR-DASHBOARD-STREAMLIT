@@ -17,6 +17,9 @@ def row(pid, power, hrw, pside, prob, pa=300, role=""):
     return {"player_id": pid, "game_pk": 9, "season_pa": pa, "game_pick_role": role,
             "season_avg": 0.25 + pid / 100, "season_slg": 0.4 + pid / 50, "season_iso": 0.15 + pid / 100,
             "season_k_rate": 0.25 - pid / 100, "lineup_spot": pid, "pitcher_throws": "R", "avg_vs_rhp": 0.24 + pid / 100,
+            "season_runs_per_pa": 0.1 + pid / 100, "season_obp": 0.3 + pid / 100, "season_rbi_per_pa": 0.1 + pid / 100,
+            "lineup_pre_onbase": 0.3 + pid / 100, "season_sb_attempt_rate": pid / 100, "steal_risk_score": 10 * pid,
+            "pitcher_sb_attempts_against": 5,
             "hr_shape_components": {"season_power_baseline": power}, "hrw_score": hrw,
             "pitcher_side_ops": pside, "season_hr_game_probability": prob}
 rows = [row(1, 90, 20, 0.700, 0.10, role="TOP"), row(2, 60, 80, 0.900, 0.12),
