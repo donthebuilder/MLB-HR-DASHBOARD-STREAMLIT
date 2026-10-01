@@ -474,7 +474,12 @@ def main() -> int:
                         })
                     continue
 
-                # Pre-game: a re-pick is legitimate.
+                # Pre-game: a re-pick is legitimate. The SAME player still in
+                # the slot gets this run's numbers (2026-10-01, NFL audit: a
+                # frozen rung kept the score from when he first took the slot,
+                # e.g. Henry w02 RUSH_ATT 67.6 vs 60.6 in the last pregame run).
+                if str(slot["stub"].get("player_id")) == occ_pid:
+                    slot["meta"] = {k: rung.get(k) for k in RUNG_META_FIELDS}
                 if str(slot["stub"].get("player_id")) != occ_pid:
                     slot["stub"] = {k: rung.get(k) for k in STUB_FIELDS}
                     slot["meta"] = {k: rung.get(k) for k in RUNG_META_FIELDS}
@@ -490,11 +495,36 @@ def main() -> int:
     restored = 0
     if a.apply and not a.dry_run and isinstance(picks_payload, dict):
         card = picks_payload.get("card") or {}
+        dup_dropped = []
         for market, blk in card.items():
             rungs = blk.get("rungs") or []
             new_rungs = []
+            # ONE PLAYER, ONE RUNG (2026-10-01, NFL audit). A locked slot holds
+            # its player even after this run re-ranks him into another slot,
+            # so restoring the lock put him on the card twice -- and both
+            # copies were graded (w02 TD: Javonte Williams #2 and #3, two
+            # misses; w03 KICK_PTS: Carlson #3 and #4). A live rung whose
+            # player already holds a LOCKED slot in this market is dropped:
+            # the market shows one fewer name, never the same name twice.
+            # Locked slots claim their player first (a lock is a promise), then
+            # live rungs in rank order; whoever is already on the card is not
+            # placed again -- covers a live rung repeating a locked player AND
+            # two locked slots holding the same player (a slot first seen after
+            # kickoff locks late on whoever sits there).
+            placed = set()
+            for rung in sorted(rungs, key=lambda r: (0 if (card_locks.get(slot_key(market, int(r["rank"]))) or {}).get("locked") else 1, int(r.get("rank") or 99)) if r.get("rank") else (2, 99)):
+                _k = slot_key(market, int(rung["rank"])) if rung.get("rank") else None
+                _sl = card_locks.get(_k) if _k else None
+                _pid = str((_sl["stub"].get("player_id") if _sl and _sl.get("locked") else rung.get("player_id")) or "")
+                if _pid and _pid in placed:
+                    rung["_dup"] = True
+                    dup_dropped.append(f"{market} #{rung.get('rank')} {(_sl['stub'] if _sl and _sl.get('locked') else rung).get('name')}")
+                elif _pid:
+                    placed.add(_pid)
             for rung in rungs:
                 rank = rung.get("rank")
+                if rung.pop("_dup", False):
+                    continue
                 key = slot_key(market, int(rank)) if rank else None
                 slot = card_locks.get(key) if key else None
                 if slot and slot.get("locked"):
@@ -560,6 +590,8 @@ def main() -> int:
           f"{a.prefix}por_log_{season}_w{week:02d}.jsonl)")
     if a.apply and not a.dry_run and restored:
         print(f"  restored {restored} locked rung(s) onto the published card")
+    if a.apply and not a.dry_run and isinstance(picks_payload, dict) and dup_dropped:
+        print(f"  dropped {len(dup_dropped)} duplicate rung(s) (player already holds a locked slot): {', '.join(dup_dropped)}")
     if card_rejects:
         print(f"  !! {len(card_rejects)} POST-LOCK RUNG CHANGES REJECTED:")
         for r in card_rejects:
