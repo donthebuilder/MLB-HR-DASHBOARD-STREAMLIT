@@ -430,7 +430,17 @@ def main() -> int:
                 print(f"  grading against the data branch's week {a.week} card")
     if cp.exists():
         try:
-            card = (json.loads(cp.read_text()) or {}).get("card", {})
+            _card_doc = json.loads(cp.read_text()) or {}
+            card = _card_doc.get("card", {})
+            # THE WEEKS MUST AGREE (2026-10-01, NFL audit). With no week-1
+            # archive the fallback graded the LIVE card -- already week 2's,
+            # built with week-1 results in its form features -- against week-1
+            # outcomes (graded 09-17 2 s after the wk02 log). A card for another
+            # week is refused: lines publish, nothing is graded against it.
+            _cw = _card_doc.get("week")
+            if a.week and _cw is not None and int(_cw) != int(a.week):
+                print(f"  card at {cp.name} is week {_cw}, grading week {a.week} — refused; publishing lines only")
+                card = {}
         except Exception as exc:
             print(f"  card unreadable ({type(exc).__name__}) — publishing lines only")
     else:
