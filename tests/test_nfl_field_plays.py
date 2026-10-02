@@ -103,6 +103,34 @@ bare = nfl_field.team_plays(2026, pbp=_pbp(), ftn=pl.DataFrame())
 check("empty FTN still builds", len(bare["NO"]["plays"]), 4)
 check("empty FTN nulls", bare["NO"]["plays"][0][no["cols"].index("hash")], None)
 
+# ── ROUTES (2026-10-02): the participation join and the defence totals.
+# Test data: routes for three of the four targets; g2/play 2 (the TD) has no
+# participation row and must keep nulls, not drop.
+_routes = pl.DataFrame({
+    "game_id": ["g1", "g1", "g2", "g1"], "play_id": [1.0, 2.0, 1.0, 1.0],
+    "route": ["IN/DIG", "GO", "SLANT", "IN/DIG"],                      # g1/1 twice: deduped
+    "defense_man_zone_type": ["ZONE_COVERAGE", "MAN_COVERAGE", "ZONE_COVERAGE", "ZONE_COVERAGE"],
+    "defense_coverage_type": ["COVER_3", None, "COVER_2", "COVER_3"],
+})
+rb = nfl_field.route_bundle(2025, pbp=_pbp(), ftn=_ftn(), routes=_routes, grids={"def_pass": {"ATL": {}}, "league_pass": {}})
+rno = rb["teams"]["NO"]
+rr = [dict(zip(rno["cols"], r)) for r in rno["plays"]]
+check("route cols", rno["cols"][-3:], ["rt", "mz", "cv"])
+check("route file keeps every target (dup participation row deduped)", len(rr), 4)
+check("routes joined", [r["rt"] for r in rr], ["IN/DIG", "GO", "SLANT", None])
+check("man/zone + shell", [(r["mz"], r["cv"]) for r in rr], [("Z", "C3"), ("M", None), ("Z", "C2"), (None, None)])
+check("route file has no red zone (the 2026 file carries it)", rno["redzone"], [])
+check("who: most targets first", rb["who"], {"R1": ["NO"], "R2": ["NO"]})
+d = rb["def"]
+check("def by route", d["def_route"]["ATL"]["IN/DIG"], {"tgt": 1, "cmp": 1, "yds": 15, "td": 0, "ypt": 15.0})
+check("def tgt adds up to the routed targets", sum(v["tgt"] for v in d["def_route"]["ATL"].values()), 3)
+check("def by coverage (M/Z + shells)", sorted(d["def_cov"]["ATL"]), ["C2", "C3", "M", "Z"])
+check("zone tally", d["def_cov"]["ATL"]["Z"], {"tgt": 2, "cmp": 1, "yds": 15, "td": 0, "ypt": 7.5})
+check("league = the one defence here", d["league_route"], d["def_route"]["ATL"])
+check("season + grids carried", (d["season"], d["def_pass"]), (2025, {"ATL": {}}))
+plain = nfl_field.team_plays(2026, pbp=_pbp(), ftn=_ftn())
+check("current-season file unchanged", plain["NO"]["cols"], nfl_field.PLAY_COLS)
+
 print(f"{CHECKS - len(FAILED)}/{CHECKS} checks passed")
 for f in FAILED:
     print("  FAIL", f)

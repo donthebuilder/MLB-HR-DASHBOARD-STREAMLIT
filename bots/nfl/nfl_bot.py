@@ -962,6 +962,10 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
         ("pass_rush", nfl_disruption.pass_rush_efficiency, stat_season),
         ("red_zone", nfl_offense_value.red_zone_conversion, stat_season),
         ("route_value", nfl_offense_value.route_value, chart_season),
+        # ROUTES (2026-10-02): every charting-season target with its route and
+        # coverage, per offence, plus what each defence gave up by route and
+        # coverage. Written to nfl_routes_*.json below, never into matchup.json.
+        ("routes", nfl_field.route_bundle, chart_season),
         # Snap counts ARE an in-season dataset (nflverse refreshes 4x/day),
         # so these run on stat_season -- no charting clamp.
         ("snaps", nfl_snaps.player_snaps, stat_season),
@@ -1611,6 +1615,21 @@ def main() -> int:
         print(f"  wrote {len(_fp)} {a.prefix}field_<TEAM>.json files "
               f"({sum(len(v['plays']) for v in _fp.values())} targets, "
               f"{sum(len(v['redzone']) for v in _fp.values())} red-zone touches)")
+
+    # ROUTES (2026-10-02, see nfl_field.route_bundle): the charting season's
+    # targets with their routes -- the site's 2025 ROUTES view. One file per
+    # offence (~35 KB), a who-played-where index (a player who moved finds his
+    # own routes), and the defence's by-route / by-coverage totals. Static all
+    # season (participation is once a year), so a rewrite is a no-op diff. An
+    # empty bundle writes nothing; this week's build only, like the field files.
+    _rb = (extras.get("routes") or {}) if not a.prefix.endswith("next_") else {}
+    if _rb.get("teams"):
+        for _team, _body in _rb["teams"].items():
+            (out / f"{a.prefix}routes_{_team}.json").write_text(json.dumps(_body, separators=(",", ":")))
+        (out / f"{a.prefix}routes_who.json").write_text(json.dumps({"season": _rb["def"].get("season"), "who": _rb["who"]}, separators=(",", ":")))
+        (out / f"{a.prefix}routes_def.json").write_text(json.dumps(_rb["def"], separators=(",", ":")))
+        print(f"  wrote {len(_rb['teams'])} {a.prefix}routes_<TEAM>.json files "
+              f"({sum(len(v['plays']) for v in _rb['teams'].values())} targets, season {_rb['def'].get('season')}) + who + def")
 
     # Game logs, for the hit-rate chart. Only the players on this slate — the
     # league's full log is 2,100 players and nobody is looking at 2,000 of them.

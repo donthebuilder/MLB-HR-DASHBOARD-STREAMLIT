@@ -196,6 +196,16 @@ PLAY_COLS = ["pid", "wk", "opp", "q", "dn", "tg", "yl", "lane", "air", "yac",
              "gain", "res", "epa", "hash", "box", "pa", "sc"]
 RZ_COLS = ["pid", "wk", "d", "kind", "res"]
 _LANE = {"left": "L", "middle": "M", "right": "R"}
+# ROUTES (2026-10-02): the charting columns a route file adds to every target.
+#   rt  the targeted receiver's route, as NGS charts it (QUICK OUT, HITCH/CURL,
+#       IN/DIG, GO, SLANT, POST, ...)
+#   mz  M / Z, the defence's man or zone
+#   cv  the shell, C0 / C1 / C2 / C2M / C3 / C4 / C6 / C9 -- charted on about
+#       half the snaps (nfl_coverage's note), null otherwise
+ROUTE_COLS = PLAY_COLS + ["rt", "mz", "cv"]
+_MZ = {"MAN_COVERAGE": "M", "ZONE_COVERAGE": "Z"}
+_CV = {"COVER_0": "C0", "COVER_1": "C1", "COVER_2": "C2", "2_MAN": "C2M",
+       "COVER_3": "C3", "COVER_4": "C4", "COVER_6": "C6", "COVER_9": "C9"}
 
 
 def _num(v, nd: int | None = None):
@@ -244,10 +254,13 @@ def _result(r: dict) -> str:
 
 
 def team_plays(season: int, pbp: pl.DataFrame | None = None,
-               ftn: pl.DataFrame | None = None) -> dict:
+               ftn: pl.DataFrame | None = None, routes: pl.DataFrame | None = None) -> dict:
     """{TEAM: {season, team, weeks, cols, plays, rz_cols, redzone, names}}:
     every target the offence threw, and every touch inside the 20.
-    `pbp` / `ftn` are injectable for the tests; the bot passes neither."""
+    `pbp` / `ftn` are injectable for the tests; the bot passes neither.
+    `routes` (game_id, play_id, route, defense_man_zone_type,
+    defense_coverage_type -- see _participation) adds rt / mz / cv to every
+    target (ROUTE_COLS); a target it has no row for keeps nulls, never drops."""
     p = _pbp(season) if pbp is None else pbp
     f = _ftn(season) if ftn is None else ftn
     p = p.with_columns(pl.col("play_id").cast(pl.Float64))
@@ -259,6 +272,8 @@ def team_plays(season: int, pbp: pl.DataFrame | None = None,
         tg = tg.with_columns(*[pl.lit(None).alias(c) for c in ("hash", "box", "pa", "sc")])
     else:
         tg = tg.join(f, on=["game_id", "play_id"], how="left")
+    if routes is not None:
+        tg = tg.join(routes.unique(["game_id", "play_id"], keep="first"), on=["game_id", "play_id"], how="left")
     tg = tg.sort(["week", "game_id", "play_id"])
     ca = p.filter(pl.col("rush_attempt") == 1, pl.col("rusher_player_id").is_not_null(),
                   pl.col("posteam").is_not_null(), pl.col("yardline_100") <= 20) \
@@ -268,7 +283,7 @@ def team_plays(season: int, pbp: pl.DataFrame | None = None,
 
     def team(t: str) -> dict:
         if t not in out:
-            out[t] = {"season": season, "team": t, "weeks": set(), "cols": PLAY_COLS,
+            out[t] = {"season": season, "team": t, "weeks": set(), "cols": ROUTE_COLS if routes is not None else PLAY_COLS,
                       "plays": [], "rz_cols": RZ_COLS, "redzone": [], "names": {}}
         return out[t]
 
@@ -280,7 +295,7 @@ def team_plays(season: int, pbp: pl.DataFrame | None = None,
         res = _result(r)
         caught = res in ("catch", "td")
         yl = _num(r.get("yardline_100"))
-        o["plays"].append([
+        row = [
             pid, wk, r.get("defteam"), _num(r.get("qtr")), _num(r.get("down")),
             _num(r.get("ydstogo")), yl, _LANE.get(r.get("pass_location")),
             _num(r.get("air_yards")),
@@ -288,7 +303,10 @@ def team_plays(season: int, pbp: pl.DataFrame | None = None,
             (_num(r.get("yards_gained")) or 0) if caught else 0,
             res, _num(r.get("epa"), 2), r.get("hash"), r.get("box"),
             1 if r.get("pa") else 0, 1 if r.get("sc") else 0,
-        ])
+        ]
+        if routes is not None:
+            row += [r.get("route") or None, _MZ.get(r.get("defense_man_zone_type")), _CV.get(r.get("defense_coverage_type"))]
+        o["plays"].append(row)
         if yl is not None and yl <= 20:
             o["redzone"].append([pid, wk, yl, "pass", res])
     for r in ca.iter_rows(named=True):
@@ -302,6 +320,83 @@ def team_plays(season: int, pbp: pl.DataFrame | None = None,
         o["weeks"] = sorted(o["weeks"], reverse=True)    # most recent first
         o["redzone"].sort(key=lambda x: (-x[1], x[2]))
     return out
+
+
+@functools.lru_cache(maxsize=2)
+def _participation(season: int) -> pl.DataFrame:
+    """The charting columns, keyed like pbp. Participation is a once-a-year
+    file (nfl_charting.py), so this is only ever called on the charting season."""
+    part = nfl.load_participation(seasons=[season])
+    return part.select(
+        pl.col("nflverse_game_id").alias("game_id"), pl.col("play_id").cast(pl.Float64),
+        "route", "defense_man_zone_type", "defense_coverage_type")
+
+
+def _tally(rows) -> dict:
+    tgt = len(rows)
+    cmp_ = sum(1 for r in rows if r["res"] in ("catch", "td"))
+    yds = sum(r["gain"] or 0 for r in rows)
+    td = sum(1 for r in rows if r["res"] == "td")
+    return {"tgt": tgt, "cmp": cmp_, "yds": yds, "td": td, "ypt": round(yds / tgt, 2) if tgt else None}
+
+
+def route_def(teams: dict) -> dict:
+    """What each DEFENCE gave up, by the targeted route and by coverage, from
+    the route files' own rows (so the site's filters and these totals are the
+    same plays): {def_route: {DEF: {route: tally}}, league_route: {route:
+    tally}, def_cov: {DEF: {M|Z|C3...: tally}}, league_cov: {...}}.
+    Yards are yards gained on a catch, 0 otherwise -- yards a target."""
+    by_def: dict = {}
+    for body in teams.values():
+        cols = body["cols"]
+        for a in body["plays"]:
+            r = dict(zip(cols, a))
+            if r.get("opp"):
+                by_def.setdefault(r["opp"], []).append(r)
+    every = [r for rs in by_def.values() for r in rs]
+
+    def split(rows, key) -> dict:
+        g: dict = {}
+        for r in rows:
+            k = key(r)
+            if k:
+                g.setdefault(k, []).append(r)
+        return {k: _tally(v) for k, v in sorted(g.items())}
+
+    def cov(rows) -> dict:
+        out = split(rows, lambda r: r.get("mz"))
+        out.update(split(rows, lambda r: r.get("cv")))
+        return out
+
+    return {
+        "def_route": {d: split(rs, lambda r: r.get("rt")) for d, rs in sorted(by_def.items())},
+        "league_route": split(every, lambda r: r.get("rt")),
+        "def_cov": {d: cov(rs) for d, rs in sorted(by_def.items())},
+        "league_cov": cov(every),
+    }
+
+
+def route_bundle(season: int, pbp: pl.DataFrame | None = None, ftn: pl.DataFrame | None = None,
+                 routes: pl.DataFrame | None = None, grids: dict | None = None) -> dict:
+    """ROUTES (2026-10-02): the charting season's targets with their routes,
+    for the site's 2025 ROUTES view. {teams: {TEAM: body}, who: {pid: [TEAM,
+    ...] most targets first}, def: route_def + that season's def_pass /
+    league_pass zone grids, so the heat under the routes is the same season}.
+    All arguments past `season` are injectable for the tests."""
+    rt = _participation(season) if routes is None else routes
+    teams = team_plays(season, pbp=pbp, ftn=ftn, routes=rt)
+    for body in teams.values():
+        body["redzone"] = []   # the 2026 file carries the red zone; this one is routes only
+    n: dict = {}
+    for t, body in teams.items():
+        for a in body["plays"]:
+            n.setdefault(a[0], {}).setdefault(t, 0)
+            n[a[0]][t] += 1
+    who = {pid: [t for t, _ in sorted(c.items(), key=lambda kv: -kv[1])] for pid, c in n.items()}
+    g = build(season) if grids is None else grids
+    d = route_def(teams)
+    d.update({"season": season, "def_pass": g.get("def_pass", {}), "league_pass": g.get("league_pass", {})})
+    return {"teams": teams, "who": who, "def": d}
 
 
 if __name__ == "__main__":
