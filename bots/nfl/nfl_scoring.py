@@ -160,6 +160,40 @@ SHADOW_MODELS = {
             "f_snap_pct":     0.1887,   # .1307 / .6928
         },
     },
+    # ── PLAYING TIME (2026-10-03, BATCH-MODEL-V2 M2) ──────────────────────────
+    # Only TD carried playing time. nfl_playtime_lab.py adds the trailing snap
+    # share (f_snap_pct, the TD model's own 4-game roll) to the receiving and
+    # rushing markets: live weights x (1 - s) + snap at s, s in {.1,.2,.3},
+    # CHOSEN ON 2024, REPORTED ON 2025, 2023 the holdout (within-week
+    # percentiles over nfl_features.build, graded on each market's bar):
+    #   RUSH_ATT +10%  top-5 2024 85.6 v 84.4 | 2025 85.6 v 82.2 | 2023 71.1 = 71.1;
+    #                  AUC up all three (.8926 v .8906, .9019 v .8992, .8504 v .8488)
+    #   REC      +30%  top-5 2024 82.2 v 81.1 | 2025 77.8 v 75.6 | 2023 82.2 v 86.7 (WORSE);
+    #                  AUC .8388 v .8381, .8445 v .8448, .8365 v .8345 -- mixed, shadowed to find out
+    #   REC_YDS, RUSH_YDS: no share beat live on 2024 (RUSH_YDS gets worse every season) -- no shadow.
+    # Routes run would be the better receiving leg, but nflverse participation is
+    # published once a year (no 2026 file), so it can't be scored live.
+    "REC": {
+        "model_version": "nfl_rec_snap_v1",
+        "label": "Receptions (shadow, + snap share)", "pos": ["WR", "TE", "RB"], "bar": 4,
+        "w": {
+            "f_target_share":  0.350,   # .50 x .7
+            "f_receptions":    0.245,   # .35 x .7
+            "f_targets":       0.105,   # .15 x .7
+            "f_snap_pct":      0.300,
+        },
+    },
+    "RUSH_ATT": {
+        "model_version": "nfl_rushatt_snap_v1",
+        "label": "Rushing attempts (shadow, + snap share)", "pos": ["RB"], "bar": 12,
+        "w": {
+            "f_carries":                              0.468,   # .52 x .9
+            "f_rz_car":                               0.144,   # .16 x .9
+            "f_ngs_rush_yards_over_expected_per_att": 0.108,   # .12 x .9
+            "oppr_rush_soft":                         0.180,   # .20 x .9
+            "f_snap_pct":                             0.100,
+        },
+    },
 }
 
 
