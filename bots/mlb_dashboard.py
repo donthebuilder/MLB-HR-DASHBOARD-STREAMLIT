@@ -1720,6 +1720,7 @@ class HitterRecord:
     # lock leaking the same-day homer. Re-measure at 40 nights.
     board_score: float = 0.0      # 0-100, higher = higher on the board
     board_rank: int = 0           # 1 = top of tonight's board
+    board_of: int = 0             # how many hitters that rank is out of (distinct men)
     # Docket #20: expected HRs from contact + luck (actual − expected).
     season_xhr: float = 0.0
     season_hr_luck: float = 0.0
@@ -10914,6 +10915,14 @@ def build_top10_alt_board(rows: List[HitterRecord]) -> str:
             _bo_rank_by_pid[_pid] = _bo_next
             r.board_rank = _bo_next
             _bo_next += 1
+        # THE BOARD'S SIZE (2026-10-03, site BATCH-MODEL-V2 M4). The site's
+        # CALLED / ON THE BOARD / NOT ON THE BOARD (lib/callStatus.js) puts a
+        # hitter with no call ON THE BOARD only inside the top third of the
+        # night's board -- rank AND n. The rank was logged pregame; n was not,
+        # so a locked row (por_rows) couldn't be labelled. n = the distinct men
+        # ranked, the same count the site's board index uses (e.of = index.size).
+        for r in rows:
+            r.board_of = _bo_next - 1
 
     ranked_all = sorted(rows, key=top10_rank_score, reverse=True)
     ranked_trusted = [r for r in ranked_all if trusted_sample(r) and not getattr(r, "true_avoid_hr", False)]
@@ -12728,6 +12737,7 @@ def _s2_player_dict(r: HitterRecord) -> Dict[str, Any]:
         "power3_score": getattr(r, "power3_score", 0.0), "power3_rank": getattr(r, "power3_rank", 0),
         "power3_flag": bool(getattr(r, "power3_flag", False)),
         "board_score": getattr(r, "board_score", 0.0), "board_rank": getattr(r, "board_rank", 0),
+        "board_of": getattr(r, "board_of", 0),
         "recent_ev": getattr(r, "recent_ev", None), "last5_hits": r.last5_hits,
         "last5_hr": r.last5_hr, "last5_xbh": r.last5_xbh, "last7_hr": r.last7_hr,
         "season_hr": r.season_hr, "season_pa": r.season_pa, "hr_per_pa": r.hr_per_pa,
@@ -14647,6 +14657,7 @@ def build_prediction_log_lines(run_meta: Dict[str, Any], rows_payload: List[Dict
                 "power3": row.get("power3_score"),
                 "board": row.get("board_score"),
                 "board_rank": row.get("board_rank"),
+                "board_of": row.get("board_of"),   # 2026-10-03: the n the rank is out of
                 # PITCHER STRIKEOUTS (2026-10-01): the starter's K/9 and this
                 # hitter's own K rate, so the locked record can rank each
                 # game's starters by K/9 x the lineup he faces (offline, in
