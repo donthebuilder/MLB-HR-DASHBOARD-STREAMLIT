@@ -1,0 +1,174 @@
+RESULTS TRACKER - 2026-09-05
+------------------------------------------
+BETTABLE RESULTS
+Top 15 HR: 5/15 (33.3%)
+HR Picks: 3/15 (20.0%)
+Top Picks: 5/15 (33.3%)
+
+FULL SHEET BASE HIT PERFORMANCE
+Base Hit Accuracy: 68.9%
+
+HR CAPTURE (BETTABLE)
+Total Slate HRs: 37
+Caught in Top 15: 5
+Caught in HR Picks: 3
+Top 15 Capture Rate: 13.5%
+HR Pick Capture Rate: 8.1%
+
+MODEL VISION (Top 40)
+Model Caught HRs: 9 / 37
+Vision Rate: 24.3%
+
+UNIQUE PLAYER HR ACCURACY
+Unique Players Tracked: 65
+Players Who Homered: 10
+Unique HR Accuracy: 15.4%
+
+HR CATEGORY BREAKDOWN
+------------------------------------------
+🏆 TOP 15 BOARD → 5 HR
+🔥 TOP PICKS → 5 HR
+🧨 HR PICKS → 3 HR
+🏁 HRR PICKS → 2 HR
+💠 HIT PICKS → 0 HR
+⚾ CONTACT PICKS → 3 HR
+Best HR-producing category: 🏆 TOP 15 BOARD
+
+LONGEST HR (BOARD)
+------------------------------------------
+- Kyle Stowers — 442 ft · 109.4 mph · 32.0°
+- Junior Caminero — 425 ft · 107.5 mph · 20.0°
+- Joshua Báez — 422 ft · 109.1 mph · 25.0°
+- Bryan Reynolds — 421 ft · 108.8 mph · 32.0°
+- Ryan Jeffers — 415 ft · 105.6 mph · 30.0°
+Longest on the board: Kyle Stowers (442 ft)
+
+
+HR RESULTS BY PLAYER
+------------------------------------------
+- Colson Montgomery — 🏆#13 + 🧨
+- Joshua Báez — 🏆#14 + 🔥
+- Kyle Stowers — 🏆#6 + 🔥 + ⭐
+- Rafael Devers — 🏆#1 + 🔥 + ⚾
+- Ryan Jeffers — 🏆#4 + 🔥 + ⚾ + ⭐
+- Junior Caminero — 🧨
+- Ketel Marte — 🧨 + ⭐
+- Jonathan Aranda — 🔥
+- Bryan Reynolds — 🏁 + ⭐
+- William Contreras — 🏁 + ⚾
+
+POOL PERFORMANCE
+------------------------------------------
+4-MAN HR POOL A → 0/4 HR (none)
+4-MAN HR POOL B → 2/4 HR (Colson Montgomery, Joshua Báez)
+4-MAN HR POOL C → 0/4 HR (none)
+4-MAN HR POOL D → 1/4 HR (Tyler Stephenson)
+3-MAN HR POOL A → 0/3 HR (none)
+3-MAN HR POOL B → 0/3 HR (none)
+3-MAN HR POOL C → 0/3 HR (none)
+3-MAN HR POOL D → 0/3 HR (none)
+
+PAIR PERFORMANCE
+------------------------------------------
+Pair 1 → 1/2 HR (Rafael Devers) | Rafael Devers + Carter Jensen
+Pair 2 → 1/2 HR (Ryan Jeffers) | Mickey Gasper + Ryan Jeffers
+Pair 3 → 0/2 HR (none) | Pete Crow-Armstrong + Zack Gelof
+Pair 4 → 1/2 HR (Kyle Stowers) | Kyle Stowers + Cal Raleigh
+
+PLAYER TYPE PERFORMANCE
+------------------------------------------
+🏆 TOP 15 BOARD (15)
+HR: 33.3% | 1+ Hit: 73.3% | XBH: 53.3% | 2+ TB: 53.3% | 2+ HRR: 73.3% | 3+ HRR: 60.0%
+
+🔥 TOP PICKS (15)
+HR: 33.3% | 1+ Hit: 66.7% | XBH: 40.0% | 2+ TB: 40.0% | 2+ HRR: 60.0% | 3+ HRR: 46.7%
+
+🧨 HR PICKS (15)
+HR: 20.0% | 1+ Hit: 66.7% | XBH: 40.0% | 2+ TB: 46.7% | 2+ HRR: 66.7% | 3+ HRR: 46.7%
+
+🏁 HRR PICKS (15)
+HR: 13.3% | 1+ Hit: 80.0% | XBH: 33.3% | 2+ TB: 60.0% | 2+ HRR: 66.7% | 3+ HRR: 40.0%
+
+💠 HIT PICKS (15)
+HR: 0.0% | 1+ Hit: 73.3% | XBH: 13.3% | 2+ TB: 33.3% | 2+ HRR: 46.7% | 3+ HRR: 33.3%
+
+⚾ CONTACT PICKS (15)
+HR: 20.0% | 1+ Hit: 53.3% | XBH: 33.3% | 2+ TB: 40.0% | 2+ HRR: 40.0% | 3+ HRR: 40.0%
+
+
+DESIGNED OUTCOME (did the pick do its job)
+------------------------------------------
+🏆 TOP 15 BOARD (15) -> 5/15 (33.3%)  ·  needs: HR
+🔥 TOP PICKS (15) -> 7/15 (46.7%)  ·  needs: most productive of our picks in his game (HRR or TB)
+🧨 HR PICKS (15) -> 3/15 (20.0%)  ·  needs: HR
+🏁 HRR PICKS (15) -> 10/15 (66.7%)  ·  needs: 2+ hits+runs+RBI
+💠 HIT PICKS (15) -> 11/15 (73.3%)  ·  needs: 1+ hit
+⚾ CONTACT PICKS (15) -> 6/15 (40.0%)  ·  needs: 2+ TB or XBH
+ALL PICKS -> 42/90 (46.7%)
+
+HIT RESULTS BY CATEGORY
+------------------------------------------
+
+🔥 TOP PICKS (1+ Hit)
+- Jonathan Aranda — 2H ⭐
+- Joshua Báez — 2H ⭐
+- Kyle Stowers — 2H ⭐
+- Rafael Devers — 2H ⭐
+- Spencer Jones — 2H ⭐
+- Angel Martínez — 1H
+- Jackson Chourio — 1H
+- James Wood — 1H
+- Ryan Jeffers — 1H
+- Zack Gelof — 1H
+
+🧨 HR PICKS (1+ Hit)
+- Kazuma Okamoto — 4H 🔥
+- Cal Raleigh — 3H 🔥
+- Zach Neto — 3H 🔥
+- Eugenio Suárez — 2H ⭐
+- Junior Caminero — 2H ⭐
+- CJ Abrams — 1H
+- Colson Montgomery — 1H
+- Ketel Marte — 1H
+- Paul Goldschmidt — 1H
+- Pete Crow-Armstrong — 1H
+
+🏁 HRR PICKS (1+ Hit)
+- Ben Rice — 3H 🔥
+- Bryan Reynolds — 3H 🔥
+- Bryce Harper — 2H ⭐
+- Gleyber Torres — 2H ⭐
+- Isaac Paredes — 2H ⭐
+- Kaelen Culpepper — 2H ⭐
+- Brett Bateman — 1H
+- Bryce Eldridge — 1H
+- Randy Arozarena — 1H
+- Seiya Suzuki — 1H
+- TJ Rumfield — 1H
+- William Contreras — 1H
+
+💠 HIT PICKS (1+ Hit)
+- Drake Baldwin — 2H ⭐
+- Gabriel Moreno — 2H ⭐
+- Luke Keaschall — 2H ⭐
+- Mookie Betts — 2H ⭐
+- Andrew Vaughn — 1H
+- Cody Bellinger — 1H
+- Jake McCarthy — 1H
+- Jeff McNeil — 1H
+- Nick Gonzales — 1H
+- Vladimir Guerrero Jr. — 1H
+- Wilyer Abreu — 1H
+
+⚾ CONTACT PICKS (1+ Hit)
+- Cal Raleigh — 3H 🔥
+- Mookie Betts — 2H ⭐
+- Rafael Devers — 2H ⭐
+- Jake McCarthy — 1H
+- Jose Altuve — 1H
+- Ryan Jeffers — 1H
+- Vaughn Grissom — 1H
+- William Contreras — 1H
+
+MODEL DIAGNOSTIC (LOW PRIORITY)
+Full Sheet HR Coverage: 37 / 37 (100.0%)

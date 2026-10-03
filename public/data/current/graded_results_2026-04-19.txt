@@ -1,0 +1,135 @@
+RESULTS TRACKER - 2026-04-19
+------------------------------------------
+FULL SHEET TRACKED PICKS: 120 | HR Accuracy: 16.7%
+FULL SHEET BASE HIT PICKS: 120 | Base Hit Accuracy: 65.8%
+
+PAIRS TRACKED: 10 | HR Accuracy: 20.0%
+4-MAN POOLS TRACKED: 4 | HR Accuracy: 0.0%
+6-MAN POOLS TRACKED: 4 | HR Accuracy: 0.0%
+
+TOP 15 TRACKED: 15 | HR Accuracy: 33.3%
+HR PICKS TRACKED: 15 | HR Accuracy: 33.3%
+TOP PICKS TRACKED: 15 | HR Accuracy: 20.0%
+
+HRR PICKS TRACKED: 30 | 2+ HRR Accuracy: 53.3% | 3+ HRR Accuracy: 43.3%
+HIT PICKS TRACKED: 30 | Hit Accuracy: 66.7% | HR Accuracy: 10.0%
+CONTACT PICKS TRACKED: 15 | XBH Accuracy: 20.0% | HR Accuracy: 0.0%
+
+TRACKED PICKS THAT HOMERED
+- 🏆#1 🧨 ⭐ Aaron Judge - HR 55.5
+  BA(S) 0.238 | BA vs LHP 0.263 | ISO 0.375 | 350+ 8/19 | L5 4H/3HR/4XBH
+- 🏆#6 🔥 Ben Rice - HR 40.6
+  BA(S) 0.349 | BA vs LHP 0.250 | ISO 0.476 | 350+ 5/19 | L5 5H/4HR/4XBH
+- 🏆#4 🏁 ⭐ Mickey Moniak - HR 42.8
+  BA(S) 0.278 | BA vs RHP 0.294 | ISO 0.389 | 350+ 4/17 | L5 6H/1HR/4XBH
+- 🏆#10 🧨 ⭐ Munetaka Murakami - HR 38.3
+  BA(S) 0.214 | BA vs LHP 0.077 | ISO 0.343 | 350+ 5/13 | L5 6H/3HR/3XBH
+- 🏆#2 🔥 ⭐ Yordan Alvarez - HR 54.3
+  BA(S) 0.333 | BA vs LHP 0.545 | ISO 0.457 | 350+ 8/28 | L5 8H/4HR/6XBH
+- 🧨 ⭐ Kyle Schwarber - HR 33.4
+  BA(S) 0.211 | BA vs RHP 0.278 | ISO 0.296 | 350+ 3/17 | L5 4H/2HR/2XBH
+- 🧨 MJ Melendez - HR 32.2
+  BA(S) 0.357 | BA vs RHP 0.500 | ISO 0.357 | 350+ 1/5 | L5 5H/1HR/3XBH
+- 🧨 ⭐ Willson Contreras - HR 23.1
+  BA(S) 0.288 | BA vs LHP 0.273 | ISO 0.212 | 350+ 2/16 | L5 3H/1HR/1XBH
+- 🔥 ⭐ Dillon Dingler - HR 32.6
+  BA(S) 0.283 | BA vs LHP 0.222 | ISO 0.267 | 350+ 5/22 | L5 6H/1HR/4XBH
+- 🏁 J.P. Crawford - HR 8.0
+  BA(S) 0.217 | BA vs LHP 0.000 | ISO 0.131 | 350+ 2/22 | L5 4H/1HR/3XBH
+- 🏁 ⭐ José Ramírez - HR 34.0
+  BA(S) 0.229 | BA vs LHP 0.250 | ISO 0.265 | 350+ 5/23 | L5 4H/3HR/3XBH
+- 🏁 ⭐ Junior Caminero - HR 19.6
+  BA(S) 0.250 | BA vs RHP 0.220 | ISO 0.214 | 350+ 2/29 | L5 7H/3HR/4XBH
+- 💠 Derek Hill - HR 5.0
+  BA(S) 0.280 | BA vs LHP 0.333 | ISO 0.120 | 350+ 0/13 | L5 3H/1HR/1XBH
+- 💠 ⭐ Randy Arozarena - HR 10.7
+  BA(S) 0.296 | BA vs LHP 0.313 | ISO 0.136 | 350+ 0/25 | L5 6H/1HR/3XBH
+- 💠 Taylor Ward - HR 18.6
+  BA(S) 0.295 | BA vs LHP 0.375 | ISO 0.160 | 350+ 3/25 | L5 4H/1HR/2XBH
+
+TRACKED PICKS THAT GOT A BASE HIT
+- Max Muncy (LAD) | TOP15#3 | 3 H
+- Mickey Moniak (COL) | TOP15#4 | 2 H
+- Aaron Judge (NYY) | TOP15#1 | 1 H
+- Ben Rice (NYY) | TOP15#6 | 1 H
+- Brice Turang (MIL) | TOP15#5 | 1 H
+- Hunter Goodman (COL) | TOP15#14 | 1 H
+- Jeremiah Jackson (BAL) | TOP15#13 | 1 H
+- Jordan Walker (STL) | TOP15#11 | 1 H
+- Munetaka Murakami (CWS) | TOP15#10 | 1 H
+- Yordan Alvarez (HOU) | TOP15#2 | 1 H
+- Max Muncy (LAD) | HR | 3 H
+- Kyle Schwarber (PHI) | HR | 2 H
+- Aaron Judge (NYY) | HR | 1 H
+- Brice Turang (MIL) | HR | 1 H
+- Elly De La Cruz (CIN) | HR | 1 H
+- Jeremiah Jackson (BAL) | HR | 1 H
+- Jordan Walker (STL) | HR | 1 H
+- Jorge Soler (LAA) | HR | 1 H
+- Ketel Marte (ARI) | HR | 1 H
+- MJ Melendez (NYM) | HR | 1 H
+- Munetaka Murakami (CWS) | HR | 1 H
+- Willson Contreras (BOS) | HR | 1 H
+- Dillon Dingler (DET) | TOP | 4 H
+- Andy Pages (LAD) | TOP | 1 H
+- Ben Rice (NYY) | TOP | 1 H
+- Ildemaro Vargas (ARI) | TOP | 1 H
+- Nico Hoerner (CHC) | TOP | 1 H
+- Otto Lopez (MIA) | TOP | 1 H
+- Yordan Alvarez (HOU) | TOP | 1 H
+- Brayan Rocchio (CLE) | HRR | 3 H
+- Adrian Del Castillo (ARI) | HRR | 2 H
+- Chase Meidroth (CWS) | HRR | 2 H
+- Drew Gilbert (SF) | HRR | 2 H
+- José Ramírez (CLE) | HRR | 2 H
+- Mickey Moniak (COL) | HRR | 2 H
+- Alex Bregman (CHC) | HRR | 1 H
+- Amed Rosario (NYY) | HRR | 1 H
+- Andrés Giménez (TOR) | HRR | 1 H
+- Austin Riley (ATL) | HRR | 1 H
+- Bryce Harper (PHI) | HRR | 1 H
+- Byron Buxton (MIN) | HRR | 1 H
+- Cody Bellinger (NYY) | HRR | 1 H
+- Gleyber Torres (DET) | HRR | 1 H
+- Iván Herrera (STL) | HRR | 1 H
+- J.P. Crawford (SEA) | HRR | 1 H
+- JJ Wetherholt (STL) | HRR | 1 H
+- Jonny DeLuca (TB) | HRR | 1 H
+- Junior Caminero (TB) | HRR | 1 H
+- Kyle Tucker (LAD) | HRR | 1 H
+- Matt Chapman (SF) | HRR | 1 H
+- Riley Greene (DET) | HRR | 1 H
+- Jose Altuve (HOU) | HIT | 3 H
+- Vladimir Guerrero Jr. (TOR) | HIT | 3 H
+- Bobby Witt Jr. (KC) | HIT | 2 H
+- Brandon Nimmo (TEX) | HIT | 2 H
+- Everson Pereira (CWS) | HIT | 2 H
+- Jake Mangum (PIT) | HIT | 2 H
+- Liam Hicks (MIA) | HIT | 2 H
+- Randy Arozarena (SEA) | HIT | 2 H
+- Taylor Ward (BAL) | HIT | 2 H
+- Troy Johnston (COL) | HIT | 2 H
+- Alex Call (LAD) | HIT | 1 H
+- Austin Martin (MIN) | HIT | 1 H
+- Casey Schmitt (SF) | HIT | 1 H
+- Ceddanne Rafaela (BOS) | HIT | 1 H
+- Chandler Simpson (TB) | HIT | 1 H
+- Derek Hill (CWS) | HIT | 1 H
+- Dominic Smith (ATL) | HIT | 1 H
+- Michael Conforto (CHC) | HIT | 1 H
+- Wilyer Abreu (BOS) | HIT | 1 H
+- Xavier Edwards (MIA) | HIT | 1 H
+- Elias Díaz (KC) | CONTACT | 2 H
+- Taylor Trammell (HOU) | CONTACT | 2 H
+- Cole Young (SEA) | CONTACT | 1 H
+- Javier Sanoja (MIA) | CONTACT | 1 H
+- Joey Wiemer (WSH) | CONTACT | 1 H
+- Jose Fernandez (ARI) | CONTACT | 1 H
+- Luis Robert Jr. (NYM) | CONTACT | 1 H
+- Will Smith (LAD) | CONTACT | 1 H
+
+PAIRS / POOLS THAT CLEARED
+- Best HR Pair [CLEARED]
+  Aaron Judge + Yordan Alvarez
+- Same-Date Homer Tag [CLEARED]
+  Ben Rice + José Ramírez

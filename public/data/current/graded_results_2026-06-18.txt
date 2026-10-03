@@ -1,0 +1,126 @@
+RESULTS TRACKER - 2026-06-18
+------------------------------------------
+BETTABLE RESULTS
+Top 15 HR: 2/15 (13.3%)
+HR Picks: 0/8 (0.0%)
+Top Picks: 1/8 (12.5%)
+
+FULL SHEET BASE HIT PERFORMANCE
+Base Hit Accuracy: 54.9%
+
+HR CAPTURE (BETTABLE)
+Total Slate HRs: 23
+Caught in Top 15: 2
+Caught in HR Picks: 0
+Top 15 Capture Rate: 8.7%
+HR Pick Capture Rate: 0.0%
+
+MODEL VISION (Top 40)
+Model Caught HRs: 6 / 23
+Vision Rate: 26.1%
+
+UNIQUE PLAYER HR ACCURACY
+Unique Players Tracked: 56
+Players Who Homered: 6
+Unique HR Accuracy: 10.7%
+
+HR CATEGORY BREAKDOWN
+------------------------------------------
+🏆 TOP 15 BOARD → 2 HR
+🔥 TOP PICKS → 1 HR
+🧨 HR PICKS → 0 HR
+🏁 HRR PICKS → 2 HR
+💠 HIT PICKS → 2 HR
+⚾ CONTACT PICKS → 1 HR
+Best HR-producing category: 🏆 TOP 15 BOARD
+
+HR RESULTS BY PLAYER
+------------------------------------------
+- Juan Soto — 🏆#7 + 🔥 + ⭐
+- Trevor Larnach — 🏆#9 + 💠
+- Shea Langeliers — 🏁
+- Tyler Soderstrom — 🏁
+- Bobby Witt Jr. — 💠 + ⭐
+- Colson Montgomery — ⚾ + ⭐
+
+MISSED HRs (NOT IN MODEL SHEET)
+------------------------------------------
+- Andrew Benintendi (CWS) — not in model sheet / lineup pool
+- Ryan Kreidler (MIN) — not in model sheet / lineup pool
+- Justin Foscue (TEX) — not in model sheet / lineup pool
+
+POOL PERFORMANCE
+------------------------------------------
+4-MAN HR POOL A → 1/4 HR (Trevor Larnach)
+4-MAN HR POOL B → 0/4 HR (none)
+4-MAN HR POOL C → 1/4 HR (Colson Montgomery)
+4-MAN HR POOL D → 0/4 HR (none)
+6-MAN HR POOL A → 0/6 HR (none)
+6-MAN HR POOL B → 0/6 HR (none)
+6-MAN HR POOL C → 0/6 HR (none)
+6-MAN HR POOL D → 1/6 HR (Shea Langeliers)
+
+PAIR PERFORMANCE
+------------------------------------------
+Pair 1 → 0/2 HR (none) | Lane Thomas + Royce Lewis
+Pair 2 → 0/2 HR (none) | Michael Massey + Byron Buxton
+Pair 3 → 0/2 HR (none) | Colton Cowser + Paul Goldschmidt
+Pair 4 → 1/2 HR (Juan Soto) | George Springer + Juan Soto
+
+PLAYER TYPE PERFORMANCE
+------------------------------------------
+🏁 HRR PICKS (16)
+2+ HRR: 43.8% | 3+ HRR: 25.0%
+
+💠 HIT PICKS (16)
+1+ Hit: 50.0% | HR: 12.5%
+
+⚾ CONTACT PICKS (8)
+XBH: 37.5% | 2+ TB: 37.5% | HR: 12.5%
+
+HIT RESULTS BY CATEGORY
+------------------------------------------
+
+🔥 TOP PICKS (1+ Hit)
+- Juan Soto — 2H ⭐
+- Lane Thomas — 2H ⭐
+- Nick Kurtz — 1H
+- Paul Goldschmidt — 1H
+
+🧨 HR PICKS (1+ Hit)
+- George Springer — 2H ⭐
+- Colton Cowser — 1H
+- Gary Sánchez — 1H
+- Kyle Schwarber — 1H
+
+🏁 HRR PICKS (1+ Hit)
+- Alec Bohm — 2H ⭐
+- Josh Bell — 2H ⭐
+- Ben Rice — 1H
+- Bryson Stott — 1H
+- Ernie Clement — 1H
+- Jake Bauers — 1H
+- Kazuma Okamoto — 1H
+- Shea Langeliers — 1H
+- Tyler Soderstrom — 1H
+
+💠 HIT PICKS (1+ Hit)
+- Trevor Larnach — 3H 🔥
+- Bobby Witt Jr. — 2H ⭐
+- Carter Jensen — 2H ⭐
+- Ceddanne Rafaela — 1H
+- Chase Meidroth — 1H
+- Cole Young — 1H
+- Kody Clemens — 1H
+- Zack Gelof — 1H
+
+⚾ CONTACT PICKS (1+ Hit)
+- Brandon Valenzuela — 2H ⭐
+- Colson Montgomery — 2H ⭐
+- Jordan Walker — 2H ⭐
+- Brandon Nimmo — 1H
+- Francisco Alvarez — 1H
+- Jonah Heim — 1H
+
+MODEL DIAGNOSTIC (LOW PRIORITY)
+Full Sheet HR Coverage: 20 / 23 (87.0%)

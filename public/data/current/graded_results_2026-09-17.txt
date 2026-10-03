@@ -1,0 +1,145 @@
+RESULTS TRACKER - 2026-09-17
+------------------------------------------
+BETTABLE RESULTS
+Top 15 HR: 3/14 (21.4%)
+HR Picks: 0/7 (0.0%)
+Top Picks: 1/7 (14.3%)
+
+FULL SHEET BASE HIT PERFORMANCE
+Base Hit Accuracy: 65.5%
+
+HR CAPTURE (BETTABLE)
+Total Slate HRs: 15
+Caught in Top 15: 3
+Caught in HR Picks: 0
+Top 15 Capture Rate: 20.0%
+HR Pick Capture Rate: 0.0%
+
+MODEL VISION (Top 40)
+Model Caught HRs: 4 / 15
+Vision Rate: 26.7%
+
+UNIQUE PLAYER HR ACCURACY
+Unique Players Tracked: 38
+Players Who Homered: 4
+Unique HR Accuracy: 10.5%
+
+HR CATEGORY BREAKDOWN
+------------------------------------------
+🏆 TOP 15 BOARD → 3 HR
+🔥 TOP PICKS → 1 HR
+🧨 HR PICKS → 0 HR
+🏁 HRR PICKS → 2 HR
+💠 HIT PICKS → 0 HR
+⚾ CONTACT PICKS → 0 HR
+Best HR-producing category: 🏆 TOP 15 BOARD
+
+LONGEST HR (BOARD)
+------------------------------------------
+- Lawrence Butler — 437 ft · 109.3 mph · 33.0°
+- Jeremy Peña — 394 ft · 103.9 mph · 35.0°
+- Yordan Alvarez — 385 ft · 107.2 mph · 37.0°
+- Sal Stewart — 380 ft · 104.3 mph · 25.0°
+Longest on the board: Lawrence Butler (437 ft)
+
+
+HR RESULTS BY PLAYER
+------------------------------------------
+- Jeremy Peña — 🏆#6 + 🔥
+- Lawrence Butler — 🏆#7
+- Yordan Alvarez — 🏆#14 + 🏁 + ⭐
+- Sal Stewart — 🏁
+
+POOL PERFORMANCE
+------------------------------------------
+4-MAN Pool A — Strongest → 0/4 HR (none)
+4-MAN Pool B — HRR+Power → 1/4 HR (Lawrence Butler)
+4-MAN Pool C — Balanced → 0/4 HR (none)
+4-MAN Pool D — Variance → 1/4 HR (Sal Stewart)
+3-MAN Pool A — Strongest → 0/3 HR (none)
+3-MAN Pool B — HRR+Var → 0/3 HR (none)
+3-MAN Pool C — Balanced → 0/3 HR (none)
+3-MAN Pool D — Variance → 0/3 HR (none)
+
+PAIR PERFORMANCE
+------------------------------------------
+Pair 1 → 1/2 HR (Yordan Alvarez) | Kyle Schwarber + Yordan Alvarez
+Pair 2 → 1/2 HR (Yordan Alvarez) | Joc Pederson + Yordan Alvarez
+Pair 3 → 0/2 HR (none) | Rafael Flores Jr. + Oneil Cruz
+Pair 4 → 0/2 HR (none) | Elly De La Cruz + Spencer Torkelson
+Pair 5 → 0/2 HR (none) | Brandon Lowe + Max Muncy
+Pair 6 → 0/2 HR (none) | Francisco Lindor + Juan Soto
+Pair 7 → 0/2 HR (none) | Carter Jensen + Jackson Merrill
+Pair 8 → 1/2 HR (Jeremy Peña) | Jeremy Peña + Corey Seager
+Pair 9 → 0/2 HR (none) | Randal Grichuk + Miguel Vargas
+Pair 10 → 0/2 HR (none) | Corey Seager + Randal Grichuk
+
+PLAYER TYPE PERFORMANCE
+------------------------------------------
+🏆 TOP 15 BOARD (14)
+HR: 21.4% | 1+ Hit: 64.3% | XBH: 35.7% | 2+ TB: 42.9% | 2+ HRR: 50.0% | 3+ HRR: 35.7%
+
+🔥 TOP PICKS (7)
+HR: 14.3% | 1+ Hit: 57.1% | XBH: 28.6% | 2+ TB: 28.6% | 2+ HRR: 42.9% | 3+ HRR: 14.3%
+
+🧨 HR PICKS (7)
+HR: 0.0% | 1+ Hit: 71.4% | XBH: 28.6% | 2+ TB: 42.9% | 2+ HRR: 42.9% | 3+ HRR: 42.9%
+
+🏁 HRR PICKS (7)
+HR: 28.6% | 1+ Hit: 71.4% | XBH: 42.9% | 2+ TB: 42.9% | 2+ HRR: 71.4% | 3+ HRR: 42.9%
+
+💠 HIT PICKS (7)
+HR: 0.0% | 1+ Hit: 71.4% | XBH: 0.0% | 2+ TB: 42.9% | 2+ HRR: 42.9% | 3+ HRR: 28.6%
+
+⚾ CONTACT PICKS (7)
+HR: 0.0% | 1+ Hit: 57.1% | XBH: 0.0% | 2+ TB: 14.3% | 2+ HRR: 28.6% | 3+ HRR: 14.3%
+
+
+DESIGNED OUTCOME (did the pick do its job)
+------------------------------------------
+🏆 TOP 15 BOARD (14) -> 3/14 (21.4%)  ·  needs: HR
+🔥 TOP PICKS (7) -> 2/7 (28.6%)  ·  needs: most productive of our picks in his game (HRR or TB)
+🧨 HR PICKS (7) -> 0/7 (0.0%)  ·  needs: HR
+🏁 HRR PICKS (7) -> 5/7 (71.4%)  ·  needs: 2+ hits+runs+RBI
+💠 HIT PICKS (7) -> 5/7 (71.4%)  ·  needs: 1+ hit
+⚾ CONTACT PICKS (7) -> 1/7 (14.3%)  ·  needs: 2+ TB or XBH
+ALL PICKS -> 16/55 (29.1%)
+
+HIT RESULTS BY CATEGORY
+------------------------------------------
+
+🔥 TOP PICKS (1+ Hit)
+- Jeremy Peña — 2H ⭐
+- Brandon Lowe — 1H
+- Cole Carrigg — 1H
+- Spencer Torkelson — 1H
+
+🧨 HR PICKS (1+ Hit)
+- Ty France — 3H 🔥
+- Carter Jensen — 2H ⭐
+- Max Muncy — 2H ⭐
+- Riley Greene — 1H
+- Zack Gelof — 1H
+
+🏁 HRR PICKS (1+ Hit)
+- Sal Stewart — 2H ⭐
+- Yordan Alvarez — 2H ⭐
+- Gleyber Torres — 1H
+- Jonathan Aranda — 1H
+- Kyle Karros — 1H
+
+💠 HIT PICKS (1+ Hit)
+- Dustin Harris — 3H 🔥
+- Chandler Simpson — 2H ⭐
+- Kevin McGonigle — 2H ⭐
+- Brice Turang — 1H
+- Yainer Diaz — 1H
+
+⚾ CONTACT PICKS (1+ Hit)
+- Carter Jensen — 2H ⭐
+- Brice Turang — 1H
+- Connor Norby — 1H
+- Spencer Torkelson — 1H
+
+MODEL DIAGNOSTIC (LOW PRIORITY)
+Full Sheet HR Coverage: 15 / 15 (100.0%)

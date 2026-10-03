@@ -1,0 +1,1192 @@
+{
+ "season": 2026,
+ "week": 4,
+ "updated": "2026-10-03T01:48:37+00:00",
+ "runs": 11,
+ "card_locks": {
+  "TD|1": {
+   "market": "TD",
+   "rank": 1,
+   "stub": {
+    "player_id": "00-0039139",
+    "name": "Jahmyr Gibbs",
+    "team": "DET",
+    "opp": "CAR",
+    "position": "RB"
+   },
+   "meta": {
+    "score": 79.4,
+    "grade": "A+",
+    "low_sample": false,
+    "questionable": false,
+    "carryover": false
+   },
+   "game_id": "401872978",
+   "at": "2026-09-29T03:51:16+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "player_id": "00-0039139",
+     "name": "Jahmyr Gibbs",
+     "at": "2026-09-29T03:51:16+00:00"
+    }
+   ]
+  },
+  "TD|2": {
+   "market": "TD",
+   "rank": 2,
+   "stub": {
+    "player_id": "00-0037248",
+    "name": "James Cook",
+    "team": "BUF",
+    "opp": "NE",
+    "position": "RB"
+   },
+   "meta": {
+    "score": 75.5,
+    "grade": "A",
+    "low_sample": false,
+    "questionable": false,
+    "carryover": false
+   },
+   "game_id": "401872971",
+   "at": "2026-10-02T00:30:46+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "player_id": "00-0037248",
+     "name": "James Cook",
+     "at": "2026-09-29T03:51:16+00:00"
+    },
+    {
+     "player_id": "00-0036963",
+     "name": "Amon-Ra St. Brown",
+     "at": "2026-10-01T02:02:43+00:00"
+    },
+    {
+     "player_id": "00-0037248",
+     "name": "James Cook",
+     "at": "2026-10-02T00:30:46+00:00"
+    }
+   ]
+  },
+  "TD|3": {
+   "market": "TD",
+   "rank": 3,
+   "stub": {
+    "player_id": "00-0036223",
+    "name": "Jonathan Taylor",
+    "team": "IND",
+    "opp": "WAS",
+    "position": "RB"
+   },
+   "meta": {
+    "score": 73.5,
+    "grade": "A",
+    "low_sample": false,
+    "questionable": false,
+    "carryover": false
+   },
+   "game_id": "401872965",
+   "at": "2026-10-02T00:30:46+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "player_id": "00-0038134",
+     "name": "Kenneth Walker III",
+     "at": "2026-09-29T03:51:16+00:00"
+    },
+    {
+     "player_id": "00-0036223",
+     "name": "Jonathan Taylor",
+     "at": "2026-10-02T00:30:46+00:00"
+    }
+   ]
+  },
+  "TD|4": {
+   "market": "TD",
+   "rank": 4,
+   "stub": {
+    "player_id": "00-0038134",
+    "name": "Kenneth Walker III",
+    "team": "KC",
+    "opp": "LV",
+    "position": "RB"
+   },
+   "meta": {
+    "score": 72.1,
+    "grade": "A",
+    "low_sample": false,
+    "questionable": false,
+    "carryover": false
+   },
+   "game_id": "401872976",
+   "at": "2026-10-02T00:30:46+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "player_id": "00-0036223",
+     "name": "Jonathan Taylor",
+     "at": "2026-09-29T03:51:16+00:00"
+    },
+    {
+     "player_id": "00-0037248",
+     "name": "James Cook",
+     "at": "2026-10-01T02:02:43+00:00"
+    },
+    {
+     "player_id": "00-0038134",
+     "name": "Kenneth Walker III",
+     "at": "2026-10-02T00:30:46+00:00"
+    }
+   ]
+  },
+  "TD|5": {
+   "market": "TD",
+   "rank": 5,
+   "stub": {
+    "player_id": "00-0036963",
+    "name": "Amon-Ra St. Brown",
+    "team": "DET",
+    "opp": "CAR",
+    "position": "WR"
+   },
+   "meta": {
+    "score": 71.1,
+    "grade": "A",
+    "low_sample": false,
+    "questionable": false,
+    "carryover": false
+   },
+   "game_id": "401872978",
+   "at": "2026-10-02T00:30:46+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "player_id": "00-0032764",
+     "name": "Derrick Henry",
+     "at": "2026-09-29T03:51:16+00:00"
+    },
+    {
+     "player_id": "00-0036963",
+     "name": "Amon-Ra St. Brown",
+     "at": "2026-09-29T18:31:08+00:00"
+    },
+    {
+     "player_id": "00-0036223",
+     "name": "Jonathan Taylor",
+     "at": "2026-10-01T02:02:43+00:00"
+    },
+    {
+     "player_id": "00-0036963",
+     "name": "Amon-Ra St. Brown",
+     "at": "2026-10-02T00:30:46+00:00"
+    }
+   ]
+  },
+  "REC_YDS|1": {
+   "market": "REC_YDS",
+   "rank": 1,
+   "stub": {
+    "player_id": "00-0037239",
+    "name": "Chris Olave",
+    "team": "NO",
+    "opp": "ATL",
+    "position": "WR"
+   },
+   "meta": {
+    "score": 79.4,
+    "grade": "A+",
+    "low_sample": false,
+    "questionable": false,
+    "carryover": false
+   },
+   "game_id": "401872979",
+   "at": "2026-09-29T03:51:16+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "player_id": "00-0037239",
+     "name": "Chris Olave",
+     "at": "2026-09-29T03:51:16+00:00"
+    }
+   ]
+  },
+  "REC_YDS|2": {
+   "market": "REC_YDS",
+   "rank": 2,
+   "stub": {
+    "player_id": "00-0038543",
+    "name": "Jaxon Smith-Njigba",
+    "team": "SEA",
+    "opp": "LAC",
+    "position": "WR"
+   },
+   "meta": {
+    "score": 75.5,
+    "grade": "A",
+    "low_sample": false,
+    "questionable": false,
+    "carryover": false
+   },
+   "game_id": "401872977",
+   "at": "2026-09-29T03:51:16+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "player_id": "00-0038543",
+     "name": "Jaxon Smith-Njigba",
+     "at": "2026-09-29T03:51:16+00:00"
+    }
+   ]
+  },
+  "REC_YDS|3": {
+   "market": "REC_YDS",
+   "rank": 3,
+   "stub": {
+    "player_id": "00-0036410",
+    "name": "Tee Higgins",
+    "team": "CIN",
+    "opp": "JAX",
+    "position": "WR"
+   },
+   "meta": {
+    "score": 73.5,
+    "grade": "A",
+    "low_sample": false,
+    "questionable": false,
+    "carryover": false
+   },
+   "game_id": "401872969",
+   "at": "2026-09-29T03:51:16+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "player_id": "00-0036410",
+     "name": "Tee Higgins",
+     "at": "2026-09-29T03:51:16+00:00"
+    }
+   ]
+  },
+  "REC_YDS|4": {
+   "market": "REC_YDS",
+   "rank": 4,
+   "stub": {
+    "player_id": "00-0038606",
+    "name": "Parker Washington",
+    "team": "JAX",
+    "opp": "CIN",
+    "position": "WR"
+   },
+   "meta": {
+    "score": 72.1,
+    "grade": "A",
+    "low_sample": false,
+    "questionable": false,
+    "carryover": false
+   },
+   "game_id": "401872969",
+   "at": "2026-09-29T03:51:16+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "player_id": "00-0038606",
+     "name": "Parker Washington",
+     "at": "2026-09-29T03:51:16+00:00"
+    }
+   ]
+  },
+  "REC_YDS|5": {
+   "market": "REC_YDS",
+   "rank": 5,
+   "stub": {
+    "player_id": "00-0038997",
+    "name": "Josh Downs",
+    "team": "IND",
+    "opp": "WAS",
+    "position": "WR"
+   },
+   "meta": {
+    "score": 71.1,
+    "grade": "A",
+    "low_sample": false,
+    "questionable": false,
+    "carryover": false
+   },
+   "game_id": "401872965",
+   "at": "2026-09-29T03:51:16+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "player_id": "00-0038997",
+     "name": "Josh Downs",
+     "at": "2026-09-29T03:51:16+00:00"
+    }
+   ]
+  },
+  "REC|1": {
+   "market": "REC",
+   "rank": 1,
+   "stub": {
+    "player_id": "00-0038543",
+    "name": "Jaxon Smith-Njigba",
+    "team": "SEA",
+    "opp": "LAC",
+    "position": "WR"
+   },
+   "meta": {
+    "score": 79.4,
+    "grade": "A+",
+    "low_sample": false,
+    "questionable": false,
+    "carryover": false
+   },
+   "game_id": "401872977",
+   "at": "2026-09-29T03:51:16+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "player_id": "00-0038543",
+     "name": "Jaxon Smith-Njigba",
+     "at": "2026-09-29T03:51:16+00:00"
+    }
+   ]
+  },
+  "REC|2": {
+   "market": "REC",
+   "rank": 2,
+   "stub": {
+    "player_id": "00-0037744",
+    "name": "Trey McBride",
+    "team": "ARI",
+    "opp": "NYG",
+    "position": "TE"
+   },
+   "meta": {
+    "score": 75.5,
+    "grade": "A",
+    "low_sample": false,
+    "questionable": false,
+    "carryover": false
+   },
+   "game_id": "401872966",
+   "at": "2026-09-29T18:31:08+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "player_id": "00-0036963",
+     "name": "Amon-Ra St. Brown",
+     "at": "2026-09-29T03:51:16+00:00"
+    },
+    {
+     "player_id": "00-0037744",
+     "name": "Trey McBride",
+     "at": "2026-09-29T18:31:08+00:00"
+    }
+   ]
+  },
+  "REC|3": {
+   "market": "REC",
+   "rank": 3,
+   "stub": {
+    "player_id": "00-0036963",
+    "name": "Amon-Ra St. Brown",
+    "team": "DET",
+    "opp": "CAR",
+    "position": "WR"
+   },
+   "meta": {
+    "score": 73.5,
+    "grade": "A",
+    "low_sample": false,
+    "questionable": false,
+    "carryover": false
+   },
+   "game_id": "401872978",
+   "at": "2026-09-29T18:31:08+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "player_id": "00-0037744",
+     "name": "Trey McBride",
+     "at": "2026-09-29T03:51:16+00:00"
+    },
+    {
+     "player_id": "00-0036963",
+     "name": "Amon-Ra St. Brown",
+     "at": "2026-09-29T18:31:08+00:00"
+    }
+   ]
+  },
+  "REC|4": {
+   "market": "REC",
+   "rank": 4,
+   "stub": {
+    "player_id": "00-0037239",
+    "name": "Chris Olave",
+    "team": "NO",
+    "opp": "ATL",
+    "position": "WR"
+   },
+   "meta": {
+    "score": 72.1,
+    "grade": "A",
+    "low_sample": false,
+    "questionable": false,
+    "carryover": false
+   },
+   "game_id": "401872979",
+   "at": "2026-09-29T03:51:16+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "player_id": "00-0037239",
+     "name": "Chris Olave",
+     "at": "2026-09-29T03:51:16+00:00"
+    }
+   ]
+  },
+  "REC|5": {
+   "market": "REC",
+   "rank": 5,
+   "stub": {
+    "player_id": "00-0039075",
+    "name": "Puka Nacua",
+    "team": "LA",
+    "opp": "PHI",
+    "position": "WR"
+   },
+   "meta": {
+    "score": 71.1,
+    "grade": "A",
+    "low_sample": false,
+    "questionable": false,
+    "carryover": true
+   },
+   "game_id": "401872970",
+   "at": "2026-10-01T02:02:43+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "player_id": "00-0036912",
+     "name": "DeVonta Smith",
+     "at": "2026-09-29T03:51:16+00:00"
+    },
+    {
+     "player_id": "00-0039075",
+     "name": "Puka Nacua",
+     "at": "2026-10-01T02:02:43+00:00"
+    }
+   ]
+  },
+  "RUSH_YDS|1": {
+   "market": "RUSH_YDS",
+   "rank": 1,
+   "stub": {
+    "player_id": "00-0032764",
+    "name": "Derrick Henry",
+    "team": "BAL",
+    "opp": "TEN",
+    "position": "RB"
+   },
+   "meta": {
+    "score": 76.7,
+    "grade": "A",
+    "low_sample": false,
+    "questionable": false,
+    "carryover": false
+   },
+   "game_id": "401872973",
+   "at": "2026-09-29T03:51:16+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "player_id": "00-0032764",
+     "name": "Derrick Henry",
+     "at": "2026-09-29T03:51:16+00:00"
+    }
+   ]
+  },
+  "RUSH_YDS|2": {
+   "market": "RUSH_YDS",
+   "rank": 2,
+   "stub": {
+    "player_id": "00-0038542",
+    "name": "Bijan Robinson",
+    "team": "ATL",
+    "opp": "NO",
+    "position": "RB"
+   },
+   "meta": {
+    "score": 72.4,
+    "grade": "A",
+    "low_sample": false,
+    "questionable": false,
+    "carryover": false
+   },
+   "game_id": "401872979",
+   "at": "2026-09-29T03:51:16+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "player_id": "00-0038542",
+     "name": "Bijan Robinson",
+     "at": "2026-09-29T03:51:16+00:00"
+    }
+   ]
+  },
+  "RUSH_YDS|3": {
+   "market": "RUSH_YDS",
+   "rank": 3,
+   "stub": {
+    "player_id": "00-0036223",
+    "name": "Jonathan Taylor",
+    "team": "IND",
+    "opp": "WAS",
+    "position": "RB"
+   },
+   "meta": {
+    "score": 70.2,
+    "grade": "A",
+    "low_sample": false,
+    "questionable": false,
+    "carryover": false
+   },
+   "game_id": "401872965",
+   "at": "2026-09-29T03:51:16+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "player_id": "00-0036223",
+     "name": "Jonathan Taylor",
+     "at": "2026-09-29T03:51:16+00:00"
+    }
+   ]
+  },
+  "RUSH_YDS|4": {
+   "market": "RUSH_YDS",
+   "rank": 4,
+   "stub": {
+    "player_id": "00-0038134",
+    "name": "Kenneth Walker III",
+    "team": "KC",
+    "opp": "LV",
+    "position": "RB"
+   },
+   "meta": {
+    "score": 68.7,
+    "grade": "A-",
+    "low_sample": false,
+    "questionable": false,
+    "carryover": false
+   },
+   "game_id": "401872976",
+   "at": "2026-09-29T03:51:16+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "player_id": "00-0038134",
+     "name": "Kenneth Walker III",
+     "at": "2026-09-29T03:51:16+00:00"
+    }
+   ]
+  },
+  "RUSH_YDS|5": {
+   "market": "RUSH_YDS",
+   "rank": 5,
+   "stub": {
+    "player_id": "00-0039139",
+    "name": "Jahmyr Gibbs",
+    "team": "DET",
+    "opp": "CAR",
+    "position": "RB"
+   },
+   "meta": {
+    "score": 67.5,
+    "grade": "A-",
+    "low_sample": false,
+    "questionable": false,
+    "carryover": false
+   },
+   "game_id": "401872978",
+   "at": "2026-09-29T03:51:16+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "player_id": "00-0039139",
+     "name": "Jahmyr Gibbs",
+     "at": "2026-09-29T03:51:16+00:00"
+    }
+   ]
+  },
+  "RUSH_ATT|1": {
+   "market": "RUSH_ATT",
+   "rank": 1,
+   "stub": {
+    "player_id": "00-0038542",
+    "name": "Bijan Robinson",
+    "team": "ATL",
+    "opp": "NO",
+    "position": "RB"
+   },
+   "meta": {
+    "score": 74.8,
+    "grade": "A",
+    "low_sample": false,
+    "questionable": false,
+    "carryover": false
+   },
+   "game_id": "401872979",
+   "at": "2026-09-29T03:51:16+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "player_id": "00-0038542",
+     "name": "Bijan Robinson",
+     "at": "2026-09-29T03:51:16+00:00"
+    }
+   ]
+  },
+  "RUSH_ATT|2": {
+   "market": "RUSH_ATT",
+   "rank": 2,
+   "stub": {
+    "player_id": "00-0032764",
+    "name": "Derrick Henry",
+    "team": "BAL",
+    "opp": "TEN",
+    "position": "RB"
+   },
+   "meta": {
+    "score": 70.3,
+    "grade": "A",
+    "low_sample": false,
+    "questionable": false,
+    "carryover": false
+   },
+   "game_id": "401872973",
+   "at": "2026-09-29T03:51:16+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "player_id": "00-0032764",
+     "name": "Derrick Henry",
+     "at": "2026-09-29T03:51:16+00:00"
+    }
+   ]
+  },
+  "RUSH_ATT|3": {
+   "market": "RUSH_ATT",
+   "rank": 3,
+   "stub": {
+    "player_id": "00-0038134",
+    "name": "Kenneth Walker III",
+    "team": "KC",
+    "opp": "LV",
+    "position": "RB"
+   },
+   "meta": {
+    "score": 68.0,
+    "grade": "A-",
+    "low_sample": false,
+    "questionable": false,
+    "carryover": false
+   },
+   "game_id": "401872976",
+   "at": "2026-09-29T13:15:48+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "player_id": "00-0038134",
+     "name": "Kenneth Walker III",
+     "at": "2026-09-29T03:51:16+00:00"
+    },
+    {
+     "player_id": "00-0039139",
+     "name": "Jahmyr Gibbs",
+     "at": "2026-09-29T04:35:41+00:00"
+    },
+    {
+     "player_id": "00-0038134",
+     "name": "Kenneth Walker III",
+     "at": "2026-09-29T13:15:48+00:00"
+    }
+   ]
+  },
+  "RUSH_ATT|4": {
+   "market": "RUSH_ATT",
+   "rank": 4,
+   "stub": {
+    "player_id": "00-0039139",
+    "name": "Jahmyr Gibbs",
+    "team": "DET",
+    "opp": "CAR",
+    "position": "RB"
+   },
+   "meta": {
+    "score": 66.3,
+    "grade": "A-",
+    "low_sample": false,
+    "questionable": false,
+    "carryover": false
+   },
+   "game_id": "401872978",
+   "at": "2026-09-29T13:15:48+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "player_id": "00-0039139",
+     "name": "Jahmyr Gibbs",
+     "at": "2026-09-29T03:51:16+00:00"
+    },
+    {
+     "player_id": "00-0038134",
+     "name": "Kenneth Walker III",
+     "at": "2026-09-29T04:35:41+00:00"
+    },
+    {
+     "player_id": "00-0039139",
+     "name": "Jahmyr Gibbs",
+     "at": "2026-09-29T13:15:48+00:00"
+    }
+   ]
+  },
+  "RUSH_ATT|5": {
+   "market": "RUSH_ATT",
+   "rank": 5,
+   "stub": {
+    "player_id": "00-0038120",
+    "name": "Breece Hall",
+    "team": "NYJ",
+    "opp": "CHI",
+    "position": "RB"
+   },
+   "meta": {
+    "score": 65.0,
+    "grade": "A-",
+    "low_sample": false,
+    "questionable": false,
+    "carryover": false
+   },
+   "game_id": "401872972",
+   "at": "2026-10-01T02:02:43+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "player_id": "00-0036223",
+     "name": "Jonathan Taylor",
+     "at": "2026-09-29T03:51:16+00:00"
+    },
+    {
+     "player_id": "00-0038120",
+     "name": "Breece Hall",
+     "at": "2026-10-01T02:02:43+00:00"
+    }
+   ]
+  },
+  "PASS_YDS|1": {
+   "market": "PASS_YDS",
+   "rank": 1,
+   "stub": {
+    "player_id": "00-0039150",
+    "name": "Bryce Young",
+    "team": "CAR",
+    "opp": "DET",
+    "position": "QB"
+   },
+   "meta": {
+    "score": 73.1,
+    "grade": "A",
+    "low_sample": false,
+    "questionable": false,
+    "carryover": false
+   },
+   "game_id": "401872978",
+   "at": "2026-09-29T03:51:16+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "player_id": "00-0039150",
+     "name": "Bryce Young",
+     "at": "2026-09-29T03:51:16+00:00"
+    }
+   ]
+  },
+  "PASS_YDS|2": {
+   "market": "PASS_YDS",
+   "rank": 2,
+   "stub": {
+    "player_id": "00-0040743",
+    "name": "Tyler Shough",
+    "team": "NO",
+    "opp": "ATL",
+    "position": "QB"
+   },
+   "meta": {
+    "score": 68.2,
+    "grade": "A-",
+    "low_sample": false,
+    "questionable": false,
+    "carryover": false
+   },
+   "game_id": "401872979",
+   "at": "2026-09-29T03:51:16+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "player_id": "00-0040743",
+     "name": "Tyler Shough",
+     "at": "2026-09-29T03:51:16+00:00"
+    }
+   ]
+  },
+  "PASS_YDS|3": {
+   "market": "PASS_YDS",
+   "rank": 3,
+   "stub": {
+    "player_id": "00-0033077",
+    "name": "Dak Prescott",
+    "team": "DAL",
+    "opp": "HOU",
+    "position": "QB"
+   },
+   "meta": {
+    "score": 65.7,
+    "grade": "A-",
+    "low_sample": false,
+    "questionable": false,
+    "carryover": false
+   },
+   "game_id": "401872967",
+   "at": "2026-10-03T01:48:37+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "player_id": "00-0036442",
+     "name": "Joe Burrow",
+     "at": "2026-09-29T03:51:16+00:00"
+    },
+    {
+     "player_id": "00-0033077",
+     "name": "Dak Prescott",
+     "at": "2026-10-01T02:02:43+00:00"
+    },
+    {
+     "player_id": "00-0036442",
+     "name": "Joe Burrow",
+     "at": "2026-10-02T00:30:46+00:00"
+    },
+    {
+     "player_id": "00-0033077",
+     "name": "Dak Prescott",
+     "at": "2026-10-03T01:48:37+00:00"
+    }
+   ]
+  },
+  "PASS_YDS|4": {
+   "market": "PASS_YDS",
+   "rank": 4,
+   "stub": {
+    "player_id": "00-0036442",
+    "name": "Joe Burrow",
+    "team": "CIN",
+    "opp": "JAX",
+    "position": "QB"
+   },
+   "meta": {
+    "score": 63.9,
+    "grade": "A-",
+    "low_sample": false,
+    "questionable": false,
+    "carryover": false
+   },
+   "game_id": "401872969",
+   "at": "2026-10-03T01:48:37+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "player_id": "00-0036971",
+     "name": "Trevor Lawrence",
+     "at": "2026-09-29T03:51:16+00:00"
+    },
+    {
+     "player_id": "00-0036442",
+     "name": "Joe Burrow",
+     "at": "2026-10-01T02:02:43+00:00"
+    },
+    {
+     "player_id": "00-0033077",
+     "name": "Dak Prescott",
+     "at": "2026-10-02T00:30:46+00:00"
+    },
+    {
+     "player_id": "00-0036442",
+     "name": "Joe Burrow",
+     "at": "2026-10-03T01:48:37+00:00"
+    }
+   ]
+  },
+  "PASS_YDS|5": {
+   "market": "PASS_YDS",
+   "rank": 5,
+   "stub": {
+    "player_id": "00-0036971",
+    "name": "Trevor Lawrence",
+    "team": "JAX",
+    "opp": "CIN",
+    "position": "QB"
+   },
+   "meta": {
+    "score": 62.4,
+    "grade": "A-",
+    "low_sample": false,
+    "questionable": false,
+    "carryover": false
+   },
+   "game_id": "401872969",
+   "at": "2026-10-01T02:02:43+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "player_id": "00-0033077",
+     "name": "Dak Prescott",
+     "at": "2026-09-29T03:51:16+00:00"
+    },
+    {
+     "player_id": "00-0036971",
+     "name": "Trevor Lawrence",
+     "at": "2026-10-01T02:02:43+00:00"
+    }
+   ]
+  },
+  "KICK_PTS|1": {
+   "market": "KICK_PTS",
+   "rank": 1,
+   "stub": {
+    "player_id": "00-0036854",
+    "name": "Evan McPherson",
+    "team": "CIN",
+    "opp": "JAX",
+    "position": "K"
+   },
+   "meta": {
+    "score": 69.9,
+    "grade": "A-",
+    "low_sample": false,
+    "questionable": false,
+    "carryover": false
+   },
+   "game_id": "401872969",
+   "at": "2026-09-29T03:51:16+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "player_id": "00-0036854",
+     "name": "Evan McPherson",
+     "at": "2026-09-29T03:51:16+00:00"
+    }
+   ]
+  },
+  "KICK_PTS|2": {
+   "market": "KICK_PTS",
+   "rank": 2,
+   "stub": {
+    "player_id": "00-0039576",
+    "name": "Spencer Shrader",
+    "team": "IND",
+    "opp": "WAS",
+    "position": "K"
+   },
+   "meta": {
+    "score": 64.5,
+    "grade": "A-",
+    "low_sample": false,
+    "questionable": false,
+    "carryover": false
+   },
+   "game_id": "401872965",
+   "at": "2026-10-02T00:30:46+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "player_id": "00-0033303",
+     "name": "Harrison Butker",
+     "at": "2026-09-29T03:51:16+00:00"
+    },
+    {
+     "player_id": "00-0039576",
+     "name": "Spencer Shrader",
+     "at": "2026-10-02T00:30:46+00:00"
+    }
+   ]
+  },
+  "KICK_PTS|3": {
+   "market": "KICK_PTS",
+   "rank": 3,
+   "stub": {
+    "player_id": "00-0033303",
+    "name": "Harrison Butker",
+    "team": "KC",
+    "opp": "LV",
+    "position": "K"
+   },
+   "meta": {
+    "score": 61.6,
+    "grade": "B+",
+    "low_sample": false,
+    "questionable": false,
+    "carryover": false
+   },
+   "game_id": "401872976",
+   "at": "2026-10-02T00:30:46+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "player_id": "00-0039576",
+     "name": "Spencer Shrader",
+     "at": "2026-09-29T03:51:16+00:00"
+    },
+    {
+     "player_id": "00-0039404",
+     "name": "Will Reichard",
+     "at": "2026-09-29T13:15:48+00:00"
+    },
+    {
+     "player_id": "00-0039576",
+     "name": "Spencer Shrader",
+     "at": "2026-10-01T02:02:43+00:00"
+    },
+    {
+     "player_id": "00-0033303",
+     "name": "Harrison Butker",
+     "at": "2026-10-02T00:30:46+00:00"
+    }
+   ]
+  },
+  "KICK_PTS|4": {
+   "market": "KICK_PTS",
+   "rank": 4,
+   "stub": {
+    "player_id": "00-0039404",
+    "name": "Will Reichard",
+    "team": "MIN",
+    "opp": "MIA",
+    "position": "K"
+   },
+   "meta": {
+    "score": 59.4,
+    "grade": "B+",
+    "low_sample": false,
+    "questionable": false,
+    "carryover": false
+   },
+   "game_id": "401872974",
+   "at": "2026-10-01T02:02:43+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "player_id": "00-0039404",
+     "name": "Will Reichard",
+     "at": "2026-09-29T03:51:16+00:00"
+    },
+    {
+     "player_id": "00-0039576",
+     "name": "Spencer Shrader",
+     "at": "2026-09-29T13:15:48+00:00"
+    },
+    {
+     "player_id": "00-0039404",
+     "name": "Will Reichard",
+     "at": "2026-10-01T02:02:43+00:00"
+    }
+   ]
+  },
+  "KICK_PTS|5": {
+   "market": "KICK_PTS",
+   "rank": 5,
+   "stub": {
+    "player_id": "00-0040279",
+    "name": "Ryan Fitzgerald",
+    "team": "CAR",
+    "opp": "DET",
+    "position": "K"
+   },
+   "meta": {
+    "score": 57.6,
+    "grade": "B+",
+    "low_sample": false,
+    "questionable": false,
+    "carryover": false
+   },
+   "game_id": "401872978",
+   "at": "2026-09-29T03:51:16+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "player_id": "00-0040279",
+     "name": "Ryan Fitzgerald",
+     "at": "2026-09-29T03:51:16+00:00"
+    }
+   ]
+  }
+ },
+ "rejected": [],
+ "prediction_of_record": {
+  "401872964": {
+   "run_id": "2026-wk04.171115Z.gha-36897417387",
+   "model_versions": {
+    "TD": "nfl_td_v2",
+    "REC_YDS": "nfl_recyds_v1",
+    "REC": "nfl_rec_v1",
+    "RUSH_YDS": "nfl_rushyds_v1",
+    "RUSH_ATT": "nfl_rushatt_v1",
+    "PASS_YDS": "nfl_passyds_v1",
+    "KICK_PTS": "nfl_kickpts_v1"
+   },
+   "config_hash": "sha256:3e10891678fb6b312c7d361311a530aec90d47a0f2b42fb69dd5a2d57c750e35",
+   "generated_at": "2026-10-01T17:11:15.160001+00:00",
+   "kickoff": "2026-10-02T00:15:00+00:00",
+   "locked_at": "2026-10-02T00:30:46+00:00",
+   "locked_late": false,
+   "por_source": "pregame_log",
+   "home": "CLE",
+   "away": "PIT"
+  }
+ },
+ "rule": "Each market's 5-rung ladder is keyed by market|rank, exactly like a pool/pair ticket in pick_lock.py: before the occupant's own game kicks off a re-pick is legitimate and every change is kept in history[]; the moment that game starts the rung freezes to whoever was standing there and any later change is recorded in rejected[] instead of applied. prediction_of_record locks, per game_id, the run standing at THAT game's own kickoff -- the pregame nfl_prediction_log, never a post-kickoff rebuild; locked_late marks a game whose first-seen run was already generated after kickoff (a late first build of the week)."
+}

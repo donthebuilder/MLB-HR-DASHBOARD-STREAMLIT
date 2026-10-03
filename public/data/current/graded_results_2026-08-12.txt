@@ -1,0 +1,184 @@
+RESULTS TRACKER - 2026-08-12
+------------------------------------------
+BETTABLE RESULTS
+Top 15 HR: 2/15 (13.3%)
+HR Picks: 3/15 (20.0%)
+Top Picks: 1/15 (6.7%)
+
+FULL SHEET BASE HIT PERFORMANCE
+Base Hit Accuracy: 65.6%
+
+HR CAPTURE (BETTABLE)
+Total Slate HRs: 38
+Caught in Top 15: 2
+Caught in HR Picks: 3
+Top 15 Capture Rate: 5.3%
+HR Pick Capture Rate: 7.9%
+
+MODEL VISION (Top 40)
+Model Caught HRs: 11 / 38
+Vision Rate: 28.9%
+
+UNIQUE PLAYER HR ACCURACY
+Unique Players Tracked: 75
+Players Who Homered: 14
+Unique HR Accuracy: 18.7%
+
+HR CATEGORY BREAKDOWN
+------------------------------------------
+🏆 TOP 15 BOARD → 2 HR
+🔥 TOP PICKS → 1 HR
+🧨 HR PICKS → 3 HR
+🏁 HRR PICKS → 3 HR
+💠 HIT PICKS → 1 HR
+⚾ CONTACT PICKS → 6 HR
+Best HR-producing category: ⚾ CONTACT PICKS
+
+LONGEST HR (BOARD)
+------------------------------------------
+- Mookie Betts — 412 ft · 103.2 mph · 28.0°
+- Willson Contreras — 408 ft · 105.9 mph · 26.0°
+- Abimelec Ortiz — 407 ft · 105.9 mph · 35.0°
+- Bo Bichette — 405 ft · 103.1 mph · 23.0°
+- Griffin Conine — 403 ft · 106.6 mph · 33.0°
+Longest on the board: Mookie Betts (412 ft)
+
+
+HR RESULTS BY PLAYER
+------------------------------------------
+- Abimelec Ortiz — 🏆#8 + 🧨 + ⭐
+- Griffin Conine — 🏆#1 + 🔥
+- Trent Grisham — 🧨
+- Willson Contreras — 🧨
+- Bo Bichette — 🏁 + ⭐
+- Chase Meidroth — 🏁
+- Julio Rodríguez — 🏁
+- Alex Bregman — 💠
+- Corbin Carroll — ⚾
+- Corey Seager — ⚾
+- Gary Sánchez — ⚾
+- Leody Taveras — ⚾
+- Mike Yastrzemski — ⚾
+- Mookie Betts — ⚾
+
+MISSED HRs (NOT IN MODEL SHEET)
+------------------------------------------
+- Lane Thomas (ATL) — not in model sheet / lineup pool
+- Dylan Beavers (BAL) — not in model sheet / lineup pool
+- Jo Adell (CLE) — not in model sheet / lineup pool
+- Zac Veen (COL) — not in model sheet / lineup pool
+
+POOL PERFORMANCE
+------------------------------------------
+4-MAN HR POOL A → 0/4 HR (none)
+4-MAN HR POOL B → 1/4 HR (Trent Grisham)
+4-MAN HR POOL C → 0/4 HR (none)
+4-MAN HR POOL D → 1/4 HR (Zack Gelof)
+3-MAN HR POOL A → 1/3 HR (Corbin Carroll)
+3-MAN HR POOL B → 0/3 HR (none)
+3-MAN HR POOL C → 1/3 HR (Gary Sánchez)
+3-MAN HR POOL D → 1/2 HR (Alex Bregman)
+
+PAIR PERFORMANCE
+------------------------------------------
+Pair 1 → 1/2 HR (Griffin Conine) | Griffin Conine + Pete Alonso
+Pair 2 → 0/2 HR (none) | Matt Olson + Jac Caglianone
+Pair 3 → 0/2 HR (none) | Eugenio Suárez + Kyle Schwarber
+Pair 4 → 1/2 HR (Abimelec Ortiz) | Munetaka Murakami + Abimelec Ortiz
+
+PLAYER TYPE PERFORMANCE
+------------------------------------------
+🏆 TOP 15 BOARD (15)
+HR: 13.3% | 1+ Hit: 60.0% | XBH: 20.0% | 2+ TB: 33.3% | 2+ HRR: 46.7% | 3+ HRR: 26.7%
+
+🔥 TOP PICKS (15)
+HR: 6.7% | 1+ Hit: 53.3% | XBH: 26.7% | 2+ TB: 40.0% | 2+ HRR: 53.3% | 3+ HRR: 33.3%
+
+🧨 HR PICKS (15)
+HR: 20.0% | 1+ Hit: 46.7% | XBH: 33.3% | 2+ TB: 33.3% | 2+ HRR: 33.3% | 3+ HRR: 26.7%
+
+🏁 HRR PICKS (15)
+HR: 20.0% | 1+ Hit: 80.0% | XBH: 40.0% | 2+ TB: 53.3% | 2+ HRR: 60.0% | 3+ HRR: 53.3%
+
+💠 HIT PICKS (15)
+HR: 6.7% | 1+ Hit: 80.0% | XBH: 26.7% | 2+ TB: 40.0% | 2+ HRR: 60.0% | 3+ HRR: 33.3%
+
+⚾ CONTACT PICKS (15)
+HR: 40.0% | 1+ Hit: 73.3% | XBH: 66.7% | 2+ TB: 66.7% | 2+ HRR: 66.7% | 3+ HRR: 66.7%
+
+
+DESIGNED OUTCOME (did the pick do its job)
+------------------------------------------
+🏆 TOP 15 BOARD (15) -> 2/15 (13.3%)  ·  needs: HR
+🔥 TOP PICKS (15) -> 2/15 (13.3%)  ·  needs: most productive of our picks in his game (HRR or TB)
+🧨 HR PICKS (15) -> 3/15 (20.0%)  ·  needs: HR
+🏁 HRR PICKS (15) -> 9/15 (60.0%)  ·  needs: 2+ hits+runs+RBI
+💠 HIT PICKS (15) -> 12/15 (80.0%)  ·  needs: 1+ hit
+⚾ CONTACT PICKS (15) -> 10/15 (66.7%)  ·  needs: 2+ TB or XBH
+ALL PICKS -> 38/90 (42.2%)
+
+HIT RESULTS BY CATEGORY
+------------------------------------------
+
+🔥 TOP PICKS (1+ Hit)
+- Ben Rice — 2H ⭐
+- Griffin Conine — 2H ⭐
+- Junior Caminero — 2H ⭐
+- Pete Alonso — 2H ⭐
+- Jac Caglianone — 1H
+- Joc Pederson — 1H
+- Pete Crow-Armstrong — 1H
+- Wilyer Abreu — 1H
+
+🧨 HR PICKS (1+ Hit)
+- Trent Grisham — 3H 🔥
+- Abimelec Ortiz — 1H
+- Brandon Lowe — 1H
+- Everson Pereira — 1H
+- Jackson Merrill — 1H
+- Jose Siri — 1H
+- Willson Contreras — 1H
+
+🏁 HRR PICKS (1+ Hit)
+- Alec Burleson — 2H ⭐
+- Chase DeLauter — 2H ⭐
+- Chase Meidroth — 2H ⭐
+- Royce Lewis — 2H ⭐
+- Seiya Suzuki — 2H ⭐
+- Yandy Díaz — 2H ⭐
+- Bo Bichette — 1H
+- Brice Turang — 1H
+- Ceddanne Rafaela — 1H
+- Cole Carrigg — 1H
+- Freddie Freeman — 1H
+- Julio Rodríguez — 1H
+
+💠 HIT PICKS (1+ Hit)
+- Alex Bregman — 3H 🔥
+- Josh Bell — 3H 🔥
+- Sam Antonacci — 3H 🔥
+- Carson Benge — 2H ⭐
+- Gabriel Moreno — 2H ⭐
+- Vladimir Guerrero Jr. — 2H ⭐
+- Andy Pages — 1H
+- Bryson Stott — 1H
+- Jonathan Aranda — 1H
+- Josh Naylor — 1H
+- Luis Campusano — 1H
+- Yordan Alvarez — 1H
+
+⚾ CONTACT PICKS (1+ Hit)
+- Angel Martínez — 3H 🔥
+- Corey Seager — 3H 🔥
+- Corbin Carroll — 2H ⭐
+- Gary Sánchez — 2H ⭐
+- Harry Ford — 2H ⭐
+- Mike Yastrzemski — 2H ⭐
+- Mookie Betts — 2H ⭐
+- Nick Gonzales — 2H ⭐
+- Iván Herrera — 1H
+- Leody Taveras — 1H
+- Tyler Soderstrom — 1H
+
+MODEL DIAGNOSTIC (LOW PRIORITY)
+Full Sheet HR Coverage: 34 / 38 (89.5%)

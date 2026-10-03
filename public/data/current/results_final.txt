@@ -1,0 +1,91 @@
+RESULTS TRACKER - 2026-10-03
+------------------------------------------
+BETTABLE RESULTS
+Top 15 HR: 0/0 (0.0%)
+HR Picks: 0/0 (0.0%)
+Top Picks: 0/0 (0.0%)
+
+FULL SHEET BASE HIT PERFORMANCE
+Base Hit Accuracy: 0.0%
+
+HR CAPTURE (BETTABLE)
+Total Slate HRs: 1
+Caught in Top 15: 0
+Caught in HR Picks: 0
+Top 15 Capture Rate: 0.0%
+HR Pick Capture Rate: 0.0%
+
+MODEL VISION (Top 40)
+Model Caught HRs: 0 / 1
+Vision Rate: 0.0%
+
+UNIQUE PLAYER HR ACCURACY
+Unique Players Tracked: 0
+Players Who Homered: 0
+Unique HR Accuracy: 0.0%
+
+HR CATEGORY BREAKDOWN
+------------------------------------------
+🏆 TOP 15 BOARD → 0 HR
+🔥 TOP PICKS → 0 HR
+🧨 HR PICKS → 0 HR
+🏁 HRR PICKS → 0 HR
+💠 HIT PICKS → 0 HR
+⚾ CONTACT PICKS → 0 HR
+Best HR-producing category: 🏆 TOP 15 BOARD
+
+HR RESULTS BY PLAYER
+------------------------------------------
+- none
+
+POOL PERFORMANCE
+------------------------------------------
+4-MAN Pool A — Strongest → 0/1 HR (none)
+4-MAN Pool B — HRR+Power → 0/2 HR (none)
+4-MAN Pool C — Balanced → 0/2 HR (none)
+4-MAN Pool D — Variance → 0/1 HR (none)
+3-MAN Pool A — Strongest → 0/2 HR (none)
+3-MAN Pool B — HRR+Var → 0/1 HR (none)
+3-MAN Pool C — Balanced → 0/1 HR (none)
+3-MAN Pool D — Variance → 0/1 HR (none)
+
+PAIR PERFORMANCE
+------------------------------------------
+Pair 1 → 1/2 HR (Munetaka Murakami) | Munetaka Murakami + Ben Rice
+Pair 2 → 0/2 HR (none) | Junior Caminero + Matt Olson
+Pair 3 → 0/2 HR (none) | Andy Pages + Jackson Chourio
+Pair 4 → 0/2 HR (none) | Brice Turang + Drake Baldwin
+Pair 5 → 0/2 HR (none) | Manny Machado + Victor Mesa Jr.
+Pair 6 → 0/2 HR (none) | Will Smith + Shohei Ohtani
+Pair 7 → 0/2 HR (none) | Michael Harris II + Fernando Tatis Jr.
+Pair 8 → 0/2 HR (none) | Chase Meidroth + Chase DeLauter
+Pair 9 → 0/2 HR (none) | Ronald Acuña Jr. + Teoscar Hernández
+Pair 10 → 0/2 HR (none) | Mookie Betts + Austin Wells
+
+PLAYER TYPE PERFORMANCE
+------------------------------------------
+
+DESIGNED OUTCOME (did the pick do its job)
+------------------------------------------
+
+HIT RESULTS BY CATEGORY
+------------------------------------------
+
+🔥 TOP PICKS (1+ Hit)
+- none
+
+🧨 HR PICKS (1+ Hit)
+- none
+
+🏁 HRR PICKS (1+ Hit)
+- none
+
+💠 HIT PICKS (1+ Hit)
+- none
+
+⚾ CONTACT PICKS (1+ Hit)
+- none
+
+MODEL DIAGNOSTIC (LOW PRIORITY)
+Full Sheet HR Coverage: 1 / 1 (100.0%)
+Pregame Pool HR Coverage: 1 / 1 (100.0%) over 1 locked games; 0 HR by late adds

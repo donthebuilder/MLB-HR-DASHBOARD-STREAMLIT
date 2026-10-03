@@ -1,0 +1,179 @@
+RESULTS TRACKER - 2026-09-22
+------------------------------------------
+BETTABLE RESULTS
+Top 15 HR: 3/15 (20.0%)
+HR Picks: 1/16 (6.2%)
+Top Picks: 3/16 (18.8%)
+
+FULL SHEET BASE HIT PERFORMANCE
+Base Hit Accuracy: 67.0%
+
+HR CAPTURE (BETTABLE)
+Total Slate HRs: 27
+Caught in Top 15: 3
+Caught in HR Picks: 1
+Top 15 Capture Rate: 11.1%
+HR Pick Capture Rate: 3.7%
+
+MODEL VISION (Top 40)
+Model Caught HRs: 5 / 27
+Vision Rate: 18.5%
+
+UNIQUE PLAYER HR ACCURACY
+Unique Players Tracked: 73
+Players Who Homered: 8
+Unique HR Accuracy: 11.0%
+
+HR CATEGORY BREAKDOWN
+------------------------------------------
+🏆 TOP 15 BOARD → 3 HR
+🔥 TOP PICKS → 3 HR
+🧨 HR PICKS → 1 HR
+🏁 HRR PICKS → 2 HR
+💠 HIT PICKS → 1 HR
+⚾ CONTACT PICKS → 1 HR
+Best HR-producing category: 🏆 TOP 15 BOARD
+
+LONGEST HR (BOARD)
+------------------------------------------
+- Nolan Arenado — 421 ft · 106.2 mph · 25.0°
+- Eugenio Suárez — 415 ft · 103.9 mph · 29.0°
+- Pete Alonso — 412 ft · 109.2 mph · 24.0°
+- Vinnie Pasquantino — 412 ft · 104.5 mph · 32.0°
+- Zack Gelof — 411 ft · 101.9 mph · 31.0°
+Longest on the board: Nolan Arenado (421 ft)
+
+
+HR RESULTS BY PLAYER
+------------------------------------------
+- Nolan Arenado — 🏆#4 + 🧨 + ⭐
+- Pete Alonso — 🏆#3 + 🔥 + ⚾
+- Yordan Alvarez — 🏆#15 + 🔥 + ⭐
+- Zack Gelof — 🔥 + ⭐
+- Isaac Paredes — 🏁 + ⭐
+- Vinnie Pasquantino — 🏁 + ⭐
+- Cody Bellinger — 💠
+- Eugenio Suárez — 
+
+MISSED HRs (NOT IN MODEL SHEET)
+------------------------------------------
+- Carlos Cortes (ATH) — not in model sheet / lineup pool
+
+POOL PERFORMANCE
+------------------------------------------
+4-MAN HR POOL A → 0/4 HR (none)
+4-MAN HR POOL B → 1/4 HR (Yordan Alvarez)
+4-MAN HR POOL C → 0/4 HR (none)
+4-MAN HR POOL D → 1/4 HR (Zack Gelof)
+3-MAN HR POOL A → 0/3 HR (none)
+3-MAN HR POOL B → 2/2 HR (Vinnie Pasquantino, Will Smith)
+3-MAN HR POOL C → 0/3 HR (none)
+3-MAN HR POOL D → 0/3 HR (none)
+
+PAIR PERFORMANCE
+------------------------------------------
+Pair 1 → 0/2 HR (none) | Pete Crow-Armstrong + Brandon Lowe
+Pair 2 → 2/2 HR (Pete Alonso, Nolan Arenado) | Pete Alonso + Nolan Arenado
+Pair 3 → 0/2 HR (none) | Miguel Vargas + Rafael Flores Jr.
+Pair 4 → 0/2 HR (none) | Hunter Goodman + Josh Jung
+
+PLAYER TYPE PERFORMANCE
+------------------------------------------
+🏆 TOP 15 BOARD (15)
+HR: 20.0% | 1+ Hit: 80.0% | XBH: 46.7% | 2+ TB: 46.7% | 2+ HRR: 60.0% | 3+ HRR: 46.7%
+
+🔥 TOP PICKS (16)
+HR: 18.8% | 1+ Hit: 75.0% | XBH: 31.2% | 2+ TB: 37.5% | 2+ HRR: 43.8% | 3+ HRR: 43.8%
+
+🧨 HR PICKS (16)
+HR: 6.2% | 1+ Hit: 62.5% | XBH: 18.8% | 2+ TB: 18.8% | 2+ HRR: 43.8% | 3+ HRR: 18.8%
+
+🏁 HRR PICKS (16)
+HR: 12.5% | 1+ Hit: 62.5% | XBH: 25.0% | 2+ TB: 31.2% | 2+ HRR: 37.5% | 3+ HRR: 31.2%
+
+💠 HIT PICKS (16)
+HR: 6.2% | 1+ Hit: 68.8% | XBH: 43.8% | 2+ TB: 50.0% | 2+ HRR: 62.5% | 3+ HRR: 37.5%
+
+⚾ CONTACT PICKS (16)
+HR: 6.2% | 1+ Hit: 62.5% | XBH: 31.2% | 2+ TB: 31.2% | 2+ HRR: 43.8% | 3+ HRR: 31.2%
+
+
+DESIGNED OUTCOME (did the pick do its job)
+------------------------------------------
+🏆 TOP 15 BOARD (15) -> 3/15 (20.0%)  ·  needs: HR
+🔥 TOP PICKS (16) -> 7/16 (43.8%)  ·  needs: most productive of our picks in his game (HRR or TB)
+🧨 HR PICKS (16) -> 1/16 (6.2%)  ·  needs: HR
+🏁 HRR PICKS (16) -> 6/16 (37.5%)  ·  needs: 2+ hits+runs+RBI
+💠 HIT PICKS (16) -> 11/16 (68.8%)  ·  needs: 1+ hit
+⚾ CONTACT PICKS (16) -> 5/16 (31.2%)  ·  needs: 2+ TB or XBH
+ALL PICKS -> 33/103 (32.0%)
+
+HIT RESULTS BY CATEGORY
+------------------------------------------
+
+🔥 TOP PICKS (1+ Hit)
+- Juan Soto — 2H ⭐
+- Pete Crow-Armstrong — 2H ⭐
+- Yordan Alvarez — 2H ⭐
+- Andrés Chaparro — 1H
+- Jake Bauers — 1H
+- José Ramírez — 1H
+- Matt Olson — 1H
+- Miguel Vargas — 1H
+- Mookie Betts — 1H
+- Pete Alonso — 1H
+- Spencer Jones — 1H
+- Zack Gelof — 1H
+
+🧨 HR PICKS (1+ Hit)
+- Nolan Arenado — 3H 🔥
+- Ben Rice — 1H
+- Carter Jensen — 1H
+- Christian Encarnacion-Strand — 1H
+- Ian Happ — 1H
+- Jeremy Peña — 1H
+- Kody Clemens — 1H
+- Matt Olson — 1H
+- Wilyer Abreu — 1H
+- Zach Neto — 1H
+
+🏁 HRR PICKS (1+ Hit)
+- Shea Langeliers — 3H 🔥
+- Vinnie Pasquantino — 3H 🔥
+- Brooks Lee — 2H ⭐
+- Isaac Paredes — 2H ⭐
+- Seiya Suzuki — 2H ⭐
+- Brice Turang — 1H
+- Chandler Simpson — 1H
+- Jonathan Aranda — 1H
+- Sal Stewart — 1H
+- Steven Kwan — 1H
+
+💠 HIT PICKS (1+ Hit)
+- Bobby Witt Jr. — 3H 🔥
+- Chase DeLauter — 2H ⭐
+- Drake Baldwin — 2H ⭐
+- Kevin McGonigle — 2H ⭐
+- Cody Bellinger — 1H
+- Dominic Canzone — 1H
+- Gabriel Moreno — 1H
+- Josh Jung — 1H
+- Luke Keaschall — 1H
+- Otto Lopez — 1H
+- William Contreras — 1H
+
+⚾ CONTACT PICKS (1+ Hit)
+- Pete Crow-Armstrong — 2H ⭐
+- Carter Jensen — 1H
+- Dominic Canzone — 1H
+- Gabriel Moreno — 1H
+- Jonathan Aranda — 1H
+- Josh Jung — 1H
+- Mauricio Dubón — 1H
+- Mookie Betts — 1H
+- Pete Alonso — 1H
+- William Contreras — 1H
+
+MODEL DIAGNOSTIC (LOW PRIORITY)
+Full Sheet HR Coverage: 26 / 27 (96.3%)
+Pregame Pool HR Coverage: 22 / 24 (91.7%) over 14 locked games; 1 HR by late adds

@@ -1,0 +1,178 @@
+RESULTS TRACKER - 2026-09-13
+------------------------------------------
+BETTABLE RESULTS
+Top 15 HR: 2/12 (16.7%)
+HR Picks: 3/12 (25.0%)
+Top Picks: 3/12 (25.0%)
+
+FULL SHEET BASE HIT PERFORMANCE
+Base Hit Accuracy: 69.4%
+
+HR CAPTURE (BETTABLE)
+Total Slate HRs: 37
+Caught in Top 15: 2
+Caught in HR Picks: 3
+Top 15 Capture Rate: 5.4%
+HR Pick Capture Rate: 8.1%
+
+MODEL VISION (Top 40)
+Model Caught HRs: 8 / 37
+Vision Rate: 21.6%
+
+UNIQUE PLAYER HR ACCURACY
+Unique Players Tracked: 52
+Players Who Homered: 11
+Unique HR Accuracy: 21.2%
+
+HR CATEGORY BREAKDOWN
+------------------------------------------
+🏆 TOP 15 BOARD → 2 HR
+🔥 TOP PICKS → 3 HR
+🧨 HR PICKS → 3 HR
+🏁 HRR PICKS → 3 HR
+💠 HIT PICKS → 2 HR
+⚾ CONTACT PICKS → 2 HR
+Best HR-producing category: 🔥 TOP PICKS
+
+LONGEST HR (BOARD)
+------------------------------------------
+- Corey Seager — 458 ft · 110.3 mph · 31.0°
+- Zach Neto — 440 ft · 107.1 mph · 26.0°
+- Kazuma Okamoto — 410 ft · 107.9 mph · 27.0°
+- Matt Olson — 400 ft · 101.9 mph · 30.0°
+- Travis Bazzana — 395 ft · 99.9 mph · 34.0°
+Longest on the board: Corey Seager (458 ft)
+
+
+HR RESULTS BY PLAYER
+------------------------------------------
+- Corey Seager — 🏆#8 + 🔥 + ⚾ + ⭐
+- Kazuma Okamoto — 🏆#2 + 🧨 + ⚾ + ⭐
+- Matt Olson — 🧨 + ⭐
+- Nolan Arenado — 🧨
+- Adael Amador — 🔥 + ⭐
+- Zach Neto — 🔥 + ⭐
+- Isaac Paredes — 🏁
+- Steven Kwan — 🏁 + ⭐
+- Vladimir Guerrero Jr. — 🏁
+- Gabriel Moreno — 💠
+- Travis Bazzana — 💠 + ⭐
+
+MISSED HRs (NOT IN MODEL SHEET)
+------------------------------------------
+- Riley Greene (DET) — not in model sheet / lineup pool
+- Josue De Paula (LAD) — not in model sheet / lineup pool
+
+POOL PERFORMANCE
+------------------------------------------
+4-MAN Pool A — Strongest → 0/4 HR (none)
+4-MAN Pool B — HRR+Power → 0/4 HR (none)
+4-MAN Pool C — Balanced → 1/4 HR (Nolan Arenado)
+4-MAN Pool D — Variance → 0/4 HR (none)
+3-MAN Pool A — Strongest → 2/3 HR (Zach Neto, Corey Seager)
+3-MAN Pool B — HRR+Var → 0/3 HR (none)
+3-MAN Pool C — Balanced → 0/3 HR (none)
+3-MAN Pool D — Variance → 1/3 HR (Adael Amador)
+
+PAIR PERFORMANCE
+------------------------------------------
+Pair 1 → 0/2 HR (none) | Rafael Devers + Kyle Schwarber
+Pair 2 → 0/2 HR (none) | Luis García Jr. + Pete Crow-Armstrong
+Pair 3 → 1/2 HR (Ben Rice) | Junior Caminero + Ben Rice
+Pair 4 → 0/2 HR (none) | Max Muncy + Elly De La Cruz
+Pair 5 → 2/2 HR (Kazuma Okamoto, Matt Olson) | Kazuma Okamoto + Matt Olson
+Pair 6 → 0/2 HR (none) | Yordan Alvarez + Eugenio Suárez
+Pair 7 → 0/2 HR (none) | Shea Langeliers + Joc Pederson
+Pair 8 → 0/2 HR (none) | Rafael Flores Jr. + Coby Mayo
+Pair 9 → 0/2 HR (none) | Kody Clemens + Munetaka Murakami
+Pair 10 → 0/2 HR (none) | Victor Mesa Jr. + Lazaro Montes
+
+PLAYER TYPE PERFORMANCE
+------------------------------------------
+🏆 TOP 15 BOARD (12)
+HR: 16.7% | 1+ Hit: 58.3% | XBH: 33.3% | 2+ TB: 50.0% | 2+ HRR: 50.0% | 3+ HRR: 50.0%
+
+🔥 TOP PICKS (12)
+HR: 25.0% | 1+ Hit: 66.7% | XBH: 41.7% | 2+ TB: 58.3% | 2+ HRR: 58.3% | 3+ HRR: 50.0%
+
+🧨 HR PICKS (12)
+HR: 25.0% | 1+ Hit: 75.0% | XBH: 41.7% | 2+ TB: 58.3% | 2+ HRR: 58.3% | 3+ HRR: 50.0%
+
+🏁 HRR PICKS (12)
+HR: 25.0% | 1+ Hit: 83.3% | XBH: 50.0% | 2+ TB: 58.3% | 2+ HRR: 50.0% | 3+ HRR: 41.7%
+
+💠 HIT PICKS (12)
+HR: 16.7% | 1+ Hit: 75.0% | XBH: 33.3% | 2+ TB: 41.7% | 2+ HRR: 58.3% | 3+ HRR: 33.3%
+
+⚾ CONTACT PICKS (12)
+HR: 16.7% | 1+ Hit: 58.3% | XBH: 41.7% | 2+ TB: 58.3% | 2+ HRR: 50.0% | 3+ HRR: 50.0%
+
+
+DESIGNED OUTCOME (did the pick do its job)
+------------------------------------------
+🏆 TOP 15 BOARD (12) -> 2/12 (16.7%)  ·  needs: HR
+🔥 TOP PICKS (12) -> 5/12 (41.7%)  ·  needs: most productive of our picks in his game (HRR or TB)
+🧨 HR PICKS (12) -> 3/12 (25.0%)  ·  needs: HR
+🏁 HRR PICKS (12) -> 6/12 (50.0%)  ·  needs: 2+ hits+runs+RBI
+💠 HIT PICKS (12) -> 9/12 (75.0%)  ·  needs: 1+ hit
+⚾ CONTACT PICKS (12) -> 7/12 (58.3%)  ·  needs: 2+ TB or XBH
+ALL PICKS -> 32/72 (44.4%)
+
+HIT RESULTS BY CATEGORY
+------------------------------------------
+
+🔥 TOP PICKS (1+ Hit)
+- Corey Seager — 3H 🔥
+- Victor Mesa Jr. — 3H 🔥
+- Elly De La Cruz — 2H ⭐
+- Kyle Schwarber — 2H ⭐
+- Adael Amador — 1H
+- Coby Mayo — 1H
+- Kody Clemens — 1H
+- Zach Neto — 1H
+
+🧨 HR PICKS (1+ Hit)
+- Matt Olson — 3H 🔥
+- Nathaniel Lowe — 2H ⭐
+- Nolan Arenado — 2H ⭐
+- Yohandy Morales — 2H ⭐
+- Alec Burleson — 1H
+- Kazuma Okamoto — 1H
+- Kyle Stowers — 1H
+- Mickey Moniak — 1H
+- Rafael Flores Jr. — 1H
+
+🏁 HRR PICKS (1+ Hit)
+- Vladimir Guerrero Jr. — 4H 🔥
+- Steven Kwan — 3H 🔥
+- Ronald Acuña Jr. — 2H ⭐
+- Isaac Paredes — 1H
+- Javier Sanoja — 1H
+- Ketel Marte — 1H
+- Max Clark — 1H
+- Mike Trout — 1H
+- Oneil Cruz — 1H
+- Sam Antonacci — 1H
+
+💠 HIT PICKS (1+ Hit)
+- Brice Turang — 2H ⭐
+- Nathan Church — 2H ⭐
+- Travis Bazzana — 2H ⭐
+- Alex Bregman — 1H
+- Drake Baldwin — 1H
+- Gabriel Moreno — 1H
+- Keibert Ruiz — 1H
+- Otto Lopez — 1H
+- TJ Rumfield — 1H
+
+⚾ CONTACT PICKS (1+ Hit)
+- Corey Seager — 3H 🔥
+- Victor Mesa Jr. — 3H 🔥
+- Angel Martínez — 2H ⭐
+- Elly De La Cruz — 2H ⭐
+- Ronald Acuña Jr. — 2H ⭐
+- Kazuma Okamoto — 1H
+- Mike Trout — 1H
+
+MODEL DIAGNOSTIC (LOW PRIORITY)
+Full Sheet HR Coverage: 35 / 37 (94.6%)

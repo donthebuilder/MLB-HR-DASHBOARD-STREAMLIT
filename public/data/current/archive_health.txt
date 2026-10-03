@@ -1,0 +1,73 @@
+archive health — 2026-09-28T19:43:57Z
+run: https://github.com/donthebuilder/MLB-HR-DASHBOARD-STREAMLIT/actions/runs/36474182857
+
+==============================================================================
+LEAK SCAN — is a feature column remembering tonight instead of predicting it?
+==============================================================================
+nights   109  (2026-04-16 … 2026-09-28)
+rows     9725   locked=2806  not-locked=6919
+
+`locked` means apply_locked_features() overlaid the pre-game snapshot onto
+the row. A row without it carries whatever the value was at GRADING time,
+which for a form field is after the game it is supposed to predict.
+
+------------------------------------------------------------------------------
+NOT LOCKED: 6919 rows, base HR rate 15.7%, 18 fields testable
+  no field's zero bucket is impossible at this sample.
+  Read that carefully: with 6919 rows this scan could only have
+  caught a zero bucket at or below 14.4%. It is not a clean bill.
+
+  Far below base, but a strong honest signal could produce it. Worth reading,
+  not worth throwing a night away over:
+  last5_hr                    118/1856   6.36%    291.0     -34.1   watch
+  last5_xbh                    24/412    5.83%     64.6      -9.2   watch
+  last10_hr                    44/561    7.84%     88.0      -7.7   watch
+  season_hr                     4/154    2.60%     24.1      -6.9   watch
+  recent_350_num               18/225    8.00%     35.3      -3.3   watch
+
+------------------------------------------------------------------------------
+LOCKED: 2806 rows, base HR rate 15.8%, 90 fields testable
+  no field's zero bucket is impossible at this sample.
+  Read that carefully: with 2806 rows this scan could only have
+  caught a zero bucket at or below 13.7%. It is not a clean bill.
+
+  Far below base, but a strong honest signal could produce it. Worth reading,
+  not worth throwing a night away over:
+  top_beat_game                39/677    5.76%    107.1     -15.2   watch
+  last5_hr                     64/658    9.73%    104.1      -5.4   watch
+
+==============================================================================
+
+==============================================================================
+DUE SCORE — DOES DUENESS EARN ITS PLACE?
+==============================================================================
+archive        9725 rows over 109 nights (2026-04-16 … 2026-09-28)
+usable         2806 rows over 37 nights (2026-08-22 … 2026-09-27)
+
+BOARD                            N  HR RATE         95% CI
+------------------------------------------------------------------------------
+every graded pick             2806    15.8%    14.5–17.2 
+
+1. hr_due_score — the published 'he is owed one' number
+------------------------------------------------------------------------------
+on pace or ahead (0)          1953    16.5%    15.0–18.3 
+overdue (> 0)                  853    14.2%    12.0–16.7 
+
+  overdue 0.1–5.2              213    22.1%    17.0–28.1 
+  overdue 5.2–11.3             213    12.7%     8.9–17.8 
+  overdue 11.3–19.3            213     8.5%     5.4–13.0 
+  overdue 19.3–39.0            214    13.6%     9.6–18.8 
+
+2. Within hr_score terciles — does dueness split what the model already knows?
+------------------------------------------------------------------------------
+hr_score 0.3–43.4              935    12.0%    10.1–14.2 
+    …on pace                   423    13.5%    10.5–17.1 
+    …overdue                   512    10.7%     8.3–13.7 
+hr_score 43.5–58.6             935    15.4%    13.2–17.9 
+    …on pace                   683    15.5%    13.0–18.4 
+    …overdue                   252    15.1%    11.2–20.0 
+hr_score 58.6–86.6             936    20.1%    17.6–22.8 
+    …on pace                   847    18.9%    16.4–21.7 
+    …overdue                    89    31.5%    22.8–41.7 
+
+==============================================================================

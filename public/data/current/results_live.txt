@@ -1,0 +1,123 @@
+LIVE RESULTS TRACKER - 2026-10-03
+------------------------------------------
+Game status: 0/4 graded games final
+Note: live results can change until every game is final.
+
+BETTABLE RESULTS
+Top 15 HR: 1/15 (6.7%)
+HR Picks: 0/4 (0.0%)
+Top Picks: 1/4 (25.0%)
+
+FULL SHEET BASE HIT PERFORMANCE
+Base Hit Accuracy: 8.3%
+
+HR CAPTURE (BETTABLE)
+Total Slate HRs: 1
+Caught in Top 15: 1
+Caught in HR Picks: 0
+Top 15 Capture Rate: 100.0%
+HR Pick Capture Rate: 0.0%
+
+MODEL VISION (Top 40)
+Model Caught HRs: 1 / 1
+Vision Rate: 100.0%
+
+UNIQUE PLAYER HR ACCURACY
+Unique Players Tracked: 24
+Players Who Homered: 1
+Unique HR Accuracy: 4.2%
+
+HR CATEGORY BREAKDOWN
+------------------------------------------
+🏆 TOP 15 BOARD → 1 HR
+🔥 TOP PICKS → 1 HR
+🧨 HR PICKS → 0 HR
+🏁 HRR PICKS → 0 HR
+💠 HIT PICKS → 0 HR
+⚾ CONTACT PICKS → 1 HR
+Best HR-producing category: 🏆 TOP 15 BOARD
+
+LONGEST HR (BOARD)
+------------------------------------------
+- Munetaka Murakami — 440 ft · 112.2 mph · 31.0°
+Longest on the board: Munetaka Murakami (440 ft)
+
+
+HR RESULTS BY PLAYER
+------------------------------------------
+- Munetaka Murakami — 🏆#2 + 🔥 + ⚾
+
+POOL PERFORMANCE
+------------------------------------------
+4-MAN Pool A — Strongest → 0/1 HR (none)
+4-MAN Pool B — HRR+Power → 0/2 HR (none)
+4-MAN Pool C — Balanced → 0/2 HR (none)
+4-MAN Pool D — Variance → 0/1 HR (none)
+3-MAN Pool A — Strongest → 0/2 HR (none)
+3-MAN Pool B — HRR+Var → 0/1 HR (none)
+3-MAN Pool C — Balanced → 0/1 HR (none)
+3-MAN Pool D — Variance → 0/1 HR (none)
+
+PAIR PERFORMANCE
+------------------------------------------
+Pair 1 → 1/2 HR (Munetaka Murakami) | Munetaka Murakami + Ben Rice
+Pair 2 → 0/2 HR (none) | Junior Caminero + Matt Olson
+Pair 3 → 0/2 HR (none) | Andy Pages + Jackson Chourio
+Pair 4 → 0/2 HR (none) | Brice Turang + Drake Baldwin
+Pair 5 → 0/2 HR (none) | Manny Machado + Victor Mesa Jr.
+Pair 6 → 0/2 HR (none) | Will Smith + Shohei Ohtani
+Pair 7 → 0/2 HR (none) | Michael Harris II + Fernando Tatis Jr.
+Pair 8 → 0/2 HR (none) | Chase Meidroth + Chase DeLauter
+Pair 9 → 0/2 HR (none) | Ronald Acuña Jr. + Teoscar Hernández
+Pair 10 → 0/2 HR (none) | Mookie Betts + Austin Wells
+
+PLAYER TYPE PERFORMANCE
+------------------------------------------
+🏆 TOP 15 BOARD (15)
+HR: 6.7% | 1+ Hit: 6.7% | XBH: 6.7% | 2+ TB: 6.7% | 2+ HRR: 6.7% | 3+ HRR: 6.7%
+
+🔥 TOP PICKS (4)
+HR: 25.0% | 1+ Hit: 25.0% | XBH: 25.0% | 2+ TB: 25.0% | 2+ HRR: 25.0% | 3+ HRR: 25.0%
+
+🧨 HR PICKS (4)
+HR: 0.0% | 1+ Hit: 0.0% | XBH: 0.0% | 2+ TB: 0.0% | 2+ HRR: 0.0% | 3+ HRR: 0.0%
+
+🏁 HRR PICKS (4)
+HR: 0.0% | 1+ Hit: 0.0% | XBH: 0.0% | 2+ TB: 0.0% | 2+ HRR: 0.0% | 3+ HRR: 0.0%
+
+💠 HIT PICKS (4)
+HR: 0.0% | 1+ Hit: 0.0% | XBH: 0.0% | 2+ TB: 0.0% | 2+ HRR: 0.0% | 3+ HRR: 0.0%
+
+⚾ CONTACT PICKS (4)
+HR: 25.0% | 1+ Hit: 25.0% | XBH: 25.0% | 2+ TB: 25.0% | 2+ HRR: 25.0% | 3+ HRR: 25.0%
+
+
+DESIGNED OUTCOME (did the pick do its job)
+------------------------------------------
+
+HIT RESULTS BY CATEGORY
+------------------------------------------
+
+🔥 TOP PICKS (1+ Hit)
+- Munetaka Murakami — 2H ⭐
+
+🧨 HR PICKS (1+ Hit)
+- none
+
+🏁 HRR PICKS (1+ Hit)
+- none
+
+💠 HIT PICKS (1+ Hit)
+- none
+
+⚾ CONTACT PICKS (1+ Hit)
+- Munetaka Murakami — 2H ⭐
+
+MODEL DIAGNOSTIC (LOW PRIORITY)
+Full Sheet HR Coverage: 1 / 1 (100.0%)
+Pregame Pool HR Coverage: 1 / 1 (100.0%) over 1 locked games; 0 HR by late adds
+
+LIVE / IN-PROGRESS PICKS WITH ACTION
+- Munetaka Murakami (CWS) | TOP15 | 2H/1HR/R1/RBI2 | In Progress
+- Munetaka Murakami (CWS) | TOP | 2H/1HR/R1/RBI2 | In Progress
+- Munetaka Murakami (CWS) | CONTACT | 2H/1HR/R1/RBI2 | In Progress

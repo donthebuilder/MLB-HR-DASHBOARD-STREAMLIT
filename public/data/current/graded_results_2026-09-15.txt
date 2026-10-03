@@ -1,0 +1,163 @@
+RESULTS TRACKER - 2026-09-15
+------------------------------------------
+BETTABLE RESULTS
+Top 15 HR: 1/12 (8.3%)
+HR Picks: 4/11 (36.4%)
+Top Picks: 1/11 (9.1%)
+
+FULL SHEET BASE HIT PERFORMANCE
+Base Hit Accuracy: 61.6%
+
+HR CAPTURE (BETTABLE)
+Total Slate HRs: 37
+Caught in Top 15: 1
+Caught in HR Picks: 4
+Top 15 Capture Rate: 2.7%
+HR Pick Capture Rate: 10.8%
+
+MODEL VISION (Top 40)
+Model Caught HRs: 8 / 37
+Vision Rate: 21.6%
+
+UNIQUE PLAYER HR ACCURACY
+Unique Players Tracked: 53
+Players Who Homered: 11
+Unique HR Accuracy: 20.8%
+
+HR CATEGORY BREAKDOWN
+------------------------------------------
+🏆 TOP 15 BOARD → 1 HR
+🔥 TOP PICKS → 1 HR
+🧨 HR PICKS → 4 HR
+🏁 HRR PICKS → 2 HR
+💠 HIT PICKS → 4 HR
+⚾ CONTACT PICKS → 1 HR
+Best HR-producing category: 🧨 HR PICKS
+
+LONGEST HR (BOARD)
+------------------------------------------
+- Bryce Eldridge — 461 ft · 112.7 mph · 30.0°
+- Pete Alonso — 414 ft · 109.6 mph · 35.0°
+- Coby Mayo — 410 ft · 106.9 mph · 25.0°
+- Cody Bellinger — 399 ft · 100.9 mph · 32.0°
+- Travis Bazzana — 393 ft · 98.0 mph · 28.0°
+Longest on the board: Bryce Eldridge (461 ft)
+
+
+HR RESULTS BY PLAYER
+------------------------------------------
+- Coby Mayo — 🏆#1 + 🧨 + ⭐
+- Junior Caminero — 🧨
+- Ronald Acuña Jr. — 🧨 + ⭐
+- Spencer Torkelson — 🧨
+- Kyle Schwarber — 🔥
+- Bryce Eldridge — 🏁
+- Travis Bazzana — 🏁
+- Alec Burleson — 💠 + ⭐
+- Cody Bellinger — 💠 + ⚾ + ⭐
+- Drake Baldwin — 💠 + ⭐
+- Pete Alonso — 💠 + ⭐
+
+POOL PERFORMANCE
+------------------------------------------
+4-MAN Pool A — Strongest → 0/4 HR (none)
+4-MAN Pool B — HRR+Power → 0/4 HR (none)
+4-MAN Pool C — Balanced → 0/4 HR (none)
+4-MAN Pool D — Variance → 0/4 HR (none)
+3-MAN Pool A — Strongest → 0/3 HR (none)
+3-MAN Pool B — HRR+Var → 0/3 HR (none)
+3-MAN Pool C — Balanced → 0/3 HR (none)
+3-MAN Pool D — Variance → 0/3 HR (none)
+
+PAIR PERFORMANCE
+------------------------------------------
+Pair 1 → 0/2 HR (none) | Ben Rice + Matt Olson
+Pair 2 → 0/2 HR (none) | Luis García Jr. + Victor Mesa Jr.
+Pair 3 → 1/2 HR (Junior Caminero) | Pete Crow-Armstrong + Junior Caminero
+Pair 4 → 1/2 HR (Pete Alonso) | Max Muncy + Pete Alonso
+Pair 5 → 1/2 HR (Kyle Schwarber) | Kyle Schwarber + Hunter Goodman
+Pair 6 → 1/2 HR (Yordan Alvarez) | Kazuma Okamoto + Yordan Alvarez
+Pair 7 → 0/2 HR (none) | Shea Langeliers + Carter Jensen
+Pair 8 → 0/2 HR (none) | Juan Soto + Randal Grichuk
+Pair 9 → 1/2 HR (Yordan Alvarez) | Kazuma Okamoto + Yordan Alvarez
+Pair 10 → 0/2 HR (none) | Nolan Arenado + Adael Amador
+
+PLAYER TYPE PERFORMANCE
+------------------------------------------
+🏆 TOP 15 BOARD (12)
+HR: 8.3% | 1+ Hit: 58.3% | XBH: 33.3% | 2+ TB: 33.3% | 2+ HRR: 41.7% | 3+ HRR: 8.3%
+
+🔥 TOP PICKS (11)
+HR: 9.1% | 1+ Hit: 81.8% | XBH: 36.4% | 2+ TB: 45.5% | 2+ HRR: 63.6% | 3+ HRR: 9.1%
+
+🧨 HR PICKS (11)
+HR: 36.4% | 1+ Hit: 54.5% | XBH: 36.4% | 2+ TB: 36.4% | 2+ HRR: 54.5% | 3+ HRR: 54.5%
+
+🏁 HRR PICKS (11)
+HR: 18.2% | 1+ Hit: 63.6% | XBH: 36.4% | 2+ TB: 54.5% | 2+ HRR: 54.5% | 3+ HRR: 45.5%
+
+💠 HIT PICKS (11)
+HR: 36.4% | 1+ Hit: 54.5% | XBH: 36.4% | 2+ TB: 36.4% | 2+ HRR: 54.5% | 3+ HRR: 36.4%
+
+⚾ CONTACT PICKS (11)
+HR: 9.1% | 1+ Hit: 45.5% | XBH: 27.3% | 2+ TB: 27.3% | 2+ HRR: 27.3% | 3+ HRR: 9.1%
+
+
+DESIGNED OUTCOME (did the pick do its job)
+------------------------------------------
+🏆 TOP 15 BOARD (12) -> 1/12 (8.3%)  ·  needs: HR
+🔥 TOP PICKS (11) -> 4/11 (36.4%)  ·  needs: most productive of our picks in his game (HRR or TB)
+🧨 HR PICKS (11) -> 4/11 (36.4%)  ·  needs: HR
+🏁 HRR PICKS (11) -> 6/11 (54.5%)  ·  needs: 2+ hits+runs+RBI
+💠 HIT PICKS (11) -> 6/11 (54.5%)  ·  needs: 1+ hit
+⚾ CONTACT PICKS (11) -> 3/11 (27.3%)  ·  needs: 2+ TB or XBH
+ALL PICKS -> 24/73 (32.9%)
+
+HIT RESULTS BY CATEGORY
+------------------------------------------
+
+🔥 TOP PICKS (1+ Hit)
+- Elly De La Cruz — 2H ⭐
+- Matt Olson — 2H ⭐
+- Carter Jensen — 1H
+- Francisco Lindor — 1H
+- Jake Bauers — 1H
+- Kazuma Okamoto — 1H
+- Kyle Schwarber — 1H
+- Luis García Jr. — 1H
+- Randal Grichuk — 1H
+
+🧨 HR PICKS (1+ Hit)
+- Coby Mayo — 2H ⭐
+- Spencer Torkelson — 2H ⭐
+- Ben Rice — 1H
+- Junior Caminero — 1H
+- Miguel Vargas — 1H
+- Ronald Acuña Jr. — 1H
+
+🏁 HRR PICKS (1+ Hit)
+- Brett Bateman — 2H ⭐
+- Bryce Eldridge — 2H ⭐
+- Juan Soto — 2H ⭐
+- Luis Arraez — 2H ⭐
+- Travis Bazzana — 2H ⭐
+- Jonathan Aranda — 1H
+- William Contreras — 1H
+
+💠 HIT PICKS (1+ Hit)
+- Cody Bellinger — 3H 🔥
+- Drake Baldwin — 2H ⭐
+- Alec Bohm — 1H
+- Alec Burleson — 1H
+- Pete Alonso — 1H
+- Steven Kwan — 1H
+
+⚾ CONTACT PICKS (1+ Hit)
+- Cody Bellinger — 3H 🔥
+- Carter Jensen — 1H
+- Francisco Lindor — 1H
+- Kazuma Okamoto — 1H
+- Randal Grichuk — 1H
+
+MODEL DIAGNOSTIC (LOW PRIORITY)
+Full Sheet HR Coverage: 37 / 37 (100.0%)

@@ -1,0 +1,67 @@
+RESULTS TRACKER — 2026-05-13
+------------------------------------------
+HR Picks: 15 | HR Accuracy: 13.3%
+Base Hit Picks: 60 | Base Hit Accuracy: 53.3%
+HRR Picks: 30 | HRR 2+ Accuracy: 43.3%
+HRR Picks: 30 | HRR 3+ Accuracy: 26.7%
+
+HR PICKS THAT HOMERED
+- Mickey Moniak (COL) | HR Score 74.29
+- Colson Montgomery (CWS) | HR Score 64.77
+
+TRACKED PICKS THAT GOT A BASE HIT
+- Jazz Chisholm Jr. (NYY) | HRR | 1 H
+- Adley Rutschman (BAL) | HRR | 1 H
+- Pete Alonso (BAL) | CONTACT | 2 H
+- Chase DeLauter (CLE) | HIT | 2 H
+- Oswald Peraza (LAA) | HRR | 1 H
+- Daylen Lile (WSH) | TOP | 2 H
+- Elly De La Cruz (CIN) | HIT | 2 H
+- Curtis Mead (WSH) | HRR | 1 H
+- Jacob Young (WSH) | HRR | 2 H
+- Mickey Moniak (COL) | HR | 3 H
+- Troy Johnston (COL) | HIT | 1 H
+- TJ Rumfield (COL) | HRR | 3 H
+- Jake McCarthy (COL) | CONTACT | 1 H
+- Wilyer Abreu (BOS) | TOP | 3 H
+- Jonathan Aranda (TB) | TOP | 1 H
+- Ernie Clement (TOR) | HIT | 1 H
+- Junior Caminero (TB) | HRR | 1 H
+- Andrés Giménez (TOR) | CONTACT | 1 H
+- Dillon Dingler (DET) | TOP | 2 H
+- Riley Greene (DET) | HIT | 3 H
+- Mark Vientos (NYM) | HIT | 1 H
+- Colt Keith (DET) | HRR | 1 H
+- Carson Benge (NYM) | CONTACT | 3 H
+- Matt Olson (ATL) | TOP | 1 H
+- Drake Baldwin (ATL) | HIT | 1 H
+- Bobby Witt Jr. (KC) | TOP | 1 H
+- Colson Montgomery (CWS) | HR | 3 H
+- Sam Antonacci (CWS) | HIT | 1 H
+- Miguel Vargas (CWS) | HRR | 1 H
+- Munetaka Murakami (CWS) | CONTACT | 1 H
+- Liam Hicks (MIA) | TOP | 1 H
+- Otto Lopez (MIA) | HIT | 1 H
+- Xavier Edwards (MIA) | HIT | 2 H
+- Byron Buxton (MIN) | HRR | 2 H
+- Victor Caratini (MIN) | CONTACT | 1 H
+- Miguel Andujar (SD) | TOP | 1 H
+- Jake Bauers (MIL) | HRR | 1 H
+- Josh Jung (TEX) | TOP | 2 H
+- Corbin Carroll (ARI) | HR | 1 H
+- Ildemaro Vargas (ARI) | HIT | 1 H
+- Ezequiel Duran (TEX) | HRR | 1 H
+- Nolan Arenado (ARI) | HRR | 2 H
+- Luke Raley (SEA) | TOP | 2 H
+- Yordan Alvarez (HOU) | HR | 1 H
+- Randy Arozarena (SEA) | HIT | 2 H
+- Josh Naylor (SEA) | HIT | 1 H
+- Julio Rodríguez (SEA) | HRR | 1 H
+- Christian Walker (HOU) | HRR | 1 H
+- Brent Rooker (ATH) | HR | 1 H
+- Iván Herrera (STL) | HIT | 1 H
+- Nick Kurtz (ATH) | HRR | 2 H
+- JJ Wetherholt (STL) | HRR | 2 H
+- Luis Arraez (SF) | HIT | 2 H
+- Freddie Freeman (LAD) | HRR | 1 H
+- Rafael Devers (SF) | CONTACT | 2 H
