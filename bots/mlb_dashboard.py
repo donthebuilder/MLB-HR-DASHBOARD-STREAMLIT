@@ -11603,6 +11603,12 @@ SHADOW_PICK_RULES = {
     "run:rpa_obp_spot": ("season_runs_per_pa", "season_obp", "neg_lineup_spot"),
     "rbi:rpa_iso_onbase": ("season_rbi_per_pa", "season_iso", "lineup_pre_onbase"),
     "sb:attempts_pitcher": ("season_sb_attempt_rate", "steal_risk_score", "pitcher_sb_attempts_against"),
+    # M0 · HR PICK SHADOW (BATCH-MODEL-V2, 2026-10-03): the game's highest HR
+    # score, graded beside the real HR pick. Evidence (21 nights, 247 games):
+    # top HR score per game homered 17.8% vs the HR pick's 13.9%, and the pick
+    # was the top score in only 43 of 247 games. Logged and frozen at first
+    # pitch like the others; game_pick_role is not touched; postseason games count.
+    "hr_pick_top_score": ("hr_score",),
 }
 
 

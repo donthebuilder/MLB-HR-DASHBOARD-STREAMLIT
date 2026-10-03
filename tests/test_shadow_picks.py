@@ -21,7 +21,7 @@ def row(pid, power, hrw, pside, prob, pa=300, role=""):
             "lineup_pre_onbase": 0.3 + pid / 100, "season_sb_attempt_rate": pid / 100, "steal_risk_score": 10 * pid,
             "pitcher_sb_attempts_against": 5,
             "hr_shape_components": {"season_power_baseline": power}, "hrw_score": hrw,
-            "pitcher_side_ops": pside, "season_hr_game_probability": prob}
+            "pitcher_side_ops": pside, "season_hr_game_probability": prob, "hr_score": 40 + pid * 10 - (pid == 3) * 30}
 rows = [row(1, 90, 20, 0.700, 0.10, role="TOP"), row(2, 60, 80, 0.900, 0.12),
         row(3, 85, 70, 0.950, 0.20, role="HR"), row(4, 99, 99, 0.999, 0.30, pa=10)]
 md.stamp_shadow_picks(rows)
@@ -33,6 +33,7 @@ for rule in md.SHADOW_PICK_RULES:
 check("power_pside #1 is the best power+pside blend", [p for p, s in by.items() if s.get("power_pside") == 1], [3])
 for rule in ("hit:avg_hand_k", "tb:slg_spot"):
     check(f"{rule} stamps a #1", sum(1 for r in rows if r["shadow_pick"].get(rule) == 1), 1)
+check("hr_pick_top_score #1 is the game's highest HR score", [p for p, s in by.items() if s.get("hr_pick_top_score") == 1], [2])
 check("neg_ inputs invert", md._shadow_input({"season_k_rate": 0.2}, "neg_k_rate"), -0.2)
 check("avg_vs_hand follows the starter's hand", md._shadow_input({"pitcher_throws": "L", "avg_vs_lhp": 0.31, "avg_vs_rhp": 0.2}, "avg_vs_hand"), 0.31)
 check("roles untouched", [r["game_pick_role"] for r in rows], ["TOP", "", "HR", ""])
