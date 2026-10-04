@@ -1,0 +1,58 @@
+# MLB RECORD REPAIR (2026-10-04): grade published nights against their LOCK.
+# Manual only. Restores the nights' graded files and locked rows from the data
+# branch, runs bots/mlb_record_repair.py (locked holders graded in their roles
+# from MLB's final game feed, stand-ins relabelled STANDIN, derived fields and
+# the .txt rebuilt, a `repairs` entry in each file), then publishes through
+# publish_data.sh -- which carries forward every file this run didn't touch.
+# Shares mlb-results' concurrency group so it never races a grading run.
+name: MLB record repair (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      dates:
+        description: "comma list of YYYY-MM-DD nights to repair"
+        required: true
+        default: ""
+
+concurrency:
+  group: mlb-results
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r bots/requirements.txt
+      - name: Restore the nights' graded files and locked rows
+        env:
+          DATES: ${{ github.event.inputs.dates }}
+        run: |
+          set -euo pipefail
+          git fetch origin data --depth 1
+          rm -rf /tmp/mlb-restore && mkdir -p /tmp/mlb-restore public/data/current
+          git archive origin/data public/data | tar -x -C /tmp/mlb-restore
+          for d in $(echo "$DATES" | tr ',' ' '); do
+            [[ "$d" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] || { echo "bad date: $d"; exit 1; }
+            for f in graded_results_$d.json graded_results_$d.txt por_rows_$d.jsonl; do
+              cp /tmp/mlb-restore/public/data/current/$f public/data/current/ 2>/dev/null || echo "no $f"
+            done
+          done
+      - name: Repair
+        env:
+          DATES: ${{ github.event.inputs.dates }}
+        run: python bots/mlb_record_repair.py --dir public/data/current --dates "$DATES" --apply
+      - name: Publish to data branch
+        run: bash .github/scripts/publish_data.sh "MLB record repair"
