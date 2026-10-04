@@ -430,10 +430,22 @@ def main() -> int:
                     continue
                 key = slot_key(market, int(rank))
                 gid = rung_game_id(rung, team_game)
-                started = bool(gid and now >= kickoff_by_game.get(gid, now + dt.timedelta(days=1)))
                 occ_pid = rung.get("player_id")
 
                 slot = card_locks.get(key)
+                # WHOSE KICKOFF FREEZES THE SLOT (2026-10-03 audit). This read
+                # the kickoff of the player in THIS run's rung. Once a held
+                # player's game started, a rerun that re-ranked a Sunday
+                # player into his slot saw "not started" and swapped the
+                # locked pick out after kickoff. A held slot freezes at ITS
+                # OWN player's kickoff; and a player whose game has already
+                # started can't be moved into an open slot (that would be a
+                # post-kickoff pick too).
+                def _started(g):
+                    return bool(g and now >= kickoff_by_game.get(g, now + dt.timedelta(days=1)))
+                rung_started = _started(gid)
+                held_gid = (slot or {}).get("game_id") or gid
+                started = _started(held_gid) if slot is not None else rung_started
                 if slot is None:
                     card_locks[key] = {
                         "market": market, "rank": int(rank),
@@ -472,6 +484,16 @@ def main() -> int:
                             "locked": slot["stub"].get("name"),
                             "attempted": rung.get("name"),
                         })
+                    continue
+
+                if rung_started and str(slot["stub"].get("player_id")) != occ_pid:
+                    # The held player's game hasn't started but the
+                    # replacement's has: keep the held pick.
+                    card_rejects.append({
+                        "slot": key, "at": stamp,
+                        "locked": slot["stub"].get("name"),
+                        "attempted": rung.get("name"),
+                    })
                     continue
 
                 # Pre-game: a re-pick is legitimate. The SAME player still in
