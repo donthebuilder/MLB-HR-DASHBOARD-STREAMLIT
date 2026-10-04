@@ -1882,16 +1882,25 @@ def main() -> int:
             slate = json.loads(slate_path.read_text())
             players = slate.get("players") if isinstance(slate, dict) else slate
             by_norm = {}
+            # TWO MEN, ONE NAME (bot audit 10-03): the books key by name, and
+            # setdefault handed the first slate man BOTH prices. A name two
+            # slate hitters share gets no price -- no number beats a wrong one.
+            ambiguous = set()
             for p in players or []:
                 n = norm_name(p.get("name") or p.get("player_name"))
                 if n:
+                    prev = by_norm.get(n)
+                    if prev is not None and str(prev.get("player_id")) != str(p.get("player_id")):
+                        ambiguous.add(n)
                     by_norm.setdefault(n, p)
                 # Each hitter's first pitch, for the dated snapshot's freeze.
                 pid0, gt0 = p.get("player_id"), p.get("game_time")
                 if pid0 is not None and gt0:
                     start_by_pid.setdefault(str(pid0), str(gt0))
+            if ambiguous:
+                print(f"  {len(ambiguous)} name(s) shared by two slate hitters -- left unpriced: {sorted(ambiguous)}")
             for norm, mkts in board.items():
-                p = by_norm.get(norm)
+                p = None if norm in ambiguous else by_norm.get(norm)
                 if not p:
                     unmatched.append(board[norm].get(MARKETS[0], {}).get("name") or norm)
                     continue
