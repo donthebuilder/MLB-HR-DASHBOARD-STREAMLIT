@@ -33,11 +33,21 @@ def main() -> int:
     url = (f"https://statsapi.mlb.com/api/v1/schedule?sportId=1&startDate={start}&endDate={end}"
            "&gameType=R,F,D,L,W")   # regular season + every postseason round
     active, why = True, "schedule unreadable -- failing open"
+    # OFF DAYS ARE A SKIP, NOT A FAILURE (2026-10-04, ops audit: 25 of 71 Today
+    # runs went red, nearly all on days with no game -- the slate guard in
+    # make_slim refuses an empty slate, as it should). The same response says
+    # whether TODAY and TOMORROW each have a game; the Today / Tomorrow jobs
+    # skip on a day with none. "unknown" (unreadable) means run: fail open.
+    today_games = tomorrow_games = "unknown"
     try:
         with urllib.request.urlopen(url, timeout=20) as r:
-            games = int(json.load(r).get("totalGames") or 0)
+            body = json.load(r)
+        games = int(body.get("totalGames") or 0)
         active = games > 0
-        why = f"{games} MLB game(s) {start}..{end}"
+        per_day = {d.get("date"): len(d.get("games") or []) for d in body.get("dates") or []}
+        today_games = str(per_day.get(str(today), 0))
+        tomorrow_games = str(per_day.get(str(today + dt.timedelta(days=1)), 0))
+        why = f"{games} MLB game(s) {start}..{end}; today {today_games}, tomorrow {tomorrow_games}"
     except Exception as e:  # noqa: BLE001 -- fail open on anything
         why = f"{why} ({type(e).__name__})"
     print(f"season guard: active={str(active).lower()} -- {why}")
@@ -45,6 +55,8 @@ def main() -> int:
     if out:
         with open(out, "a", encoding="utf-8") as fh:
             fh.write(f"active={str(active).lower()}\n")
+            fh.write(f"today_games={today_games}\n")
+            fh.write(f"tomorrow_games={tomorrow_games}\n")
     return 0
 
 

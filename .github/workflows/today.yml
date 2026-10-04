@@ -118,6 +118,8 @@ jobs:
     timeout-minutes: 5
     outputs:
       active: ${{ steps.g.outputs.active }}
+      today_games: ${{ steps.g.outputs.today_games }}
+      tomorrow_games: ${{ steps.g.outputs.tomorrow_games }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -128,7 +130,8 @@ jobs:
 
   run-bot:
     needs: [guard]
-    if: ${{ needs.guard.outputs.active == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.scheduled != 'true') }}
+    # an off day (no game today) is a green skip, not a red run (2026-10-04)
+    if: ${{ (needs.guard.outputs.active == 'true' && needs.guard.outputs.today_games != '0') || (github.event_name == 'workflow_dispatch' && github.event.inputs.scheduled != 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 90
     env:
@@ -405,7 +408,7 @@ jobs:
     # had -- or by hand with tomorrow=true. Steps unchanged (the old file is in
     # .github/workflows-disabled/). Its own job, so a Today failure never costs
     # the Tomorrow slate or the other way round.
-    if: ${{ (needs.guard.outputs.active == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.scheduled != 'true')) && (github.event.schedule == '5 7 * * *' || github.event.schedule == '5 9 * * *' || github.event.inputs.tomorrow == 'true') }}
+    if: ${{ ((needs.guard.outputs.active == 'true' && needs.guard.outputs.tomorrow_games != '0') || (github.event_name == 'workflow_dispatch' && github.event.inputs.scheduled != 'true')) && (github.event.schedule == '5 7 * * *' || github.event.schedule == '5 9 * * *' || github.event.inputs.tomorrow == 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 90
     env:
