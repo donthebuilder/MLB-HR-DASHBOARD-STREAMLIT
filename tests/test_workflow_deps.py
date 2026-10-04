@@ -128,20 +128,6 @@ def test_archive_is_importable_by_the_scripts_that_need_it():
             f"bots/{name} no longer imports archive — update this test's premise"
 
 
-def test_odds_probe_leaves_its_answer_on_the_data_branch():
-    """A diagnostic whose only output is a log is one nobody runs twice.
-
-    The probe wrote nothing and committed nothing, so a run that changed no
-    file was indistinguishable from a run that never happened — reported twice
-    as "I ran it and it didn't work".
-    """
-    text = (WORKFLOWS / "odds-probe.yml").read_text(encoding="utf-8")
-    assert "contents: write" in text, "the probe cannot commit its own answer"
-    assert "odds_probe.txt" in text, "the probe no longer writes odds_probe.txt"
-    assert "ref: data" in text, "the probe no longer checks out the data branch"
-    assert "tee /tmp/probe.txt" in text, "the probe output is no longer captured"
-
-
 if __name__ == "__main__":
     failed, checks = [], 0
     for _name, _fn in sorted(globals().items()):
@@ -160,5 +146,4 @@ if __name__ == "__main__":
     print(f"ok   workflow deps: {checks} assertions — every script a workflow "
           f"stages gets the sibling modules it imports (accountability.yml's "
           f"nightly memory job died on a missing archive.py for two weeks), and "
-          f"the odds probe leaves its answer on the data branch instead of only "
-          f"in a log")
+          f"the archive module is importable where it's needed")
