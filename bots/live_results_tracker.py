@@ -4394,6 +4394,13 @@ def main() -> int:
         str(gs.get("abstract_state", "")).lower() == "final" for gs in _game_states
     )
     payload_live = live_mode and not slate_done
+    # A --final-only run skips games still in progress, then labelled the
+    # night "Final" anyway (2026-10-04 audit: 10-03 said final while SD@MIL
+    # was in the 3rd -- Chourio's TOP-pick homer ungraded, three pages
+    # disagreeing). A night with a skipped game isn't final; the "Finish
+    # earlier slates" step re-grades it once that game ends.
+    if skipped_live_games and not slate_not_started:
+        payload_live = True
 
     site_results = [
         {**slot,
