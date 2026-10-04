@@ -1016,8 +1016,16 @@ def _webhook_transitions(old_payload, new_payload, date_str: str = "") -> None:
             for sl in ((p or {}).get("graded_slots") or (p or {}).get("results") or []):
                 nm = str(sl.get("name", "")).strip()
                 role = str(sl.get("game_pick_role") or sl.get("pick_type") or "").split("/")[0].strip().upper()
+                # WHO, BY ID (bot audit 10-03): keyed (name, role), a
+                # doubleheader's two games -- or two men sharing a name --
+                # collapsed into one slot and the digest credited the wrong
+                # line. player_id + game_pk when the slot has them; the name
+                # only for an old slot without. Display names still come
+                # from sl["name"].
+                pid, gpk = sl.get("player_id"), sl.get("game_pk")
+                ident = f"{pid}|{gpk}" if pid not in (None, "") else nm.lower()
                 if nm:
-                    out[(nm.lower(), role)] = sl
+                    out[(ident, role)] = sl
             return out
 
         def bar_cleared(sl, role):
