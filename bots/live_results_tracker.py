@@ -2672,7 +2672,14 @@ def annotate_designed(graded: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return graded
 
 
-def build_tracking_slots(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def build_tracking_slots(rows: List[Dict[str, Any]], locked_holders: List[Dict[str, Any]] | None = None) -> List[Dict[str, Any]]:
+    """`locked_holders` (2026-10-04, record audit A2): designated players the
+    locked join knows but the rebuilt slate dropped. They join their game's
+    pool BEFORE the roles are assigned, so _designated() finds the man who
+    actually held TOP/HR/HIT/HRR/CONTACT at lock. Without them the fallback
+    pick_top() graded a stand-in under the role (159 slots, 09-09 -> 10-03:
+    e.g. 09-11 game 824631 graded Reynolds as TOP for the locked
+    Crow-Armstrong). They never enter TOP15 (a slate-wide hr_score list)."""
     tracking = []
 
     top15 = sorted(rows, key=lambda x: safe_float(x.get("hr_score")), reverse=True)[:15]
@@ -2680,7 +2687,7 @@ def build_tracking_slots(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         tracking.append({**trim_row(r), "pick_type": "TOP15", "rank": i})
 
     by_game: Dict[int, List[Dict[str, Any]]] = {}
-    for r in rows:
+    for r in list(rows) + list(locked_holders or []):
         by_game.setdefault(int(r["game_pk"]), []).append(r)
 
     for _, hitters in by_game.items():
@@ -4138,8 +4145,14 @@ def main() -> int:
     # below. They still never join the full slate-row shape `rows` itself.
     rows, dropped_locked_rows = apply_locked_features(rows, date_str, OUT_DIR)
 
-    tracking_slots = build_tracking_slots(rows)
-    tracking_slots = restore_pinched_slots(tracking_slots, dropped_locked_rows)
+    # A dropped player who held a real designation (anything but WATCH) is
+    # graded IN that designation (build_tracking_slots' locked_holders); only
+    # the rest are restored as PINCHED context, as before.
+    def _held_role(d):
+        return any(r.strip().upper() not in ("", "WATCH") for r in str(d.get("game_pick_role") or "").split("/"))
+    locked_holders = [d for d in dropped_locked_rows if _held_role(d)]
+    tracking_slots = build_tracking_slots(rows, locked_holders)
+    tracking_slots = restore_pinched_slots(tracking_slots, [d for d in dropped_locked_rows if not _held_role(d)])
 
     game_cache: Dict[int, Dict[str, Any]] = {}
     game_status_by_pk: Dict[int, Dict[str, Any]] = {}
