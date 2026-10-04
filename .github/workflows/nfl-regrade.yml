@@ -13,6 +13,10 @@ on:
         description: "weeks whose card to rebuild from the pregame record, e.g. 1"
         required: false
         default: ""
+      lock_replay:
+        description: "weeks whose card to rebuild by replaying the pick lock over the pregame runs, e.g. 1,2,3"
+        required: false
+        default: ""
       grade:
         description: "weeks to regrade, e.g. 1,2,3"
         required: true
@@ -55,6 +59,7 @@ jobs:
           set -euo pipefail
           ARGS="--dir $GITHUB_WORKSPACE/public/data/current --grade ${{ github.event.inputs.grade }}"
           for w in $(echo "${{ github.event.inputs.rebuild }}" | tr ',' ' '); do ARGS="$ARGS --rebuild-card $w"; done
+          for w in $(echo "${{ github.event.inputs.lock_replay }}" | tr ',' ' '); do ARGS="$ARGS --lock-replay $w"; done
           python nfl_regrade.py $ARGS
       - name: Publish to data branch
         run: bash .github/scripts/publish_data.sh "NFL regrade"

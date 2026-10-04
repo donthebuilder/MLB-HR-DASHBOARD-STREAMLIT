@@ -13,6 +13,10 @@ once in weeks 2 and 3. Two tools, one script:
                      Week 1 needs this: no week-1 card was archived, and the
                      published w01 grade used the live card -- already week 2's,
                      built with week-1 results in its form features.
+  --lock-replay W    Rebuild week W's card the way the (fixed) pick lock would
+                     have held it: every pregame run in order, each slot frozen
+                     at its own player's kickoff (2026-10-04). The strict
+                     answer to "what was knowable before each kickoff".
   --grade W[,W...]   Re-run nfl_results.py for each week against its archived
                      card (grade() now counts each player once per market).
 
@@ -81,6 +85,88 @@ def pregame_rows(current: Path, season: int, week: int, ko: dict[str, dt.datetim
     return list(players.values())
 
 
+def _runs(current: Path, season: int, week: int) -> list[tuple[dt.datetime, list[dict]]]:
+    """Every week-mode prediction-log run for the week: (generated_at, rows), oldest first."""
+    out = []
+    for f in sorted(glob.glob(str(current / f"nfl_prediction_log_{season}-wk{week:02d}.*.jsonl"))):
+        with open(f, encoding="utf-8") as fh:
+            header = json.loads(fh.readline() or "{}")
+            if header.get("mode") != "week" or int(header.get("week") or -1) != week:
+                continue
+            gen = dt.datetime.fromisoformat(str(header["generated_at"]).replace("Z", "+00:00"))
+            rows = []
+            for line in fh:
+                try:
+                    rows.append(json.loads(line))
+                except Exception:
+                    continue
+            out.append((gen, rows))
+    return sorted(out, key=lambda x: x[0])
+
+
+def _run_players(rows: list[dict]) -> list[dict]:
+    """One run's rows -> the payload-shaped players nfl_picks.build() ranks."""
+    players: dict[str, dict] = {}
+    for r in rows:
+        if not isinstance(r.get("score"), (int, float)):
+            continue
+        p = players.setdefault(str(r["player_id"]), {"player_id": str(r["player_id"]), "name": r.get("player"), "team": r.get("team"),
+                                                    "opp": r.get("opp"), "position": r.get("position"),
+                                                    "scores": {}, "low_sample": False, "questionable": False, "carryover": False})
+        p["scores"][r["market"]] = r["score"]
+        p["low_sample"] = p["low_sample"] or bool(r.get("low_sample"))
+        p["questionable"] = p["questionable"] or bool(r.get("questionable"))
+        p["carryover"] = p["carryover"] or bool(r.get("carryover"))
+    return list(players.values())
+
+
+def lock_replay_card(current: Path, season: int, week: int, why: str) -> Path:
+    """THE CARD AS THE LOCK WOULD HAVE HELD IT (2026-10-04, Donovan: regrade
+    the record from what was knowable before each kickoff). Every logged
+    pregame run, oldest first, is built into a card (nfl_picks.build, the bot's
+    own rule) and walked through nfl_pick_lock's rules as fixed in ba825939 /
+    8d263898: a slot freezes at ITS holder's kickoff, and a player whose game
+    has started can't move into a slot. Each rung is the man who held it at
+    his own kickoff. Duplicates stay on the card as the lock left them --
+    nfl_results.grade() counts each player once per market. Nothing is
+    re-scored; every score is one logged before that player's kickoff."""
+    import nfl_picks
+    ko = kickoffs(season, week)
+    runs = _runs(current, season, week)
+    if not runs:
+        raise SystemExit(f"no prediction-log runs for {season} week {week} -- nothing replayed")
+    slots: dict[tuple[str, int], dict] = {}
+    meta: dict[str, dict] = {}
+    started = lambda team, now: team in ko and now >= ko[team]
+    for gen, rows in runs:
+        card = nfl_picks.build(_run_players(rows))
+        for mk, blk in card.items():
+            meta.setdefault(mk, {k: v for k, v in blk.items() if k != "rungs"})
+            for i, rung in enumerate(blk.get("rungs") or []):
+                key = (mk, i + 1)
+                sl = slots.get(key)
+                if sl is None:
+                    if not started(rung.get("team"), gen):
+                        slots[key] = {"rung": rung, "at": gen}
+                    continue
+                if started(sl["rung"].get("team"), gen) or started(rung.get("team"), gen):
+                    continue
+                sl["rung"], sl["at"] = rung, gen
+    card = {}
+    for (mk, rank), sl in sorted(slots.items(), key=lambda kv: (kv[0][0], kv[0][1])):
+        blk = card.setdefault(mk, {**meta.get(mk, {}), "rungs": []})
+        blk["rungs"].append({**sl["rung"], "rank": rank})
+    out = current / f"nfl_picks_{season}_w{week:02d}.json"
+    out.write_text(json.dumps({
+        "season": season, "week": week, "card": card,
+        "rebuilt": {"at": dt.datetime.now(dt.timezone.utc).isoformat(), "method": "lock-replay",
+                    "from": f"{len(runs)} pregame nfl_prediction_log runs, walked through the fixed pick-lock rules: each rung is the player standing in it at his own kickoff",
+                    "why": why},
+    }, separators=(",", ":")))
+    print(f"  lock-replayed {out.name} ({len(runs)} runs): " + "; ".join(f"{k} {[r['name'] for r in v['rungs']]}" for k, v in card.items()))
+    return out
+
+
 def rebuild_card(current: Path, season: int, week: int) -> Path:
     import nfl_picks
     ko = kickoffs(season, week)
@@ -104,11 +190,15 @@ def main() -> int:
     ap.add_argument("--dir", required=True)
     ap.add_argument("--season", type=int, default=2026)
     ap.add_argument("--rebuild-card", type=int, action="append", default=[])
+    ap.add_argument("--lock-replay", type=int, action="append", default=[])
+    ap.add_argument("--why", type=str, default="the published card was not provably the pregame one")
     ap.add_argument("--grade", type=str, default="")
     a = ap.parse_args()
     current = Path(a.dir)
     for w in a.rebuild_card:
         rebuild_card(current, a.season, w)
+    for w in a.lock_replay:
+        lock_replay_card(current, a.season, w, a.why)
     # nfl_results.py also rewrites the LIVE nfl_results.json (this week's
     # page) on every run; a regrade of a past week must only touch that week's
     # archive, so the live file is set aside and put back.
