@@ -36,6 +36,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import json
+from zoneinfo import ZoneInfo
 import os
 import re
 import sys
@@ -1619,13 +1620,16 @@ def resolve_slate_date(slate_arg, now=None, *, quiet: bool = False) -> str:
                         ts = dt.datetime.fromisoformat(str(t).replace("Z", "+00:00"))
                         if ts.tzinfo is None:
                             ts = ts.replace(tzinfo=dt.timezone.utc)
-                        slate_date = (ts - dt.timedelta(hours=4)).date().isoformat()
+                        # real US Eastern, not a fixed UTC-4: DST ends Nov 1,
+                        # inside a World Series (bot audit 10-03)
+                        slate_date = ts.astimezone(ZoneInfo("America/New_York")).date().isoformat()
     except Exception as e:
         if not quiet:
             print(f"  slate date not readable ({type(e).__name__}: {e})")
     if not slate_date:
         # Last resort, and it is US Eastern rather than UTC for the same reason.
-        slate_date = (now - dt.timedelta(hours=4)).date().isoformat()
+        _now = now if now.tzinfo else now.replace(tzinfo=dt.timezone.utc)
+        slate_date = _now.astimezone(ZoneInfo("America/New_York")).date().isoformat()
         if not quiet:
             print(f"  WARNING: no slate date found; filing under {slate_date} (US/Eastern of now)")
     return str(slate_date)[:10]
