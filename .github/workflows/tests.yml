@@ -30,7 +30,7 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
-      - run: pip install -r bots/requirements.txt -r bots/nfl/requirements.txt
+      - run: pip install -r bots/requirements.txt -r bots/nfl/requirements.txt pytest
       - name: Run every test file
         env:
           PYTHONPATH: .
@@ -40,7 +40,9 @@ jobs:
           failed=""; passed=0
           for t in tests/test_*.py; do
             n=$(basename "$t")
-            if timeout 180 python "$t" > "/tmp/$n.log" 2>&1; then
+            # run as a local run would: GitHub's run id makes every run_id in this
+            # job identical, and two tests check that separate runs differ
+            if timeout 180 env -u GITHUB_RUN_ID -u GITHUB_RUN_ATTEMPT -u GITHUB_ACTIONS python "$t" > "/tmp/$n.log" 2>&1; then
               passed=$((passed+1))
             elif [[ " $KNOWN_BROKEN " == *" $n "* ]]; then
               echo "::warning::$n is on KNOWN_BROKEN (still failing)"
