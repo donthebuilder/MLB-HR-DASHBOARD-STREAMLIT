@@ -82,6 +82,32 @@ PHX = dt.timezone(dt.timedelta(hours=-7))
 # this table -- target share, xTD, TDs per game, TDoE -- rendered as 0 or 1
 # and the whole board read as noise. Precision is a property of the stat, so
 # it's declared here with the stat and shipped in the payload.
+# WHICH STATS ARE HIS (2026-10-04, data trace). Zeros were dropped across the
+# board so a running back's PAYD/ATT/CPOE/FGM didn't read as data -- but that
+# also dropped every REAL zero: a receiver with no TD read "—", not 0 (7.5k
+# dashes on Research). A stat that applies to his position keeps its 0; one
+# that doesn't still drops.
+_SCORING = {"RZ", "GL", "xTD", "TD", "TDoE"}
+_RECEIVING = {"TGT%", "WOPR", "TGT", "REC", "RECYD", "AIRYD", "20+", "SEP", "YACOE"}
+_RUSHING = {"CAR", "RUYD", "RYOE"}
+STATS_FOR_POS = {
+    "QB": {"PAYD", "PATD", "ATT", "CPOE", "CAR", "RUYD"} | _SCORING,
+    "RB": _RUSHING | _RECEIVING | _SCORING,
+    "WR": _RECEIVING | _SCORING,
+    "TE": _RECEIVING | _SCORING,
+    "K": {"FGM", "PAT"},
+}
+
+
+def keeps_stat(position, short, v) -> bool:
+    """Publish this value? Nonzero always; a zero only where the stat is his."""
+    if v is None:
+        return False
+    if v != 0:
+        return True
+    return short in STATS_FOR_POS.get(str(position or "").upper(), set())
+
+
 RESEARCH = [
     ("f_target_share", "TGT%", "Share of his team's targets", 1, True),
     ("f_wopr", "WOPR", "Weighted opportunity — target share + air yards share", 3, False),
@@ -771,7 +797,7 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
                 # Skip exact zeros: a running back carries PAYD/ATT/CPOE/FGM/PAT
                 # as 0.000 and a wall of zeroes in the modal reads as data when
                 # it's really "this stat doesn't apply to him".
-                if col in r and v is not None and v != 0:
+                if col in r and keeps_stat(r.get("position"), short, v):
                     p["stats"][short] = v
 
     # preseason: attach opponent from the game list
@@ -806,7 +832,7 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
         stats = {}
         for col, short, _, _dp, _pct in RESEARCH:
             v = _num(r.get(col))
-            if col in r and v is not None and v != 0:
+            if col in r and keeps_stat(r.get("position"), short, v):
                 stats[short] = v
         rows.append({
             "player_id": r["player_id"],
