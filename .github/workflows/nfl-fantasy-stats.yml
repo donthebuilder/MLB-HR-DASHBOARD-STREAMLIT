@@ -25,7 +25,10 @@ on:
     #   Sat (late season) Sat 17:00-23:59Z + Sun 00:00-05:59Z
     #   Sunday            Sun 17:00-23:59Z + Mon 00:00-05:59Z
     #   Mon night (MNF)   Tue 00:00-05:59Z
-    - cron: '*/15 17-23 * * 0,6'
+    # Sunday from 13:00 UTC (2026-10-04 game-day check: IND@WAS kicked off 13:30Z
+    # in London and the box stayed at its 10:04Z pre-game build until 17:00).
+    - cron: '*/15 13-23 * * 0'
+    - cron: '*/15 17-23 * * 6'
     - cron: '*/15 0-5 * * 0,1,2,5'
     # No Tuesday "correction" pass: the slate rolls to next week Tue 13:00Z
     # and the site only merges a stats file whose week matches the slate's,
