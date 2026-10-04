@@ -518,6 +518,25 @@ def main() -> int:
     if a.apply and not a.dry_run and isinstance(picks_payload, dict):
         card = picks_payload.get("card") or {}
         dup_dropped = []
+
+        # A slot the card must show from the ledger: a locked one, or (since
+        # 2026-10-03) an open one whose live rung is a player whose game has
+        # already started -- the ledger refused him above, so the published
+        # card (and the week archive results grade) must refuse him too.
+        def _held(market, rung):
+            if not rung.get("rank"):
+                return None
+            sl = card_locks.get(slot_key(market, int(rung["rank"])))
+            if not sl:
+                return None
+            if sl.get("locked"):
+                return sl
+            g = rung_game_id(rung, team_game)
+            if (g and now >= kickoff_by_game.get(g, now + dt.timedelta(days=1))
+                    and str(sl["stub"].get("player_id")) != str(rung.get("player_id"))):
+                return sl
+            return None
+
         for market, blk in card.items():
             rungs = blk.get("rungs") or []
             new_rungs = []
@@ -534,22 +553,20 @@ def main() -> int:
             # two locked slots holding the same player (a slot first seen after
             # kickoff locks late on whoever sits there).
             placed = set()
-            for rung in sorted(rungs, key=lambda r: (0 if (card_locks.get(slot_key(market, int(r["rank"]))) or {}).get("locked") else 1, int(r.get("rank") or 99)) if r.get("rank") else (2, 99)):
-                _k = slot_key(market, int(rung["rank"])) if rung.get("rank") else None
-                _sl = card_locks.get(_k) if _k else None
-                _pid = str((_sl["stub"].get("player_id") if _sl and _sl.get("locked") else rung.get("player_id")) or "")
+            for rung in sorted(rungs, key=lambda r: (0 if _held(market, r) else 1, int(r.get("rank") or 99)) if r.get("rank") else (2, 99)):
+                _sl = _held(market, rung)
+                _pid = str((_sl["stub"].get("player_id") if _sl else rung.get("player_id")) or "")
                 if _pid and _pid in placed:
                     rung["_dup"] = True
-                    dup_dropped.append(f"{market} #{rung.get('rank')} {(_sl['stub'] if _sl and _sl.get('locked') else rung).get('name')}")
+                    dup_dropped.append(f"{market} #{rung.get('rank')} {(_sl['stub'] if _sl else rung).get('name')}")
                 elif _pid:
                     placed.add(_pid)
             for rung in rungs:
                 rank = rung.get("rank")
                 if rung.pop("_dup", False):
                     continue
-                key = slot_key(market, int(rank)) if rank else None
-                slot = card_locks.get(key) if key else None
-                if slot and slot.get("locked"):
+                slot = _held(market, rung)
+                if slot:
                     pid = slot["stub"].get("player_id")
                     live = live_index.get(str(pid)) if pid else None
                     frozen = dict(slot["stub"])

@@ -6,7 +6,8 @@ Run 2, EARLY has kicked off, LATE hasn't: the board re-ranks #2 to L2 (LATE).
 The old code read the kickoff of the REPLACEMENT (LATE, not started) and swapped
 E1 out after his game began. Now #2 must stay E1, locked.
 Run 3, same instant: #1 (held by L1, LATE not started) is re-ranked to E2,
-whose EARLY game already started -- a post-kickoff pick, refused: #1 stays L1.
+whose EARLY game already started -- a post-kickoff pick, refused: #1 stays L1
+in the ledger AND on the published card (which the week archive copies).
 Run: PYTHONPATH=. python3 tests/test_nfl_pick_lock_own_kickoff.py"""
 import datetime as dt, json, os, sys, tempfile
 from pathlib import Path
@@ -51,6 +52,7 @@ check("#1 (LATE, not started) still open", ledger().get("TD|1", {}).get("locked"
 write(iso(-5), iso(240), [rung(1, "E2", "EEE"), rung(2, "E1", "EEE")])   # an EARLY (started) player re-ranked into LATE's #1
 out = run()
 check("#1 ledger refuses a player whose game already started", ledger().get("TD|1", {}).get("stub", {}).get("player_id"), "L1")
+check("#1 published card refuses him too", out.get(1), "L1")
 check("#1 stays open for its own (LATE) kickoff", ledger().get("TD|1", {}).get("locked"), False)
 
 print(f"{CHECKS - len(FAILED)}/{CHECKS} checks passed")
