@@ -13489,6 +13489,19 @@ def game_has_started(game: Dict[str, Any]) -> bool:
     return False
 
 
+def freeze_pregame_rows(rows: List["HitterRecord"], pregame: List["HitterRecord"]) -> Tuple[List["HitterRecord"], set]:
+    """The first-pitch rebuild, frozen (2026-10-04): a hitter the last pregame
+    run scored keeps that row -- scores, ranks, features, stamp -- with only
+    his real-lineup place (lineup_spot, lineup_confirmed) from the rebuild; a
+    hitter the pregame guess missed keeps the rebuilt row. Returns (rows, ids
+    carried from pregame)."""
+    pre = {int(p.player_id): p for p in pregame}
+    carried = {int(r.player_id) for r in rows if int(r.player_id) in pre}
+    out = [dataclasses.replace(pre[int(r.player_id)], lineup_spot=r.lineup_spot, lineup_confirmed=r.lineup_confirmed)
+           if int(r.player_id) in pre else r for r in rows]
+    return out, carried
+
+
 def should_reuse_locked_rows(game: Dict[str, Any], game_pk: int,
                               locked_rows_by_game: Dict[int, List[HitterRecord]]) -> bool:
     """True once a game has both started AND already survived its one
@@ -14914,6 +14927,7 @@ def main() -> int:
             else:
                 print(f"[{idx}/{len(games)}] Building {away} @ {home}...", file=sys.stderr, flush=True)
                 rows = build_hitter_records(client, db, game, slate_date)
+                _carried: set = set()
                 # ── ONE-TIME REAL-LINEUP REFRESH AT LOCK (2026-09-12) ───────────
                 # OPEN-ITEMS #18/#19, parked 2026-09-11 for lack of live data to
                 # chase -- Donovan sent a screenshot of two real starters
@@ -14948,6 +14962,18 @@ def main() -> int:
                 # official, rather than fighting it. It never reopens the
                 # post-lock drift hole pick_lock.py exists to close.
                 if game_has_started(game):
+                    # FROZEN AT FIRST PITCH (2026-10-04, Donovan: "freeze at
+                    # first pitch"). This build exists for the REAL lineup, but
+                    # it also re-scored every hitter from feeds that may already
+                    # hold this game -- a 1st-inning homer could lift a man's
+                    # hr_score and rank (record audit: 448 homer rows carried
+                    # in-game values). A hitter the last pregame run already
+                    # scored keeps that run's row -- every score, rank and
+                    # feature -- and takes only his place in the real lineup
+                    # (lineup_spot, lineup_confirmed). A hitter the pregame
+                    # guess missed has no pregame row and keeps this build's
+                    # (the 09-12 reason this build exists).
+                    rows, _carried = freeze_pregame_rows(rows, locked_rows_by_game.get(game_pk) or [])
                     for _r in rows:
                         _r.built_after_lock = True
                 filtered_rows = apply_global_pa_filter(rows)
@@ -14967,6 +14993,9 @@ def main() -> int:
                     # the whole run (see hr_config_hash()/build_run_meta()).
                     _hr_hash = (run_meta.get("config_hashes") or {}).get("hr") or ""
                     for _r in rows:
+                        # a row carried from the pregame run keeps that run's stamp (above)
+                        if game_has_started(game) and int(_r.player_id) in _carried:
+                            continue
                         _r.model_version = _hr_version
                         _r.run_id = run_meta["run_id"]
                         _r.config_hash = _hr_hash
