@@ -1,0 +1,52 @@
+# BOT TESTS ON EVERY PUSH (2026-10-04, Donovan: "whatever is best and free").
+# Nothing ran tests/*.py before this, so a broken test failed unseen until a
+# person happened to run it. Each test file is its own script (PASS = exit 0),
+# run with a 3-minute cap. Free on a public repo; only runs when bot code or
+# tests change.
+#
+# KNOWN_BROKEN: tests that fail on main today for reasons outside this job
+# (flagged in the 2026-10-03 dead-code audit). They still run and print, but
+# don't fail the job; fix the test and take it off this list.
+name: Bot tests
+
+on:
+  push:
+    branches: [main]
+    paths: ["bots/**", "tests/**", ".github/workflows/tests.yml"]
+  pull_request:
+    paths: ["bots/**", "tests/**"]
+
+concurrency:
+  group: bot-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r bots/requirements.txt -r bots/nfl/requirements.txt
+      - name: Run every test file
+        env:
+          PYTHONPATH: .
+          KNOWN_BROKEN: "test_savant_feeds.py test_snapshot_and_sb.py"
+        run: |
+          set -u
+          failed=""; passed=0
+          for t in tests/test_*.py; do
+            n=$(basename "$t")
+            if timeout 180 python "$t" > "/tmp/$n.log" 2>&1; then
+              passed=$((passed+1))
+            elif [[ " $KNOWN_BROKEN " == *" $n "* ]]; then
+              echo "::warning::$n is on KNOWN_BROKEN (still failing)"
+            else
+              echo "::error::$n failed"; tail -20 "/tmp/$n.log"; failed="$failed $n"
+            fi
+          done
+          echo "passed: $passed"
+          [ -z "$failed" ] || { echo "FAILED:$failed"; exit 1; }
