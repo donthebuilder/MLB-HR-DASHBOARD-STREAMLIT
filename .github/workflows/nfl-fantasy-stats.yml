@@ -27,9 +27,11 @@ on:
     #   Mon night (MNF)   Tue 00:00-05:59Z
     # Sunday from 13:00 UTC (2026-10-04 game-day check: IND@WAS kicked off 13:30Z
     # in London and the box stayed at its 10:04Z pre-game build until 17:00).
-    - cron: '*/15 13-23 * * 0'
-    - cron: '*/15 17-23 * * 6'
-    - cron: '*/15 0-5 * * 0,1,2,5'
+    - cron: '7,22,37,52 13-23 * * 0'
+    - cron: '7,22,37,52 17-23 * * 6'
+    # off the quarter-hours (2026-10-04: GitHub started none of the */15 runs
+    # 16:31-17:50 on a Sunday; its scheduler drops most at :00/:15/:30/:45)
+    - cron: '7,22,37,52 0-5 * * 0,1,2,5'
     # No Tuesday "correction" pass: the slate rolls to next week Tue 13:00Z
     # and the site only merges a stats file whose week matches the slate's,
     # so a Tuesday rebuild of last week could never reach a page. The last
