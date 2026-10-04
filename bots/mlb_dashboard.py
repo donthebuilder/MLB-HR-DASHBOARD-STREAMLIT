@@ -13473,6 +13473,26 @@ def render_game_block(game: Dict[str, Any], hitters: List[HitterRecord]) -> str:
     return "\n".join(blocks)
 
 
+def playable_games(games: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Drop postponed and cancelled games from a slate (bot audit 10-03: their
+    hitters were ranked, counted in board_of and moved the top-third cut, for
+    games nobody played). A suspended game stays -- it started; its hitters did
+    play -- and so does anything the status doesn't name."""
+    out = []
+    for g in games or []:
+        st = (g or {}).get("status", {}) or {}
+        detailed = str(st.get("detailedState", "")).lower()
+        # codedGameState D = postponed, C = cancelled (statsapi /gameStatus);
+        # statusCode is the two-letter form (DR, CO, ...). Both read "Final".
+        coded = str(st.get("codedGameState", "")).upper()
+        code = str(st.get("statusCode", "")).upper()
+        if detailed.startswith(("postponed", "cancelled", "canceled")) or coded in {"D", "C"}:
+            print(f"  skipping game {g.get('gamePk')}: {st.get('detailedState') or code}")
+            continue
+        out.append(g)
+    return out
+
+
 def game_has_started(game: Dict[str, Any]) -> bool:
     """Return True only after first pitch/live/final so picks stay frozen for integrity."""
     status = game.get("status", {}) or {}
@@ -14890,6 +14910,7 @@ def main() -> int:
         # night games. gameDate is an ISO8601 UTC string ("...Z"), which
         # sorts correctly as plain text without needing to parse it first.
         games = sorted(games, key=lambda g: str(g.get("gameDate", "")))
+        games = playable_games(games)
         if not games:
             print(f"No MLB games found for {slate_date.isoformat()}.")
             return 0
