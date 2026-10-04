@@ -358,6 +358,7 @@ jobs:
       # continue-on-error for the same reason as the other data steps: a bug
       # in the lock must never cost the whole slate publish.
       - name: Lock the card
+        id: lock
         continue-on-error: true
         working-directory: bots/nfl
         run: |
@@ -379,7 +380,14 @@ jobs:
       # graded are always the picks that were published, never a bare
       # re-derivation that a late-week rebuild could silently change out from
       # under an already-decided rung.
+      # A FAILED LOCK SKIPS GRADING (bot audit 10-03): with no lock, the card on
+      # disk is the live recompute, and grading it could grade a post-kickoff
+      # swap. Grading is idempotent, so the next run with a good lock grades.
+      - name: Say the lock failed
+        if: steps.lock.outcome == 'failure'
+        run: echo "::error::the card lock failed -- grading skipped this run so the live (possibly post-kickoff) card is never graded"
       - name: Grade the card
+        if: steps.lock.outcome != 'failure'
         continue-on-error: true
         working-directory: bots/nfl
         run: |

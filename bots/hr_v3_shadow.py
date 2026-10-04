@@ -285,6 +285,12 @@ def cmd_score(args) -> int:
     # date over yesterday's players with nothing to say so.
     _slate_dates = {str(r.get("game_date") or r.get("date") or "") for r in slate}
     _slate_dates.discard("")
+    # ...and refuse a slate that is plainly another day's (bot audit 10-03:
+    # an off-day run scored yesterday's players under today's label -- the
+    # likely source of the fake 09-28 rows). Rows with no date still pass.
+    if _slate_dates and str(date) not in {d[:10] for d in _slate_dates}:
+        print(f"slate holds {sorted(_slate_dates)[:3]}, not {date} -- refusing to score it under {date} (skipped, nothing written)")
+        return 0   # an off day is a skip, not a failure
     payload = {
         "date": date,
         "slate_dates_seen": sorted(_slate_dates)[:3],
