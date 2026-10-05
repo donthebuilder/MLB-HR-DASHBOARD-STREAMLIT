@@ -290,6 +290,12 @@ SLATE_KEEP=14
 # a genuine full-season span, landing near MLB's own 300 by coincidence of
 # this arithmetic (a ~3-week buffer at MLB's daily cadence), not because it
 # was copied from it.
+#
+# 2026-10-05: the cadence is now ~50+ runs/week (nfl.yml pregame slots), so 300
+# by COUNT is ~6 weeks. The count cap stays as the backstop (300 x 685 KB =
+# ~205 MB worst case; a blind raise to cover a season would be ~850 MB), but
+# .github/scripts/nfl_thin_logs.py runs first and drops, for weeks older than
+# the previous one, every run except the last before each kickoff window.
 NFL_PRED_LOG_GLOB="nfl_prediction_log_*.jsonl"
 NFL_PRED_LOG_KEEP=300
 
@@ -782,6 +788,18 @@ carry_forward() {
   # broke Today #14 -- on the first run there were no graded files yet, so the
   # glob matched nothing and the script died trying to count zero files.
   # find exits 0 on no matches.
+  # NFL pregame logs: thin before the count caps (2026-10-05). The pregame
+  # cadence is ~50+ runs a week at ~685 KB a prediction log, so the old
+  # cap-300-by-count (sized for 12 runs/wk) would eat weeks 1-2 by about week 7
+  # and a blind raise would cost ~850 MB. This keeps every run of the newest
+  # two weeks and, for older weeks, the last run before each kickoff window
+  # (what nfl_regrade / nfl_signal_audit read). NFL_THIN_DRY_RUN=1 only prints.
+  # Best effort: on any failure the count caps below still apply.
+  if command -v python3 >/dev/null 2>&1 && [ -f "$(dirname "${BASH_SOURCE[0]}")/nfl_thin_logs.py" ]; then
+    thin_args=(--dir "$STAGE/public/data/current")
+    [ "${NFL_THIN_DRY_RUN:-}" = "1" ] && thin_args+=(--dry-run)
+    python3 "$(dirname "${BASH_SOURCE[0]}")/nfl_thin_logs.py" "${thin_args[@]}" || echo "::warning::nfl_thin_logs failed; falling back to the count caps"
+  fi
   for spec in "$GRADED_GLOB:$GRADED_KEEP" "$GRADED_JSON_GLOB:$GRADED_KEEP" "$ODDS_GLOB:$ODDS_KEEP" \
               "$ML_PRICES_GLOB:$ML_PRICES_KEEP" \
               "$PRED_LOG_GLOB:$PRED_LOG_KEEP" "$OUTCOME_LOG_GLOB:$OUTCOME_LOG_KEEP" \
