@@ -1415,6 +1415,55 @@ def write_nfl_signal_log(run_meta: dict, players: list[dict], out_dir: Path, pre
         return None
 
 
+# THE WEEK'S MATCHUP, FROZEN BEFORE SUNDAY (2026-10-05, the site's angle backtest:
+# scripts/nfl/angle-backtest.mjs). Weak spot, softest matchup and aligned read the
+# matchup file -- roles, defence-vs-position, red zone, snap share -- and
+# matchup.json is overwritten by every run, so no week's pregame state survived:
+# those three angles could not be measured. This keeps ONE file per week with
+# only the keys they read (~340 KB), rewritten by each run until the week's
+# first Sunday kickoff and never after, so the copy left standing is the last
+# one built before the main slate. Best effort: a failure prints and returns.
+MATCHUP_WEEK_KEYS = ("season", "alt_season", "dvp", "dvp_trend", "dvp_roles", "dvp_stats", "dvp_labels", "roles", "red_zone", "snaps")
+
+
+def first_sunday_kickoff(games: list[dict]) -> "dt.datetime | None":
+    """The earliest Sunday (US Eastern) kickoff among the week's games, or None."""
+    from zoneinfo import ZoneInfo
+    et = ZoneInfo("America/New_York")
+    best = None
+    for g in games or []:
+        raw = str(g.get("kickoff") or "")
+        try:
+            k = dt.datetime.fromisoformat(raw.replace("Z", "+00:00"))
+        except ValueError:
+            continue
+        if k.tzinfo is None:
+            k = k.replace(tzinfo=dt.timezone.utc)
+        if k.astimezone(et).weekday() == 6 and (best is None or k < best):
+            best = k
+    return best
+
+
+def write_nfl_matchup_week(matchup: dict, games: list[dict], out_dir: Path, prefix: str, season: int, week: "int | None",
+                           now: "dt.datetime | None" = None) -> "Path | None":
+    """{out_dir}/{prefix}matchup_week_{season}_w{NN}.json, until the first Sunday kickoff."""
+    try:
+        if not week or prefix.endswith("next_"):
+            return None
+        now = now or dt.datetime.now(dt.timezone.utc)
+        cut = first_sunday_kickoff(games)
+        if cut is None or now >= cut:
+            return None
+        body = {k: matchup.get(k) for k in MATCHUP_WEEK_KEYS if k in matchup}
+        body.update({"week": week, "frozen_at": now.isoformat(), "sunday_kickoff": cut.isoformat()})
+        path = out_dir / f"{prefix}matchup_week_{season}_w{int(week):02d}.json"
+        path.write_text(json.dumps(body, separators=(",", ":")))
+        return path
+    except Exception as exc:
+        print(f"nfl matchup week snapshot failed: {exc}")
+        return None
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--mode", choices=["preseason", "week", "auto"], default="preseason")
@@ -1627,6 +1676,11 @@ def main() -> int:
         "rush_labels": nfl_field.RUSH_LABEL,
         "depth_labels": nfl_field.DEPTH_LABEL,
     }, separators=(",", ":")))
+
+    # the week's pregame matchup, kept (write_nfl_matchup_week above)
+    _mw = write_nfl_matchup_week(json.loads((out / f"{a.prefix}matchup.json").read_text()), payload.get("games", []), out, a.prefix, a.season, a.week)
+    if _mw:
+        print(f"  wrote {_mw.name} (frozen before the first Sunday kickoff)")
 
     # THE FIELD, one file per offence (2026-09-30, BATCH-NFL-FIELD; see
     # nfl_field.team_plays). Its own files, not matchup.json: the player card

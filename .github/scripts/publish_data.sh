@@ -338,6 +338,15 @@ NFL_NEXT_PRED_LOG_KEEP=24
 NFL_SIGNAL_LOG_GLOB="nfl_signal_log_*.jsonl"
 NFL_SIGNAL_LOG_KEEP=300
 
+# nfl_matchup_week_<season>_wNN.json (2026-10-05): ONE FILE PER WEEK, the
+# matchup keys the site's angles read (roles, defence-vs-position, red zone,
+# snaps), frozen before the week's first Sunday kickoff by
+# write_nfl_matchup_week() in bots/nfl/nfl_bot.py -- the only pregame copy of
+# them that survives the week (matchup.json is overwritten every run). ~340 KB a
+# week; 40 keeps two seasons.
+NFL_MATCHUP_WEEK_GLOB="nfl_matchup_week_*.json"
+NFL_MATCHUP_WEEK_KEEP=40
+
 # nfl_outcome_log_*.jsonl: ONE FILE PER DATE, same as OUTCOME_LOG_GLOB --
 # append_nfl_outcome_log() in bots/nfl/nfl_results.py appends a new line to
 # that date's file every grading pass rather than opening a new file. Real
@@ -630,6 +639,7 @@ stage_local() {
            "$SRC"/data/$NFL_PICKS_GLOB "$SRC"/data/current/$NFL_PICKS_GLOB \
            "$SRC"/data/$NFL_POR_LOG_GLOB "$SRC"/data/current/$NFL_POR_LOG_GLOB \
            "$SRC"/data/$NFL_SIGNAL_LOG_GLOB "$SRC"/data/current/$NFL_SIGNAL_LOG_GLOB \
+           "$SRC"/data/$NFL_MATCHUP_WEEK_GLOB "$SRC"/data/current/$NFL_MATCHUP_WEEK_GLOB \
            "$SRC"/data/$NFL_NEXT_PICKS_GLOB "$SRC"/data/current/$NFL_NEXT_PICKS_GLOB \
            "$SRC"/data/$NFL_NEXT_PRED_LOG_GLOB "$SRC"/data/current/$NFL_NEXT_PRED_LOG_GLOB \
            "$SRC"/data/current/$NFL_GAME_CALLS_LOG_GLOB \
@@ -783,6 +793,7 @@ carry_forward() {
               "$NFL_ODDS_GLOB:$NFL_ODDS_KEEP" \
               "$NFL_NEXT_PRED_LOG_GLOB:$NFL_NEXT_PRED_LOG_KEEP" \
               "$NFL_SIGNAL_LOG_GLOB:$NFL_SIGNAL_LOG_KEEP" \
+              "$NFL_MATCHUP_WEEK_GLOB:$NFL_MATCHUP_WEEK_KEEP" \
               "$NFL_GAME_CALLS_LOG_GLOB:$NFL_GAME_CALLS_LOG_KEEP" \
               "$NFL_GAME_CALLS_GRADED_GLOB:$NFL_GAME_CALLS_GRADED_KEEP" \
               "$NFL_GAME_CALLS_TOTALS_GLOB:$NFL_GAME_CALLS_TOTALS_KEEP"; do
