@@ -670,16 +670,23 @@ def index_players(payload: dict) -> dict[int, dict]:
 
 
 def post_discord(lines: list[str]) -> None:
+    """Shared helper: User-Agent set (Discord 403s urllib's default) and the
+    secret split on commas/whitespace/newlines."""
     hook = os.environ.get("DISCORD_WEBHOOK", "")
     if not hook or not lines:
         return
-    body = json.dumps({"content": "\n".join(lines)[:1900]}).encode()
-    for url in [u.strip() for u in hook.split(",") if u.strip()]:
-        try:
-            req = urllib.request.Request(url, data=body, headers={"Content-Type": "application/json"})
-            urllib.request.urlopen(req, timeout=15).read()
-        except Exception as e:
-            print(f"  ! discord post failed: {e}")
+    import discord_post
+    discord_post.post(hook, {"content": "\n".join(lines)[:1900]})
+
+
+def slate_date_fallback(first_pitches: dict, now: dt.datetime | None = None) -> str:
+    """The slate's date when the payload has no header: the US-Eastern calendar
+    date of the earliest first pitch (MLB's own game date), not the UTC date --
+    a night game's first pitch is already "tomorrow" in UTC."""
+    from zoneinfo import ZoneInfo
+    et = ZoneInfo("America/New_York")
+    t = min(first_pitches.values()) if first_pitches else (now or now_utc())
+    return t.astimezone(et).date().isoformat()
 
 
 def main() -> int:
@@ -712,8 +719,7 @@ def main() -> int:
     meta = base if isinstance(base, dict) else {}
     date = str(meta.get("date") or meta.get("slate_date") or "")
     if not date:
-        t = first_pitch_of(rows)
-        date = min(t.values()).date().isoformat() if t else now_utc().date().isoformat()
+        date = slate_date_fallback(first_pitch_of(rows))
 
     lock = fetch_lock(date)
     games: dict[str, dict] = lock.get("games") or {}
@@ -1108,7 +1114,9 @@ def main() -> int:
         for r in rejects:
             print(f"     {r['cat']} game {r['game_pk']}: kept {r['locked']['name']}, "
                   f"refused {r['attempted']['name']}")
-        post_discord(
+        # --dry-run changes nothing: that includes the real Discord room.
+        if not a.dry_run:
+          post_discord(
             [f"**📌 Pick lock held** — {len(rejects)} designation change{'s' if len(rejects) > 1 else ''} "
              f"refused after first pitch ({date})", ""]
             + [f"· **{r['cat']}** — kept **{r['locked']['name']}**, refused {r['attempted']['name']}"

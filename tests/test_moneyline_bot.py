@@ -515,3 +515,34 @@ def test_doubleheader_join_picks_the_arm_for_this_first_pitch():
     # One candidate needs no time at all; no candidate is None, not a crash.
     assert starter_for({(1, "CHC"): starters[(1, "CHC")]}, "CHC", "")["name"] == "Early Arm"
     assert starter_for(starters, "NYY", "2026-09-05T17:20:00Z") is None
+
+
+# ── bot audit 10-05 ─────────────────────────────────────────────────────────
+
+def test_a_started_game_is_not_a_pregame_line():
+    import datetime as dt
+    from moneyline_bot import started
+    now = dt.datetime(2026, 9, 5, 20, 0, tzinfo=dt.timezone.utc)
+    assert started("2026-09-05T19:05:00Z", now)          # first pitch passed: live price
+    assert not started("2026-09-05T23:05:00Z", now)
+    assert started("", now) and started("garbage", now)  # cannot place it in time -> not pregame
+
+
+def test_tomorrows_game_does_not_borrow_todays_starter():
+    starters = {(1, "CHC"): {"fip": 3.1, "name": "Tonight Arm", "time": "2026-09-05T23:05:00Z"}}
+    assert starter_for(starters, "CHC", "2026-09-06T18:20:00Z") is None       # tomorrow
+    assert starter_for(starters, "CHC", "2026-09-05T23:10:00Z")["name"] == "Tonight Arm"
+
+
+def test_the_record_survives_the_history_cap_across_runs():
+    # 450 graded picks: 50 age out of the published history, but stay in the record,
+    # and the next run (which only reads back 400) still carries them.
+    many = [_pick(+120, pk=i) for i in range(450)]
+    first = payload([], settle(many, {i: "HOM" for i in range(450)}))
+    assert len(first["history"]) == 400 and first["record"]["graded"] == 450
+    assert first["archived"]["graded"] == 50
+    from moneyline_bot import Pick as P
+    reread = [P(**{k: v for k, v in r.items() if k in P.__dataclass_fields__}) for r in first["history"]]
+    second = payload([], reread, archived=first["archived"])
+    assert second["record"]["graded"] == 450 and second["record"]["wins"] == 450
+    assert abs(second["record"]["units_profit"] - first["record"]["units_profit"]) < 1e-6

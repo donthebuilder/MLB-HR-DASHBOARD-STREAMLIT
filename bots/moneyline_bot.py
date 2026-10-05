@@ -400,29 +400,59 @@ def settle(picks: list[Pick], winners: dict) -> list[Pick]:
     return picks
 
 
-def record(picks: list[Pick]) -> dict:
-    """The grade. Flat one unit a side, at the price that was actually offered."""
+def tally(picks: list[Pick]) -> dict:
+    """The additive parts of the record -- what can be carried forward."""
     graded = [p for p in picks if p.result]
-    wins = sum(1 for p in graded if p.result == "win")
-    staked = float(len(graded))
-    profit = round(sum(p.profit for p in graded), 3)
     return {
         "graded": len(graded),
+        "wins": sum(1 for p in graded if p.result == "win"),
+        "profit": round(sum(p.profit for p in graded), 6),
+        "market_p": round(sum(p.market_p for p in graded), 6),
+    }
+
+
+def record(picks: list[Pick], carried: dict | None = None) -> dict:
+    """The grade. Flat one unit a side, at the price that was actually offered.
+    `carried` is the tally of graded picks that have aged out of the published
+    history (see payload) so the record keeps counting them."""
+    t = tally(picks)
+    c = carried or {}
+    n = t["graded"] + int(c.get("graded") or 0)
+    wins = t["wins"] + int(c.get("wins") or 0)
+    profit = round(t["profit"] + float(c.get("profit") or 0.0), 3)
+    mp = t["market_p"] + float(c.get("market_p") or 0.0)
+    staked = float(n)
+    return {
+        "graded": n,
         "wins": wins,
-        "losses": len(graded) - wins,
-        "win_rate": round(wins / len(graded), 4) if graded else 0.0,
+        "losses": n - wins,
+        "win_rate": round(wins / n, 4) if n else 0.0,
         "units_staked": staked,
         "units_profit": profit,
         "roi": round(profit / staked, 4) if staked else 0.0,
         # What the model needed to hit to break even at the prices it took.
-        "breakeven_rate": round(
-            sum(p.market_p for p in graded) / len(graded), 4) if graded else 0.0,
+        "breakeven_rate": round(mp / n, 4) if n else 0.0,
     }
+
+
+HISTORY_KEEP = 400
 
 
 def payload(today: list[Pick], history: list[Pick],
             coef: moneyball.Coef | None = None, backtest: dict | None = None,
-            blend_w: float = moneyball.DEFAULT_BLEND) -> dict:
+            blend_w: float = moneyball.DEFAULT_BLEND, archived: dict | None = None) -> dict:
+    # The published history is the last HISTORY_KEEP picks, and the next run
+    # reads it back as its whole past -- so a record computed over `history`
+    # alone decayed to the last 400 every run. The graded picks that fall off
+    # the end are tallied into `archived` (published, and read back by main())
+    # so the record stays over everything ever graded.
+    dropped = history[:-HISTORY_KEEP] if len(history) > HISTORY_KEEP else []
+    base = dict(archived or {})
+    if dropped:
+        t = tally(dropped)
+        for k in ("graded", "wins", "profit", "market_p"):
+            base[k] = (base.get(k) or 0) + t[k]
+    full_record = record(history[-HISTORY_KEEP:], base)
     by_base = {
         "blend": record([p for p in history if getattr(p, "base", "record").startswith("blend")
                          or getattr(p, "base", "") == "obp/slg"]),
@@ -460,15 +490,32 @@ def payload(today: list[Pick], history: list[Pick],
         "record_by_base": by_base,
         "starter_weight": STARTER_WEIGHT,
         "starter_innings": STARTER_INNINGS,
-        "record": record(history),
+        "record": full_record,
+        "archived": {k: round(float(base.get(k) or 0), 6) if k in ("profit", "market_p") else int(base.get(k) or 0)
+                     for k in ("graded", "wins", "profit", "market_p")},
         "today": [p.__dict__ for p in today],
-        "history": [p.__dict__ for p in history[-400:]],
+        "history": [p.__dict__ for p in history[-HISTORY_KEEP:]],
     }
 
 
 # ── the small part ───────────────────────────────────────────────────────────
 
-def fetch_lines(regions: str = "us") -> list[Line]:
+def started(commence: str, now: dt.datetime | None = None) -> bool:
+    """True when the game has already started (or its start is unreadable --
+    an event we cannot place in time is not a pregame price). The odds feed
+    returns in-play games with LIVE prices; a pick or a kept "pregame" price
+    taken after first pitch is not pregame."""
+    now = now or dt.datetime.now(dt.timezone.utc)
+    try:
+        t = dt.datetime.fromisoformat(str(commence).replace("Z", "+00:00"))
+    except ValueError:
+        return True
+    if t.tzinfo is None:
+        t = t.replace(tzinfo=dt.timezone.utc)
+    return t <= now
+
+
+def fetch_lines(regions: str = "us", now: dt.datetime | None = None) -> list[Line]:
     """Game moneylines from theoddsapi /odds/ with markets=h2h.
 
     Uses odds_fetch's own api() helper so the key handling, the forensics
@@ -487,6 +534,8 @@ def fetch_lines(regions: str = "us") -> list[Line]:
     for ev in events:
         home = str(ev.get("home_team") or ev.get("homeTeam") or "")
         away = str(ev.get("away_team") or ev.get("awayTeam") or "")
+        if started(ev.get("commence_time") or "", now):
+            continue
         best: dict[str, tuple[int, str]] = {}
         for bk in ev.get("bookmakers") or []:
             for mk in bk.get("markets") or []:
@@ -560,6 +609,9 @@ def fetch_starters(slate_url: str = "") -> dict:
     return out
 
 
+SAME_GAME_WINDOW_S = 12 * 3600
+
+
 def starter_for(starters: dict, team: str, commence: str = "") -> dict | None:
     """The starter a team sends out for THIS line.
 
@@ -572,7 +624,7 @@ def starter_for(starters: dict, team: str, commence: str = "") -> dict | None:
     cands = [sp for (pk, tm), sp in starters.items() if tm == team]
     if not cands:
         return None
-    if len(cands) == 1 or not commence:
+    if not commence:
         return cands[0]
     def gap(sp):
         try:
@@ -581,7 +633,14 @@ def starter_for(starters: dict, team: str, commence: str = "") -> dict | None:
             return abs((a - b).total_seconds())
         except Exception:
             return float("inf")
-    return min(cands, key=gap)
+    best = min(cands, key=gap)
+    # The slate is TODAY's: a line for tomorrow's game must not borrow today's
+    # starter. A doubleheader's two games are hours apart; a different day is
+    # never within SAME_GAME_WINDOW of the slate row's first pitch. When the
+    # slate row has no readable time we cannot tell, and keep the old answer.
+    if gap(best) != float("inf") and gap(best) > SAME_GAME_WINDOW_S:
+        return None
+    return best
 
 
 def price_rows(lines: list[Line], strength: dict[str, float], rates=None,
@@ -799,7 +858,7 @@ def main(argv=None):
     write_prices(lines, strength, rates, coef, blend_w, os.path.dirname(args.out) or ".")
     print(f"  {len(lines)} game line(s) → {len(today)} pick(s) over the edge floor")
 
-    out = payload(today, prior, coef, backtest, blend_w)
+    out = payload(today, prior, coef, backtest, blend_w, archived=(last or {}).get("archived"))
     with open(args.out, "w") as fh:
         json.dump(out, fh, separators=(",", ":"))
     print(f"wrote {args.out} — record {out['record']['wins']}-{out['record']['losses']}, "
