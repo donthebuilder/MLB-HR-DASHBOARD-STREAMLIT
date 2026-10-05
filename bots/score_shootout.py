@@ -279,9 +279,10 @@ def load_nights(days: int | None, dirs: list[Path] | None = None) -> list[tuple[
         rows, seen = [], set()
         for r in _slots(payload):
             pid = r.get("player_id")
-            if pid is None or pid in seen:
-                continue                       # one row per player per night
-            seen.add(pid)
+            key = (pid, r.get("game_pk"))      # one row per player per GAME (doubleheaders)
+            if pid is None or key in seen:
+                continue
+            seen.add(key)
             if (num(r.get("actual_ab")) or 0) <= 0:
                 continue                       # void: he never batted
             hr_score = num(r.get("hr_score"))

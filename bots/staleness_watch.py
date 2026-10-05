@@ -134,17 +134,19 @@ def nfl_fantasy_stats_age(current: Path):
     return None
 
 
-def post_discord(lines: list[str]) -> None:
+def post_discord(lines: list[str]) -> bool:
+    """True when at least one webhook took the post. Sends a User-Agent
+    (Discord 403s urllib's default) and reads the secret like the tracker:
+    commas, whitespace or newlines between URLs (bots/discord_post.py)."""
+    import discord_post
     hook = os.environ.get("DISCORD_WEBHOOK", "")
-    if not hook or not lines:
-        return
-    body = json.dumps({"content": "\n".join(lines)[:1900]}).encode()
-    for url in [u.strip() for u in hook.split(",") if u.strip()]:
-        try:
-            req = urllib.request.Request(url, data=body, headers={"Content-Type": "application/json"})
-            urllib.request.urlopen(req, timeout=15).read()
-        except Exception as e:
-            print(f"  ! discord post failed: {e}")
+    if not lines:
+        return True
+    if not discord_post.webhook_urls(hook):
+        print("  ! DISCORD_WEBHOOK unset or holds no URL -- alert NOT delivered", file=sys.stderr)
+        return False
+    ok, bad = discord_post.post(hook, {"content": "\n".join(lines)[:1900]})
+    return ok > 0
 
 
 def main() -> int:
@@ -197,8 +199,9 @@ def main() -> int:
     if alerts:
         print("\nALERTS:")
         print("\n".join("  " + a for a in alerts))
-        if args.post:
-            post_discord(["🚨 **Board staleness**"] + alerts)
+        if args.post and not post_discord(["🚨 **Board staleness**"] + alerts):
+            print("ALERT NOT DELIVERED", file=sys.stderr)
+            return 1
     else:
         print("\nall fresh / out of window — no alert")
     return 0

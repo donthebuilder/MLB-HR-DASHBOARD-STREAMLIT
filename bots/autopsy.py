@@ -45,6 +45,7 @@ import json
 import os
 import re
 import statistics
+import sys
 import urllib.request
 from pathlib import Path
 from typing import Any
@@ -122,7 +123,7 @@ def load(days: int) -> tuple[list[tuple[str, list[dict]]], list[str]]:
             pid = r.get("player_id")
             if pid is None:
                 continue
-            key = (pid, role_of(r))
+            key = (pid, r.get("game_pk"), role_of(r))   # doubleheader: one row per game
             if key in seen:
                 continue
             seen.add(key)
@@ -299,13 +300,10 @@ def main() -> int:
                 for s in report["missed_homers"][:3]:
                     L.append(f"💥 **{s['name']}** — scored {s['score']}, {s['line']}")
             L.append(f"\n**The pattern**\n{pattern['reading']}")
-            body = json.dumps({"content": "\n".join(L)[:1900]}).encode()
-            for url in [u.strip() for u in hook.split(",") if u.strip()]:
-                try:
-                    req = urllib.request.Request(url, data=body, headers={"Content-Type": "application/json"})
-                    urllib.request.urlopen(req, timeout=15).read()
-                except Exception as e:
-                    print(f"  ! discord post failed: {e}")
+            import discord_post
+            ok, bad = discord_post.post(hook, {"content": "\n".join(L)[:1900]})
+            if not ok:
+                print("  ! autopsy not delivered to any webhook", file=sys.stderr)
     return 0
 
 

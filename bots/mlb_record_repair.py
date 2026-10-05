@@ -46,9 +46,10 @@ ROLES = ("TOP", "HR", "HIT", "HRR", "CONTACT")
 # (they read nothing but the slot), so a repaired `results` list is built the
 # same way the tracker builds a final one.
 def _grade_for_row(r):
-    if int(r.get("got_hr", 0)) == 1:
-        return "WIN"
-    if int(r.get("got_base_hit", 0)) == 1 and r.get("pick_type") in ("HIT", "HRR", "CONTACT", "TOP", "TOP15"):
+    # One definition of the WIN bars (the digest's), shared with the tracker.
+    if r.get("void"):
+        return "DNP"
+    if t.win_bar_cleared(r):
         return "WIN"
     if int(r.get("actual_ab", 0)) > 0:
         return "LOSS"

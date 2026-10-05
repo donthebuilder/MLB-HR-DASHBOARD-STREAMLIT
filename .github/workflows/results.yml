@@ -140,6 +140,25 @@ jobs:
       - name: Fetch published picks
         run: python bots/fetch_picks_for_grading.py --date today
 
+      # THE DIGEST'S BASELINE (2026-10-05). live_results_tracker diffs the new
+      # live grade against public/data/current/results_live.json (the digest's
+      # "what changed since the last run") and reads `board_posted_date` from it
+      # (Tonight's board posts once). A fresh CI checkout has neither -- main
+      # carries no public/data -- so every hourly run re-announced the whole
+      # night. Restore the last published copy from the data branch first.
+      # Best effort: with no baseline the tracker skips the digest and says so.
+      - name: Restore last published live results (digest baseline)
+        run: |
+          git fetch origin data --depth 1 -q 2>/dev/null || true
+          if git cat-file -e origin/data:public/data/current/results_live.json 2>/dev/null; then
+            mkdir -p public/data/current
+            git show origin/data:public/data/current/results_live.json > public/data/current/results_live.json
+            echo "Restored results_live.json ($(wc -c < public/data/current/results_live.json) bytes)."
+          else
+            echo "::warning::no results_live.json on the data branch -- digest has no baseline this run."
+          fi
+        continue-on-error: true
+
       # SUSPENDED-GAME FIX (2026-08-21, Sol's audit finding #4). See
       # regrade_stale_dates()'s docstring in live_results_tracker.py: a game
       # suspended on day D and resumed on D+2 used to sit un-regraded forever,

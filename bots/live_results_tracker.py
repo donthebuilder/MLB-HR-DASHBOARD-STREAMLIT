@@ -963,12 +963,41 @@ def pregame_board_sections(graded_slots, proven_b2b_ids=None) -> list:
     return sections
 
 
-def post_pregame_board(graded_slots, date_str: str) -> None:
+def _board_started(graded_slots, now=None) -> bool:
+    """True when any slot's game has already started (game_time <= now, UTC).
+    "Tonight's board" is posted ONCE, BEFORE first pitch: a first run that
+    sees a started game (a late/missed pregame slot) must not post it."""
+    now = now or dt.datetime.now(dt.timezone.utc)
+    for sl in graded_slots or []:
+        raw = (sl or {}).get("game_time")
+        if not raw:
+            continue
+        try:
+            t = dt.datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
+        except ValueError:
+            continue
+        if t.tzinfo is None:
+            t = t.replace(tzinfo=dt.timezone.utc)
+        if t <= now:
+            return True
+    return False
+
+
+def post_pregame_board(graded_slots, date_str: str, prior_posted=None, now=None) -> str:
+    """Post the board once per date. Returns the date it is now known to have
+    been posted for (or the prior value). The "already posted" memory lives in
+    the published results_live.json (`board_posted_date`, passed in as
+    `prior_posted`) as well as the local state file: CI runners are ephemeral
+    and never had state/live_digest_state.json, so the board used to repeat on
+    every hourly run."""
     if not date_str:
-        return
+        return prior_posted
     st = _load_board_state()
-    if st.get("board_posted_date") == date_str:
-        return
+    if st.get("board_posted_date") == date_str or prior_posted == date_str:
+        return date_str
+    if _board_started(graded_slots, now):
+        print(f"pregame board skipped for {date_str}: a game has already started")
+        return prior_posted
     try:
         yesterday = (dt.date.fromisoformat(date_str) - dt.timedelta(days=1)).isoformat()
     except Exception:
@@ -976,7 +1005,7 @@ def post_pregame_board(graded_slots, date_str: str) -> None:
     proven = _proven_b2b_ids(yesterday)
     sections = pregame_board_sections(graded_slots, proven)
     if not sections:
-        return
+        return prior_posted
     desc = "\n\n".join(
         f"**{title}**\n" + "\n".join(f"· {ln}" for ln in lines) for title, lines in sections
     )[:4000]
@@ -997,8 +1026,9 @@ def post_pregame_board(graded_slots, date_str: str) -> None:
         st["board_posted_date"] = date_str
         _save_board_state(st)
         print(f"pregame board posted for {date_str} ({ok} hook(s), {bad} failed)")
-    else:
-        print(f"pregame board DELIVERED NOTHING for {date_str}", file=sys.stderr)
+        return date_str
+    print(f"pregame board DELIVERED NOTHING for {date_str}", file=sys.stderr)
+    return prior_posted
 
 
 def _webhook_transitions(old_payload, new_payload, date_str: str = "") -> None:
@@ -1440,15 +1470,30 @@ def sync_results_to_website_repo_v2(date_str: str, live_mode: bool, json_path: P
     # Discord transitions: compare against what was already public BEFORE the
     # new results overwrite it (live runs only — finals repeat nothing new).
     if live_mode:
+        _oldp, _newp = None, None
         try:
             _old_pub = current_dir / active_json
             _oldp = json.loads(_old_pub.read_text(encoding="utf-8")) if _old_pub.exists() else None
             _newp = json.loads(Path(json_path).read_text(encoding="utf-8"))
-            _webhook_transitions(_oldp, _newp, date_str)
+            if _oldp is None and os.environ.get("GITHUB_ACTIONS"):
+                # results.yml restores the last published results_live.json
+                # before grading. With no baseline every pick would read as a
+                # fresh transition and the whole digest would repeat, so say so
+                # loudly and skip it rather than spam.
+                print(f"::warning::no previous {active_json} restored in CI -- digest skipped (no baseline to diff)")
+            else:
+                _webhook_transitions(_oldp, _newp, date_str)
         except Exception as _wexc:
             print(f"webhook diff skipped: {_wexc}")
         try:
-            post_pregame_board(_newp.get("graded_slots") or _newp.get("results"), date_str)
+            if _newp is not None:
+                _prior = (_oldp or {}).get("board_posted_date")
+                _posted = post_pregame_board(_newp.get("graded_slots") or _newp.get("results"),
+                                             date_str, prior_posted=_prior)
+                if _posted and _newp.get("board_posted_date") != _posted:
+                    # Persist the memory in the published file (the next run's baseline).
+                    _newp["board_posted_date"] = _posted
+                    Path(json_path).write_text(json.dumps(_newp, indent=2), encoding="utf-8")
         except Exception as _bexc:
             print(f"pregame board skipped: {_bexc}")
 
@@ -1829,8 +1874,16 @@ def build_pick_coverage_report(rows: List[Dict[str, Any]],
 
 def build_hr_capture_report(rows: List[Dict[str, Any]], game_cache: Dict[int, Dict[str, Any]], actual_by_pid: Dict[Tuple[int, int], Dict[str, int]]) -> Dict[str, Any]:
     """Compare every HR hit on the slate against every player included in the model output."""
-    tracked_player_ids = {int(r["player_id"]) for r in rows}
-    tracked_by_pid = {int(r["player_id"]): r for r in rows}
+    # Keyed (game_pk, player_id): a doubleheader man is tracked per game, and a
+    # homer in the leg he was NOT on the sheet for is a missed homer, not a
+    # caught one. A row without a game_pk can only match by player.
+    tracked_keys = {(safe_int(r.get("game_pk"), 0), int(r["player_id"])) for r in rows}
+    tracked_pids_nogame = {int(r["player_id"]) for r in rows if not safe_int(r.get("game_pk"), 0)}
+    tracked_by_pid = {(safe_int(r.get("game_pk"), 0), int(r["player_id"])): r for r in rows}
+
+    def _tracked(h: Dict[str, Any]) -> bool:
+        pid = int(h.get("player_id", 0))
+        return (safe_int(h.get("game_pk"), 0), pid) in tracked_keys or pid in tracked_pids_nogame
 
     all_homer_entries: List[Dict[str, Any]] = []
     for game_pk, feed in game_cache.items():
@@ -1839,15 +1892,15 @@ def build_hr_capture_report(rows: List[Dict[str, Any]], game_cache: Dict[int, Di
             all_homer_entries.append(h)
 
     total_hrs = sum(safe_int(h.get("hr"), 0) for h in all_homer_entries)
-    caught_entries = [h for h in all_homer_entries if int(h.get("player_id", 0)) in tracked_player_ids]
+    caught_entries = [h for h in all_homer_entries if _tracked(h)]
     caught_hrs = sum(safe_int(h.get("hr"), 0) for h in caught_entries)
-    missed_entries = [h for h in all_homer_entries if int(h.get("player_id", 0)) not in tracked_player_ids]
+    missed_entries = [h for h in all_homer_entries if not _tracked(h)]
     missed_hrs = max(0, total_hrs - caught_hrs)
     capture_pct = round(100 * caught_hrs / total_hrs, 1) if total_hrs else 0.0
 
     caught_details = []
     for h in caught_entries:
-        base = tracked_by_pid.get(int(h.get("player_id", 0)), {})
+        base = tracked_by_pid.get((safe_int(h.get("game_pk"), 0), int(h.get("player_id", 0))), {})
         caught_details.append({
             **h,
             "hr_score": safe_float(base.get("hr_score"), 0.0),
@@ -1885,7 +1938,7 @@ def build_hr_capture_report(rows: List[Dict[str, Any]], game_cache: Dict[int, Di
     late_add_entries = [
         h for h in pool_entries
         if (int(h.get("game_pk", 0)), int(h.get("player_id", 0))) not in locked_keys
-        and int(h.get("player_id", 0)) in tracked_player_ids
+        and _tracked(h)
     ]
     pool_pct = round(100 * pool_caught / pool_total, 1) if pool_total else None
 
@@ -1910,11 +1963,14 @@ def build_hr_capture_report(rows: List[Dict[str, Any]], game_cache: Dict[int, Di
 
 def build_unique_player_hr_report(graded_slots: List[Dict[str, Any]]) -> Dict[str, Any]:
     """Count each player once so duplicate slots do not inflate/deflate HR accuracy."""
-    by_pid: Dict[int, Dict[str, Any]] = {}
+    # One entry per (player, game): a doubleheader man had two games, two
+    # real chances, and one leg's homer must not hide the other leg's miss.
+    by_pid: Dict[Tuple[int, int], Dict[str, Any]] = {}
     for r in graded_slots:
-        pid = safe_int(r.get("player_id"), 0)
-        if not pid:
+        pid0 = safe_int(r.get("player_id"), 0)
+        if not pid0:
             continue
+        pid = (pid0, safe_int(r.get("game_pk"), 0))
         if pid not in by_pid:
             by_pid[pid] = {**r, "got_hr": 0, "slot_tags": []}
         if safe_int(r.get("got_hr"), 0) >= 1:
@@ -1975,6 +2031,37 @@ def game_is_final(game_feed: Dict[str, Any]) -> bool:
     detailed = str(st.get("detailed_state", "")).lower()
     abstract = str(st.get("abstract_state", "")).lower()
     return "final" in detailed or abstract == "final"
+
+
+def game_is_void(game_status: Dict[str, Any]) -> bool:
+    """True for a game that will never be played under this game_pk
+    (postponed / cancelled). MLB's StatsAPI reports such a game with
+    abstractGameState "Final", so game_is_final() is True for it and its
+    picks were graded as zero-line MISSES in every rate; the outcome log
+    already voids them ("postponed", build_outcome_candidates) -- the same
+    rule, from the same detailedState words, for the site-facing grade."""
+    low = str((game_status or {}).get("detailed_state", "")).lower()
+    return "postponed" in low or "cancel" in low
+
+
+def win_bar_cleared(r: Dict[str, Any]) -> bool:
+    """The bar a pick had to clear to be a WIN on the site -- the SAME bars as
+    the Discord digest's bar_cleared: HR/TOP/TOP15 need a homer, HIT a hit,
+    HRR hits+runs+RBI >= 2, CONTACT/TB 2+ total bases. (It used to be "any
+    homer, else any hit for HIT/HRR/CONTACT/TOP/TOP15", so a single for a
+    CONTACT or TOP pick read WIN on the site and a miss in the digest.)
+    A homer clears every bar. A copy lives in mlb_record_repair.py."""
+    if int(r.get("got_hr", 0) or 0) == 1:
+        return True
+    pt = str(r.get("pick_type") or "").upper()
+    if pt == "HIT":
+        return int(r.get("got_base_hit", 0) or 0) == 1
+    if pt == "HRR":
+        return (int(r.get("actual_hits", 0) or 0) + int(r.get("actual_runs", 0) or 0)
+                + int(r.get("actual_rbi", 0) or 0)) >= 2
+    if pt in ("CONTACT", "TB"):
+        return int(r.get("actual_tb", 0) or 0) >= 2
+    return False
 
 
 def minmax_norm(value: float, low: float, high: float) -> float:
@@ -3409,16 +3496,18 @@ def grade_slot(slot: Dict[str, Any], actual: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def merge_homer_entries(graded_slots: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    merged: Dict[int, Dict[str, Any]] = {}
+    # Keyed (player_id, game_pk): a doubleheader man who homered in both legs
+    # is two homer entries (merge_homer_distances already matches by game_pk).
+    merged: Dict[Tuple[int, int], Dict[str, Any]] = {}
     emoji_order = {"🏆": 0, "🧨": 1, "🔥": 2, "🏁": 3, "💠": 4, "⚾": 5, "⭐": 6}
 
     for r in graded_slots:
         if int(r.get("got_hr", 0)) != 1:
             continue
-        pid = int(r["player_id"])
+        pid = (int(r["player_id"]), safe_int(r.get("game_pk"), 0))
         if pid not in merged:
             merged[pid] = {
-                "player_id": pid,
+                "player_id": pid[0],
                 "name": r["name"],
                 "team": r["team"],
                 "tags": [],
@@ -3846,6 +3935,11 @@ def build_summary_text(
     unique_player_report: Optional[Dict[str, Any]] = None,
     live_mode: bool = False,
 ) -> str:
+    # A postponed/cancelled game is void, not a miss: its picks never had a
+    # chance, so they stay out of every rate and count below (they remain on
+    # the payload's graded_slots, marked void).
+    _void_n = sum(1 for r in graded_slots if r.get("void"))
+    graded_slots = [r for r in graded_slots if not r.get("void")]
     top15 = [r for r in graded_slots if r["pick_type"] == "TOP15"]
     hr_picks = [r for r in graded_slots if r["pick_type"] == "HR"]
     top_picks = [r for r in graded_slots if r["pick_type"] == "TOP"]
@@ -3860,6 +3954,9 @@ def build_summary_text(
     if live_mode:
         lines.append(f"Game status: {final_games}/{total_games} graded games final")
         lines.append("Note: live results can change until every game is final.")
+        lines.append("")
+    if _void_n:
+        lines.append(f"Void (postponed/cancelled, not counted): {_void_n} pick slot(s)")
         lines.append("")
 
     lines.append("BETTABLE RESULTS")
@@ -4191,6 +4288,11 @@ def main() -> int:
         graded = grade_slot(slot, actual)
         graded["game_status"] = game_status_by_pk.get(game_pk, {})
         graded["is_final"] = 1 if game_is_final(game_cache[game_pk]) else 0
+        if game_is_void(graded["game_status"]):
+            # Marked, never dropped (a deleted row looks like a pick that was
+            # never made). Rates below skip void slots.
+            graded["void"] = True
+            graded["void_reason"] = "postponed"
         graded_slots.append(graded)
 
     # Make sure every player in rows has an actual line, not just displayed tracking slots.
@@ -4345,9 +4447,9 @@ def main() -> int:
     def _grade_for_row(r):
         # Final-mode grading uses certainty. Live-mode shows in-progress.
         if not live_mode:
-            if int(r.get("got_hr", 0)) == 1:
-                return "WIN"
-            if int(r.get("got_base_hit", 0)) == 1 and r.get("pick_type") in ("HIT", "HRR", "CONTACT", "TOP", "TOP15"):
+            if r.get("void"):
+                return "DNP"  # postponed/cancelled: never a LOSS
+            if win_bar_cleared(r):
                 return "WIN"
             if int(r.get("actual_ab", 0)) > 0:
                 return "LOSS"
