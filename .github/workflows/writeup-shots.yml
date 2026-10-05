@@ -58,8 +58,9 @@ jobs:
           shopt -s nullglob
           files=(/tmp/writeup-shots/*.png)
           if [ ${#files[@]} -eq 0 ]; then echo "no cards to publish"; exit 0; fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # --global: the publish happens in a fresh `git init` below, which has no repo config
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           rm -rf /tmp/shots-branch && mkdir -p /tmp/shots-branch
           # keep the earlier cards of the same slate (a Sunday's 1pm and SNF runs) when the
           # branch was written in the last 2 days; older -> start clean, so it never grows
