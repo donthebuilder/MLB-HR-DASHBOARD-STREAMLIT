@@ -166,6 +166,15 @@ if ok:
           [5.0, 12.0, 9.0])
     check("td_regression computes without the opponent roll",
           [round(v, 6) for v in dv["td_regression"].to_list()], [0.3, -0.2, 0.2])
+    # the published TDoE: actual minus expected, from 2-dp inputs (2026-10-04)
+    check("td_over_expected = TD - xTD (the published TDoE)",
+          [round(v, 6) for v in dv["td_over_expected"].to_list()], [-0.3, 0.2, -0.2])
+    # Donovan's two cards (10-04): Hubbard 1.00 TD on 0.875 xTD read "-0.13";
+    # LaPorta 0.333 TD on 0.59 xTD read "+0.26". Both now match their sign and
+    # add up from the printed 2-dp numbers.
+    cards = ns.derive(pl.DataFrame({"f_xtd": [0.875, 0.59], "f_td_actual": [1.0, 0.333]}))
+    check("Hubbard +0.12 / LaPorta -0.26",
+          [round(v, 6) for v in cards["td_over_expected"].to_list()], [0.12, -0.26])
     # The genuinely-absent one is present but flat, which is exactly what lets
     # nfl_bot drop it on its own instead of taking the others down with it.
     check("opp_td_soft is constant when its inputs are missing",

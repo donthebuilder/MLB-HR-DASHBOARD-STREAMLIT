@@ -122,7 +122,9 @@ RESEARCH = [
     ("f_gl_opp", "GL", "Goal-line touches — inside-10 targets, inside-5 carries", 2, False),
     ("f_xtd", "xTD", "Expected TDs per game from field position", 2, False),
     ("f_td_actual", "TD", "Actual TDs per game", 2, False),
-    ("td_regression", "TDoE", "Expected minus actual — positive means he's due", 2, False),
+    # TDoE = actual minus expected since 2026-10-04 (was expected minus actual,
+    # which read backwards under its own name); nfl_scoring.derive's td_over_expected
+    ("td_over_expected", "TDoE", "TD over expected — actual minus expected; above zero, he has scored more than his chances", 2, False),
     ("f_ngs_avg_separation", "SEP", "Average separation at the catch point (NGS)", 2, False),
     ("f_ngs_avg_yac_above_expectation", "YACOE", "YAC above expected (NGS)", 2, False),
     ("f_ngs_rush_yards_over_expected_per_att", "RYOE", "Rush yards over expected per attempt (NGS)", 2, False),
@@ -219,7 +221,7 @@ def _fill_missing(d: pl.DataFrame) -> pl.DataFrame:
         if c not in d.columns:
             add.append(pl.lit(dflt).cast(pl.Float64).alias(c))
     for c, _, _, _dp, _pct in RESEARCH:
-        if c not in d.columns and c != "td_regression":
+        if c not in d.columns and c not in ("td_regression", "td_over_expected"):   # derive() makes them
             add.append(pl.lit(None).cast(pl.Float64).alias(c))
     return d.with_columns(add) if add else d
 

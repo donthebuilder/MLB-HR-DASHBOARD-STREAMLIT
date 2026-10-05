@@ -332,7 +332,7 @@ def _candidate_cols(d: pl.DataFrame) -> list[str]:
     itself — and testing those would be measuring the outcome against itself.
     """
     used = {c.lstrip("-") for c in MODELS["TD"]["w"]}
-    used |= {"score", "hit", "y", "f_td_actual", "f_xtd", "td_regression"}
+    used |= {"score", "hit", "y", "f_td_actual", "f_xtd", "td_regression", "td_over_expected"}
     out = []
     for c, t in zip(d.columns, d.dtypes):
         if not t.is_numeric():

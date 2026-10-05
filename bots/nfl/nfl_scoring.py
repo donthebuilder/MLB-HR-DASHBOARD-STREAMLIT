@@ -244,6 +244,12 @@ def derive(df: pl.DataFrame) -> pl.DataFrame:
          ).alias("oppr_rush_soft"),
         # regression: expected TDs above what he's actually scored = due
         (c("f_xtd").fill_null(0) - c("f_td_actual").fill_null(0)).alias("td_regression"),
+        # TD OVER EXPECTED, the published TDoE (2026-10-04, Donovan): actual minus
+        # expected, so it reads the way its name says (Hubbard 1.00 TD vs 0.88 xTD
+        # = +0.12). From the 2-dp values the card prints beside it, so the three
+        # numbers add up on the page (0.875 unrounded made "-0.13" before).
+        # td_regression above keeps the old expected-minus-actual sign for the lab.
+        (c("f_td_actual").fill_null(0).round(2) - c("f_xtd").fill_null(0).round(2)).alias("td_over_expected"),
         # game script. negative spread = underdog = pass volume; positive = run volume
         (-c("spread")).fill_null(0).alias("pass_script"),
         c("spread").fill_null(0).alias("run_script"),
