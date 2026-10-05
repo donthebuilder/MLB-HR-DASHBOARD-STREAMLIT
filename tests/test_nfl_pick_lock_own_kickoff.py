@@ -14,6 +14,13 @@ from pathlib import Path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "bots", "nfl"))
 import nfl_pick_lock as pl  # noqa: E402
 
+# These exercise main(), not the network: a fresh week has no previous ledger.
+# (A FAILED read now raises instead of reading as empty -- see test_nfl_failed_reads.)
+import io, urllib.error, urllib.request  # noqa: E402
+def _no_branch_copy(*a, **k):   # local ledger (if any) is read first; the branch has none yet
+    raise urllib.error.HTTPError("u", 404, "not found", {}, io.BytesIO(b""))
+urllib.request.urlopen = _no_branch_copy
+
 FAILED, CHECKS = [], 0
 def check(name, got, want):
     global CHECKS

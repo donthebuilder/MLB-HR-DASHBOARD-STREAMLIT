@@ -189,8 +189,17 @@ jobs:
         run: |
           set -uo pipefail
           ok=1
-          git fetch --depth 1 --force origin '+refs/heads/data:refs/remotes/origin/data' 2>/dev/null || true
-          if git rev-parse --verify origin/data >/dev/null 2>&1; then
+          # A failed fetch is NOT a first run (bot audit 10-05): it used to be
+          # `|| true`, so a transient failure restored nothing and this run's
+          # append-only log replaced the week's history. fetch_data_branch.sh:
+          # 0 fetched, 3 branch genuinely absent, 1 failed -> stop here.
+          fetch_rc=0
+          bash .github/scripts/fetch_data_branch.sh || fetch_rc=$?
+          if [ "$fetch_rc" = 1 ]; then
+            echo "::error::could not fetch origin/data -- refusing to treat a failed read as a first run (game-call logs would be replaced)."
+            exit 1
+          fi
+          if [ "$fetch_rc" = 0 ] && git rev-parse --verify origin/data >/dev/null 2>&1; then
             mkdir -p public/data/current
             files=$(git ls-tree --name-only origin/data public/data/current/ | grep -E 'nfl_game_calls_(log_.*\.jsonl|graded_.*\.json|totals_.*\.json)$' || true)
             for f in $files; do
@@ -202,7 +211,7 @@ jobs:
             done
             echo "Restored $(echo "$files" | grep -c . || true) game-call file(s)."
           else
-            echo "origin/data not fetchable -- first-run shape; nothing to restore."
+            echo "origin/data does not exist -- first-run shape; nothing to restore."
           fi
           echo "NFL_GAME_CALLS_RESTORED=$ok" >> "$GITHUB_ENV"
 
@@ -306,10 +315,17 @@ jobs:
       # a separate hard-failing guard so a silent restore failure cannot
       # masquerade as "no locks yet."
       - name: Restore NFL prediction-of-record locks and pregame logs from the data branch
-        continue-on-error: true
+        # NOT continue-on-error (bot audit 10-05): a failed fetch here used to
+        # read as "first run", the lock then rebuilt every slot from this run's
+        # post-kickoff log and published a por_log of only its own locks.
         run: |
-          git fetch origin data --depth 1 2>/dev/null || true
-          if git rev-parse --verify origin/data >/dev/null 2>&1; then
+          fetch_rc=0
+          bash .github/scripts/fetch_data_branch.sh || fetch_rc=$?
+          if [ "$fetch_rc" = 1 ]; then
+            echo "::error::could not fetch origin/data -- refusing to lock against an empty history."
+            exit 1
+          fi
+          if [ "$fetch_rc" = 0 ] && git rev-parse --verify origin/data >/dev/null 2>&1; then
             rm -rf /tmp/nfl-por-restore && mkdir -p /tmp/nfl-por-restore
             git archive origin/data public/data 2>/dev/null | tar -x -C /tmp/nfl-por-restore || true
             mkdir -p public/data/current
@@ -328,7 +344,11 @@ jobs:
       - name: Verify the NFL por_logs restored cleanly (if any exist on the data branch)
         run: |
           if ! git rev-parse --verify origin/data >/dev/null 2>&1; then
-            echo "origin/data not fetchable -- cannot verify; continuing (first-ever run shape)."
+            if git ls-remote --exit-code --heads origin data >/dev/null 2>&1; then
+              echo "::error::origin/data exists but is not fetched -- cannot verify the por_logs; refusing to continue."
+              exit 1
+            fi
+            echo "origin/data does not exist -- nothing to verify (first-ever run shape)."
             exit 0
           fi
           missing=0

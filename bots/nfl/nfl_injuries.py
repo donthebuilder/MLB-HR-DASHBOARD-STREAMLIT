@@ -151,29 +151,36 @@ def attach_espn_ids(rows: list[dict[str, Any]], ids: dict[str, str]) -> int:
     return n
 
 
+class InjuriesUnavailable(RuntimeError):
+    """The ESPN report (or the id crosswalk) could not be read. NOT the same
+    as "nobody is hurt": callers must not treat it as an empty report."""
+
+
 def fetch(session: requests.Session | None = None) -> dict[str, str]:
     """{gsis_id: code} for every player carrying a real designation.
 
-    Never raises. An injury feed that is down must not take the slate down with
-    it — the board is still correct without tags, it is only less informed, and
-    a bot run that dies here publishes nothing at all. The caller logs the count
-    so a silent zero is visible in the run output rather than looking like a
-    healthy league.
+    RAISES InjuriesUnavailable when the report cannot be read (bot audit
+    10-05). It used to return {} on any failure, which every caller read as
+    "nobody is hurt": injured players published untagged and undamped. Both
+    callers in nfl_bot.py already wrap this in try/except so a dead injury feed
+    still cannot take the slate down -- but the failure is now a failure, with a
+    ::warning:: in the run log, rather than a healthy-looking empty league. A
+    report that reads fine and lists nobody is still {} (that one is real).
     """
     sess = session or requests
     try:
         r = sess.get(INJURIES_URL, timeout=TIMEOUT)
         r.raise_for_status()
         body = r.json()
-    except Exception as exc:  # noqa: BLE001 - deliberately broad, see docstring
-        print(f"  injuries: ESPN fetch failed ({type(exc).__name__}) — no tags this run")
-        return {}
+    except Exception as exc:  # noqa: BLE001
+        raise InjuriesUnavailable(f"ESPN fetch failed ({type(exc).__name__}: {exc})") from exc
+    if not isinstance(body, dict) or "injuries" not in body:
+        raise InjuriesUnavailable("ESPN injury report has no 'injuries' list (malformed response)")
 
     try:
         xw = _crosswalk()
     except Exception as exc:  # noqa: BLE001
-        print(f"  injuries: crosswalk failed ({type(exc).__name__}) — no tags this run")
-        return {}
+        raise InjuriesUnavailable(f"id crosswalk failed ({type(exc).__name__}: {exc})") from exc
 
     out: dict[str, str] = {}
     seen = unmapped = 0

@@ -95,6 +95,7 @@ import argparse
 import datetime as dt
 import glob as globmod
 import json
+import urllib.error
 import urllib.request
 from pathlib import Path
 from typing import Any
@@ -139,6 +140,10 @@ def load_json(path: Path) -> Any:
         return None
 
 
+class LockLedgerUnreadable(RuntimeError):
+    """The previous lock ledger could not be read (not: does not exist)."""
+
+
 def fetch_lock(prefix: str, season: int, week: int, current_dir: Path) -> dict:
     """Last run's ledger for this exact (season, week). A miss, or a ledger
     for a different week, is a fresh start -- same rule as pick_lock.py's
@@ -160,9 +165,17 @@ def fetch_lock(prefix: str, season: int, week: int, current_dir: Path) -> dict:
         if isinstance(j, dict) and j.get("season") == season and j.get("week") == week:
             return j
         return {}
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            # The one genuine "no ledger yet" -- the file is not on the branch.
+            print(f"  · no previous lock on the branch (404) — starting fresh for {season} week {week}")
+            return {}
+        raise LockLedgerUnreadable(f"previous lock ledger unreadable (HTTP {e.code})") from e
     except Exception as e:
-        print(f"  · no previous lock fetched ({e}) — starting fresh for {season} week {week}")
-        return {}
+        # NOT "starting fresh" (bot audit 10-05): treating a failed read as an
+        # empty ledger rebuilt every slot from this run's log and froze the
+        # post-kickoff occupants as locked_late. Stop; the next run retries.
+        raise LockLedgerUnreadable(f"previous lock ledger unreadable ({type(e).__name__}: {e})") from e
 
 
 def team_game_map(games: list[dict]) -> tuple[dict[str, str], dict[str, dt.datetime]]:

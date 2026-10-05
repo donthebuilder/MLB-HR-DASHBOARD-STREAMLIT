@@ -194,7 +194,7 @@ def preseason_rows(prior_season: int, teams: set[str]) -> pl.DataFrame:
     try:
         _q = {k for k, v in nfl_injuries.fetch().items() if v == "Q"}
     except Exception as _exc:  # noqa: BLE001
-        print(f"  inj_q: no injury feed ({type(_exc).__name__}) — nobody damped")
+        print(f"::warning::injury feed unavailable ({type(_exc).__name__}: {_exc}) — nobody damped this run")
     full = full.rename(ren).with_columns(
         pl.lit(1).cast(pl.Int8).alias("is_carryover"),
         pl.col("player_id").is_in(list(_q)).cast(pl.Int8).alias("inj_q"),
@@ -1056,7 +1056,7 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
     except Exception as _exc:  # noqa: BLE001
         # Never let the injury feed take the slate down; the board is correct
         # without tags, only less informed.
-        print(f"  injuries: skipped ({type(_exc).__name__}: {_exc})")
+        print(f"::warning::injuries skipped — feed unavailable, rows carry NO designation this run ({type(_exc).__name__}: {_exc})")
 
     # B10(d), 2026-09-15: real jersey/birthdate/season-TD, for the NFL side
     # of the Numerology/Alignments feature (see nfl_numerology.py's header
