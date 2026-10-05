@@ -2418,7 +2418,11 @@ def _fetch_weather_open_meteo(lat: float, lon: float, game_time: str, roof: str,
                 "temperature_unit": "fahrenheit",
                 "wind_speed_unit": "mph",
                 "forecast_days": 2,
-                "timezone": "auto",
+                # UTC, not "auto": `times` must be on the same clock as target_dt
+                # below (the game's UTC start, tzinfo stripped). "auto" returned
+                # naive ballpark-LOCAL times, so a 7pm ET game read the 23:00 local
+                # hour (4h late) and a 7pm PT game read ~17h off.
+                "timezone": "UTC",
             },
             timeout=TIMEOUT,
         ).json()

@@ -586,6 +586,16 @@ def main() -> int:
     else:
         print(f"  no card at {cp} — publishing lines only")
 
+    # NEVER PUBLISH AN EMPTY CARD OVER A GRADED WEEK (2026-10-05 scan). With no
+    # local week archive (every Tue-Thu run) the card comes from the data branch;
+    # one failed fetch, or a week mismatch, leaves `card` empty and grade() would
+    # write {} for graded and totals over week N's real grade -- and the site
+    # accepts {} as a valid archive. publish_data.sh carries forward any file the
+    # run did not regenerate, so skipping the write keeps the last good grade.
+    if a.week and not card:
+        print(f"  no card for week {a.week} -- NOT writing results: the last published grade stays")
+        return 0
+
     graded, totals = grade(card, actual, positions)
 
     # OVER THE BOOK LINE -- additive, week mode only, never fatal. See

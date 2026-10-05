@@ -1889,8 +1889,12 @@ def main() -> int:
             for p in players or []:
                 n = norm_name(p.get("name") or p.get("player_name"))
                 if n:
-                    prev = by_norm.get(n)
-                    if prev is not None and str(prev.get("player_id")) != str(p.get("player_id")):
+                    # `dup`, not `prev`: `prev` is the published odds_latest.json read
+                    # at the top of main(). Reusing the name here clobbered it, so the
+                    # fetches_this_slate counter below always reset to 1 and
+                    # ODDS_MAX_PER_SLATE never tripped.
+                    dup = by_norm.get(n)
+                    if dup is not None and str(dup.get("player_id")) != str(p.get("player_id")):
                         ambiguous.add(n)
                     by_norm.setdefault(n, p)
                 # Each hitter's first pitch, for the dated snapshot's freeze.

@@ -690,6 +690,17 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
         # numbering; nfl_espn.slice_for maps our 19-22 onto it.
         st, ew = nfl_espn.slice_for(week)
         games = nfl_espn.fetch(seasontype=st, year=season, week=ew)
+        # AN EMPTY SCHEDULE IS A FAILED FETCH, NOT A SLATE (2026-10-05 scan).
+        # nfl_espn.fetch() returns [] on any failure. Publishing that put
+        # nfl_week.json up with players and no games; the workflow's kickoff gate
+        # reads the published file, found no kickoff within 125 min and skipped
+        # every pregame run, so one ESPN blip could cost the 1pm wave its locks.
+        # Fail the run instead: nothing publishes and the last good slate stays.
+        if not games:
+            raise RuntimeError(
+                f"ESPN returned no games for season {season} week {week} "
+                f"(seasontype={st}, week={ew}) -- refusing to publish a slate with games: []"
+            )
         # REST DAYS (2026-08-28, B7; SOURCE FIXED 2026-09-11, item 22).
         # Unlike the preseason branch, `games` above is scoped to ONE week —
         # a team's prior game lives in an earlier week, so this needs its
