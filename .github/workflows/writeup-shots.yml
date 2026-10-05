@@ -1,0 +1,76 @@
+name: Write-up shots (featured NFL games)
+
+# BATCH-GAME-WRITEUP (2026-10-04). Photographs each called player's LIVE page
+# (signed out) before a featured game, for the X write-up the site posts 75-60
+# minutes before kickoff (moonshot-mlb lib/writeups/post.js). The script reads
+# the featured games from the site (/api/writeups/featured) and exits at once
+# unless one kicks off 95-150 minutes from now, so most runs cost seconds.
+#
+# The PNGs live on their own orphan branch, `writeup-shots`, one commit,
+# force-pushed -- never the data branch, so publish_data.sh and its merge rules
+# are untouched. The site reads raw.githubusercontent.com/.../writeup-shots/<game>_<player>.png.
+
+on:
+  schedule:
+    # UTC. Phoenix is UTC-7 year-round; ET kickoffs move an hour on Nov 1, so
+    # each window is wide enough for both sides of the change.
+    - cron: '5,35 21-23 * * 4'   # Thu -> TNF (Fri 00:15Z / 01:15Z kickoff)
+    - cron: '5,35 10-23 * * 0'   # Sun -> London, the 1 / 4:25 games, SNF
+    - cron: '5,35 20-23 * * 1'   # Mon -> MNF (Tue 00:15Z / 01:15Z)
+  workflow_dispatch:
+    inputs:
+      player:
+        description: 'One player id to shoot (a test; skips the time window)'
+        required: false
+      game:
+        description: 'Game id for that test file name'
+        required: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: writeup-shots
+  cancel-in-progress: false
+
+jobs:
+  shots:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Playwright (chromium only)
+        run: |
+          npm install --no-save --no-package-lock playwright@1.48.2
+          npx playwright install --with-deps chromium
+      - name: Shoot the cards
+        env:
+          SITE: https://dashnetwork.vercel.app
+          OUT: /tmp/writeup-shots
+          PLAYER: ${{ github.event.inputs.player }}
+          GAME: ${{ github.event.inputs.game }}
+        run: node .github/scripts/writeup_shots.mjs
+      - name: Publish to the writeup-shots branch
+        run: |
+          shopt -s nullglob
+          files=(/tmp/writeup-shots/*.png)
+          if [ ${#files[@]} -eq 0 ]; then echo "no cards to publish"; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -rf /tmp/shots-branch && mkdir -p /tmp/shots-branch
+          # keep the earlier cards of the same slate (a Sunday's 1pm and SNF runs) when the
+          # branch was written in the last 2 days; older -> start clean, so it never grows
+          if git fetch --depth=1 origin writeup-shots 2>/dev/null; then
+            age=$(( $(date +%s) - $(git log -1 --format=%ct FETCH_HEAD) ))
+            if [ "$age" -lt 172800 ]; then git --work-tree=/tmp/shots-branch checkout FETCH_HEAD -- . 2>/dev/null || true; fi
+          fi
+          cp /tmp/writeup-shots/*.png /tmp/shots-branch/
+          cd /tmp/shots-branch
+          git init -q -b writeup-shots
+          git add -A
+          git commit -q -m "Write-up cards $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" writeup-shots
+          ls -1 *.png | wc -l | xargs echo "cards on the branch:"
