@@ -167,6 +167,13 @@ checkTrue("blocklist: hr_score is never tested as a signal",
           "hr_score" in MS.BLOCK_EXACT)
 checkTrue("blocklist: actual_* outcomes are never tested as signals",
           any("actual_".startswith(p) or p == "actual_" for p in MS.BLOCK_PREFIX))
+for f in ("tb_2_plus", "tb_3_plus", "plate_appearances", "book_action", "designed_hit",
+          "top_beat_game", "top_game_best_tb"):
+    checkTrue(f"blocklist: outcome column {f} is never tested as a signal",
+              f in MS.BLOCK_EXACT or f.startswith(MS.BLOCK_PREFIX))
+import inspect
+checkTrue("BH correction: m is every field scanned (len(results)), not len(tested)",
+          "m = len(results)" in inspect.getsource(MS.main) if hasattr(MS, "main") else True)
 checkTrue("blocklist: the model's own composite outputs stay excluded by default",
           "damage_conversion_score" in MS.DERIVED_SCORES)
 

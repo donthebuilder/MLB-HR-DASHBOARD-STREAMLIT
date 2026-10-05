@@ -82,6 +82,13 @@ BLOCK_EXACT = {
     "hr_score", "hr_score_v2", "hr_score_legacy", "hr_score_old", "hr_score_pure",
     "hr_score_delta", "overall_score", "overall_score_legacy", "player_id",
     "game_pk", "jersey_number", "is_final", "rank",
+    # OUTCOME columns grade_slot writes that the actual_/got_/hrr_ prefixes miss
+    # (bot audit 10-05): a field computed from the box score cannot be a signal
+    # -- tb_2_plus alone would "predict" a homer (a homer is 4 TB).
+    "tb_2_plus", "tb_3_plus", "plate_appearances", "book_action", "designed_hit",
+    "top_beat_game", "top_game_best_tb",
+    "was_replaced", "was_substitute", "fair_play_eligible", "fair_test_void",
+    "hr_nodoubt", "hr_scraper", "hr_crushed", "hr_soft", "void",
 }
 
 # ── THE MODEL'S OWN OUTPUTS ARE NOT SIGNALS (2026-08-09, second pass) ───────
@@ -544,7 +551,10 @@ def main() -> int:
     # Benjamini-Hochberg. ~170 fields means ~8 false positives at p<0.05, so a
     # tool that reported raw p-values would invent a discovery every run.
     tested = sorted([r for r in results if r["p"] < 1.0], key=lambda r: r["p"])
-    m = len(tested)
+    # m is every hypothesis in the family (every field scanned), NOT just the
+    # ~40 that got a permutation p: the rest sit at p=1.0 and still count
+    # against the correction. m=len(tested) understated it ~4x.
+    m = len(results)
     for i, r in enumerate(tested, start=1):
         r["q"] = min(1.0, r["p"] * m / i)
     for i in range(len(tested) - 2, -1, -1):
