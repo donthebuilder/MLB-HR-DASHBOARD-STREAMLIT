@@ -4046,6 +4046,11 @@ def build_batter_statcast_profile(db: CacheDB, player_id: int, end_date: dt.date
         out["recent_bat_tracking_status"] = "ok"
         out["recent_bat_tracking_window"] = str(bat_tracking.get("window") or "")
     cached = db.get(key, max_age_days=1)
+    # A "missing" profile is a FAILED/EMPTY pull (the defaults above), never a
+    # real profile: older runs cached it for 24h and every later run served it
+    # as fact ("True Avoid HR", score cap 30). Treat it as a miss and re-pull.
+    if isinstance(cached, dict) and cached.get("statcast_pull_status") == "missing":
+        cached = None
     if cached is not None:
         merged = dict(out)
         if isinstance(cached, dict):
@@ -4073,16 +4078,16 @@ def build_batter_statcast_profile(db: CacheDB, player_id: int, end_date: dt.date
             _bp.setdefault("bat_speed_in_band_rate", 0.0)
         return merged
 
+    # Failures are returned (flagged "missing") but NOT cached: a failed pull
+    # cached for 24h poisoned every later run (the cache-hit above also
+    # refuses a "missing" row, for entries written before this).
     if statcast_batter is None:
-        db.set(key, out)
         return out
     try:
         df = statcast_batter(SEASON_START.isoformat(), end_date.isoformat(), player_id)
     except Exception:
-        db.set(key, out)
         return out
     if df is None or len(df) == 0:
-        db.set(key, out)
         return out
 
     try:
