@@ -1,0 +1,46 @@
+name: Pair history v2 (four seasons)
+# Manual only. One run pulls four seasons of real game logs (MLB boxscores, NHL per-game skater
+# report, nflverse weekly stats), keeps the pairs of ACTIVE players, and publishes three small
+# files (pairhist_v2_mlb/nhl/nfl.json) to the data branch. The cache carries finished seasons
+# between runs so a re-run only fetches new games. Run it when you want it refreshed.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pairhist-v2
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - run: pip install -r bots/requirements.txt -r bots/nfl/requirements.txt
+      - uses: actions/cache@v4
+        with:
+          path: pairhist_cache
+          key: pairhist-v2-${{ github.run_id }}
+          restore-keys: |
+            pairhist-v2-
+      - name: Build pairhist_v2
+        run: |
+          mkdir -p public/data
+          python bots/pair_history_v2.py --sport all --out public/data --cache pairhist_cache
+          ls -la public/data
+      - uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: pairhist_cache
+          key: pairhist-v2-${{ github.run_id }}
+      - name: Publish to data branch
+        run: bash .github/scripts/publish_data.sh "Pair history v2"
