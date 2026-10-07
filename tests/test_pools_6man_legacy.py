@@ -217,5 +217,115 @@ class GradedLikeOtherPools(unittest.TestCase):
         self.assertEqual(t.LEGACY_6MAN_MODEL_VERSION, m.LEGACY_6MAN_MODEL_VERSION)
 
 
+class OldRecipeHalves(unittest.TestCase):
+    """pools_3man_legacy: each legacy 6-man split into X1 (first 3) / X2 (last 3). TEST data."""
+
+    def payload(self):
+        m.LAST_ALT_USED_IDS = set()
+        m.LAST_TOP30_BOARD = []
+        return m._build_pair_sections(slate())[1]
+
+    def test_eight_disjoint_halves_cover_all_names_in_order(self):
+        a = self.payload()
+        halves, sixes = a["pools_3man_legacy"], a["pools_6man_legacy"]
+        self.assertEqual([h["name"] for h in halves],
+                         [f"Pool {c}{n}" for c in "ABCD" for n in "12"])
+        for i, six in enumerate(sixes):
+            h1, h2 = halves[2 * i], halves[2 * i + 1]
+            self.assertEqual(h1["parent"], six["name"])
+            self.assertEqual(h2["parent"], six["name"])
+            p6 = [p["player_id"] for p in six["players"]]
+            p1 = [p["player_id"] for p in h1["players"]]
+            p2 = [p["player_id"] for p in h2["players"]]
+            self.assertEqual((len(p1), len(p2)), (3, 3))
+            self.assertFalse(set(p1) & set(p2))
+            self.assertEqual(p1 + p2, p6)
+            self.assertEqual(h1["size"], 3)
+            self.assertEqual(h1["model_version"], "pools_6man_legacy_v1_half")
+
+    def test_deterministic_and_existing_keys_unchanged(self):
+        a, b = self.payload(), self.payload()
+        for k in ("pools_3man_legacy", "pools_6man_legacy", "pools_3man", "pools_4man", "recommended_pairs"):
+            self.assertEqual(json.dumps(a[k], sort_keys=True), json.dumps(b[k], sort_keys=True))
+        self.assertEqual(a["pools_6man"], [])
+        self.assertEqual([len(p["players"]) for p in a["pools_3man"]], [3] * 4)
+        self.assertEqual([len(p["players"]) for p in a["pools_4man"]], [4] * 4)
+
+    def test_locked_pregame_only(self):
+        import importlib
+        import bots.pick_lock as pl
+        self.assertIn("pools_3man_legacy", pl.POOL_SECTIONS)
+        for offset, want_frozen in ((120, False), (-30, True)):
+            with tempfile.TemporaryDirectory() as d:
+                importlib.reload(pl)
+                cur = Path(d) / "current"
+                cur.mkdir()
+                pl.PUBLIC, pl.CURRENT = Path(d), cur
+                gt = (dt.datetime.now(dt.timezone.utc) + dt.timedelta(minutes=offset)
+                      ).isoformat().replace("+00:00", "Z")
+                rows = [{"player_id": i, "name": f"TEST Hitter {i}", "game_pk": 100, "game_time": gt,
+                         "team": "AAA", "opponent": "BBB", "hr_score": 50.0} for i in range(1, 10)]
+                (cur / "today.json").write_text(json.dumps({"players": rows}))
+
+                def run(pids):
+                    blob = {"name": "Pool A1", "parent": "Pool A — Strongest", "size": 3,
+                            "model_version": "pools_6man_legacy_v1_half",
+                            "players": [{"player_id": p, "name": f"TEST Hitter {p}", "game_pk": 100} for p in pids]}
+                    (cur / "pair_builder_latest.json").write_text(json.dumps({"pools_3man_legacy": [blob]}))
+
+                    def local(date):
+                        f = cur / "pick_lock.json"
+                        if f.exists():
+                            j = json.loads(f.read_text())
+                            if j.get("date") == date:
+                                return j
+                        return {"date": date, "games": {}, "tickets": {}, "rejected": []}
+                    pl.fetch_lock = local
+                    argv = sys.argv
+                    sys.argv = ["pick_lock.py", "--apply"]
+                    try:
+                        pl.main()
+                    finally:
+                        sys.argv = argv
+                    return json.loads((cur / "pair_builder_latest.json").read_text())["pools_3man_legacy"][0]
+                run([1, 2, 3])
+                out = run([4, 5, 6])
+                got = [p["player_id"] for p in out["players"]]
+                self.assertEqual(got, [1, 2, 3] if want_frozen else [4, 5, 6])
+                if want_frozen:
+                    self.assertEqual(out["parent"], "Pool A — Strongest")
+                    self.assertEqual(out["model_version"], "pools_6man_legacy_v1_half")
+
+    def test_graded_independently(self):
+        mk = lambda ids: [{"player_id": i, "name": f"TEST Hitter {i}", "game_pk": 9} for i in ids]
+        pb = {"date": "2099-01-01", "recommended_pairs": [], "pools_4man": [],
+              "pools_3man": [{"name": "Pool A — Strongest", "players": mk((1, 2, 3))}],
+              "pools_6man_legacy": [{"name": "Pool A — Strongest", "players": mk(range(1, 7))}],
+              "pools_3man_legacy": [{"name": "Pool A1", "parent": "Pool A — Strongest", "players": mk((1, 2, 3))},
+                                    {"name": "Pool A2", "parent": "Pool A — Strongest", "players": mk((4, 5, 6))}]}
+        with tempfile.TemporaryDirectory() as d:
+            (Path(d) / "pair_builder_latest.json").write_text(json.dumps(pb))
+            old = t.OUT_DIR
+            t.OUT_DIR = Path(d)
+            try:
+                sections = t.load_pair_builder_sections("2099-01-01")
+            finally:
+                t.OUT_DIR = old
+        actual = {(9, 1): {"hr": 1, "ab": 4}, (9, 2): {"hr": 1, "ab": 4}, (9, 3): {"hr": 0, "ab": 4},
+                  (9, 4): {"hr": 0, "ab": 4}, (9, 5): {"hr": 1, "ab": 4}, (9, 6): {"hr": 0, "ab": 4}}
+        g = t.grade_pairs_pools(sections, actual)
+        halves = {e["label"]: e for e in g["pool3_legacy"]}
+        self.assertEqual(set(halves), {"OLD-RECIPE 3-MAN Pool A1", "OLD-RECIPE 3-MAN Pool A2"})
+        a1, a2 = halves["OLD-RECIPE 3-MAN Pool A1"], halves["OLD-RECIPE 3-MAN Pool A2"]
+        self.assertEqual((a1["hr_count"], a1["total_count"], a1["primary"]), (2, 3, 1))
+        self.assertEqual((a2["hr_count"], a2["total_count"], a2["primary"]), (1, 3, 0))
+        self.assertEqual(a1["model_version"], "pools_6man_legacy_v1_half")
+        # the six-man grades on its own and totals elsewhere are untouched
+        self.assertEqual([e["hr_count"] for e in g["pool6_legacy"]], [3])
+        self.assertEqual([e["label"] for e in g["pool6"]], ["3-MAN Pool A — Strongest"])
+        self.assertEqual(g["pool4"], [])
+        self.assertEqual(len(g["graded_pools"]), 4)
+
+
 if __name__ == "__main__":
     unittest.main()

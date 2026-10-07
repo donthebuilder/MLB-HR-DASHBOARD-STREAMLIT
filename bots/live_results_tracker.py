@@ -3601,6 +3601,7 @@ def format_stat_line(r: Dict[str, Any]) -> str:
 
 
 LEGACY_6MAN_MODEL_VERSION = "pools_6man_legacy_v1"
+LEGACY_HALF_MODEL_VERSION = "pools_6man_legacy_v1_half"
 
 
 def load_pair_builder_sections(date_str: str):
@@ -3658,7 +3659,8 @@ def load_pair_builder_sections(date_str: str):
     # any older dated archive file that still carries real 6-man data from
     # before 2026-08-09.
     for key, prefix in (("pools_4man", "4-MAN"), ("pools_3man", "3-MAN"), ("pools_6man", "6-MAN"),
-                        ("pools_6man_legacy", "SIX-MAN LEGACY")):
+                        ("pools_6man_legacy", "SIX-MAN LEGACY"),
+                        ("pools_3man_legacy", "OLD-RECIPE 3-MAN")):
         for pl in (pb.get(key) or []):
             players = [x for x in (pl.get("players") or []) if x.get("player_id")]
             if not players:
@@ -3723,6 +3725,7 @@ def grade_pairs_pools(sections: Dict[str, Any], actual_by_pid: Dict[Tuple[int, i
     pool4 = []
     pool6 = []
     pool6_legacy = []
+    pool3_legacy = []
     for pool in sections["pools"]:
         players = pool["players"]
         # MINI-BOT AUDIT (2026-08-08, B5+B6): a leg whose player never got an
@@ -3789,6 +3792,11 @@ def grade_pairs_pools(sections: Dict[str, Any], actual_by_pid: Dict[Tuple[int, i
         graded_pools.append(entry)
         if pool["label"].startswith("4-MAN"):
             pool4.append(entry)
+        elif pool["label"].startswith("OLD-RECIPE 3-MAN"):
+            # old-recipe halves: graded one by one, in neither pool6 nor the
+            # current 3-man totals.
+            entry["model_version"] = LEGACY_HALF_MODEL_VERSION
+            pool3_legacy.append(entry)
         elif pool["label"].startswith("SIX-MAN LEGACY"):
             # 2026-10-07: the old 6-man recipe, back as its own model_version.
             # Kept OUT of pool6 (the 3-man totals) so nothing existing moves.
@@ -3811,6 +3819,7 @@ def grade_pairs_pools(sections: Dict[str, Any], actual_by_pid: Dict[Tuple[int, i
         "pool4": pool4,
         "pool6": pool6,
         "pool6_legacy": pool6_legacy,
+        "pool3_legacy": pool3_legacy,
     }
 
 

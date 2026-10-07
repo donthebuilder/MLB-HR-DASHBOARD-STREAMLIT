@@ -12912,6 +12912,20 @@ LEGACY_6MAN_RECIPES = (
 )
 
 
+LEGACY_HALF_MODEL_VERSION = "pools_6man_legacy_v1_half"
+
+
+def split_legacy_6man_halves(legacy6):
+    """Each legacy 6-man pool -> two 3-man halves, by the pool's own order:
+    first three = X1, last three = X2. Returns [(name, parent, [3 records])]."""
+    out = []
+    for name, pool in legacy6:
+        letter = name.split()[1] if len(name.split()) > 1 else name
+        out.append((f"Pool {letter}1", name, list(pool[:3])))
+        out.append((f"Pool {letter}2", name, list(pool[3:6])))
+    return out
+
+
 def build_legacy_6man_pools(candidate_rows, buckets, seed_exposure, pick_tag_map, top5_ids):
     """Old 6-man recipe (6cd816e5^). Returns [(name, [HitterRecord x6])] A-D.
 
@@ -12958,13 +12972,13 @@ def build_pair_sections(rows: List[HitterRecord]) -> Tuple[str, Dict[str, Any]]:
         print("!! pairs/pools section failed — slate continues without it")
         print(f"!! {type(e).__name__}: {e}")
         traceback.print_exc()
-        return "", {"recommended_pairs": [], "pools_4man": [], "pools_6man": [], "pools_3man": [], "pools_6man_legacy": []}
+        return "", {"recommended_pairs": [], "pools_4man": [], "pools_6man": [], "pools_3man": [], "pools_6man_legacy": [], "pools_3man_legacy": []}
 
 
 def _build_pair_sections(rows: List[HitterRecord]) -> Tuple[str, Dict[str, Any]]:
     global LAST_HR_SECTION_USED_IDS
     LAST_HR_SECTION_USED_IDS = set()
-    if len(rows) < 6: return "", {"recommended_pairs": [], "pools_4man": [], "pools_6man": [], "pools_3man": [], "pools_6man_legacy": []}
+    if len(rows) < 6: return "", {"recommended_pairs": [], "pools_4man": [], "pools_6man": [], "pools_3man": [], "pools_6man_legacy": [], "pools_3man_legacy": []}
     candidate_rows = top_pool_candidates(rows, 62)
     ranked = sorted(candidate_rows, key=_pool_leg_score, reverse=True)
     pick_tag_map = game_pick_type_map(rows)
@@ -13182,6 +13196,12 @@ def _build_pair_sections(rows: List[HitterRecord]) -> Tuple[str, Dict[str, Any]]
         _blob = _s2_pool_json(_nm, _pl, len(_pl))
         _blob["model_version"] = LEGACY_6MAN_MODEL_VERSION
         json_pools_6man_legacy.append(_blob)
+    json_pools_3man_legacy = []
+    for _nm, _parent, _pl in split_legacy_6man_halves(legacy6):
+        _blob = _s2_pool_json(_nm, _pl, len(_pl))
+        _blob["model_version"] = LEGACY_HALF_MODEL_VERSION
+        _blob["parent"] = _parent
+        json_pools_3man_legacy.append(_blob)
     json_payload = {
         # available_pool added per audit (2026-06-27) -- the frontend
         # (Pairs.js) uses this as its PRIMARY data source for client-side
@@ -13199,6 +13219,7 @@ def _build_pair_sections(rows: List[HitterRecord]) -> Tuple[str, Dict[str, Any]]
         "pools_3man": json_pools_3man,
         "pools_6man": [],
         "pools_6man_legacy": json_pools_6man_legacy,
+        "pools_3man_legacy": json_pools_3man_legacy,
     }
     return "\n".join(lines), json_payload
 
@@ -15284,7 +15305,7 @@ Use ALT LOOKS as quality variance, not primary plays.
             report_text += "\n\n" + the_four_text
         if args.full and game_by_game_text:
             report_text += "\n\n" + game_by_game_text
-        pair_sections_json: Dict[str, Any] = {"recommended_pairs": [], "pools_4man": [], "pools_6man": [], "pools_3man": [], "pools_6man_legacy": []}
+        pair_sections_json: Dict[str, Any] = {"recommended_pairs": [], "pools_4man": [], "pools_6man": [], "pools_3man": [], "pools_6man_legacy": [], "pools_3man_legacy": []}
         if not args.no_pairs:
             pair_text, pair_sections_json = build_pair_sections(all_rows)
             if pair_text and hot_power_pairs_text:
@@ -15759,6 +15780,7 @@ Use ALT LOOKS as quality variance, not primary plays.
                 "pools_3man": pair_sections_json.get("pools_3man", []),
                 "pools_6man": pair_sections_json.get("pools_6man", []),
                 "pools_6man_legacy": pair_sections_json.get("pools_6man_legacy", []),
+                "pools_3man_legacy": pair_sections_json.get("pools_3man_legacy", []),
                 # MINI-BOT AUDIT (2026-08-08, B2): available_pool is the
                 # frontend's PRIMARY source for Build-a-Pair — it was built
                 # every night and then dropped right here, which is why the
