@@ -12892,6 +12892,47 @@ def build_top30_pairs(top30: List[HitterRecord]) -> Tuple[str, List[Dict[str, An
     return "\n".join(lines), json_pairs
 
 
+# ── THE OLD 6-MAN POOLS, BACK AS THEIR OWN PRODUCT (2026-10-07, Donovan) ─────
+# Retired 2026-08-09 (commit 6cd816e5) when pools became 3-man. Owner decision:
+# show the old six-man tickets NEXT TO the 3-man pools, not instead of them.
+# Rules kept: the recipes below are the 6cd816e5^ recipes verbatim; they ship
+# under their OWN key (pools_6man_legacy, NOT the empty retired pools_6man) with
+# their own model_version, so no existing pool/pair row or key is rewritten; the
+# key rides pick_lock.POOL_SECTIONS so it freezes at the ticket's first pitch;
+# and it grades through load_pair_builder_sections like the other pools.
+# It is built from a PRIVATE copy of the exposure map and a fresh blocked set,
+# and never feeds pair_pool_used_ids / LAST_HR_SECTION_USED_IDS, so adding it
+# cannot change one name in any existing pool, pair or downstream section.
+LEGACY_6MAN_MODEL_VERSION = "pools_6man_legacy_v1"
+LEGACY_6MAN_RECIPES = (
+    ("Pool A — Strongest", {"core": 1, "hrr": 1, "hybrid": 3, "wtf": 1}, False, False),
+    ("Pool B — Balanced", {"hybrid": 4, "mid": 1, "wtf": 1}, False, False),
+    ("Pool C — Mid / Var", {"mid": 2, "wtf": 4}, True, False),
+    ("Pool D — Contrarian", {"wtf": 4, "mid": 2}, True, True),
+)
+
+
+def build_legacy_6man_pools(candidate_rows, buckets, seed_exposure, pick_tag_map, top5_ids):
+    """Old 6-man recipe (6cd816e5^). Returns [(name, [HitterRecord x6])] A-D.
+
+    seed_exposure is COPIED, never mutated. Same call shape the retired builder
+    used: build_structured_pool -> top_up_pool to 6, blocked set carried A->D,
+    C and D prefer variance, D avoids the top-5 board."""
+    exposure = dict(seed_exposure)
+    blocked: set[int] = set()
+    out = []
+    for name, recipe, variance, avoid_top in LEGACY_6MAN_RECIPES:
+        kw = {"blocked_top_ids": top5_ids} if avoid_top else {}
+        pool = build_structured_pool(candidate_rows, recipe, buckets, exposure, blocked_ids=blocked, **kw)
+        tkw = {"prefer_variance": True} if variance else {}
+        if avoid_top:
+            tkw["avoid_top_ids"] = top5_ids
+        pool = top_up_pool(pool, 6, candidate_rows, blocked, pick_tag_map, **tkw)
+        blocked.update(r.player_id for r in pool)
+        out.append((name, pool))
+    return out
+
+
 def build_pair_sections(rows: List[HitterRecord]) -> Tuple[str, Dict[str, Any]]:
     """
     Pairs and pools. WRAPPED, because a failure here must not cost the slate.
@@ -12917,13 +12958,13 @@ def build_pair_sections(rows: List[HitterRecord]) -> Tuple[str, Dict[str, Any]]:
         print("!! pairs/pools section failed — slate continues without it")
         print(f"!! {type(e).__name__}: {e}")
         traceback.print_exc()
-        return "", {"recommended_pairs": [], "pools_4man": [], "pools_6man": [], "pools_3man": []}
+        return "", {"recommended_pairs": [], "pools_4man": [], "pools_6man": [], "pools_3man": [], "pools_6man_legacy": []}
 
 
 def _build_pair_sections(rows: List[HitterRecord]) -> Tuple[str, Dict[str, Any]]:
     global LAST_HR_SECTION_USED_IDS
     LAST_HR_SECTION_USED_IDS = set()
-    if len(rows) < 6: return "", {"recommended_pairs": [], "pools_4man": [], "pools_6man": [], "pools_3man": []}
+    if len(rows) < 6: return "", {"recommended_pairs": [], "pools_4man": [], "pools_6man": [], "pools_3man": [], "pools_6man_legacy": []}
     candidate_rows = top_pool_candidates(rows, 62)
     ranked = sorted(candidate_rows, key=_pool_leg_score, reverse=True)
     pick_tag_map = game_pick_type_map(rows)
@@ -13020,6 +13061,7 @@ def _build_pair_sections(rows: List[HitterRecord]) -> Tuple[str, Dict[str, Any]]
             pool6_exposure[_pid] = 99
     for _pid in pair_pool_used_ids:
         pool6_exposure[_pid] = 99
+    legacy6_seed_exposure = dict(pool6_exposure)  # snapshot BEFORE the 3-man builds mutate it
     pool6_blocked:set[int]=set()
     # REBALANCED (2026-07-25, pass 2): same slot-level backtest as the 4-man
     # pools above -- core ran 10.4% in both 6-Man A and B (consistent
@@ -13067,6 +13109,11 @@ def _build_pair_sections(rows: List[HitterRecord]) -> Tuple[str, Dict[str, Any]]
     # Kept under the old names so downstream consumers that read pool6_* keep
     # working; they now hold three names each rather than six.
     pool6_a, pool6_b, pool6_c, pool6_d = pool3_a, pool3_b, pool3_c, pool3_d
+    # Old 6-man pools, shown beside the 3-man ones. Does not touch
+    # pair_pool_used_ids (see build_legacy_6man_pools).
+    legacy6 = build_legacy_6man_pools(candidate_rows, buckets, legacy6_seed_exposure, pick_tag_map, top5_ids)
+    lines.append(""); lines.append("🏊 6-MAN HR POOLS  (the old recipe, shown beside the 3-man pools)")
+    lines.extend(format_pool_columns(legacy6[0][0], legacy6[0][1], legacy6[1][0], legacy6[1][1], legacy6[2][0], legacy6[2][1], legacy6[3][0], legacy6[3][1], pick_tag_map, width=34))
     LAST_HR_SECTION_USED_IDS = set(pair_pool_used_ids)
 
     # JSON pools added per audit (2026-06-27) -- mirrors System 1's pool
@@ -13130,6 +13177,11 @@ def _build_pair_sections(rows: List[HitterRecord]) -> Tuple[str, Dict[str, Any]]
         _s2_pool_json("Pool C — Balanced", pool6_c, len(pool6_c)),
         _s2_pool_json("Pool D — Variance", pool6_d, len(pool6_d)),
     ]
+    json_pools_6man_legacy = []
+    for _nm, _pl in legacy6:
+        _blob = _s2_pool_json(_nm, _pl, len(_pl))
+        _blob["model_version"] = LEGACY_6MAN_MODEL_VERSION
+        json_pools_6man_legacy.append(_blob)
     json_payload = {
         # available_pool added per audit (2026-06-27) -- the frontend
         # (Pairs.js) uses this as its PRIMARY data source for client-side
@@ -13146,6 +13198,7 @@ def _build_pair_sections(rows: List[HitterRecord]) -> Tuple[str, Dict[str, Any]]
         "pools_4man": json_pools_4man,
         "pools_3man": json_pools_3man,
         "pools_6man": [],
+        "pools_6man_legacy": json_pools_6man_legacy,
     }
     return "\n".join(lines), json_payload
 
@@ -15231,7 +15284,7 @@ Use ALT LOOKS as quality variance, not primary plays.
             report_text += "\n\n" + the_four_text
         if args.full and game_by_game_text:
             report_text += "\n\n" + game_by_game_text
-        pair_sections_json: Dict[str, Any] = {"recommended_pairs": [], "pools_4man": [], "pools_6man": [], "pools_3man": []}
+        pair_sections_json: Dict[str, Any] = {"recommended_pairs": [], "pools_4man": [], "pools_6man": [], "pools_3man": [], "pools_6man_legacy": []}
         if not args.no_pairs:
             pair_text, pair_sections_json = build_pair_sections(all_rows)
             if pair_text and hot_power_pairs_text:
@@ -15705,6 +15758,7 @@ Use ALT LOOKS as quality variance, not primary plays.
                 "pools_4man": pair_sections_json.get("pools_4man", []),
                 "pools_3man": pair_sections_json.get("pools_3man", []),
                 "pools_6man": pair_sections_json.get("pools_6man", []),
+                "pools_6man_legacy": pair_sections_json.get("pools_6man_legacy", []),
                 # MINI-BOT AUDIT (2026-08-08, B2): available_pool is the
                 # frontend's PRIMARY source for Build-a-Pair — it was built
                 # every night and then dropped right here, which is why the

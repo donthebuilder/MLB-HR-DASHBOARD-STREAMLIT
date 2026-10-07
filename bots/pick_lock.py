@@ -129,13 +129,13 @@ SLATE_FILES = ["current/today.json", "current/today_slim.json",
 # a replacement after the ticket is live would be inventing a bet nobody made.
 POOL_FILES = ["current/pair_builder_latest.json", "pair_builder_latest.json"]
 POOL_SECTIONS = ("recommended_pairs", "recommended_3mans",
-                 "pools_4man", "pools_3man", "pools_6man")
+                 "pools_4man", "pools_3man", "pools_6man", "pools_6man_legacy")
 
 # Restored verbatim onto a locked ticket, because they were computed FOR that
 # roster. Leaving today's score on yesterday's names is how you get a pool
 # labelled "Strongest" that is arithmetically nothing of the sort.
 TICKET_FIELDS = ("name", "label", "type", "lane_key", "pair_key", "pair_score",
-                 "score", "pool_score", "size", "risk", "tags", "reason")
+                 "score", "pool_score", "size", "risk", "tags", "reason", "model_version")
 
 # Enough to render a locked man who has since vanished from the candidate pool.
 STUB_FIELDS = ("player_id", "name", "team", "opponent", "game_pk", "lineup_spot")
