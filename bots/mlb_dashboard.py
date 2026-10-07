@@ -1244,6 +1244,12 @@ class HitterRecord:
     # multiplier, plus its board rank. Exported via asdict for grading.
     hr_score_shadow: float = 0.0
     shadow_board_rank: int = 0
+    # GATE-POWER LABEL SHADOW (2026-10-06): the HR label / best bet / Strong-HR
+    # flag as they WOULD be if batted_ball_power_score were assigned before the
+    # label gate reads it. Informational only: no live field reads this. Empty
+    # unless a PREGAME run stamped it; carried with the row at first pitch.
+    # See stamp_hr_label_shadow().
+    hr_label_shadow: Dict[str, Any] = dataclasses.field(default_factory=dict)
     # Longest-HR distance metric (2026-07-13): who hits the farthest ball,
     # from recent 400ft+/350ft+ rates, avg EV, and avg batted-ball distance.
     longest_hr_score: float = 0.0
@@ -7152,7 +7158,7 @@ def _hr2_first_reasons(rec: "HitterRecord", bbe: Dict[str, Any], pitch_fit: floa
     return reasons[:3]
 
 
-def _hr2_best_bet_and_label(rec: "HitterRecord", score: float, pitch_fit: float, trap: bool, hidden: bool, strong_confirmed: bool) -> Tuple[str, str]:
+def _hr2_best_bet_and_label_core(rec: "HitterRecord", score: float, pitch_fit: float, trap: bool, hidden: bool, strong_confirmed: bool) -> Tuple[str, str]:
     if trap:
         return "Avoid for HR", "Be Careful"
     if hidden:
@@ -7197,6 +7203,72 @@ def _hr2_best_bet_and_label(rec: "HitterRecord", score: float, pitch_fit: float,
     if score >= 55:
         return "HR or HRR", "Safer Production Play"
     return "HRR / Hits", "Better for HRR"
+
+
+# ── GATE-POWER LABEL SHADOW (2026-10-06) ─────────────────────────────────────
+# THE BUG THIS SHADOWS: _hr2_best_bet_and_label_core() counts
+# `batted_ball_power_score >= 80` as one of its five gate signals, but
+# apply_model_v2_layers() calls it BEFORE it assigns h.batted_ball_power_score
+# (= round(batted_shape, 1)). At call time the field is the dataclass default
+# 0.0, so that signal can never fire, the gate tops out at four signals, and
+# 'Strong HR Look' / 'HR Look' (>= 3) are harder to reach than intended.
+#
+# THE FIX IS NOT APPLIED TO THE LIVE LABEL. A new model version runs in shadow:
+# the wrapper below leaves the live call's result exactly as it was and only
+# remembers its inputs; stamp_hr_label_shadow() (called per game, pregame only)
+# re-runs the SAME core on a snapshot of those inputs with
+# batted_ball_power_score set to its final value -- the corrected ordering --
+# and stores both verdicts on row.hr_label_shadow. apply_model_v2_layers is in
+# _HR_CONFIG_FORMULA_FUNCS and is deliberately NOT edited, so config_hash and
+# every live field stay byte-identical (tests/test_hr_label_shadow.py).
+HR_LABEL_SHADOW_VERSION = "mlb_hr_v4+gate_power_order_1"
+_HR_LABEL_SHADOW_PENDING: Dict[int, Tuple[Any, Any, Tuple[Any, ...], Tuple[str, str]]] = {}
+
+
+def _hr2_best_bet_and_label(rec: "HitterRecord", score: float, pitch_fit: float, trap: bool, hidden: bool, strong_confirmed: bool) -> Tuple[str, str]:
+    out = _hr2_best_bet_and_label_core(rec, score, pitch_fit, trap, hidden, strong_confirmed)
+    try:
+        snap = dataclasses.replace(rec)
+        snap.bbe_profile = dict(getattr(rec, "bbe_profile", {}) or {})
+        _HR_LABEL_SHADOW_PENDING[id(rec)] = (rec, snap, (score, pitch_fit, trap, hidden, strong_confirmed), out)
+    except Exception:
+        pass   # the shadow can never block or alter the live call
+    return out
+
+
+def stamp_hr_label_shadow(rows: List["HitterRecord"], game_started: bool) -> List["HitterRecord"]:
+    """Stamp row.hr_label_shadow on freshly scored rows (mutates, returns rows).
+
+    Pregame only: when the game has started (first pitch or later) nothing is
+    stamped -- the pending inputs are just dropped -- so no shadow value is ever
+    computed or written at/after first pitch. A row the first-pitch freeze
+    carries over from the last pregame run keeps that run's stamp
+    (freeze_pregame_rows copies the whole row)."""
+    for h in rows:
+        entry = _HR_LABEL_SHADOW_PENDING.pop(id(h), None)
+        if entry is None or game_started:
+            continue
+        _rec, snap, args, (live_best, live_label) = entry
+        try:
+            bpp = safe_float(getattr(h, "batted_ball_power_score", 0.0), 0.0)
+            snap.batted_ball_power_score = h.batted_ball_power_score   # the corrected ordering
+            best, label = _hr2_best_bet_and_label_core(snap, *args)
+            h.hr_label_shadow = {
+                "model_version": HR_LABEL_SHADOW_VERSION,
+                "label": label,
+                "best_bet_type": best,
+                "high_confidence_hr_flag": bool(label == "Strong HR Look"),
+                "gate_power_signal": bool(bpp >= 80),
+                "batted_ball_power_score": h.batted_ball_power_score,
+                # what the live gate said on the same inputs, same moment
+                "live_label": live_label,
+                "live_best_bet_type": live_best,
+                "live_high_confidence_hr_flag": bool(live_label == "Strong HR Look"),
+                "differs": bool(label != live_label or best != live_best),
+            }
+        except Exception as exc:
+            print(f"hr_label_shadow skipped for {getattr(h, 'player_id', '?')}: {exc}", file=sys.stderr)
+    return rows
 
 
 def _v31_best_pitch_detail(h: HitterRecord) -> Dict[str, Any]:
@@ -14712,6 +14784,8 @@ def build_prediction_log_lines(run_meta: Dict[str, Any], rows_payload: List[Dict
             # data to compare rather than needing to start from zero.
             "candidate": {
                 "hr_score_shadow": row.get("hr_score_shadow"),
+                # GATE-POWER LABEL SHADOW (2026-10-06): {} unless a pregame run stamped it
+                "hr_label_shadow": row.get("hr_label_shadow") or {},
                 "best_blend_score": row.get("best_blend_score"),
                 "alt_hr_score": row.get("alt_hr_score"),
                 # SHADOW PICKS (2026-10-01): {rule: 1|2} -- see stamp_shadow_picks().
@@ -14991,6 +15065,7 @@ def main() -> int:
                 # the exact run pick_lock.py was always going to treat as
                 # official, rather than fighting it. It never reopens the
                 # post-lock drift hole pick_lock.py exists to close.
+                stamp_hr_label_shadow(rows, game_has_started(game))   # pregame only; see its docstring
                 if game_has_started(game):
                     # FROZEN AT FIRST PITCH (2026-10-04, Donovan: "freeze at
                     # first pitch"). This build exists for the REAL lineup, but
