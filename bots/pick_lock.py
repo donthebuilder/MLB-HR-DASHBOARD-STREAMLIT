@@ -80,6 +80,7 @@ import argparse
 import datetime as dt
 import json
 import os
+import sys
 import urllib.request
 from pathlib import Path
 from typing import Any
@@ -670,13 +671,18 @@ def index_players(payload: dict) -> dict[int, dict]:
 
 
 def post_discord(lines: list[str]) -> None:
-    """Shared helper: User-Agent set (Discord 403s urllib's default) and the
-    secret split on commas/whitespace/newlines."""
-    hook = os.environ.get("DISCORD_WEBHOOK", "")
-    if not hook or not lines:
+    """Ops post (DISCORD_OPS_WEBHOOK, else the shared room until one exists).
+    User-Agent set by bots/discord_post.py; a post that went nowhere is printed
+    to stderr, not swallowed."""
+    if not lines:
         return
     import discord_post
-    discord_post.post(hook, {"content": "\n".join(lines)[:1900]})
+    if not discord_post.webhook_urls(discord_post.ops_secret()):
+        print("  ! DISCORD_OPS_WEBHOOK / DISCORD_WEBHOOK unset: pick-lock alert NOT delivered", file=sys.stderr)
+        return
+    ok, bad, _ops = discord_post.post_ops({"content": "\n".join(lines)[:1900]})
+    if not ok:
+        print(f"  ! pick-lock alert delivered to 0 webhook(s) ({bad} failed)", file=sys.stderr)
 
 
 def slate_date_fallback(first_pitches: dict, now: dt.datetime | None = None) -> str:
@@ -1117,12 +1123,12 @@ def main() -> int:
         # --dry-run changes nothing: that includes the real Discord room.
         if not a.dry_run:
           post_discord(
-            [f"**📌 Pick lock held** — {len(rejects)} designation change{'s' if len(rejects) > 1 else ''} "
+            [f"**📌 Pick lock held** — {len(rejects)} pick change{'s' if len(rejects) > 1 else ''} "
              f"refused after first pitch ({date})", ""]
             + [f"· **{r['cat']}** — kept **{r['locked']['name']}**, refused {r['attempted']['name']}"
                for r in rejects[:8]]
-            + ["", "_Picks freeze when their game starts. This is the rule the receipts card has always "
-               "claimed; it is enforced now._"]
+            + ([f"+{len(rejects) - 8} more not listed"] if len(rejects) > 8 else [])
+            + ["", "_Picks freeze when their game starts. This is that rule holding._"]
         )
     return 0
 

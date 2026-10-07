@@ -15601,9 +15601,11 @@ Use ALT LOOKS as quality variance, not primary plays.
                     }]}
                     for _dw in _dws:
                         try:
-                            _req = _ur.Request(_dw, data=json.dumps(_payload).encode("utf-8"),
-                                               headers={"Content-Type": "application/json", "User-Agent": "moonshot-bot"})
-                            _ur.urlopen(_req, timeout=10)
+                            try:
+                                import discord_post as _dp
+                            except ImportError:
+                                from bots import discord_post as _dp
+                            _dp.send(_dw, json.dumps(_payload).encode("utf-8"), timeout=10)
                         except Exception as _pexc:
                             print(f"discord slate post failed: {_pexc}", file=sys.stderr)
                     db.set(_sig_key, {"sig": _sig, "map": _pick_map})

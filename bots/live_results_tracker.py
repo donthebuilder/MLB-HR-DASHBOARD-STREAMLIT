@@ -12,6 +12,11 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import requests
+try:
+    import discord_post   # bots/ on sys.path (scripts, CI)
+    import digest_budget
+except ImportError:       # imported as bots.live_results_tracker
+    from bots import discord_post, digest_budget
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.pdfgen import canvas
@@ -524,16 +529,11 @@ def _post_discord_payload(payload: dict) -> tuple:
     if not urls:
         return 0, 0
     ok = bad = 0
+    body = json.dumps(payload).encode("utf-8")
     for i, url in enumerate(urls, 1):
         try:
-            import urllib.request
-            req = urllib.request.Request(
-                url,
-                data=json.dumps(payload).encode("utf-8"),
-                headers={"Content-Type": "application/json", "User-Agent": "moonshot-bot"},
-            )
-            with urllib.request.urlopen(req, timeout=10) as r:
-                print(f"discord hook {i}/{len(urls)}: HTTP {r.status}")
+            status = discord_post.send(url, body, timeout=10)
+            print(f"discord hook {i}/{len(urls)}: HTTP {status}")
             ok += 1
         except Exception as exc:
             code = getattr(exc, "code", None)
@@ -591,16 +591,11 @@ def _post_discord(msg: str) -> tuple:
     if not urls:
         return 0, 0
     ok = bad = 0
+    body = json.dumps({"content": msg[:1900]}).encode("utf-8")
     for i, url in enumerate(urls, 1):
         try:
-            import urllib.request
-            req = urllib.request.Request(
-                url,
-                data=json.dumps({"content": msg[:1900]}).encode("utf-8"),
-                headers={"Content-Type": "application/json", "User-Agent": "moonshot-bot"},
-            )
-            with urllib.request.urlopen(req, timeout=10) as r:
-                print(f"discord hook {i}/{len(urls)}: HTTP {r.status}")
+            status = discord_post.send(url, body, timeout=10)
+            print(f"discord hook {i}/{len(urls)}: HTTP {status}")
             ok += 1
         except Exception as exc:
             code = getattr(exc, "code", None)
@@ -608,80 +603,6 @@ def _post_discord(msg: str) -> tuple:
             print(f"discord hook {i}/{len(urls)} FAILED: {exc}{hint}", file=sys.stderr)
             bad += 1
     return ok, bad
-
-
-def send_pitching_change_alerts(game_cache: Dict[int, Dict[str, Any]], rows: List[Dict[str, Any]]) -> None:
-    """🚪 PEN DOOR alerts (2026-08-08, Donovan: "add a discord noti for when
-    the pitchers change in the game").
-
-    The live feed marks every change explicitly — eventType
-    'pitching_substitution' with a written description ("Pitching Change:
-    Evan Sisk replaces Carmen Mlodzinski.") and a UTC startTime; VERIFIED on
-    a real game feed before this was written. This job runs hourly, so the
-    honest framing is "changes in the last hour", batched into one post.
-
-    Dedupe without state: the window is the PREVIOUS full clock hour
-    [tick-1h, tick). Every hourly run sees a disjoint window, so no change
-    is ever posted twice and none is skipped (a change landing between the
-    tick and this run's start simply ships next hour).
-
-    Why bettors care enough to ping a phone: the door opening is the HR
-    window opening — our own graded pen numbers say relievers bleed homers
-    late. Each line names which of tonight's picks are on the attacking
-    side of the new arm."""
-    if not _discord_urls():
-        return
-    now = dt.datetime.now(dt.UTC)
-    tick = now.replace(minute=0, second=0, microsecond=0)
-    w_start, w_end = tick - dt.timedelta(hours=1), tick
-
-    picks_by_game: Dict[int, List[Dict[str, Any]]] = {}
-    for r in rows:
-        try:
-            picks_by_game.setdefault(int(r.get("game_pk") or 0), []).append(r)
-        except (TypeError, ValueError):
-            continue
-
-    lines: List[str] = []
-    for game_pk, feed in game_cache.items():
-        gteams = (feed.get("gameData", {}) or {}).get("teams", {}) or {}
-        home_ab = (gteams.get("home") or {}).get("abbreviation", "")
-        away_ab = (gteams.get("away") or {}).get("abbreviation", "")
-        for play in ((feed.get("liveData", {}) or {}).get("plays", {}) or {}).get("allPlays", []) or []:
-            about = play.get("about") or {}
-            for ev in play.get("playEvents") or []:
-                det = ev.get("details") or {}
-                if det.get("eventType") != "pitching_substitution":
-                    continue
-                ts = str(ev.get("startTime") or "")
-                try:
-                    t = dt.datetime.fromisoformat(ts.replace("Z", "+00:00"))
-                except ValueError:
-                    continue
-                if not (w_start <= t < w_end):
-                    continue
-                half = str(about.get("halfInning") or "")
-                inning = about.get("inning")
-                pitching_ab = home_ab if half == "top" else away_ab
-                batting_ab = away_ab if half == "top" else home_ab
-                desc = str(det.get("description") or "").rstrip(".")
-                our = [str(r.get("name") or "").split()[-1]
-                       for r in picks_by_game.get(game_pk, [])
-                       if str(r.get("team") or "").upper() == batting_ab][:3]
-                line = f"🚪 **{pitching_ab}** pen, {half} {inning}: {desc}"
-                if our:
-                    line += f" — our bats attacking: {', '.join(our)}"
-                lines.append(line)
-
-    if not lines:
-        return
-    header = (f"🚪 **PEN DOORS — last hour** ({len(lines)} change{'s' if len(lines) != 1 else ''})\n"
-              "Fresh arms are where the late homers live — full pen workloads on the site.")
-    ok, bad = _post_discord(header + "\n" + "\n".join(lines[:15]))
-    if ok:
-        print(f"pen-door alert: {len(lines)} change(s) posted ({ok} hook(s), {bad} failed)")
-    else:
-        print(f"pen-door alert: DELIVERED NOTHING — {len(lines)} change(s) had nowhere to go", file=sys.stderr)
 
 
 def _render_night_card(tally: dict, date_str: str) -> bytes:
@@ -744,19 +665,18 @@ def _post_discord_file(png: bytes, filename: str, content: str) -> tuple:
     if not urls:
         return 0, 0
     ok = bad = 0
+    import uuid
+    boundary = uuid.uuid4().hex
+    pj = json.dumps({"content": content}).encode()
+    body = b""
+    body += f"--{boundary}\r\nContent-Disposition: form-data; name=\"payload_json\"\r\nContent-Type: application/json\r\n\r\n".encode() + pj + b"\r\n"
+    body += f"--{boundary}\r\nContent-Disposition: form-data; name=\"files[0]\"; filename=\"{filename}\"\r\nContent-Type: image/png\r\n\r\n".encode() + png + b"\r\n"
+    body += f"--{boundary}--\r\n".encode()
     for i, url in enumerate(urls, 1):
         try:
-            import urllib.request, uuid
-            boundary = uuid.uuid4().hex
-            pj = json.dumps({"content": content}).encode()
-            body = b""
-            body += f"--{boundary}\r\nContent-Disposition: form-data; name=\"payload_json\"\r\nContent-Type: application/json\r\n\r\n".encode() + pj + b"\r\n"
-            body += f"--{boundary}\r\nContent-Disposition: form-data; name=\"files[0]\"; filename=\"{filename}\"\r\nContent-Type: image/png\r\n\r\n".encode() + png + b"\r\n"
-            body += f"--{boundary}--\r\n".encode()
-            req = urllib.request.Request(url, data=body, headers={
-                "Content-Type": f"multipart/form-data; boundary={boundary}", "User-Agent": "moonshot-bot"})
-            with urllib.request.urlopen(req, timeout=15) as r:
-                print(f"discord hook {i}/{len(urls)}: HTTP {r.status}")
+            status = discord_post.send(
+                url, body, content_type=f"multipart/form-data; boundary={boundary}", timeout=15)
+            print(f"discord hook {i}/{len(urls)}: HTTP {status}")
             ok += 1
         except Exception as exc:
             code = getattr(exc, "code", None)
@@ -1031,6 +951,124 @@ def post_pregame_board(graded_slots, date_str: str, prior_posted=None, now=None)
     return prior_posted
 
 
+_LEGACY_SIX_PREFIX = "SIX-MAN LEGACY "
+_LEGACY_HALF_PREFIX = "OLD-RECIPE 3-MAN "
+
+
+def _pool_snapshot(payload) -> dict:
+    """label -> (hr_count, total_count, member names, lower-cased homer names)."""
+    out = {}
+    for pl in (((payload or {}).get("pair_pool_results") or {}).get("graded_pools") or []):
+        out[str(pl.get("label"))] = (
+            int(pl.get("hr_count") or 0), int(pl.get("total_count") or 0),
+            [str(m.get("name")) for m in (pl.get("players") or []) if isinstance(m, dict)],
+            set(str(x).lower() for x in (pl.get("homer_names") or [])),
+        )
+    return out
+
+
+def _legacy_family(label: str):
+    """('A', 'six' | 'half', display name) for an old-recipe label, else None.
+    One legacy six-man pool and its two halves hold the same six names, so
+    they are one family: one swing can complete all three at once."""
+    import re as _re
+    if label.startswith(_LEGACY_SIX_PREFIX):
+        nm = label[len(_LEGACY_SIX_PREFIX):]
+        m = _re.match(r"Pool\s+([A-Z])", nm)
+        return (m.group(1), "six", nm) if m else None
+    if label.startswith(_LEGACY_HALF_PREFIX):
+        nm = label[len(_LEGACY_HALF_PREFIX):]
+        m = _re.match(r"Pool\s+([A-Z])\d", nm)
+        return (m.group(1), "half", nm) if m else None
+    return None
+
+
+def pool_ticket_lines(old_payload, new_payload) -> list:
+    """The 🎟 / 💰 pool lines for one digest. A pool needs 2 or more names
+    (a one-man pool is his own 💥 line). One cash event = one alert: a legacy
+    six-man pool and its two halves share names, so they are reported as ONE
+    line naming the six-man pool and which halves cashed."""
+    oldp, newp = _pool_snapshot(old_payload), _pool_snapshot(new_payload)
+    lines, fams, fam_order = [], {}, []
+    for label, (hit, tot, members, homered) in newp.items():
+        if not tot:
+            continue
+        old_hit = oldp.get(label, (0,))[0]
+        fam = _legacy_family(label)
+        if fam:
+            letter, kind, nm = fam
+            if letter not in fams:
+                fams[letter] = {"six": None, "halves": []}
+                fam_order.append((letter, len(lines)))
+                lines.append(None)   # placeholder keeps first-appearance order
+            rec = (label, nm, hit, tot, members, homered, old_hit)
+            if kind == "six":
+                fams[letter]["six"] = rec
+            else:
+                fams[letter]["halves"].append(rec)
+            continue
+        # POOL CASHED means a POOL -- 2 or more names riding together.
+        # tot == 1 is a single player, already covered by his own 💥 HR
+        # line above; alerting "POOL CASHED" the moment a one-man "pool"
+        # homers is the same event announced twice; a real cash needs a
+        # second (or third+) name to have come home with him (2026-09-06,
+        # Donovan: "the pool cashing is only for 2 or more").
+        if tot >= 2 and hit >= tot and old_hit < tot:
+            lines.append(f"💰 **POOL CASHED — {label}**: all {tot} went deep")
+        elif tot >= 2 and hit == tot - 1 and old_hit < tot - 1:
+            missing = [m for m in members if m.lower() not in homered]
+            lines.append(f"🎟 {label} · **{hit}/{tot}** — one swing away ({', '.join(missing[:3])})")
+    for letter, slot in fam_order:
+        f = fams[letter]
+        six, halves = f["six"], f["halves"]
+        recs = ([six] if six else []) + halves
+        cashed_now = [r for r in recs if r[3] >= 2 and r[2] >= r[3] and r[6] < r[3]]
+        if cashed_now:
+            halves_cashed = [r for r in halves if r[3] >= 2 and r[2] >= r[3]]
+            half_names = " + ".join(r[1] for r in halves_cashed)
+            if six and six in cashed_now:
+                tail = f" · cashed halves: {half_names}" if half_names else ""
+                lines[slot] = f"💰 **POOL CASHED — {six[0]}**: all {six[3]} went deep{tail}"
+            else:
+                head = six[0] if six else f"{_LEGACY_HALF_PREFIX}Pool {letter}"
+                extra = f" (the six-man is {six[2]}/{six[3]})" if six else ""
+                lines[slot] = (f"💰 **POOL CASHED — {head}**: half {half_names or cashed_now[0][1]} "
+                               f"all {cashed_now[0][3]} went deep{extra}")
+            continue
+        away = [r for r in recs if r[3] >= 2 and r[2] == r[3] - 1 and r[6] < r[3] - 1]
+        if not away:
+            continue
+        if six and six in away:
+            r = six
+            missing = [m for m in r[4] if m.lower() not in r[5]]
+            lines[slot] = f"🎟 {r[0]} · **{r[2]}/{r[3]}** — one swing away ({', '.join(missing[:3])})"
+        else:
+            head = six[0] if six else f"{_LEGACY_HALF_PREFIX}Pool {letter}"
+            parts = []
+            for r in away:
+                missing = [m for m in r[4] if m.lower() not in r[5]]
+                parts.append(f"half {r[1]} **{r[2]}/{r[3]}** ({', '.join(missing[:3])})")
+            lines[slot] = f"🎟 {head} · one swing away: " + " · ".join(parts)
+    return [ln for ln in lines if ln]
+
+
+def pair_ticket_lines(old_payload, new_payload) -> list:
+    def hr_names(p):
+        slots = (p or {}).get("graded_slots") or (p or {}).get("results") or []
+        return set(str(sl.get("name", "")).lower() for sl in slots
+                   if int(sl.get("actual_hr") or 0) >= 1 or int(sl.get("got_hr") or 0) >= 1)
+    old_hr, new_hr = hr_names(old_payload), hr_names(new_payload)
+    out = []
+    for pr in (((new_payload or {}).get("pair_pool_results") or {}).get("all_pairs") or []):
+        a_n = str((pr.get("a") or {}).get("name", ""))
+        b_n = str((pr.get("b") or {}).get("name", ""))
+        if not a_n or not b_n:
+            continue
+        if a_n.lower() in new_hr and b_n.lower() in new_hr and not (a_n.lower() in old_hr and b_n.lower() in old_hr):
+            out.append(f"💰 **PAIR CASHED — {a_n} + {b_n}** ({pr.get('label', 'pair')})")
+    return out
+
+
 def _webhook_transitions(old_payload, new_payload, date_str: str = "") -> None:
     """Diff the previous published live results against the new ones and post
     ONE Discord digest per grading run (2026-08-06, expanded on request).
@@ -1244,47 +1282,8 @@ def _webhook_transitions(old_payload, new_payload, date_str: str = "") -> None:
         if dead_lines:
             sections.append(("✗ DIDN'T GET THERE", dead_lines[:8]))
 
-        # ── pools ──
-        def pools(p):
-            out = {}
-            for pl in (((p or {}).get("pair_pool_results") or {}).get("graded_pools") or []):
-                out[str(pl.get("label"))] = (
-                    int(pl.get("hr_count") or 0), int(pl.get("total_count") or 0),
-                    [str(m.get("name")) for m in (pl.get("players") or []) if isinstance(m, dict)],
-                    set(str(x).lower() for x in (pl.get("homer_names") or [])),
-                )
-            return out
-        ticket_lines = []
-        oldp, newp = pools(old_payload), pools(new_payload)
-        for label, (hit, tot, members, homered) in newp.items():
-            if not tot:
-                continue
-            old_hit = oldp.get(label, (0,))[0]
-            # POOL CASHED means a POOL -- 2 or more names riding together.
-            # tot == 1 is a single player, already covered by his own 💥 HR
-            # line above; alerting "POOL CASHED" the moment a one-man "pool"
-            # homers is the same event announced twice; a real cash needs a
-            # second (or third+) name to have come home with him (2026-09-06,
-            # Donovan: "the pool cashing is only for 2 or more").
-            if tot >= 2 and hit >= tot and old_hit < tot:
-                ticket_lines.append(f"💰 **POOL CASHED — {label}**: all {tot} went deep")
-            elif tot >= 2 and hit == tot - 1 and old_hit < tot - 1:
-                missing = [m for m in members if m.lower() not in homered]
-                ticket_lines.append(f"🎟 {label} · **{hit}/{tot}** — one swing away ({', '.join(missing[:3])})")
-
-        # ── pairs ──
-        def hr_names(p):
-            slots = (p or {}).get("graded_slots") or (p or {}).get("results") or []
-            return set(str(sl.get("name", "")).lower() for sl in slots
-                       if int(sl.get("actual_hr") or 0) >= 1 or int(sl.get("got_hr") or 0) >= 1)
-        old_hr, new_hr = hr_names(old_payload), hr_names(new_payload)
-        for pr in (((new_payload or {}).get("pair_pool_results") or {}).get("all_pairs") or []):
-            a_n = str((pr.get("a") or {}).get("name", ""))
-            b_n = str((pr.get("b") or {}).get("name", ""))
-            if not a_n or not b_n:
-                continue
-            if a_n.lower() in new_hr and b_n.lower() in new_hr and not (a_n.lower() in old_hr and b_n.lower() in old_hr):
-                ticket_lines.append(f"💰 **PAIR CASHED — {a_n} + {b_n}** ({pr.get('label', 'pair')})")
+        # ── pools and pairs (one alert per cash event; see pool_ticket_lines) ──
+        ticket_lines = pool_ticket_lines(old_payload, new_payload) + pair_ticket_lines(old_payload, new_payload)
 
         # ── night wrap: per-category record, once, when grading turns final ──
         def final_share(p):
@@ -1340,7 +1339,7 @@ def _webhook_transitions(old_payload, new_payload, date_str: str = "") -> None:
             if _tot_n2:
                 _pct = round(100 * _tot_ok2 / _tot_n2)
                 wrap_lines.append(
-                    f"📊 **{_tot_ok2}/{_tot_n2}** designated picks cleared their bar tonight ({_pct}%)"
+                    f"📊 **{_tot_ok2}/{_tot_n2}** picks cleared their bar tonight ({_pct}%)"
                     + (f" · {_hr_tonight} total HR from the board" if _hr_tonight else "")
                 )
             if missed_picks:
@@ -1369,7 +1368,14 @@ def _webhook_transitions(old_payload, new_payload, date_str: str = "") -> None:
                 except Exception as _cexc:
                     print(f"night card skipped: {_cexc}")
         if ticket_lines:
-            sections.append(("🎫 TICKETS", ticket_lines[:8]))
+            # Pool / pair lines are announced ONCE and never again, so they sit
+            # right after THE RECORD (ahead of the lower-value sections), cashes
+            # first. Nothing is cut at 8: digest_budget splits into a second
+            # message instead, and says "+N more" if it ever runs out of room.
+            ticket_lines.sort(key=lambda ln: 0 if "CASHED" in ln else 1)
+            _tix = ("🎫 TICKETS", ticket_lines)
+            _at = 1 if sections and sections[0][0].startswith("🧾 THE RECORD") else 0
+            sections.insert(_at, _tix)
 
         if not sections:
             return
@@ -1379,24 +1385,30 @@ def _webhook_transitions(old_payload, new_payload, date_str: str = "") -> None:
         cashed = any("CASHED" in ln for _, ls in sections for ln in ls)
         went_deep = any(t.startswith("💥") for t, _ in sections)
         color = 0xF5C242 if cashed else (0x4ADE80 if went_deep else 0xF97316)
-        desc_parts = []
-        for title, ls in sections:
-            desc_parts.append(f"**{title}**\n" + "\n".join(ls))
-        desc = "\n\n".join(desc_parts)[:4000]
+        descs, _left_out = digest_budget.pack_sections(sections)
+        if len(descs) > 1 or _left_out:
+            print(f"live digest: {len(descs)} message(s), {_left_out} line(s) not shown")
         src_tally = tally or live_tally
         ok_t = sum(ok for ok, n in src_tally.values()) if src_tally else None
         n_t = sum(n for ok, n in src_tally.values()) if src_tally else None
         footer = (f"picks {ok_t}/{n_t} on their own bars tonight" if n_t else "moonshot live digest") \
             + " · stats & analysis, not financial or betting advice"
-        _deliv_ok, _deliv_bad = _post_discord_payload({
-            "embeds": [{
-                "title": "📡 Moonshot — live digest",
-                "description": desc,
-                "color": color,
-                "footer": {"text": footer},
-                "timestamp": dt.datetime.now(dt.timezone.utc).isoformat(),
-            }],
-        })
+        _deliv_ok = _deliv_bad = 0
+        for _i, desc in enumerate(descs, 1):
+            _ttl = "📡 Moonshot — live digest" + (f" ({_i}/{len(descs)})" if len(descs) > 1 else "")
+            _o, _b = _post_discord_payload({
+                "embeds": [{
+                    "title": _ttl,
+                    "description": desc,
+                    "color": color,
+                    "footer": {"text": footer},
+                    "timestamp": dt.datetime.now(dt.timezone.utc).isoformat(),
+                }],
+            })
+            _deliv_ok += _o
+            _deliv_bad += _b
+            if not _o:
+                print(f"live digest message {_i}/{len(descs)} DELIVERED NOTHING", file=sys.stderr)
         if _deliv_ok:
             print(f"live digest posted ({_deliv_ok} hook(s), {_deliv_bad} failed)")
         else:
@@ -4400,8 +4412,8 @@ def main() -> int:
     # (2026-08-08, same day they landed here): Donovan wanted the ping when
     # the change HAPPENS, not an hourly digest. The 10-minute watcher owns
     # the job alone — calling the hourly version too would double-post
-    # every change. send_pitching_change_alerts stays defined as the
-    # fallback if the watcher ever has to come out.
+    # every change. The hourly send_pitching_change_alerts was deleted
+    # 2026-10-07 (never called; see git history if the watcher ever comes out).
 
     graded_slots = annotate_designed(graded_slots)
 

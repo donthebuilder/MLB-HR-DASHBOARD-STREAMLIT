@@ -56,6 +56,7 @@ jobs:
       - name: Check board freshness
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          DISCORD_OPS_WEBHOOK: ${{ secrets.DISCORD_OPS_WEBHOOK }}
         run: |
           python _main/bots/staleness_watch.py \
             --dir _data/public/data/current \

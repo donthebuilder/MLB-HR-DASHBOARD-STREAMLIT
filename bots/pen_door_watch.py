@@ -62,6 +62,11 @@ import time
 import urllib.request
 from pathlib import Path
 
+try:
+    import discord_post
+except ImportError:
+    from bots import discord_post
+
 API = "https://statsapi.mlb.com/api/v1"
 FEED_FIELDS = ("gameData,teams,home,away,abbreviation,liveData,plays,allPlays,"
                "about,halfInning,inning,playEvents,details,eventType,description,startTime,"
@@ -139,11 +144,8 @@ def _deliver(payload: dict) -> tuple[int, int]:
     ok = bad = 0
     for i, url in enumerate(urls, 1):
         try:
-            req = urllib.request.Request(
-                url, data=json.dumps(payload).encode("utf-8"),
-                headers={"Content-Type": "application/json", "User-Agent": "moonshot-bot"})
-            with urllib.request.urlopen(req, timeout=10) as r:
-                print(f"discord hook {i}/{len(urls)}: HTTP {r.status}")
+            status = discord_post.send(url, json.dumps(payload).encode("utf-8"), timeout=10)
+            print(f"discord hook {i}/{len(urls)}: HTTP {status}")
             ok += 1
         except Exception as exc:
             # 404 = webhook deleted in Discord; 401 = token rotated. Both mean
