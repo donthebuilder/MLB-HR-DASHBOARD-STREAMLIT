@@ -39,6 +39,14 @@ import functools
 import nflreadpy as nfl
 import polars as pl
 
+# The new buckets read the GAME's own schedule facts, joined onto the pbp.
+# (weekday is derived from game_date; rest and the result come from the
+# schedule / the pbp's final score.) If the schedule can't be read the columns
+# are null, every new predicate selects nothing, and the old buckets are
+# untouched.
+_REST_MAX_SHORT = 6      # days; a Thursday game after a Sunday is 4
+_REST_MIN_LONG = 8       # a bye is 13-14, a mini-bye after TNF is 10
+
 # bucket key -> (label, predicate over the pbp frame)
 SPLITS: dict[str, tuple[str, pl.Expr]] = {
     "home":     ("Home",        pl.col("posteam") == pl.col("home_team")),
@@ -55,12 +63,43 @@ SPLITS: dict[str, tuple[str, pl.Expr]] = {
     "h2":       ("2nd half",    pl.col("game_half") == "Half2"),
     "rz":       ("Red zone",    pl.col("yardline_100") <= 20),
     "field":    ("Open field",  pl.col("yardline_100") > 20),
+    # ADDITIVE (2026-10-06): kickoff weekday, rest, and the game's result.
+    "thu":      ("Thursday",    pl.col("wd") == "Thursday"),
+    "sun":      ("Sunday",      pl.col("wd") == "Sunday"),
+    "mon":      ("Monday",      pl.col("wd") == "Monday"),
+    "short":    ("Short week",  pl.col("rest") <= _REST_MAX_SHORT),
+    "rested":   ("Bye / long rest", pl.col("rest") >= _REST_MIN_LONG),
+    "win":      ("In a win",    pl.col("won") == 1),
+    "loss":     ("In a loss",   pl.col("won") == 0),
 }
 
 
 @functools.lru_cache(maxsize=4)
 def _pbp(season: int) -> pl.DataFrame:
-    return nfl.load_pbp(seasons=[season]).filter(pl.col("season_type") == "REG")
+    p = nfl.load_pbp(seasons=[season]).filter(pl.col("season_type") == "REG")
+    return _with_context(p, season)
+
+
+def _with_context(p: pl.DataFrame, season: int) -> pl.DataFrame:
+    """Add wd (weekday name), rest (days, the posteam's) and won (1/0/null)."""
+    p = p.with_columns(
+        pl.col("game_date").str.to_date(strict=False).dt.strftime("%A").alias("wd"),
+        pl.when(pl.col("result").is_null()).then(None)
+          .when(pl.col("result") == 0).then(None)
+          .when(pl.col("posteam") == pl.col("home_team"))
+          .then((pl.col("result") > 0).cast(pl.Int8))
+          .otherwise((pl.col("result") < 0).cast(pl.Int8)).alias("won"),
+    )
+    try:
+        sc = (nfl.load_schedules(seasons=[season])
+              .filter(pl.col("game_type") == "REG")
+              .select("game_id", "home_rest", "away_rest"))
+        p = p.join(sc, on="game_id", how="left").with_columns(
+            pl.when(pl.col("posteam") == pl.col("home_team"))
+              .then(pl.col("home_rest")).otherwise(pl.col("away_rest")).alias("rest"))
+    except Exception:
+        p = p.with_columns(pl.lit(None, dtype=pl.Int32).alias("rest"))
+    return p
 
 
 def _side(p: pl.DataFrame, id_col: str, prefix: str) -> pl.DataFrame:
@@ -149,6 +188,12 @@ SPLIT_PAIRS = [
     ("close", "trailing"),
     ("h1", "h2"),
     ("rz", "field"),
+    # ADDITIVE (2026-10-06). The site draws a pair only when BOTH sides have a
+    # row for the player, so a Sunday-only player simply has no weekday pair.
+    ("thu", "sun"),
+    ("sun", "mon"),
+    ("short", "rested"),
+    ("win", "loss"),
 ]
 
 SPLIT_LABELS = {k: v[0] for k, v in SPLITS.items()}
