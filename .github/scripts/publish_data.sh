@@ -39,6 +39,10 @@ PUBLISH_FILES=(
   tomorrow.txt
   pair_builder_latest.json
   pair_history_summary.json
+  # pairhist_v2: four seasons of active-player pair history, one file per sport (2026-10-07), ~140 KB each
+  pairhist_v2_mlb.json
+  pairhist_v2_nhl.json
+  pairhist_v2_nfl.json
   hr_companion_latest.json
   results_live.json
   results_live.txt
