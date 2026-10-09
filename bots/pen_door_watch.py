@@ -64,8 +64,10 @@ from pathlib import Path
 
 try:
     import discord_post
+    import copy_pendoor as words
 except ImportError:
     from bots import discord_post
+    from bots import copy_pendoor as words
 
 API = "https://statsapi.mlb.com/api/v1"
 FEED_FIELDS = ("gameData,teams,home,away,abbreviation,liveData,plays,allPlays,"
@@ -86,6 +88,7 @@ MAX_LIVE_SWEEPS = 3
 LIVE_BUDGET_S = 300
 
 EMBED_COLOR = 0xF97316
+STATUS_SECTIONS_ON = words.STATUS_SECTIONS_ON   # which status sections post; edit in bots/copy_pendoor.py
 
 
 def get_json(url: str) -> dict | None:
@@ -204,6 +207,16 @@ def surname(nm: str) -> str:
     return str(nm or "").split()[-1] if nm else "?"
 
 
+def batting_order(pk: int) -> dict[str, list[int]]:
+    """The posted batting order of a game, {'home': [ids], 'away': [ids]}; a side with no card is [].
+    A pick is only ever named as PLAYING when his id is in here (2026-10-09)."""
+    box = get_json(f"{API}/game/{pk}/boxscore?fields=teams,home,away,team,id,battingOrder")
+    out: dict[str, list[int]] = {"home": [], "away": []}
+    for side in ("home", "away"):
+        out[side] = [int(x) for x in (((box or {}).get("teams") or {}).get(side) or {}).get("battingOrder") or []]
+    return out
+
+
 def team_abbrs() -> dict[int, str]:
     j = get_json(f"{API}/teams?sportId=1&fields=teams,id,abbreviation")
     return {t["id"]: t.get("abbreviation", "") for t in (j or {}).get("teams", []) if t.get("id")}
@@ -263,17 +276,26 @@ def gather_status_sections(st: dict, games: list[dict], picks: dict[int, list[di
         h_ab = abbrs.get((home.get("team") or {}).get("id"), "?")
         a_ab = abbrs.get((away.get("team") or {}).get("id"), "?")
 
-        # ☔ delay / postponement — once per game per status
-        if any(w in detailed for w in ("Delayed", "Postponed", "Suspended")):
+        # ☔ delay / postponement -- once per game per status. Names no one and counts only
+        # picks in the POSTED batting order; before a card exists it says so (2026-10-09).
+        if any(w in detailed for w in ("Delayed", "Postponed", "Suspended")) and "delay" in STATUS_SECTIONS_ON:
             k = f"delay:{pk}:{detailed}"
             if not seen(st, k):
-                pending.append(k)
-                delay_lines.append(f"**{a_ab}@{h_ab} — {detailed.upper()}**"
-                                    + (f" · {len(designated)} pick{'s' if len(designated) != 1 else ''} affected"
-                                       f" ({', '.join(surname(p['name']) for p in designated[:4])})" if designated else ""))
+                order = batting_order(pk)
+                posted = bool(order["home"]) and bool(order["away"])
+                played = [p for p in designated if p["pid"] in order["home"] + order["away"]]
+                if "postpon" in detailed.lower():
+                    count: int | None = len(designated)
+                else:
+                    count = len(played) if posted else None
+                if posted and not played and "postpon" not in detailed.lower():
+                    pending.append(k)            # every pick is out of it: nothing to say, and nothing to retry
+                else:
+                    pending.append(k)
+                    delay_lines.append(words.delay_line(a_ab, h_ab, detailed, count))
 
         # 🏁 final recap — the receipts, the moment they're in
-        if abstract == "Final" and designated and not seen(st, f"final:{pk}"):
+        if abstract == "Final" and designated and "final" in STATUS_SECTIONS_ON and not seen(st, f"final:{pk}"):
             box = get_json(f"{API}/game/{pk}/boxscore")
             if box:
                 pending.append(f"final:{pk}")
@@ -290,10 +312,10 @@ def gather_status_sections(st: dict, games: list[dict], picks: dict[int, list[di
                                     f"{int(bat.get('hits') or 0)}-{int(bat.get('atBats') or 0)}"
                                     + (f" {hr}HR" if hr else ""))
                 score = f"{a_ab} {away.get('score', '?')}–{home.get('score', '?')} {h_ab}"
-                final_lines.append(f"**FINAL {score}** — " + (" · ".join(pl_lines) if pl_lines else "no pick lines found"))
+                final_lines.append(words.final_line(score, pl_lines))
 
         # 📋 lineups + ⚠️ scratches — pregame only
-        if abstract == "Preview" and gp:
+        if abstract == "Preview" and gp and ("lineup" in STATUS_SECTIONS_ON or "scratch" in STATUS_SECTIONS_ON):
             box = get_json(f"{API}/game/{pk}/boxscore?fields=teams,home,away,team,id,battingOrder,players,person")
             for side in ("home", "away"):
                 t = ((box or {}).get("teams") or {}).get(side) or {}
@@ -306,25 +328,25 @@ def gather_status_sections(st: dict, games: list[dict], picks: dict[int, list[di
                 if not team_picks:
                     continue
                 k = f"lineup:{pk}:{side}"
-                if not seen(st, k):
+                if "lineup" in STATUS_SECTIONS_ON and not seen(st, k):
                     pending.append(k)
                     ours = [(p, order.index(p["pid"]) + 1) for p in team_picks if p["pid"] in order]
                     if ours:
                         spots = " · ".join(f"{surname(p['name'])} {i}{'st' if i == 1 else 'nd' if i == 2 else 'rd' if i == 3 else 'th'}"
                                            + (f" ({p['role']})" if p['role'] else "") for p, i in ours[:6])
-                        lineup_lines.append(f"**{ab2}** — {spots}")
+                        lineup_lines.append(words.lineup_line(ab2, spots))
                 # scratches: designated picks on this team NOT in the posted order
                 for p in [x for x in team_picks if x["role"] and x["pid"] not in order]:
                     ks = f"scratch:{pk}:{p['pid']}"
-                    if not seen(st, ks):
+                    if "scratch" in STATUS_SECTIONS_ON and not seen(st, ks):
                         pending.append(ks)
-                        scratch_lines.append(f"**{p['name']}** ({p['role']} pick) — not in the posted {ab2} lineup")
+                        scratch_lines.append(words.scratch_line(p['name'], p['role'], ab2))
 
     sections = [
-        ("📋 Lineups posted", lineup_lines),
-        ("⚠️ Scratch watch", scratch_lines),
-        ("🏁 Final recaps", final_lines),
-        ("☔ Delays / postponements", delay_lines),
+        (words.SECTION_HEADS["lineup"], lineup_lines),
+        (words.SECTION_HEADS["scratch"], scratch_lines),
+        (words.SECTION_HEADS["final"], final_lines),
+        (words.SECTION_HEADS["delay"], delay_lines),
     ]
     return sections, pending
 
@@ -350,6 +372,7 @@ def live_sweep(st: dict) -> tuple[int, int]:
         live_pks = [g["gamePk"] for d in (sched or {}).get("dates", []) for g in d.get("games", [])
                     if (g.get("status") or {}).get("abstractGameState") == "Live"]
 
+        orders: dict[int, dict[str, list[int]]] = {}   # posted batting orders, fetched once per game per sweep
         for pk in live_pks:
             feed = get_json(f"https://statsapi.mlb.com/api/v1.1/game/{pk}/feed/live?fields={FEED_FIELDS}")
             if not feed:
@@ -398,13 +421,17 @@ def live_sweep(st: dict) -> tuple[int, int]:
                     # new arm. No pick facing him, no ping — skip, but still
                     # mark it seen so it is never reconsidered on the next
                     # sweep or a later run.
-                    our = [surname(p["name"]) for p in gp if p["role"] and p["team"] == batting_ab][:3]
+                    # LINEUP + GAME CHECK (2026-10-09). `gp` is already this game's picks (slate_picks is
+                    # keyed by game_pk); a pick is named only when he is on the batting team AND his id is in
+                    # this game's posted batting order for that side -- a pick the same run lists as out of
+                    # the lineup (Scratch watch) is never named as playing.
+                    order = orders.setdefault(pk, batting_order(pk))
+                    side_ids = order["away" if half == "top" else "home"]
+                    our = [p["name"] for p in gp if p["role"] and p["team"] == batting_ab and p["pid"] in side_ids][:3]
                     if not our:
                         mark(st, k)
                         continue
-                    line = (f"🚪 **{pitching_ab}** pen, {half} {about.get('inning')}: "
-                            f"{str(det.get('description') or '').rstrip('.')}"
-                            f" — our bats attacking: {', '.join(our)}")
+                    line = words.pitching_change(pitching_ab, half, about.get("inning"), str(det.get("description") or ""), our)
                     ok, bad = post(line)
                     sent += ok
                     failed += bad
@@ -424,9 +451,8 @@ def live_sweep(st: dict) -> tuple[int, int]:
                     inn = ls.get("currentInning")
                     k = f"opp:{pk}:{p['pid']}:{inn}"
                     if not seen(st, k):
-                        spot = "bases loaded" if runners == 3 else f"{runners} on"
-                        line = (f"🚨 **{p['name']}** ({p['role']} pick) at the plate with the {spot}"
-                                f" — inning {inn}, {away_ab}@{home_ab}")
+                        line = words.pick_at_plate(p["name"], p["role"], runners,
+                                                   "top" if ls.get("isTopInning") else "bottom", inn, away_ab, home_ab)
                         ok, bad = post(line)
                         sent += ok
                         failed += bad
@@ -457,8 +483,7 @@ def main() -> int:
     digest_ok = digest_bad = 0
     has_digest = any(lines for _, lines in sections)
     if has_digest:
-        digest_ok, digest_bad = post_embed("📋 Tonight's status", sections,
-                                            footer="lineups · scratches · finals · delays, grouped once per check")
+        digest_ok, digest_bad = post_embed(words.STATUS_TITLE, sections, footer=words.STATUS_FOOTER)
         if digest_ok:
             for k in pending_keys:
                 mark(st, k)
