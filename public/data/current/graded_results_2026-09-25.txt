@@ -1,0 +1,168 @@
+RESULTS TRACKER - 2026-09-25
+------------------------------------------
+BETTABLE RESULTS
+Top 15 HR: 2/15 (13.3%)
+HR Picks: 2/17 (11.8%)
+Top Picks: 3/17 (17.6%)
+
+FULL SHEET BASE HIT PERFORMANCE
+Base Hit Accuracy: 58.7%
+
+HR CAPTURE (BETTABLE)
+Total Slate HRs: 36
+Caught in Top 15: 2
+Caught in HR Picks: 2
+Top 15 Capture Rate: 5.6%
+HR Pick Capture Rate: 5.6%
+
+MODEL VISION (Top 40)
+Model Caught HRs: 10 / 36
+Vision Rate: 27.8%
+
+UNIQUE PLAYER HR ACCURACY
+Unique Players Tracked: 86
+Players Who Homered: 11
+Unique HR Accuracy: 12.8%
+
+HR CATEGORY BREAKDOWN
+------------------------------------------
+🏆 TOP 15 BOARD → 2 HR
+🔥 TOP PICKS → 3 HR
+🧨 HR PICKS → 2 HR
+🏁 HRR PICKS → 2 HR
+💠 HIT PICKS → 1 HR
+⚾ CONTACT PICKS → 2 HR
+Best HR-producing category: 🔥 TOP PICKS
+
+HR RESULTS BY PLAYER
+------------------------------------------
+- Nolan Arenado — 🏆#3 + ⚾
+- Pete Alonso — 🏆#1 + 🔥 + ⚾
+- Christian Walker — 🧨
+- Jordan Walker — 🧨 + ⭐
+- Carter Jensen — 🔥
+- Munetaka Murakami — 🔥 + ⭐
+- Dominic Canzone — 🏁
+- TJ Rumfield — 🏁
+- Carson Benge — 💠
+- Iván Herrera — ⭐
+- Eugenio Suárez — 
+
+POOL PERFORMANCE
+------------------------------------------
+4-MAN HR POOL A → 0/4 HR (none)
+4-MAN HR POOL B → 0/4 HR (none)
+4-MAN HR POOL C → 1/4 HR (Munetaka Murakami)
+4-MAN HR POOL D → 1/4 HR (Rafael Flores Jr.)
+3-MAN HR POOL A → 0/3 HR (none)
+3-MAN HR POOL B → 1/3 HR (Iván Herrera)
+3-MAN HR POOL C → 2/3 HR (Spencer Torkelson, Christian Walker)
+3-MAN HR POOL D → 1/3 HR (Carter Jensen)
+
+PAIR PERFORMANCE
+------------------------------------------
+Pair 1 → 2/2 HR (Pete Alonso, Nolan Arenado) | Pete Alonso + Nolan Arenado
+Pair 2 → 0/2 HR (none) | CJ Abrams + Angel Martínez
+Pair 3 → 0/2 HR (none) | Brandon Lowe + Elly De La Cruz
+Pair 4 → 0/2 HR (none) | Ben Rice + Pete Crow-Armstrong
+
+PLAYER TYPE PERFORMANCE
+------------------------------------------
+🏆 TOP 15 BOARD (15)
+HR: 13.3% | 1+ Hit: 66.7% | XBH: 33.3% | 2+ TB: 40.0% | 2+ HRR: 53.3% | 3+ HRR: 53.3%
+
+🔥 TOP PICKS (17)
+HR: 17.6% | 1+ Hit: 70.6% | XBH: 35.3% | 2+ TB: 41.2% | 2+ HRR: 58.8% | 3+ HRR: 47.1%
+
+🧨 HR PICKS (17)
+HR: 11.8% | 1+ Hit: 58.8% | XBH: 29.4% | 2+ TB: 29.4% | 2+ HRR: 52.9% | 3+ HRR: 41.2%
+
+🏁 HRR PICKS (17)
+HR: 11.8% | 1+ Hit: 64.7% | XBH: 35.3% | 2+ TB: 47.1% | 2+ HRR: 58.8% | 3+ HRR: 41.2%
+
+💠 HIT PICKS (17)
+HR: 5.9% | 1+ Hit: 47.1% | XBH: 17.6% | 2+ TB: 29.4% | 2+ HRR: 41.2% | 3+ HRR: 41.2%
+
+⚾ CONTACT PICKS (17)
+HR: 11.8% | 1+ Hit: 70.6% | XBH: 29.4% | 2+ TB: 29.4% | 2+ HRR: 47.1% | 3+ HRR: 47.1%
+
+
+DESIGNED OUTCOME (did the pick do its job)
+------------------------------------------
+🏆 TOP 15 BOARD (15) -> 2/15 (13.3%)  ·  needs: HR
+🔥 TOP PICKS (17) -> 6/17 (35.3%)  ·  needs: most productive of our picks in his game (HRR or TB)
+🧨 HR PICKS (17) -> 2/17 (11.8%)  ·  needs: HR
+🏁 HRR PICKS (17) -> 10/17 (58.8%)  ·  needs: 2+ hits+runs+RBI
+💠 HIT PICKS (17) -> 8/17 (47.1%)  ·  needs: 1+ hit
+⚾ CONTACT PICKS (17) -> 5/17 (29.4%)  ·  needs: 2+ TB or XBH
+ALL PICKS -> 33/138 (23.9%)
+
+HIT RESULTS BY CATEGORY
+------------------------------------------
+
+🔥 TOP PICKS (1+ Hit)
+- Munetaka Murakami — 3H 🔥
+- Pete Alonso — 3H 🔥
+- Carter Jensen — 2H ⭐
+- Fernando Tatis Jr. — 2H ⭐
+- Juan Soto — 2H ⭐
+- Randy Arozarena — 2H ⭐
+- Elly De La Cruz — 1H
+- Jake Bauers — 1H
+- Jake Burger — 1H
+- Pete Alonso — 1H
+- Pete Crow-Armstrong — 1H
+- Yordan Alvarez — 1H
+
+🧨 HR PICKS (1+ Hit)
+- Jac Caglianone — 3H 🔥
+- Ben Rice — 2H ⭐
+- Kazuma Okamoto — 2H ⭐
+- Ben Rice — 1H
+- CJ Abrams — 1H
+- Christian Walker — 1H
+- Corey Seager — 1H
+- Jordan Walker — 1H
+- Junior Caminero — 1H
+- Oneil Cruz — 1H
+
+🏁 HRR PICKS (1+ Hit)
+- Dominic Canzone — 3H 🔥
+- Will Smith — 3H 🔥
+- Eduardo Valencia — 2H ⭐
+- Geraldo Perdomo — 2H ⭐
+- Jakob Marsee — 2H ⭐
+- Seiya Suzuki — 2H ⭐
+- TJ Rumfield — 2H ⭐
+- Alejandro Kirk — 1H
+- Andrés Chaparro — 1H
+- Vinnie Pasquantino — 1H
+- William Contreras — 1H
+
+💠 HIT PICKS (1+ Hit)
+- Wade Meckler — 4H 🔥
+- Sam Antonacci — 3H 🔥
+- Carson Benge — 2H ⭐
+- Gabriel Moreno — 2H ⭐
+- Yainer Diaz — 2H ⭐
+- Bobby Witt Jr. — 1H
+- Roman Anthony — 1H
+- Vladimir Guerrero Jr. — 1H
+
+⚾ CONTACT PICKS (1+ Hit)
+- Pete Alonso — 3H 🔥
+- Angel Martínez — 2H ⭐
+- Eduardo Valencia — 2H ⭐
+- CJ Abrams — 1H
+- Elly De La Cruz — 1H
+- Jake Bauers — 1H
+- Jonathan Aranda — 1H
+- Nolan Arenado — 1H
+- Pete Alonso — 1H
+- Pete Crow-Armstrong — 1H
+- Randal Grichuk — 1H
+- Roman Anthony — 1H
+
+MODEL DIAGNOSTIC (LOW PRIORITY)
+Full Sheet HR Coverage: 36 / 36 (100.0%)
+Pregame Pool HR Coverage: 35 / 36 (97.2%) over 17 locked games; 1 HR by late adds

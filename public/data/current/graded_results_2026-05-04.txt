@@ -1,0 +1,64 @@
+RESULTS TRACKER — 2026-05-04
+------------------------------------------
+HR Picks: 12 | HR Accuracy: 16.7%
+Base Hit Picks: 48 | Base Hit Accuracy: 68.8%
+HRR Picks: 24 | HRR 2+ Accuracy: 54.2%
+HRR Picks: 24 | HRR 3+ Accuracy: 33.3%
+
+HR PICKS THAT HOMERED
+- Munetaka Murakami (CWS) | HR Score 66.37
+- Drake Baldwin (ATL) | HR Score 52.97
+
+TRACKED PICKS THAT GOT A BASE HIT
+- Mickey Moniak (COL) | TOP | 2 H
+- Mark Vientos (NYM) | HRR | 1 H
+- Carson Benge (NYM) | CONTACT | 1 H
+- Wilyer Abreu (BOS) | HIT | 1 H
+- Trevor Story (BOS) | HRR | 1 H
+- Jarren Duran (BOS) | HRR | 3 H
+- Dillon Dingler (DET) | CONTACT | 1 H
+- Kazuma Okamoto (TOR) | HR | 1 H
+- Vladimir Guerrero Jr. (TOR) | HIT | 1 H
+- Chandler Simpson (TB) | HIT | 1 H
+- Jonathan Aranda (TB) | HRR | 3 H
+- Ben Williamson (TB) | CONTACT | 2 H
+- Otto Lopez (MIA) | HIT | 1 H
+- Xavier Edwards (MIA) | HIT | 1 H
+- Jakob Marsee (MIA) | HRR | 2 H
+- Brandon Marsh (PHI) | HRR | 1 H
+- Adolis García (PHI) | CONTACT | 2 H
+- Aaron Judge (NYY) | TOP | 2 H
+- Pete Alonso (BAL) | HR | 1 H
+- Cody Bellinger (NYY) | HIT | 1 H
+- Trent Grisham (NYY) | HIT | 2 H
+- Jazz Chisholm Jr. (NYY) | HRR | 1 H
+- Seiya Suzuki (CHC) | TOP | 2 H
+- Nico Hoerner (CHC) | HIT | 1 H
+- Alex Bregman (CHC) | HRR | 1 H
+- Pete Crow-Armstrong (CHC) | CONTACT | 1 H
+- Vinnie Pasquantino (KC) | TOP | 2 H
+- Bobby Witt Jr. (KC) | HIT | 1 H
+- Salvador Perez (KC) | HRR | 1 H
+- Jordan Walker (STL) | TOP | 1 H
+- JJ Wetherholt (STL) | HR | 2 H
+- William Contreras (MIL) | HIT | 1 H
+- Brice Turang (MIL) | HIT | 3 H
+- Jake Bauers (MIL) | HRR | 1 H
+- Nathan Church (STL) | CONTACT | 1 H
+- Yordan Alvarez (HOU) | HIT | 2 H
+- Kyle Tucker (LAD) | HRR | 2 H
+- Isaac Paredes (HOU) | HRR | 1 H
+- Munetaka Murakami (CWS) | HR | 3 H
+- Nolan Schanuel (LAA) | HIT | 2 H
+- Jo Adell (LAA) | HIT | 1 H
+- Miguel Vargas (CWS) | HRR | 2 H
+- Colson Montgomery (CWS) | CONTACT | 1 H
+- Matt Olson (ATL) | TOP | 1 H
+- Drake Baldwin (ATL) | HR | 1 H
+- Ozzie Albies (ATL) | HIT | 1 H
+- Julio Rodríguez (SEA) | HIT | 1 H
+- Austin Riley (ATL) | HRR | 2 H
+- Randy Arozarena (SEA) | CONTACT | 1 H
+- Casey Schmitt (SF) | TOP | 1 H
+- Luis Arraez (SF) | HIT | 2 H
+- Heliot Ramos (SF) | CONTACT | 1 H

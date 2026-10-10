@@ -1,0 +1,54 @@
+{
+ "date": "2026-10-10",
+ "generated_at": "2026-10-10T20:18:20.393581+00:00",
+ "changes": [
+  {
+   "kind": "in",
+   "name": "Sam Antonacci",
+   "role": "HIT",
+   "reason": "lineup confirmed him \u2014 replaces Chase Meidroth"
+  },
+  {
+   "kind": "in",
+   "name": "Miguel Vargas",
+   "role": "HRR",
+   "reason": "lineup confirmed him \u2014 replaces Steven Kwan"
+  },
+  {
+   "kind": "in",
+   "name": "Munetaka Murakami",
+   "role": "TOP",
+   "reason": "lineup confirmed him"
+  },
+  {
+   "kind": "moved",
+   "name": "Jo Adell",
+   "role": "HR",
+   "reason": "category changed TOP\u2192HR"
+  },
+  {
+   "kind": "out",
+   "name": "Randal Grichuk",
+   "role": "HR",
+   "reason": "off the slate (lineup scratch or postponement)"
+  },
+  {
+   "kind": "out",
+   "name": "Chase Meidroth",
+   "role": "HIT",
+   "reason": "score moved +0.2 \u2014 someone else took the lane"
+  },
+  {
+   "kind": "out",
+   "name": "Steven Kwan",
+   "role": "HRR",
+   "reason": "score moved +0.0 \u2014 someone else took the lane"
+  },
+  {
+   "kind": "out",
+   "name": "Brayan Rocchio",
+   "role": "CONTACT",
+   "reason": "score moved -0.6 \u2014 someone else took the lane"
+  }
+ ]
+}

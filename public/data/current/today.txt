@@ -1,0 +1,291 @@
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+┃ ⚾ THE BOARD — SATURDAY · OCTOBER 10, 2026
+┃ data locked 2026-10-10 · lineups live/confirmed
+┃ filter: recent 20+ PA (or 80+ season PA)
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📊 SLATE ─────────────────────────────────────
+
+ projected HRs 0–6 · power grade Strong
+ top HR profiles 9 · weak pitcher spots 1
+
+
+
+🎯 THE FOUR ──────────────────────────────────
+
+ 🧨 HR       Munetaka Murakami (CWS)          64.5
+             L5 6H/2HR/4XBH · vs Gavin Williams
+
+ 💠 HIT      Sam Antonacci (CWS)              77.1
+             L5 9H/0HR/1XBH · vs Gavin Williams
+
+ 🏁 HRR      Miguel Vargas (CWS) ⭐            65.5
+             L5 4H/0HR/0XBH · vs Gavin Williams
+
+ ⚾ CONTACT  Brayan Rocchio (CLE)             59.8
+             L5 6H/2HR/3XBH · vs Sean Burke
+
+──────────────────────────────────────────────
+
+🗓️ GAME BY GAME ──────────────────────────────
+
+═══════════════════════════════════════
+⚾ CWS @ CLE (05:00 PM MST)
+🎯 CWS SP Sean Burke (R) — ⚠️ HARD CONTACT | HR/9 0.99 | HH 44%
+Weak pitches: SL (2HR 44%HH) , SI (2HR 29%HH)
+🎯 CLE SP Gavin Williams (R) | RHB Weak — Neutral | HR/9 1.37 | HH 37%
+Weak pitches: SI (2HR 55%HH) , KC (2HR 41%HH)
+69F | Wind 7mph crosswind (in)
+═══════════════════════════════════════
+
+🥇 Top Pick | Munetaka Murakami (CWS) — HR 64.5 | OVR 59.8 | HR/PA -0.3 vs pace (on pace) | 2g | HRW 🌋 (84) | IHR 0.17
+PMix 89 | Crush FF/ST | 350+ 4/18 375+ 3/18 | FB 39% Pull 61% | L5 6H/2HR/4XBH R3 RBI5
+
+🎆 HR Pick | Patrick Bailey (CLE) — HR 57.5 | HR/PA +2.4 vs pace (hot) | 1g | HRW 🚀 (78) | IHR 0.31
+PMix 88 | Crush FF/FC | 350+ 4/16 375+ 4/16 | FB 38% Pull 50% | L5 3H/2HR/2XBH
+
+➕ Hit Pick | Sam Antonacci (CWS) — HIT 77.1 | HR/PA -0.3 vs pace (on pace) | 53g | IHR 0.15
+BA .277 | BA vs RHP .290 | K 15% | L5 9H/0HR/1XBH
+
+🔺 HRR Pick | Miguel Vargas ⭐ (CWS) — HRR 65.5 | HR/PA +0.1 vs pace (on pace) | 6g | HRW 🌤️ (45) | IHR 0.05
+BA .250 | BABIP 0.257 | PreOB 0.381 Post 0.466 | L5 4H/5R/5RBI
+
+🟢 Base Pick | Brayan Rocchio (CLE) — XBH Anchor | HR/PA +1.5 vs pace (hot) | 0g | HRW 🚀 (71) | IHR 0.09
+BA .253 | BABIP 0.275 | L5 6H/3XBH/2HR
+
+🧩 PAIRINGS
+Rules: max 1 appearance in pairs | reasons compact
+🔒 CORE HR PAIRS
+1) Munetaka Murakami (CWS) 🥇  + Miguel Vargas (CWS) 🔺
+   Reason: EV 93.2+92.7 | HR/9 1.37+1.37 | L7 3HR+1HR
+2) Chase DeLauter (CLE) ➕  + Chase Meidroth (CWS) 🎆
+   Reason: 1 HARD CONTACT | L7 2HR+2HR | L5 XBH 3+4
+
+🧬 STATCAST HR PAIRS
+1) Jo Adell (CLE) 🎆  + Kyle Teel (CWS)
+   Reason: 1 HARD CONTACT | L7 1HR+1HR
+
+🏊 4-MAN HR POOLS
+POOL A — STRONGEST                  POOL B — HRR+POWER                  POOL C — BALANCED                   POOL D — VARIANCE
+
+Colson Montgomery (CWS)             Nathaniel Lowe (CLE)                Tristan Peters (CWS)                Travis Bazzana (CLE)
+
+🏊 3-MAN HR POOLS  (replaces the 6-man — see the note in the code)
+   Grade ladder: 2+ is a hit, 3/3 is perfect. One homer is not a win.
+POOL A — STRONGEST                  POOL B — HRR+VAR                    POOL C — BALANCED                   POOL D — VARIANCE
+
+Brenton Doyle (CWS) 🎆               Patrick Bailey (CLE) 🎆              José Ramírez (CLE)                  Petey Halpin (CLE)
+Murakami (CWS) 🥇                    Jo Adell (CLE) 🎆                    Brayan Rocchio (CLE) 🟢              Chase Meidroth (CWS) 🎆
+Miguel Vargas (CWS) 🔺               Chase DeLauter (CLE) ➕              Sam Antonacci (CWS) ➕               Travis Bazzana (CLE)
+
+🏊 6-MAN HR POOLS  (the old recipe, shown beside the 3-man pools)
+POOL A — STRONGEST                  POOL B — BALANCED                   POOL C — MID / VAR                  POOL D — CONTRARIAN
+
+Brenton Doyle (CWS) 🎆               José Ramírez (CLE)                  Patrick Bailey (CLE) 🎆
+Murakami (CWS) 🥇                    Sam Antonacci (CWS) ➕               Travis Bazzana (CLE)
+Miguel Vargas (CWS) 🔺               Steven Kwan (CLE) 🔺                 Kyle Teel (CWS)
+Jo Adell (CLE) 🎆                    Colson Montgomery (CWS)             Tristan Peters (CWS)
+Chase DeLauter (CLE) ➕              Nathaniel Lowe (CLE)                Petey Halpin (CLE)
+Brayan Rocchio (CLE) 🟢              Chase Meidroth (CWS) 🎆
+
+⚾ THE BOARDS ─────────────────────────────────
+
+🏆 TOP 30 ────────────────────────────────────
+ min 40 PA · 10 BBE · avoid = TRUE avoid only
+
+1. Munetaka Murakami (CWS) — 💎 HR Bet | PA 553 BBE 18
+HR 64.5 | Board 73.4 | DC 61.8 | HR/PA -0.3 vs pace (on pace) | 2g | HRW 🌋 (84) | IHR 0.17 | spot 4
+PMix 89 | Crush FF/ST | 350+ 4/18 375+ 3/18 | FB 39% Pull 61% | L5 6H/2HR/4XBH
+
+2. Jo Adell ⭐ 🧩 (CLE) — 🔭 Power Watch | PA 660 BBE 21
+HR 50.4 | Board 70.8 | DC 56.8 | HR/PA +0.3 vs pace (on pace) | 0g | HRW ⚡ (64) | IHR 0.19 | spot 4
+PMix 80 | Crush FF | 350+ 4/21 375+ 3/21 | FB 38% Pull 57% | L5 4H/1HR/2XBH
+
+3. Patrick Bailey (CLE) — 📈 HR Lean | PA 345 BBE 16
+HR 57.5 | Board 73.6 | DC 56.9 | HR/PA +2.4 vs pace (hot) | 1g | HRW 🚀 (78) | IHR 0.31 | spot 7
+PMix 88 | Crush FF/FC | 350+ 4/16 375+ 4/16 | FB 38% Pull 50% | L5 3H/2HR/2XBH
+
+4. Miguel Vargas ⭐ (CWS) — 🔭 Power Watch | PA 704 BBE 19
+HR 39.5 | Board 62.7 | DC 50.1 | HR/PA +0.1 vs pace (on pace) | 6g | HRW 🌤️ (45) | IHR 0.05 | spot 3
+PMix 95 | Crush ST/FF | 350+ 1/19 375+ 1/19 | FB 42% Pull 74% | L5 4H/0HR/0XBH
+
+5. Travis Bazzana (CLE) — 🔭 Power Watch | PA 517 BBE 24
+HR 31.7 | Board 55.8 | DC 51.7 | HR/PA -0.6 vs pace (due) | 8g | HRW 🧊 (37) | IHR 0.17 | spot 6
+PMix 72 | Crush FF/SI | 350+ 3/24 375+ 2/24 | FB 46% Pull 75% | L5 4H/0HR/3XBH
+
+6. Kyle Teel (CWS) — 🧭 Contact / Monitor | PA 144 BBE 20
+HR 32.6 | Board 49.5 | DC 39.2 | HR/PA +0.3 vs pace (on pace) | 2g | HRW 🧊 (42) | IHR 0.10 | spot 2
+PMix 78 | Crush FF/SI | 350+ 1/20 375+ 0/20 | FB 25% Pull 65% | L5 6H/1HR/1XBH
+
+7. Chase DeLauter ⭐ 🧩 (CLE) — 🧭 Contact / Monitor | PA 559 BBE 27
+HR 35.7 | Board 48.9 | DC 42.5 | HR/PA +0.4 vs pace (hot) | 0g | HRW 🌤️ (52) | IHR 0.04 | spot 3
+PMix 84 | Crush FF/FC | 350+ 2/27 375+ 1/27 | FB 19% Pull 67% | L5 4H/1HR/3XBH
+
+8. Brayan Rocchio (CLE) — 🧭 Contact / Monitor | PA 592 BBE 23
+HR 43.1 | Board 48.0 | DC 36.8 | HR/PA +1.5 vs pace (hot) | 0g | HRW 🚀 (71) | IHR 0.09 | spot 9
+PMix 70 | Crush FF/SI | 350+ 4/23 375+ 0/23 | FB 30% Pull 39% | L5 6H/2HR/3XBH
+
+9. Tristan Peters (CWS) — 🧭 Contact / Monitor | PA 491 BBE 16
+HR 21.5 | Board 45.0 | DC 41.3 | HR/PA -0.5 vs pace (due) | 28g | HRW 🧊 (8) | IHR 0.00 | spot 6
+PMix 86 | Crush FF/ST | 350+ 0/16 375+ 0/16 | FB 31% Pull 56% | L5 2H/0HR/0XBH
+
+10. Colson Montgomery (CWS) — 🧭 Contact / Monitor | PA 638 BBE 13
+HR 23.4 | Board 42.6 | DC 42.3 | HR/PA -1.0 vs pace (due) | 19g | HRW 🧊 (8) | IHR 0.08 | spot 8
+PMix 80 | Crush FF/SI | 350+ 1/13 375+ 1/13 | FB 31% Pull 46% | L5 0H/0HR/0XBH
+
+11. José Ramírez (CLE) — 🧭 Contact / Monitor | PA 544 BBE 28
+HR 21.4 | Board 42.5 | DC 41.6 | HR/PA +0.6 vs pace (hot) | 7g | HRW 🧊 (42) | IHR 0.11 | spot 2
+PMix 78 | Crush FF/SI | 350+ 3/28 375+ 1/28 | FB 21% Pull 68% | L5 4H/0HR/0XBH
+
+12. Nathaniel Lowe (CLE) — 🧭 Contact / Monitor | PA 429 BBE 21
+HR 21.2 | Board 42.2 | DC 40.8 | HR/PA -0.8 vs pace (due) | 13g | HRW 🧊 (18) | IHR 0.00 | spot 5
+PMix 81 | Crush FF/SL | 350+ 0/21 375+ 0/21 | FB 14% Pull 52% | L5 2H/0HR/0XBH
+
+13. Brenton Doyle (CWS) — 🧭 Contact / Monitor | PA 223 BBE 18
+HR 44.0 | Board 40.9 | DC 39.0 | HR/PA +1.5 vs pace (hot) | 0g | HRW 🚀 (71) | IHR 0.11 | spot 9
+PMix 41 | Risk ST/SI | 350+ 3/18 375+ 1/18 | FB 44% Pull 78% | L5 4H/3HR/3XBH
+
+14. Chase Meidroth (CWS) — 🧭 Contact / Monitor | PA 643 BBE 22
+HR 34.1 | Board 38.9 | DC 33.0 | HR/PA +0.5 vs pace (hot) | 3g | HRW ⚡ (68) | IHR 0.05 | spot 7
+PMix 66 | Crush FF | 350+ 1/22 375+ 1/22 | FB 14% Pull 59% | L5 9H/2HR/4XBH
+
+15. Sam Antonacci (CWS) — 🧭 Contact / Monitor | PA 557 BBE 20
+HR 18.9 | Board 37.1 | DC 33.0 | HR/PA -0.3 vs pace (on pace) | 53g | HRW 🧊 (39) | IHR 0.15 | spot 1
+PMix 68 | Crush FF/SI | 350+ 0/20 375+ 0/20 | FB 15% Pull 50% | L5 9H/0HR/1XBH
+
+16. Petey Halpin (CLE) — 🧭 Contact / Monitor | PA 195 BBE 10
+HR 15.8 | Board 35.2 | DC 35.3 | HR/PA +0.6 vs pace (hot) | 9g | HRW 🧊 (24) | IHR 0.00 | spot 8
+PMix 73 | Crush FF/SL | 350+ 0/10 375+ 0/10 | FB 30% Pull 70% | L5 2H/0HR/0XBH
+
+17. Steven Kwan (CLE) — 🧭 Contact / Monitor | PA 637 BBE 30
+HR 1.6 | Board 14.4 | DC 19.3 | HR/PA -0.1 vs pace (on pace) | 11g | HRW 🧊 (19) | IHR 0.03 | spot 1
+PMix 47 | Risk FF/SI | 350+ 1/30 375+ 0/30 | FB 13% Pull 43% | L5 6H/0HR/1XBH
+
+🔄 ALT LOOKS · small sample / variance ───────
+
+1. Andrew Benintendi (CWS) | ALT — 🔭 Power Watch | ⚠️ PA 468 BBE 8
+HR 39.3 | Board 62.4 | DC 50.3 | HR/PA +0.4 vs pace (on pace) | 0g | HRW 🌤️ (50) | IHR 0.12 | spot 5
+PMix 89 | Crush FF/ST | 350+ 1/8 375+ 1/8 | FB 38% Pull 88% | L5 2H/1HR/1XBH
+
+💣 LONGEST BOMB WATCH ────────────────────────
+
+1. Jo Adell (CLE) — DIST 60.7 | RAW 74.5 | HR 50.4 | HR/PA +0.3 vs pace (on pace) | 0g | IHR 0.19 | 350+ 4/21 375+ 3/21 400+ 2
+FB 38% Pull 57% | Pitcher ⚠️ HARD CONTACT ATK 34 | P allowed: Barrel 4.0% | HH 44% | EV 90.8 | 375+ 3 | BABIP 0.249
+
+2. Patrick Bailey (CLE) — DIST 71.8 | RAW 50.2 | HR 57.5 | HR/PA +2.4 vs pace (hot) | 1g | IHR 0.31 | 350+ 4/16 375+ 4/16 400+ 0
+FB 38% Pull 50% | Pitcher ⚠️ HARD CONTACT ATK 34 | P allowed: Barrel 4.0% | HH 44% | EV 90.8 | 375+ 3 | BABIP 0.249
+
+3. Munetaka Murakami (CWS) — DIST 53.1 | RAW 66.0 | HR 64.5 | HR/PA -0.3 vs pace (on pace) | 2g | IHR 0.17 | 350+ 4/18 375+ 3/18 400+ 1
+FB 39% Pull 61% | Pitcher Neutral ATK 24 | P allowed: Barrel 7.0% | HH 37% | EV 87.5 | 375+ 1 | BABIP 0.371
+
+═══════════════════════════════════════
+🏁 HRR BUILDER
+═══════════════════════════════════════
+Rules: max 2/player · no duplicate combos · hit picks can qualify
+
+💰 CORE PLAY  (2-man)
+1) Sam Antonacci (CWS) [HRR 63/HIT 77]  +  Chase DeLauter ⭐ (CLE) [HRR 57/HIT 69]
+   avg HRR 60.4 | avg HIT 72.9 · solid HRR floor · strong contact · full team spread
+2) Sam Antonacci (CWS) [HRR 63/HIT 77]  +  Miguel Vargas ⭐ (CWS) [HRR 66/HIT 62]
+   avg HRR 64.4 | avg HIT 69.4 · solid HRR floor
+
+💰 BALANCED PLAY  (3-man)
+1) Miguel Vargas ⭐ (CWS) [HRR 66/HIT 62]  +  Chase Meidroth (CWS) [HRR 56/HIT 62]  +  Chase DeLauter ⭐ (CLE) [HRR 57/HIT 69]
+   avg HRR 59.6 | avg HIT 64.2 · solid HRR floor
+2) Sam Antonacci (CWS) [HRR 63/HIT 77]  +  Miguel Vargas ⭐ (CWS) [HRR 66/HIT 62]  +  Chase DeLauter ⭐ (CLE) [HRR 57/HIT 69]
+   avg HRR 62.1 | avg HIT 69.1 · solid HRR floor
+
+🔎 MODEL CROSS-CHECK PLAYS
+
+HIGH ACROSS CATEGORIES
+Patrick Bailey (CLE) 🎆
+Munetaka Murakami (CWS) 🥇
+Jo Adell (CLE) 🎆
+Brenton Doyle (CWS) 🎆
+Brayan Rocchio (CLE) 🟢
+
+HR UPSIDE / UNDERLISTED
+Andrew Benintendi (CWS) 🎆
+Travis Bazzana (CLE)
+Chase Meidroth (CWS) 🎆
+Chase DeLauter (CLE) ➕
+
+LEGEND
+
+Score Keys:
+HR = Home run score / power ceiling
+OVR = overall Top Pick score; HR + HRR + HIT blend
+HRW = Home Run Window; timing score for today's HR chance
+IHR = Ideal HR contact rate
+350+/375+ = recent tracked balls hit 350/375+ feet
+FB = recent fly-ball rate
+Pull = recent pull rate
+HR/9 = pitcher home runs allowed per 9 innings
+ATK = Pitcher Attack Score from recent pitcher damage allowed
+Projected HR Total = model estimate for full-slate home runs
+Longest HR Targets = distance-ceiling section, not safest HR picks
+
+Emoji / Category Keys — tonight's game-slot picks (pick_type; this report only, not the site):
+🥇 TOP = best overall/model blend from that game or board
+🎆 HR = pure HR/power pick
+🔺 HRR = hits + runs + RBI production profile; also used for hot production bats
+➕ HIT = base-hit profile / hit-floor pick
+🟢 CON = Base Pick; contact/XBH anchor, gap-power or total-base profile
+⭐ = batter lines up in a pitcher weak spot
+🎯 = pitcher throws a pitch type this batter crushes (pitch-type match)
+🧩 = Aligned Signals: weak-spot + pitch-match + real recent contact quality all stacking together (strongest validated combo)
+🚀 HRW 70+ = strong HR timing
+⚡ HRW 60–69 = playable HR timing
+🌤️ HRW 50–59 = borderline/building timing
+🧊 HRW under 50 = weak HR timing
+⚠️ LIMITED = sample/variance warning (soft caution, score not forced down)
+⛔ = hard score suppression in effect (e.g. True Avoid HR -- score actively capped, not just flagged)
+
+Role Tags (final_hr_role -- a DIFFERENT system from the game-slot picks above:
+his general profile for the season, not tonight's designation. Also on the
+site, on every card. Corrected here 2026-08-12 -- this legend had drifted
+behind the actual code, still teaching the emoji final_hr_role moved off of):
+💎 HR Bet = model's top-confidence home run play
+📈 HR Lean = good home run shot, strong but not airtight
+🧲 HRR / XBH = good bet for extra-base hits even if HR isn't a lock
+🔭 Power Watch = real raw power, more matchup uncertainty
+🧭 Contact / Monitor = not projecting a home run; may suit contact bets
+⛔ True Avoid HR = model expects no home run; score actively capped
+
+Player Output Keys:
+BA = batting average
+BA vs RHP/LHP = batting average split vs starting pitcher side
+BABIP = batting average on balls in play
+PreOB = on-base strength of hitters before him
+Post = run-production strength of hitters after him
+L5 = last 5 games shown on output
+K = strikeout rate
+XBH = extra-base hits
+2+ TB = two or more total bases
+
+Sections:
+Top 30 = trusted sample only; 40+ PA and 10+ tracked BBE
+Global PA Filter = applies to every output section; recent PA 30+ when available, otherwise season PA 80+
+ALT LOOKS = unique quality looks not already used in main board/pools/pairs when possible
+PAIRINGS = HR-focused two-man slips with compact reasons
+DUE BOMBER = drought 5g+ + weak-spot star + HR score 45+; HRW ignored on purpose (timing score buries droughts)
+POOLS = HR coverage groups; C/D can include variance and underlisted model plays
+HRR BUILDER = production slips; 2-man, 3-man, and 5-man combos; max 2 appearances per player
+MODEL CROSS-CHECK = high-scoring players across multiple categories or underlisted HR upside
+
+Helpful Read:
+Use HR picks for home run slips.
+Use HRR Builder for hit/run/RBI style slips.
+Use Base Picks for XBH or 2+ total-base ideas.
+Use ALT LOOKS as quality variance, not primary plays.
+
+
+📋 MODEL HEALTH ──────────────────────────────
+
+Players scored: 18 | Games: 1
+Role breakdown:
+  🧭 Contact / Monitor: 12
+  🔭 Power Watch: 4
+  💎 HR Bet: 1
+  📈 HR Lean: 1
+Coverage: weather 18/18 | pitch-mix 18/18 | pitcher Statcast 18/18

@@ -1,0 +1,135 @@
+RESULTS TRACKER - 2026-08-26
+------------------------------------------
+BETTABLE RESULTS
+Top 15 HR: 3/5 (60.0%)
+HR Picks: 1/6 (16.7%)
+Top Picks: 1/6 (16.7%)
+
+FULL SHEET BASE HIT PERFORMANCE
+Base Hit Accuracy: 54.3%
+
+HR CAPTURE (BETTABLE)
+Total Slate HRs: 12
+Caught in Top 15: 3
+Caught in HR Picks: 1
+Top 15 Capture Rate: 25.0%
+HR Pick Capture Rate: 8.3%
+
+MODEL VISION (Top 40)
+Model Caught HRs: 3 / 12
+Vision Rate: 25.0%
+
+UNIQUE PLAYER HR ACCURACY
+Unique Players Tracked: 26
+Players Who Homered: 3
+Unique HR Accuracy: 11.5%
+
+HR CATEGORY BREAKDOWN
+------------------------------------------
+🏆 TOP 15 BOARD → 3 HR
+🔥 TOP PICKS → 1 HR
+🧨 HR PICKS → 1 HR
+🏁 HRR PICKS → 1 HR
+💠 HIT PICKS → 0 HR
+⚾ CONTACT PICKS → 1 HR
+Best HR-producing category: 🏆 TOP 15 BOARD
+
+LONGEST HR (BOARD)
+------------------------------------------
+- Kyle Schwarber — 425 ft · 104.8 mph · 27.0°
+- Rafael Devers — 414 ft · 105.5 mph · 26.0°
+- Bryce Harper — 388 ft · 106.4 mph · 30.0°
+Longest on the board: Kyle Schwarber (425 ft)
+
+
+HR RESULTS BY PLAYER
+------------------------------------------
+- Bryce Harper — 🏆#10 + 🏁
+- Kyle Schwarber — 🏆#8 + 🧨
+- Rafael Devers — 🏆#3 + 🔥 + ⚾
+
+POOL PERFORMANCE
+------------------------------------------
+4-MAN Pool A — Strongest → 0/2 HR (none)
+4-MAN Pool B — HRR+Power → 0/2 HR (none)
+4-MAN Pool C — Balanced → 0/2 HR (none)
+4-MAN Pool D — Contrarian → 0/3 HR (none)
+3-MAN Pool A — Strongest → 0/2 HR (none)
+3-MAN Pool B — HRR+Var → 0/2 HR (none)
+3-MAN Pool C — Balanced → 0/2 HR (none)
+3-MAN Pool D — Contrarian → 0/2 HR (none)
+
+PAIR PERFORMANCE
+------------------------------------------
+Pair 1 → 1/2 HR (Rafael Devers) | Rafael Devers + Hunter Goodman
+Pair 2 → 0/2 HR (none) | Mickey Gasper + Cal Raleigh
+Pair 3 → 0/2 HR (none) | Daylen Lile + Zach Neto
+Pair 4 → 0/2 HR (none) | Luis García Jr. + Pete Alonso
+Pair 5 → 1/2 HR (Jonah Cox) | Kevin McGonigle + Jonah Cox
+Pair 6 → 0/2 HR (none) | Max Muncy + Spencer Jones
+Pair 7 → 0/2 HR (none) | Pete Alonso + Esmerlyn Valdez
+Pair 8 → 2/2 HR (Bryce Harper, Kyle Schwarber) | Bryce Harper + Kyle Schwarber
+Pair 9 → 0/2 HR (none) | Jordan Walker + Pete Crow-Armstrong
+Pair 10 → 0/2 HR (none) | Fernando Tatis Jr. + Justin Foscue
+
+PLAYER TYPE PERFORMANCE
+------------------------------------------
+🏆 TOP 15 BOARD (5)
+HR: 60.0% | 1+ Hit: 80.0% | XBH: 60.0% | 2+ TB: 60.0% | 2+ HRR: 60.0% | 3+ HRR: 60.0%
+
+🔥 TOP PICKS (6)
+HR: 16.7% | 1+ Hit: 83.3% | XBH: 33.3% | 2+ TB: 50.0% | 2+ HRR: 50.0% | 3+ HRR: 33.3%
+
+🧨 HR PICKS (6)
+HR: 16.7% | 1+ Hit: 66.7% | XBH: 16.7% | 2+ TB: 33.3% | 2+ HRR: 33.3% | 3+ HRR: 33.3%
+
+🏁 HRR PICKS (6)
+HR: 16.7% | 1+ Hit: 50.0% | XBH: 33.3% | 2+ TB: 50.0% | 2+ HRR: 50.0% | 3+ HRR: 33.3%
+
+💠 HIT PICKS (6)
+HR: 0.0% | 1+ Hit: 16.7% | XBH: 16.7% | 2+ TB: 16.7% | 2+ HRR: 33.3% | 3+ HRR: 16.7%
+
+⚾ CONTACT PICKS (6)
+HR: 16.7% | 1+ Hit: 33.3% | XBH: 16.7% | 2+ TB: 16.7% | 2+ HRR: 33.3% | 3+ HRR: 33.3%
+
+
+DESIGNED OUTCOME (did the pick do its job)
+------------------------------------------
+🏆 TOP 15 BOARD (5) -> 3/5 (60.0%)  ·  needs: HR
+🔥 TOP PICKS (6) -> 4/6 (66.7%)  ·  needs: most productive of our picks in his game (HRR or TB)
+🧨 HR PICKS (6) -> 1/6 (16.7%)  ·  needs: HR
+🏁 HRR PICKS (6) -> 3/6 (50.0%)  ·  needs: 2+ hits+runs+RBI
+💠 HIT PICKS (6) -> 1/6 (16.7%)  ·  needs: 1+ hit
+⚾ CONTACT PICKS (6) -> 1/6 (16.7%)  ·  needs: 2+ TB or XBH
+ALL PICKS -> 13/35 (37.1%)
+
+HIT RESULTS BY CATEGORY
+------------------------------------------
+
+🔥 TOP PICKS (1+ Hit)
+- Junior Caminero — 2H ⭐
+- Rafael Devers — 2H ⭐
+- Pete Crow-Armstrong — 1H
+- Randy Arozarena — 1H
+- Zach Neto — 1H
+
+🧨 HR PICKS (1+ Hit)
+- Kyle Schwarber — 2H ⭐
+- Nathaniel Lowe — 2H ⭐
+- Esmerlyn Valdez — 1H
+- Nolan Arenado — 1H
+
+🏁 HRR PICKS (1+ Hit)
+- Elly De La Cruz — 3H 🔥
+- Bryce Harper — 2H ⭐
+- José Ramírez — 2H ⭐
+
+💠 HIT PICKS (1+ Hit)
+- Steven Kwan — 2H ⭐
+
+⚾ CONTACT PICKS (1+ Hit)
+- Rafael Devers — 2H ⭐
+- Zach Neto — 1H
+
+MODEL DIAGNOSTIC (LOW PRIORITY)
+Full Sheet HR Coverage: 12 / 12 (100.0%)

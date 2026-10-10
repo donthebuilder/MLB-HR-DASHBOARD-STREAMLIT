@@ -1,0 +1,302 @@
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+┃ ⚾ THE BOARD — SUNDAY · OCTOBER 11, 2026
+┃ data locked 2026-10-10 · lineups live/confirmed
+┃ filter: recent 20+ PA (or 80+ season PA)
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+═══════════════════════════════════════
+⚠️ 1/18 players have a low/no pitch-mix sample
+⚠️ 18/18 players on unconfirmed lineups
+═══════════════════════════════════════
+
+📊 SLATE ─────────────────────────────────────
+
+ projected HRs 0–6 · power grade Strong
+ top HR profiles 8 · weak pitcher spots 0
+
+
+
+🎯 THE FOUR ──────────────────────────────────
+
+ 🧨 HR       Max Muncy (LAD)                  56.8
+             L5 2H/0HR/1XBH · vs Dustin May
+
+ 💠 HIT      Jackson Chourio (MIL)            74.3
+             L5 8H/1HR/1XBH · vs Tarik Skubal
+
+ 🏁 HRR      Andy Pages (LAD)                 64.5
+             L5 6H/2HR/3XBH · vs Dustin May
+
+ ⚾ CONTACT  Brice Turang (MIL)               63.5
+             L5 8H/2HR/5XBH · vs Tarik Skubal
+
+──────────────────────────────────────────────
+
+🗓️ GAME BY GAME ──────────────────────────────
+
+═══════════════════════════════════════
+⚾ LAD @ MIL (05:00 PM MST)
+(UNCONFIRMED LINEUP)
+🎯 LAD SP Tarik Skubal (L) — 🧊 GB/TRAP | HR/9 0.79 | HH 30%
+Weak pitches: CH (4HR 32%HH) , FF (3HR 41%HH)
+🎯 MIL SP Dustin May (R) — Neutral | HR/9 0.86 | HH 38%
+Weak pitches: SI (2HR 91%HH) , FF (2HR 50%HH)
+72F | Wind 5mph out to CF
+═══════════════════════════════════════
+
+🥇 Top Pick | Jackson Chourio (MIL) — HR 47.3 | OVR 55.4 | HR/PA +0.1 vs pace (on pace) | 3g | HRW ⚡ (57) | IHR 0.15
+PMix 86 | Crush FF/SL | 350+ 3/26 375+ 3/26 | FB 31% Pull 58% | L5 8H/1HR/1XBH R6 RBI5
+
+🎆 HR Pick | Max Muncy (LAD) — HR 56.8 | HR/PA +2.0 vs pace (hot) | 7g | HRW 🌤️ (54) | IHR 0.26
+PMix 88 | Crush FC/FF | 350+ 5/19 375+ 4/19 | FB 32% Pull 74% | L5 2H/0HR/1XBH
+
+➕ Hit Pick | Freddie Freeman ⭐ (LAD) — HIT 67.0 | HR/PA +1.5 vs pace (hot) | 18g | IHR 0.20
+BA .288 | BA vs RHP .307 | K 18% | L5 4H/0HR/0XBH
+
+🔺 HRR Pick | Andy Pages (LAD) — HRR 64.5 | HR/PA +0.2 vs pace (on pace) | 0g | HRW ⚡ (69) | IHR 0.12
+BA .274 | BABIP 0.310 | PreOB 0.399 Post 0.458 | L5 6H/2R/5RBI
+
+🟢 Base Pick | Brice Turang (MIL) — XBH Anchor | HR/PA +1.4 vs pace (hot) | 1g | HRW ⚡ (58) | IHR 0.08
+BA .268 | BABIP 0.329 | L5 8H/5XBH/2HR
+
+🧩 PAIRINGS
+Rules: max 1 appearance in pairs | reasons compact
+🔒 CORE HR PAIRS
+1) Andy Pages (LAD) 🔺  + Jackson Chourio (MIL) 🥇
+   Reason: EV 95.3+91.4 | L5 6H+8H hot | L7 2HR+1HR
+2) Brice Turang (MIL) 🔺  + Will Smith (LAD) ➕
+   Reason: L5 8H+6H hot | L7 2HR+3HR
+
+🧬 STATCAST HR PAIRS
+1) Max Muncy (LAD) 🎆  + Teoscar Hernández (LAD) 🎆
+   Reason: EV 94.2+95.8
+
+🏊 4-MAN HR POOLS
+POOL A — STRONGEST                  POOL B — HRR+POWER                  POOL C — BALANCED                   POOL D — VARIANCE
+
+Freddie Freeman (LAD) ➕             Jake Bauers (MIL)                   Kyle Tucker (LAD)                   Christian Yelich (MIL)
+
+🏊 3-MAN HR POOLS  (replaces the 6-man — see the note in the code)
+   Grade ladder: 2+ is a hit, 3/3 is perfect. One homer is not a win.
+POOL A — STRONGEST                  POOL B — HRR+VAR                    POOL C — BALANCED                   POOL D — VARIANCE
+
+Mookie Betts (LAD) 🟢                Gary Sánchez (MIL) 🎆                William Contreras (MIL)             Joey Ortiz (MIL)
+Max Muncy (LAD) 🎆                   Jackson Chourio (MIL) 🥇             Will Smith (LAD) ➕                  Teoscar Hernández (LAD) 🎆
+Andy Pages (LAD) 🔺                  Brice Turang (MIL) 🔺                Freddie Freeman (LAD) ➕             Jake Bauers (MIL)
+
+🏊 6-MAN HR POOLS  (the old recipe, shown beside the 3-man pools)
+POOL A — STRONGEST                  POOL B — BALANCED                   POOL C — MID / VAR                  POOL D — CONTRARIAN
+
+Mookie Betts (LAD) 🟢                Gary Sánchez (MIL) 🎆                Joey Ortiz (MIL)
+Max Muncy (LAD) 🎆                   Freddie Freeman (LAD) ➕             Andrew Vaughn (MIL)
+Andy Pages (LAD) 🔺                  Jake Bauers (MIL)                   Kyle Tucker (LAD)
+Jackson Chourio (MIL) 🥇             Teoscar Hernández (LAD) 🎆           Miguel Rojas (LAD)
+Brice Turang (MIL) 🔺                William Contreras (MIL)             Hyeseong Kim (LAD)
+Will Smith (LAD) ➕                  Christian Yelich (MIL)              Sal Frelick (MIL)
+
+⚾ THE BOARDS ─────────────────────────────────
+
+🏆 TOP 30 ────────────────────────────────────
+ min 40 PA · 10 BBE · avoid = TRUE avoid only
+
+1. Max Muncy (LAD) — 📈 HR Lean | PA 561 BBE 19
+HR 56.8 | Board 76.2 | DC 62.5 | HR/PA +2.0 vs pace (hot) | 7g | HRW 🌤️ (54) | IHR 0.26 | spot 3
+PMix 88 | Crush FC/FF | 350+ 5/19 375+ 4/19 | FB 32% Pull 74% | L5 2H/0HR/1XBH
+
+2. Freddie Freeman ⭐ (LAD) — 🔭 Power Watch | PA 657 BBE 25
+HR 37.2 | Board 64.6 | DC 51.7 | HR/PA +1.5 vs pace (hot) | 18g | HRW 🌤️ (48) | IHR 0.20 | spot 2
+PMix 84 | Crush FC/FF | 350+ 3/25 375+ 3/25 | FB 36% Pull 56% | L5 4H/0HR/0XBH
+
+3. Teoscar Hernández (LAD) — 🔭 Power Watch | PA 491 BBE 17
+HR 35.8 | Board 61.4 | DC 57.2 | HR/PA +0.3 vs pace (on pace) | 2g | HRW ⚡ (61) | IHR 0.24 | spot 6
+PMix 57 | Crush FC/FF | 350+ 4/17 375+ 3/17 | FB 47% Pull 59% | L5 5H/1HR/2XBH
+
+4. Jackson Chourio (MIL) — 🧭 Contact / Monitor | PA 573 BBE 26
+HR 47.3 | Board 66.1 | DC 47.6 | HR/PA +0.1 vs pace (on pace) | 3g | HRW ⚡ (57) | IHR 0.15 | spot 3
+PMix 86 | Crush FF/SL | 350+ 3/26 375+ 3/26 | FB 31% Pull 58% | L5 8H/1HR/1XBH
+
+5. William Contreras (MIL) — 🧭 Contact / Monitor | PA 640 BBE 27
+HR 32.6 | Board 53.0 | DC 42.8 | HR/PA +1.4 vs pace (hot) | 5g | HRW 🧊 (42) | IHR 0.11 | spot 4
+PMix 86 | Crush FF/SL | 350+ 3/27 375+ 1/27 | FB 41% Pull 52% | L5 4H/0HR/0XBH
+
+6. Gary Sánchez (MIL) — 🧭 Contact / Monitor | PA 275 BBE 14
+HR 35.1 | Board 44.5 | DC 25.7 | HR/PA +0.1 vs pace (on pace) | 0g | HRW 🧊 (42) | IHR 0.07 | spot 8
+PMix 73 | Crush FF/SI | 350+ 1/14 375+ 0/14 | FB 36% Pull 71% | L5 4H/1HR/1XBH
+
+7. Mookie Betts (LAD) — 🧭 Contact / Monitor | PA 528 BBE 23
+HR 40.4 | Board 59.1 | DC 45.2 | HR/PA +0.1 vs pace (on pace) | 1g | HRW 🧊 (42) | IHR 0.09 | spot 7
+PMix 95 | Crush SI/FC | 350+ 4/23 375+ 2/23 | FB 35% Pull 57% | L5 4H/1HR/2XBH
+
+8. Will Smith (LAD) — 🧭 Contact / Monitor | PA 276 BBE 18
+HR 34.0 | Board 54.7 | DC 44.7 | HR/PA +0.3 vs pace (on pace) | 3g | HRW ⚡ (62) | IHR 0.06 | spot 1
+PMix 83 | Crush SI/FF | 350+ 1/18 375+ 1/18 | FB 28% Pull 61% | L5 6H/1HR/1XBH
+
+9. Andy Pages (LAD) — 🧭 Contact / Monitor | PA 574 BBE 17
+HR 39.0 | Board 47.5 | DC 45.2 | HR/PA +0.2 vs pace (on pace) | 0g | HRW ⚡ (69) | IHR 0.12 | spot 4
+PMix 43 | Crush ST/CU | 350+ 3/17 375+ 2/17 | FB 29% Pull 71% | L5 6H/2HR/3XBH
+
+10. Kyle Tucker (LAD) — 🧭 Contact / Monitor | PA 627 BBE 25
+HR 22.7 | Board 44.9 | DC 46.0 | HR/PA +0.5 vs pace (hot) | 8g | HRW 🧊 (14) | IHR 0.00 | spot 5
+PMix 82 | Crush FF/SI | 350+ 1/25 375+ 1/25 | FB 36% Pull 52% | L5 4H/0HR/0XBH
+
+11. Andrew Vaughn (MIL) — 🧭 Contact / Monitor | PA 331 BBE 15
+HR 15.5 | Board 36.0 | DC 39.5 | HR/PA -0.4 vs pace (on pace) | 10g | HRW 🧊 (17) | IHR 0.07 | spot 7
+PMix 74 | Crush FF | 350+ 1/15 375+ 0/15 | FB 27% Pull 40% | L5 3H/0HR/1XBH
+
+12. Christian Yelich (MIL) — 🧭 Contact / Monitor | PA 500 BBE 20
+HR 23.9 | Board 35.9 | DC 30.2 | HR/PA +0.5 vs pace (hot) | 3g | HRW 🧊 (42) | IHR 0.10 | spot 2
+PMix 28 | Crush FF/SL | 350+ 3/20 375+ 3/20 | FB 15% Pull 55% | L5 3H/1HR/1XBH
+
+13. Miguel Rojas (LAD) — 🧭 Contact / Monitor | PA 252 BBE 13
+HR 9.5 | Board 25.5 | DC 35.5 | HR/PA -0.3 vs pace (on pace) | 7g | HRW 🧊 (20) | IHR 0.08 | spot 8
+PMix 40 | Risk FF/ST | 350+ 0/13 375+ 0/13 | FB 15% Pull 62% | L5 2H/0HR/1XBH
+
+14. Hyeseong Kim (LAD) — 🧭 Contact / Monitor | PA 131 BBE 15
+HR 8.7 | Board 27.8 | DC 24.3 | HR/PA -0.2 vs pace (on pace) | 35g | HRW 🧊 (11) | IHR 0.00 | spot 9
+PMix 50 ⚠️ | PMix N/A | 350+ 0/15 375+ 0/15 | FB 7% Pull 73% | L5 2H/0HR/0XBH
+
+15. Jake Bauers (MIL) — 🧭 Contact / Monitor | PA 578 BBE 16
+HR 17.7 | Board 27.3 | DC 25.0 | HR/PA -0.9 vs pace (due) | 10g | HRW 🧊 (30) | IHR 0.12 | spot 6
+PMix 40 | Crush FF/CU | 350+ 1/16 375+ 0/16 | FB 19% Pull 56% | L5 4H/0HR/1XBH
+
+16. Brice Turang (MIL) — 🧭 Contact / Monitor | PA 680 BBE 26
+HR 29.5 | Board 27.4 | DC 23.7 | HR/PA +1.4 vs pace (hot) | 1g | HRW ⚡ (58) | IHR 0.08 | spot 1
+PMix 22 | Risk SI/FF | 350+ 1/26 375+ 1/26 | FB 27% Pull 35% | L5 8H/2HR/5XBH
+
+17. Joey Ortiz (MIL) — 🧭 Contact / Monitor | PA 415 BBE 17
+HR 6.4 | Board 26.7 | DC 22.6 | HR/PA -0.4 vs pace (due) | 9g | HRW 🧊 (20) | IHR 0.00 | spot 9
+PMix 70 | Crush FF/SL | 350+ 0/17 375+ 0/17 | FB 6% Pull 65% | L5 5H/0HR/1XBH
+
+18. Sal Frelick (MIL) — 🧭 Contact / Monitor | PA 384 BBE 22
+HR 1.8 | Board 9.3 | DC 6.8 | HR/PA -0.2 vs pace (on pace) | 23g | HRW 🧊 (16) | IHR 0.05 | spot 5
+PMix 15 | Risk SI/SL | 350+ 1/22 375+ 0/22 | FB 5% Pull 45% | L5 1H/0HR/1XBH
+
+🔄 ALT LOOKS · small sample / variance ───────
+
+
+
+💣 LONGEST BOMB WATCH ────────────────────────
+
+1. Teoscar Hernández (LAD) — DIST 68.8 | RAW 80.7 | HR 35.8 | HR/PA +0.3 vs pace (on pace) | 2g | IHR 0.24 | 350+ 4/17 375+ 3/17 400+ 2
+FB 47% Pull 59% | Pitcher Neutral ATK 32 | P allowed: Barrel 6.0% | HH 38% | EV 90.5 | 375+ 3 | BABIP 0.305
+
+2. Max Muncy (LAD) — DIST 69.2 | RAW 53.7 | HR 56.8 | HR/PA +2.0 vs pace (hot) | 7g | IHR 0.26 | 350+ 5/19 375+ 4/19 400+ 0
+FB 32% Pull 74% | Pitcher Neutral ATK 32 | P allowed: Barrel 6.0% | HH 38% | EV 90.5 | 375+ 3 | BABIP 0.305
+
+3. Freddie Freeman (LAD) — DIST 63.2 | RAW 40.1 | HR 37.2 | HR/PA +1.5 vs pace (hot) | 18g | IHR 0.20 | 350+ 3/25 375+ 3/25 400+ 0
+FB 36% Pull 56% | Pitcher Neutral ATK 32 | P allowed: Barrel 6.0% | HH 38% | EV 90.5 | 375+ 3 | BABIP 0.305
+
+═══════════════════════════════════════
+🏁 HRR BUILDER
+═══════════════════════════════════════
+Rules: max 2/player · no duplicate combos · hit picks can qualify
+
+💰 CORE PLAY  (2-man)
+1) Jackson Chourio (MIL) [HRR 70/HIT 74]  +  Andy Pages (LAD) [HRR 65/HIT 54]
+   avg HRR 67.1 | avg HIT 64.3 · elite HRR floor · full team spread
+2) Jackson Chourio (MIL) [HRR 70/HIT 74]  +  Freddie Freeman ⭐ (LAD) [HRR 59/HIT 67]
+   avg HRR 64.4 | avg HIT 70.7 · solid HRR floor · strong contact · full team spread
+
+💰 BALANCED PLAY  (3-man)
+1) Andy Pages (LAD) [HRR 65/HIT 54]  +  Brice Turang (MIL) [HRR 64/HIT 50]  +  Freddie Freeman ⭐ (LAD) [HRR 59/HIT 67]
+   avg HRR 62.6 | avg HIT 57.1 · solid HRR floor
+2) Jackson Chourio (MIL) [HRR 70/HIT 74]  +  Andy Pages (LAD) [HRR 65/HIT 54]  +  Freddie Freeman ⭐ (LAD) [HRR 59/HIT 67]
+   avg HRR 64.5 | avg HIT 65.2 · solid HRR floor
+
+💰 VALUE PLAY  (5-man)
+1) Jackson Chourio (MIL) [HRR 70/HIT 74]  +  Andy Pages (LAD) [HRR 65/HIT 54]  +  Brice Turang (MIL) [HRR 64/HIT 50]  +  Freddie Freeman ⭐ (LAD) [HRR 59/HIT 67]  +  William Contreras (MIL) [HRR 58/HIT 57]
+   avg HRR 63.2 | avg HIT 60.5 · solid HRR floor
+
+🔎 MODEL CROSS-CHECK PLAYS
+
+HIGH ACROSS CATEGORIES
+Max Muncy (LAD) 🎆
+Jackson Chourio (MIL) 🥇
+Andy Pages (LAD) 🔺
+Teoscar Hernández (LAD) 🎆
+Freddie Freeman (LAD) ➕
+
+HR UPSIDE / UNDERLISTED
+Mookie Betts (LAD) 🟢
+Brice Turang (MIL) 🔺
+Christian Yelich (MIL)
+Will Smith (LAD) ➕
+
+LEGEND
+
+Score Keys:
+HR = Home run score / power ceiling
+OVR = overall Top Pick score; HR + HRR + HIT blend
+HRW = Home Run Window; timing score for today's HR chance
+IHR = Ideal HR contact rate
+350+/375+ = recent tracked balls hit 350/375+ feet
+FB = recent fly-ball rate
+Pull = recent pull rate
+HR/9 = pitcher home runs allowed per 9 innings
+ATK = Pitcher Attack Score from recent pitcher damage allowed
+Projected HR Total = model estimate for full-slate home runs
+Longest HR Targets = distance-ceiling section, not safest HR picks
+
+Emoji / Category Keys — tonight's game-slot picks (pick_type; this report only, not the site):
+🥇 TOP = best overall/model blend from that game or board
+🎆 HR = pure HR/power pick
+🔺 HRR = hits + runs + RBI production profile; also used for hot production bats
+➕ HIT = base-hit profile / hit-floor pick
+🟢 CON = Base Pick; contact/XBH anchor, gap-power or total-base profile
+⭐ = batter lines up in a pitcher weak spot
+🎯 = pitcher throws a pitch type this batter crushes (pitch-type match)
+🧩 = Aligned Signals: weak-spot + pitch-match + real recent contact quality all stacking together (strongest validated combo)
+🚀 HRW 70+ = strong HR timing
+⚡ HRW 60–69 = playable HR timing
+🌤️ HRW 50–59 = borderline/building timing
+🧊 HRW under 50 = weak HR timing
+⚠️ LIMITED = sample/variance warning (soft caution, score not forced down)
+⛔ = hard score suppression in effect (e.g. True Avoid HR -- score actively capped, not just flagged)
+
+Role Tags (final_hr_role -- a DIFFERENT system from the game-slot picks above:
+his general profile for the season, not tonight's designation. Also on the
+site, on every card. Corrected here 2026-08-12 -- this legend had drifted
+behind the actual code, still teaching the emoji final_hr_role moved off of):
+💎 HR Bet = model's top-confidence home run play
+📈 HR Lean = good home run shot, strong but not airtight
+🧲 HRR / XBH = good bet for extra-base hits even if HR isn't a lock
+🔭 Power Watch = real raw power, more matchup uncertainty
+🧭 Contact / Monitor = not projecting a home run; may suit contact bets
+⛔ True Avoid HR = model expects no home run; score actively capped
+
+Player Output Keys:
+BA = batting average
+BA vs RHP/LHP = batting average split vs starting pitcher side
+BABIP = batting average on balls in play
+PreOB = on-base strength of hitters before him
+Post = run-production strength of hitters after him
+L5 = last 5 games shown on output
+K = strikeout rate
+XBH = extra-base hits
+2+ TB = two or more total bases
+
+Sections:
+Top 30 = trusted sample only; 40+ PA and 10+ tracked BBE
+Global PA Filter = applies to every output section; recent PA 30+ when available, otherwise season PA 80+
+ALT LOOKS = unique quality looks not already used in main board/pools/pairs when possible
+PAIRINGS = HR-focused two-man slips with compact reasons
+DUE BOMBER = drought 5g+ + weak-spot star + HR score 45+; HRW ignored on purpose (timing score buries droughts)
+POOLS = HR coverage groups; C/D can include variance and underlisted model plays
+HRR BUILDER = production slips; 2-man, 3-man, and 5-man combos; max 2 appearances per player
+MODEL CROSS-CHECK = high-scoring players across multiple categories or underlisted HR upside
+
+Helpful Read:
+Use HR picks for home run slips.
+Use HRR Builder for hit/run/RBI style slips.
+Use Base Picks for XBH or 2+ total-base ideas.
+Use ALT LOOKS as quality variance, not primary plays.
+
+
+📋 MODEL HEALTH ──────────────────────────────
+
+Players scored: 18 | Games: 1
+Role breakdown:
+  🧭 Contact / Monitor: 15
+  🔭 Power Watch: 2
+  📈 HR Lean: 1
+Coverage: weather 18/18 | pitch-mix 17/18 | pitcher Statcast 18/18

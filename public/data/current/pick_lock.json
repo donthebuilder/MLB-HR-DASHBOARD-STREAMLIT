@@ -1,0 +1,1482 @@
+{
+ "date": "2026-10-10",
+ "updated": "2026-10-10T20:18:40+00:00",
+ "runs": 5,
+ "games": {
+  "849831": {
+   "first_pitch": "2026-10-11T00:00:00+00:00",
+   "cats": {
+    "HR": {
+     "pid": 666176,
+     "name": "Jo Adell",
+     "at": "2026-10-10T20:18:40+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 545341,
+       "name": "Randal Grichuk",
+       "at": "2026-10-10T08:06:21+00:00"
+      },
+      {
+       "pid": 666176,
+       "name": "Jo Adell",
+       "at": "2026-10-10T20:18:40+00:00"
+      }
+     ]
+    },
+    "HIT": {
+     "pid": 803011,
+     "name": "Sam Antonacci",
+     "at": "2026-10-10T20:18:40+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 805367,
+       "name": "Chase Meidroth",
+       "at": "2026-10-10T08:06:21+00:00"
+      },
+      {
+       "pid": 803011,
+       "name": "Sam Antonacci",
+       "at": "2026-10-10T20:18:40+00:00"
+      }
+     ]
+    },
+    "TOP": {
+     "pid": 808959,
+     "name": "Munetaka Murakami",
+     "at": "2026-10-10T20:18:40+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 666176,
+       "name": "Jo Adell",
+       "at": "2026-10-10T08:06:21+00:00"
+      },
+      {
+       "pid": 808959,
+       "name": "Munetaka Murakami",
+       "at": "2026-10-10T20:18:40+00:00"
+      }
+     ]
+    },
+    "HRR": {
+     "pid": 678246,
+     "name": "Miguel Vargas",
+     "at": "2026-10-10T20:18:40+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 680757,
+       "name": "Steven Kwan",
+       "at": "2026-10-10T08:06:21+00:00"
+      },
+      {
+       "pid": 678246,
+       "name": "Miguel Vargas",
+       "at": "2026-10-10T20:18:40+00:00"
+      }
+     ]
+    },
+    "CONTACT": {
+     "pid": 808959,
+     "name": "Munetaka Murakami",
+     "at": "2026-10-10T20:18:40+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 677587,
+       "name": "Brayan Rocchio",
+       "at": "2026-10-10T08:06:21+00:00"
+      },
+      {
+       "pid": 808959,
+       "name": "Munetaka Murakami",
+       "at": "2026-10-10T20:18:40+00:00"
+      }
+     ]
+    }
+   }
+  }
+ },
+ "rejected": [],
+ "gone_from_slate": [],
+ "tickets": {
+  "recommended_pairs|A|0": {
+   "section": "recommended_pairs",
+   "first_pitch": "2026-10-11T00:00:00+00:00",
+   "pids": [
+    808959,
+    678246
+   ],
+   "meta": {
+    "type": "CORE HR PAIRS",
+    "lane_key": "A",
+    "pair_key": "678246|808959",
+    "pair_score": 19.03,
+    "risk": "High",
+    "tags": [
+     "HRW",
+     "Pitcher target",
+     "Weak side",
+     "Recent HR"
+    ],
+    "reason": "EV 93.2+92.7 | HR/9 1.37+1.37 | L7 3HR+1HR"
+   },
+   "stubs": {
+    "808959": {
+     "player_id": 808959,
+     "name": "Munetaka Murakami",
+     "team": "CWS",
+     "opponent": "CLE",
+     "game_pk": 849831,
+     "lineup_spot": 4
+    },
+    "678246": {
+     "player_id": 678246,
+     "name": "Miguel Vargas",
+     "team": "CWS",
+     "opponent": "CLE",
+     "game_pk": 849831,
+     "lineup_spot": 3
+    }
+   },
+   "at": "2026-10-10T20:18:40+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      678246,
+      805367
+     ],
+     "at": "2026-10-10T08:06:21+00:00"
+    },
+    {
+     "pids": [
+      808959,
+      678246
+     ],
+     "at": "2026-10-10T20:18:40+00:00"
+    }
+   ]
+  },
+  "recommended_pairs|B|0": {
+   "section": "recommended_pairs",
+   "first_pitch": "2026-10-11T00:00:00+00:00",
+   "pids": [
+    666176,
+    691019
+   ],
+   "meta": {
+    "type": "STATCAST HR PAIRS",
+    "lane_key": "B",
+    "pair_key": "666176|691019",
+    "pair_score": 13.34,
+    "risk": "High",
+    "tags": [
+     "HRW",
+     "Pitcher target",
+     "Hard contact",
+     "Recent HR"
+    ],
+    "reason": "1 HARD CONTACT | L7 1HR+1HR"
+   },
+   "stubs": {
+    "666176": {
+     "player_id": 666176,
+     "name": "Jo Adell",
+     "team": "CLE",
+     "opponent": "CWS",
+     "game_pk": 849831,
+     "lineup_spot": 4
+    },
+    "691019": {
+     "player_id": 691019,
+     "name": "Kyle Teel",
+     "team": "CWS",
+     "opponent": "CLE",
+     "game_pk": 849831,
+     "lineup_spot": 2
+    }
+   },
+   "at": "2026-10-10T20:18:40+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      545341,
+      666176
+     ],
+     "at": "2026-10-10T08:06:21+00:00"
+    },
+    {
+     "pids": [
+      666176,
+      691019
+     ],
+     "at": "2026-10-10T20:18:40+00:00"
+    }
+   ]
+  },
+  "recommended_pairs|B|1": {
+   "section": "recommended_pairs",
+   "first_pitch": "2026-10-11T00:00:00+00:00",
+   "pids": [
+    682657,
+    686668
+   ],
+   "meta": {
+    "type": "STATCAST HR PAIRS",
+    "lane_key": "B",
+    "pair_key": "682657|686668",
+    "pair_score": 12.98,
+    "risk": "High",
+    "tags": [
+     "HRW",
+     "Pitcher target",
+     "Hard contact",
+     "Weak side",
+     "Recent HR"
+    ],
+    "reason": "1 HARD CONTACT | L7 1HR+3HR"
+   },
+   "stubs": {
+    "682657": {
+     "player_id": 682657,
+     "name": "Angel Mart\u00ednez",
+     "team": "CLE",
+     "opponent": "CWS",
+     "game_pk": 849831,
+     "lineup_spot": 8
+    },
+    "686668": {
+     "player_id": 686668,
+     "name": "Brenton Doyle",
+     "team": "CWS",
+     "opponent": "CLE",
+     "game_pk": 849831,
+     "lineup_spot": 7
+    }
+   },
+   "at": "2026-10-10T08:06:21+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      682657,
+      686668
+     ],
+     "at": "2026-10-10T08:06:21+00:00"
+    }
+   ]
+  },
+  "pools_4man|Pool A \u2014 Strongest|0": {
+   "section": "pools_4man",
+   "first_pitch": "2026-10-11T00:00:00+00:00",
+   "pids": [
+    695657
+   ],
+   "meta": {
+    "name": "Pool A \u2014 Strongest",
+    "pool_score": 39.2,
+    "size": 1,
+    "risk": "Lower",
+    "tags": [
+     "Pitcher target"
+    ],
+    "reason": "Pool A \u2014 Strongest build \u00b7 optimized for 2+ \u00b7 1/1 players filled"
+   },
+   "stubs": {
+    "695657": {
+     "player_id": 695657,
+     "name": "Colson Montgomery",
+     "team": "CWS",
+     "opponent": "CLE",
+     "game_pk": 849831,
+     "lineup_spot": 8
+    }
+   },
+   "at": "2026-10-10T20:18:40+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      663993
+     ],
+     "at": "2026-10-10T08:06:21+00:00"
+    },
+    {
+     "pids": [
+      695657
+     ],
+     "at": "2026-10-10T20:18:40+00:00"
+    }
+   ]
+  },
+  "pools_4man|Pool B \u2014 HRR+Power|0": {
+   "section": "pools_4man",
+   "first_pitch": "2026-10-11T00:00:00+00:00",
+   "pids": [
+    663993
+   ],
+   "meta": {
+    "name": "Pool B \u2014 HRR+Power",
+    "pool_score": 29.0,
+    "size": 1,
+    "risk": "Lower",
+    "tags": [],
+    "reason": "Pool B \u2014 HRR+Power build \u00b7 optimized for 2+ \u00b7 1/1 players filled"
+   },
+   "stubs": {
+    "663993": {
+     "player_id": 663993,
+     "name": "Nathaniel Lowe",
+     "team": "CLE",
+     "opponent": "CWS",
+     "game_pk": 849831,
+     "lineup_spot": 5
+    }
+   },
+   "at": "2026-10-10T20:18:40+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      502054
+     ],
+     "at": "2026-10-10T08:06:21+00:00"
+    },
+    {
+     "pids": [
+      663993
+     ],
+     "at": "2026-10-10T20:18:40+00:00"
+    }
+   ]
+  },
+  "pools_4man|Pool C \u2014 Balanced|0": {
+   "section": "pools_4man",
+   "first_pitch": "2026-10-11T00:00:00+00:00",
+   "pids": [
+    671976
+   ],
+   "meta": {
+    "name": "Pool C \u2014 Balanced",
+    "pool_score": 13.7,
+    "size": 1,
+    "risk": "Lower",
+    "tags": [
+     "Pitcher target"
+    ],
+    "reason": "Pool C \u2014 Balanced build \u00b7 optimized for 2+ \u00b7 1/1 players filled"
+   },
+   "stubs": {
+    "671976": {
+     "player_id": 671976,
+     "name": "Tristan Peters",
+     "team": "CWS",
+     "opponent": "CLE",
+     "game_pk": 849831,
+     "lineup_spot": 6
+    }
+   },
+   "at": "2026-10-10T20:18:40+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      608070
+     ],
+     "at": "2026-10-10T08:06:21+00:00"
+    },
+    {
+     "pids": [
+      671976
+     ],
+     "at": "2026-10-10T20:18:40+00:00"
+    }
+   ]
+  },
+  "pools_4man|Pool D \u2014 Variance|0": {
+   "section": "pools_4man",
+   "first_pitch": "2026-10-11T00:00:00+00:00",
+   "pids": [
+    683953
+   ],
+   "meta": {
+    "name": "Pool D \u2014 Variance",
+    "pool_score": 18.5,
+    "size": 1,
+    "risk": "Lower",
+    "tags": [],
+    "reason": "Pool D \u2014 Variance build \u00b7 optimized for 2+ \u00b7 1/1 players filled"
+   },
+   "stubs": {
+    "683953": {
+     "player_id": 683953,
+     "name": "Travis Bazzana",
+     "team": "CLE",
+     "opponent": "CWS",
+     "game_pk": 849831,
+     "lineup_spot": 6
+    }
+   },
+   "at": "2026-10-10T20:18:40+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      682177
+     ],
+     "at": "2026-10-10T08:06:21+00:00"
+    },
+    {
+     "pids": [
+      683953
+     ],
+     "at": "2026-10-10T20:18:40+00:00"
+    }
+   ]
+  },
+  "pools_3man|Pool A \u2014 Strongest|0": {
+   "section": "pools_3man",
+   "first_pitch": "2026-10-11T00:00:00+00:00",
+   "pids": [
+    686668,
+    808959,
+    678246
+   ],
+   "meta": {
+    "name": "Pool A \u2014 Strongest",
+    "pool_score": 51.0,
+    "size": 3,
+    "risk": "Lower",
+    "tags": [
+     "HRW",
+     "Pitcher target",
+     "Recent HR",
+     "Reliable"
+    ],
+    "reason": "Pool A \u2014 Strongest build \u00b7 optimized for 2+ \u00b7 includes same-game legs \u00b7 3/3 players filled"
+   },
+   "stubs": {
+    "686668": {
+     "player_id": 686668,
+     "name": "Brenton Doyle",
+     "team": "CWS",
+     "opponent": "CLE",
+     "game_pk": 849831,
+     "lineup_spot": 9
+    },
+    "808959": {
+     "player_id": 808959,
+     "name": "Munetaka Murakami",
+     "team": "CWS",
+     "opponent": "CLE",
+     "game_pk": 849831,
+     "lineup_spot": 4
+    },
+    "678246": {
+     "player_id": 678246,
+     "name": "Miguel Vargas",
+     "team": "CWS",
+     "opponent": "CLE",
+     "game_pk": 849831,
+     "lineup_spot": 3
+    }
+   },
+   "at": "2026-10-10T20:18:40+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      672275,
+      545341,
+      678246
+     ],
+     "at": "2026-10-10T08:06:21+00:00"
+    },
+    {
+     "pids": [
+      686668,
+      808959,
+      678246
+     ],
+     "at": "2026-10-10T20:18:40+00:00"
+    }
+   ]
+  },
+  "pools_3man|Pool B \u2014 HRR+Var|0": {
+   "section": "pools_3man",
+   "first_pitch": "2026-10-11T00:00:00+00:00",
+   "pids": [
+    672275,
+    666176,
+    800050
+   ],
+   "meta": {
+    "name": "Pool B \u2014 HRR+Var",
+    "pool_score": 26.6,
+    "size": 3,
+    "risk": "Lower",
+    "tags": [
+     "HRW",
+     "Recent HR"
+    ],
+    "reason": "Pool B \u2014 HRR+Var build \u00b7 optimized for 2+ \u00b7 includes same-game legs \u00b7 3/3 players filled"
+   },
+   "stubs": {
+    "672275": {
+     "player_id": 672275,
+     "name": "Patrick Bailey",
+     "team": "CLE",
+     "opponent": "CWS",
+     "game_pk": 849831,
+     "lineup_spot": 7
+    },
+    "666176": {
+     "player_id": 666176,
+     "name": "Jo Adell",
+     "team": "CLE",
+     "opponent": "CWS",
+     "game_pk": 849831,
+     "lineup_spot": 4
+    },
+    "800050": {
+     "player_id": 800050,
+     "name": "Chase DeLauter",
+     "team": "CLE",
+     "opponent": "CWS",
+     "game_pk": 849831,
+     "lineup_spot": 3
+    }
+   },
+   "at": "2026-10-10T20:18:40+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      695657,
+      666176,
+      677587
+     ],
+     "at": "2026-10-10T08:06:21+00:00"
+    },
+    {
+     "pids": [
+      672275,
+      666176,
+      800050
+     ],
+     "at": "2026-10-10T20:18:40+00:00"
+    }
+   ]
+  },
+  "pools_3man|Pool C \u2014 Balanced|0": {
+   "section": "pools_3man",
+   "first_pitch": "2026-10-11T00:00:00+00:00",
+   "pids": [
+    608070,
+    677587,
+    803011
+   ],
+   "meta": {
+    "name": "Pool C \u2014 Balanced",
+    "pool_score": 11.1,
+    "size": 3,
+    "risk": "Lower",
+    "tags": [
+     "HRW",
+     "Recent HR",
+     "Pitcher target"
+    ],
+    "reason": "Pool C \u2014 Balanced build \u00b7 optimized for 2+ \u00b7 includes same-game legs \u00b7 3/3 players filled"
+   },
+   "stubs": {
+    "608070": {
+     "player_id": 608070,
+     "name": "Jos\u00e9 Ram\u00edrez",
+     "team": "CLE",
+     "opponent": "CWS",
+     "game_pk": 849831,
+     "lineup_spot": 2
+    },
+    "677587": {
+     "player_id": 677587,
+     "name": "Brayan Rocchio",
+     "team": "CLE",
+     "opponent": "CWS",
+     "game_pk": 849831,
+     "lineup_spot": 9
+    },
+    "803011": {
+     "player_id": 803011,
+     "name": "Sam Antonacci",
+     "team": "CWS",
+     "opponent": "CLE",
+     "game_pk": 849831,
+     "lineup_spot": 1
+    }
+   },
+   "at": "2026-10-10T20:18:40+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      691019,
+      805367,
+      608070
+     ],
+     "at": "2026-10-10T08:06:21+00:00"
+    },
+    {
+     "pids": [
+      608070,
+      677587,
+      803011
+     ],
+     "at": "2026-10-10T20:18:40+00:00"
+    }
+   ]
+  },
+  "pools_3man|Pool D \u2014 Variance|0": {
+   "section": "pools_3man",
+   "first_pitch": "2026-10-11T00:00:00+00:00",
+   "pids": [
+    690984,
+    805367,
+    683953
+   ],
+   "meta": {
+    "name": "Pool D \u2014 Variance",
+    "pool_score": 18.0,
+    "size": 3,
+    "risk": "Lower",
+    "tags": [
+     "HRW",
+     "Pitcher target",
+     "Recent HR"
+    ],
+    "reason": "Pool D \u2014 Variance build \u00b7 optimized for 2+ \u00b7 includes same-game legs \u00b7 3/3 players filled"
+   },
+   "stubs": {
+    "690984": {
+     "player_id": 690984,
+     "name": "Petey Halpin",
+     "team": "CLE",
+     "opponent": "CWS",
+     "game_pk": 849831,
+     "lineup_spot": 8
+    },
+    "805367": {
+     "player_id": 805367,
+     "name": "Chase Meidroth",
+     "team": "CWS",
+     "opponent": "CLE",
+     "game_pk": 849831,
+     "lineup_spot": 7
+    },
+    "683953": {
+     "player_id": 683953,
+     "name": "Travis Bazzana",
+     "team": "CLE",
+     "opponent": "CWS",
+     "game_pk": 849831,
+     "lineup_spot": 6
+    }
+   },
+   "at": "2026-10-10T20:18:40+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      668670,
+      686668,
+      682177
+     ],
+     "at": "2026-10-10T08:06:21+00:00"
+    },
+    {
+     "pids": [
+      690984,
+      805367,
+      683953
+     ],
+     "at": "2026-10-10T20:18:40+00:00"
+    }
+   ]
+  },
+  "pools_6man_legacy|Pool A \u2014 Strongest|0": {
+   "section": "pools_6man_legacy",
+   "first_pitch": "2026-10-11T00:00:00+00:00",
+   "pids": [
+    686668,
+    808959,
+    678246,
+    666176,
+    800050,
+    677587
+   ],
+   "meta": {
+    "name": "Pool A \u2014 Strongest",
+    "pool_score": 38.2,
+    "size": 6,
+    "risk": "Lower",
+    "tags": [
+     "HRW",
+     "Pitcher target",
+     "Recent HR",
+     "Reliable"
+    ],
+    "reason": "Pool A \u2014 Strongest build \u00b7 optimized for 2+ \u00b7 includes same-game legs \u00b7 6/6 players filled",
+    "model_version": "pools_6man_legacy_v1"
+   },
+   "stubs": {
+    "686668": {
+     "player_id": 686668,
+     "name": "Brenton Doyle",
+     "team": "CWS",
+     "opponent": "CLE",
+     "game_pk": 849831,
+     "lineup_spot": 9
+    },
+    "808959": {
+     "player_id": 808959,
+     "name": "Munetaka Murakami",
+     "team": "CWS",
+     "opponent": "CLE",
+     "game_pk": 849831,
+     "lineup_spot": 4
+    },
+    "678246": {
+     "player_id": 678246,
+     "name": "Miguel Vargas",
+     "team": "CWS",
+     "opponent": "CLE",
+     "game_pk": 849831,
+     "lineup_spot": 3
+    },
+    "666176": {
+     "player_id": 666176,
+     "name": "Jo Adell",
+     "team": "CLE",
+     "opponent": "CWS",
+     "game_pk": 849831,
+     "lineup_spot": 4
+    },
+    "800050": {
+     "player_id": 800050,
+     "name": "Chase DeLauter",
+     "team": "CLE",
+     "opponent": "CWS",
+     "game_pk": 849831,
+     "lineup_spot": 3
+    },
+    "677587": {
+     "player_id": 677587,
+     "name": "Brayan Rocchio",
+     "team": "CLE",
+     "opponent": "CWS",
+     "game_pk": 849831,
+     "lineup_spot": 9
+    }
+   },
+   "at": "2026-10-10T20:18:40+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      672275,
+      545341,
+      678246,
+      666176,
+      677587,
+      805367
+     ],
+     "at": "2026-10-10T08:06:21+00:00"
+    },
+    {
+     "pids": [
+      686668,
+      808959,
+      678246,
+      666176,
+      800050,
+      677587
+     ],
+     "at": "2026-10-10T20:18:40+00:00"
+    }
+   ]
+  },
+  "pools_6man_legacy|Pool B \u2014 Balanced|0": {
+   "section": "pools_6man_legacy",
+   "first_pitch": "2026-10-11T00:00:00+00:00",
+   "pids": [
+    608070,
+    803011,
+    680757,
+    695657,
+    663993,
+    805367
+   ],
+   "meta": {
+    "name": "Pool B \u2014 Balanced",
+    "pool_score": 17.7,
+    "size": 6,
+    "risk": "Lower",
+    "tags": [
+     "Pitcher target",
+     "HRW",
+     "Recent HR"
+    ],
+    "reason": "Pool B \u2014 Balanced build \u00b7 optimized for 2+ \u00b7 includes same-game legs \u00b7 6/6 players filled",
+    "model_version": "pools_6man_legacy_v1"
+   },
+   "stubs": {
+    "608070": {
+     "player_id": 608070,
+     "name": "Jos\u00e9 Ram\u00edrez",
+     "team": "CLE",
+     "opponent": "CWS",
+     "game_pk": 849831,
+     "lineup_spot": 2
+    },
+    "803011": {
+     "player_id": 803011,
+     "name": "Sam Antonacci",
+     "team": "CWS",
+     "opponent": "CLE",
+     "game_pk": 849831,
+     "lineup_spot": 1
+    },
+    "680757": {
+     "player_id": 680757,
+     "name": "Steven Kwan",
+     "team": "CLE",
+     "opponent": "CWS",
+     "game_pk": 849831,
+     "lineup_spot": 1
+    },
+    "695657": {
+     "player_id": 695657,
+     "name": "Colson Montgomery",
+     "team": "CWS",
+     "opponent": "CLE",
+     "game_pk": 849831,
+     "lineup_spot": 8
+    },
+    "663993": {
+     "player_id": 663993,
+     "name": "Nathaniel Lowe",
+     "team": "CLE",
+     "opponent": "CWS",
+     "game_pk": 849831,
+     "lineup_spot": 5
+    },
+    "805367": {
+     "player_id": 805367,
+     "name": "Chase Meidroth",
+     "team": "CWS",
+     "opponent": "CLE",
+     "game_pk": 849831,
+     "lineup_spot": 7
+    }
+   },
+   "at": "2026-10-10T20:18:40+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      695657,
+      608070,
+      680757,
+      682657,
+      663993,
+      686668
+     ],
+     "at": "2026-10-10T08:06:21+00:00"
+    },
+    {
+     "pids": [
+      608070,
+      803011,
+      680757,
+      695657,
+      663993,
+      805367
+     ],
+     "at": "2026-10-10T20:18:40+00:00"
+    }
+   ]
+  },
+  "pools_6man_legacy|Pool C \u2014 Mid / Var|0": {
+   "section": "pools_6man_legacy",
+   "first_pitch": "2026-10-11T00:00:00+00:00",
+   "pids": [
+    672275,
+    683953,
+    691019,
+    671976,
+    690984
+   ],
+   "meta": {
+    "name": "Pool C \u2014 Mid / Var",
+    "pool_score": 17.8,
+    "size": 5,
+    "risk": "Lower",
+    "tags": [
+     "HRW",
+     "Recent HR",
+     "Pitcher target"
+    ],
+    "reason": "Pool C \u2014 Mid / Var build \u00b7 optimized for 2+ \u00b7 includes same-game legs \u00b7 5/5 players filled",
+    "model_version": "pools_6man_legacy_v1"
+   },
+   "stubs": {
+    "672275": {
+     "player_id": 672275,
+     "name": "Patrick Bailey",
+     "team": "CLE",
+     "opponent": "CWS",
+     "game_pk": 849831,
+     "lineup_spot": 7
+    },
+    "683953": {
+     "player_id": 683953,
+     "name": "Travis Bazzana",
+     "team": "CLE",
+     "opponent": "CWS",
+     "game_pk": 849831,
+     "lineup_spot": 6
+    },
+    "691019": {
+     "player_id": 691019,
+     "name": "Kyle Teel",
+     "team": "CWS",
+     "opponent": "CLE",
+     "game_pk": 849831,
+     "lineup_spot": 2
+    },
+    "671976": {
+     "player_id": 671976,
+     "name": "Tristan Peters",
+     "team": "CWS",
+     "opponent": "CLE",
+     "game_pk": 849831,
+     "lineup_spot": 6
+    },
+    "690984": {
+     "player_id": 690984,
+     "name": "Petey Halpin",
+     "team": "CLE",
+     "opponent": "CWS",
+     "game_pk": 849831,
+     "lineup_spot": 8
+    }
+   },
+   "at": "2026-10-10T20:18:40+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      691019,
+      682177,
+      502054,
+      668670,
+      690984
+     ],
+     "at": "2026-10-10T08:06:21+00:00"
+    },
+    {
+     "pids": [
+      672275,
+      683953,
+      691019,
+      671976,
+      690984
+     ],
+     "at": "2026-10-10T20:18:40+00:00"
+    }
+   ]
+  },
+  "pools_3man_legacy|Pool A1|0": {
+   "section": "pools_3man_legacy",
+   "first_pitch": "2026-10-11T00:00:00+00:00",
+   "pids": [
+    686668,
+    808959,
+    678246
+   ],
+   "meta": {
+    "name": "Pool A1",
+    "pool_score": 51.0,
+    "size": 3,
+    "risk": "Lower",
+    "tags": [
+     "HRW",
+     "Pitcher target",
+     "Recent HR",
+     "Reliable"
+    ],
+    "reason": "Pool A1 build \u00b7 optimized for 2+ \u00b7 includes same-game legs \u00b7 3/3 players filled",
+    "model_version": "pools_6man_legacy_v1_half",
+    "parent": "Pool A \u2014 Strongest"
+   },
+   "stubs": {
+    "686668": {
+     "player_id": 686668,
+     "name": "Brenton Doyle",
+     "team": "CWS",
+     "opponent": "CLE",
+     "game_pk": 849831,
+     "lineup_spot": 9
+    },
+    "808959": {
+     "player_id": 808959,
+     "name": "Munetaka Murakami",
+     "team": "CWS",
+     "opponent": "CLE",
+     "game_pk": 849831,
+     "lineup_spot": 4
+    },
+    "678246": {
+     "player_id": 678246,
+     "name": "Miguel Vargas",
+     "team": "CWS",
+     "opponent": "CLE",
+     "game_pk": 849831,
+     "lineup_spot": 3
+    }
+   },
+   "at": "2026-10-10T20:18:40+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      672275,
+      545341,
+      678246
+     ],
+     "at": "2026-10-10T08:06:21+00:00"
+    },
+    {
+     "pids": [
+      686668,
+      808959,
+      678246
+     ],
+     "at": "2026-10-10T20:18:40+00:00"
+    }
+   ]
+  },
+  "pools_3man_legacy|Pool A2|0": {
+   "section": "pools_3man_legacy",
+   "first_pitch": "2026-10-11T00:00:00+00:00",
+   "pids": [
+    666176,
+    800050,
+    677587
+   ],
+   "meta": {
+    "name": "Pool A2",
+    "pool_score": 25.3,
+    "size": 3,
+    "risk": "Lower",
+    "tags": [
+     "HRW",
+     "Recent HR"
+    ],
+    "reason": "Pool A2 build \u00b7 optimized for 2+ \u00b7 includes same-game legs \u00b7 3/3 players filled",
+    "model_version": "pools_6man_legacy_v1_half",
+    "parent": "Pool A \u2014 Strongest"
+   },
+   "stubs": {
+    "666176": {
+     "player_id": 666176,
+     "name": "Jo Adell",
+     "team": "CLE",
+     "opponent": "CWS",
+     "game_pk": 849831,
+     "lineup_spot": 4
+    },
+    "800050": {
+     "player_id": 800050,
+     "name": "Chase DeLauter",
+     "team": "CLE",
+     "opponent": "CWS",
+     "game_pk": 849831,
+     "lineup_spot": 3
+    },
+    "677587": {
+     "player_id": 677587,
+     "name": "Brayan Rocchio",
+     "team": "CLE",
+     "opponent": "CWS",
+     "game_pk": 849831,
+     "lineup_spot": 9
+    }
+   },
+   "at": "2026-10-10T20:18:40+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      666176,
+      677587,
+      805367
+     ],
+     "at": "2026-10-10T08:06:21+00:00"
+    },
+    {
+     "pids": [
+      666176,
+      800050,
+      677587
+     ],
+     "at": "2026-10-10T20:18:40+00:00"
+    }
+   ]
+  },
+  "pools_3man_legacy|Pool B1|0": {
+   "section": "pools_3man_legacy",
+   "first_pitch": "2026-10-11T00:00:00+00:00",
+   "pids": [
+    608070,
+    803011,
+    680757
+   ],
+   "meta": {
+    "name": "Pool B1",
+    "pool_score": 4.6,
+    "size": 3,
+    "risk": "Lower",
+    "tags": [
+     "Pitcher target"
+    ],
+    "reason": "Pool B1 build \u00b7 optimized for 2+ \u00b7 includes same-game legs \u00b7 3/3 players filled",
+    "model_version": "pools_6man_legacy_v1_half",
+    "parent": "Pool B \u2014 Balanced"
+   },
+   "stubs": {
+    "608070": {
+     "player_id": 608070,
+     "name": "Jos\u00e9 Ram\u00edrez",
+     "team": "CLE",
+     "opponent": "CWS",
+     "game_pk": 849831,
+     "lineup_spot": 2
+    },
+    "803011": {
+     "player_id": 803011,
+     "name": "Sam Antonacci",
+     "team": "CWS",
+     "opponent": "CLE",
+     "game_pk": 849831,
+     "lineup_spot": 1
+    },
+    "680757": {
+     "player_id": 680757,
+     "name": "Steven Kwan",
+     "team": "CLE",
+     "opponent": "CWS",
+     "game_pk": 849831,
+     "lineup_spot": 1
+    }
+   },
+   "at": "2026-10-10T20:18:40+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      695657,
+      608070,
+      680757
+     ],
+     "at": "2026-10-10T08:06:21+00:00"
+    },
+    {
+     "pids": [
+      608070,
+      803011,
+      680757
+     ],
+     "at": "2026-10-10T20:18:40+00:00"
+    }
+   ]
+  },
+  "pools_3man_legacy|Pool B2|0": {
+   "section": "pools_3man_legacy",
+   "first_pitch": "2026-10-11T00:00:00+00:00",
+   "pids": [
+    695657,
+    663993,
+    805367
+   ],
+   "meta": {
+    "name": "Pool B2",
+    "pool_score": 30.8,
+    "size": 3,
+    "risk": "Lower",
+    "tags": [
+     "Pitcher target",
+     "HRW",
+     "Recent HR"
+    ],
+    "reason": "Pool B2 build \u00b7 optimized for 2+ \u00b7 includes same-game legs \u00b7 3/3 players filled",
+    "model_version": "pools_6man_legacy_v1_half",
+    "parent": "Pool B \u2014 Balanced"
+   },
+   "stubs": {
+    "695657": {
+     "player_id": 695657,
+     "name": "Colson Montgomery",
+     "team": "CWS",
+     "opponent": "CLE",
+     "game_pk": 849831,
+     "lineup_spot": 8
+    },
+    "663993": {
+     "player_id": 663993,
+     "name": "Nathaniel Lowe",
+     "team": "CLE",
+     "opponent": "CWS",
+     "game_pk": 849831,
+     "lineup_spot": 5
+    },
+    "805367": {
+     "player_id": 805367,
+     "name": "Chase Meidroth",
+     "team": "CWS",
+     "opponent": "CLE",
+     "game_pk": 849831,
+     "lineup_spot": 7
+    }
+   },
+   "at": "2026-10-10T20:18:40+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      682657,
+      663993,
+      686668
+     ],
+     "at": "2026-10-10T08:06:21+00:00"
+    },
+    {
+     "pids": [
+      695657,
+      663993,
+      805367
+     ],
+     "at": "2026-10-10T20:18:40+00:00"
+    }
+   ]
+  },
+  "pools_3man_legacy|Pool C1|0": {
+   "section": "pools_3man_legacy",
+   "first_pitch": "2026-10-11T00:00:00+00:00",
+   "pids": [
+    672275,
+    683953,
+    691019
+   ],
+   "meta": {
+    "name": "Pool C1",
+    "pool_score": 21.4,
+    "size": 3,
+    "risk": "Lower",
+    "tags": [
+     "HRW",
+     "Recent HR",
+     "Pitcher target"
+    ],
+    "reason": "Pool C1 build \u00b7 optimized for 2+ \u00b7 includes same-game legs \u00b7 3/3 players filled",
+    "model_version": "pools_6man_legacy_v1_half",
+    "parent": "Pool C \u2014 Mid / Var"
+   },
+   "stubs": {
+    "672275": {
+     "player_id": 672275,
+     "name": "Patrick Bailey",
+     "team": "CLE",
+     "opponent": "CWS",
+     "game_pk": 849831,
+     "lineup_spot": 7
+    },
+    "683953": {
+     "player_id": 683953,
+     "name": "Travis Bazzana",
+     "team": "CLE",
+     "opponent": "CWS",
+     "game_pk": 849831,
+     "lineup_spot": 6
+    },
+    "691019": {
+     "player_id": 691019,
+     "name": "Kyle Teel",
+     "team": "CWS",
+     "opponent": "CLE",
+     "game_pk": 849831,
+     "lineup_spot": 2
+    }
+   },
+   "at": "2026-10-10T20:18:40+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      691019,
+      682177,
+      502054
+     ],
+     "at": "2026-10-10T08:06:21+00:00"
+    },
+    {
+     "pids": [
+      672275,
+      683953,
+      691019
+     ],
+     "at": "2026-10-10T20:18:40+00:00"
+    }
+   ]
+  },
+  "pools_3man_legacy|Pool C2|0": {
+   "section": "pools_3man_legacy",
+   "first_pitch": "2026-10-11T00:00:00+00:00",
+   "pids": [
+    671976,
+    690984
+   ],
+   "meta": {
+    "name": "Pool C2",
+    "pool_score": 12.5,
+    "size": 2,
+    "risk": "Lower",
+    "tags": [
+     "Pitcher target"
+    ],
+    "reason": "Pool C2 build \u00b7 optimized for 2+ \u00b7 includes same-game legs \u00b7 2/2 players filled",
+    "model_version": "pools_6man_legacy_v1_half",
+    "parent": "Pool C \u2014 Mid / Var"
+   },
+   "stubs": {
+    "671976": {
+     "player_id": 671976,
+     "name": "Tristan Peters",
+     "team": "CWS",
+     "opponent": "CLE",
+     "game_pk": 849831,
+     "lineup_spot": 6
+    },
+    "690984": {
+     "player_id": 690984,
+     "name": "Petey Halpin",
+     "team": "CLE",
+     "opponent": "CWS",
+     "game_pk": 849831,
+     "lineup_spot": 8
+    }
+   },
+   "at": "2026-10-10T20:18:40+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      668670,
+      690984
+     ],
+     "at": "2026-10-10T08:06:21+00:00"
+    },
+    {
+     "pids": [
+      671976,
+      690984
+     ],
+     "at": "2026-10-10T20:18:40+00:00"
+    }
+   ]
+  },
+  "recommended_pairs|A|1": {
+   "section": "recommended_pairs",
+   "first_pitch": "2026-10-11T00:00:00+00:00",
+   "pids": [
+    800050,
+    805367
+   ],
+   "meta": {
+    "type": "CORE HR PAIRS",
+    "lane_key": "A",
+    "pair_key": "800050|805367",
+    "pair_score": 10.72,
+    "risk": "Medium",
+    "tags": [
+     "HRW",
+     "Pitcher target",
+     "Hard contact",
+     "Weak side",
+     "Recent HR"
+    ],
+    "reason": "1 HARD CONTACT | L7 2HR+2HR | L5 XBH 3+4"
+   },
+   "stubs": {
+    "800050": {
+     "player_id": 800050,
+     "name": "Chase DeLauter",
+     "team": "CLE",
+     "opponent": "CWS",
+     "game_pk": 849831,
+     "lineup_spot": 3
+    },
+    "805367": {
+     "player_id": 805367,
+     "name": "Chase Meidroth",
+     "team": "CWS",
+     "opponent": "CLE",
+     "game_pk": 849831,
+     "lineup_spot": 7
+    }
+   },
+   "at": "2026-10-10T20:18:40+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      800050,
+      805367
+     ],
+     "at": "2026-10-10T20:18:40+00:00"
+    }
+   ]
+  }
+ },
+ "prediction_of_record": {},
+ "rule": "Before a game's first pitch a designation may change and every change is kept in history[]. At first pitch it freezes: the published sheet is rewritten to match the lock and any later change is recorded in rejected[] instead of being applied. locked_late marks games first seen after they had already started. Pools and pairs follow the same rule keyed on their slot (label / lane_key), freezing when their EARLIEST leg starts; a locked ticket is never re-rostered when a leg scratches \u2014 that leg voids, which is what a real ticket does. prediction_of_record locks, per game_pk, the run_id standing at that game's first pitch -- the one official run for every player in that game, not just the picks; a player who joins the slate after that lock has no row in it, which is honest, not a bug."
+}
