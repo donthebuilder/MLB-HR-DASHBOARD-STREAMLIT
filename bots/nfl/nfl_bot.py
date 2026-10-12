@@ -57,6 +57,7 @@ from nfl_features import (build, season_baseline, upcoming_rows, stats_season_fo
 from nfl_scoring import (MODELS, OUTCOME, score, derive, _pctile, V1_MODELS, score_def_td, SHADOW_MODELS,
                          QB_TD_MODEL)
 import nfl_qb_td
+import nfl_alignment
 
 # MODEL FOUNDATION (2026-08-24) -- the NFL side of the same provenance work
 # bots/model_registry.py / bots/config_fingerprint.py did for MLB on
@@ -1036,6 +1037,9 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
         ("def_explosive", nfl_explosive.defense_explosive, stat_season),
         ("player_explosive", nfl_explosive.player_explosive, stat_season),
         ("usage", nfl_explosive.team_usage, stat_season),
+        # ALIGNMENT (bot task 2): club-level run front / personnel / formation from
+        # participation (the charting season); per-man stays empty, no free feed.
+        ("alignment", nfl_alignment.build, chart_season),
         ("field", nfl_field.build, stat_season),
         # Every target and red-zone touch, per offence (The Field). Written to
         # its own nfl_field_{TEAM}.json files below, never into matchup.json.
@@ -1739,6 +1743,7 @@ def main() -> int:
         "disruption_stats": nfl_disruption.STATS,
         "disruption_labels": nfl_disruption.STAT_LABELS,
         "pass_rush": extras.get("pass_rush", {}),
+        "alignment": extras.get("alignment", {}),
         "red_zone": extras.get("red_zone", {}),
         # FTN in-season tendencies; carries its own `season` (nfl_tendencies.py).
         "tendencies": extras.get("tendencies", {}),
