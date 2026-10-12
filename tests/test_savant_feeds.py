@@ -166,7 +166,8 @@ def test_every_loader_returns_a_status():
     zeroes."""
     SF._CACHE.clear()
     src = (Path(__file__).resolve().parents[1] / "bots" / "savant_feeds.py").read_text(encoding="utf-8")
-    assert "return out, status" in src
+    # the success path returns the joined map with its status (a map that parsed but joined nothing is not "ok", see _joined_status)
+    assert "return out, _joined_status(status, rows, out)" in src
     assert src.count("Tuple[Dict[int, dict], str]") >= 2
 
 

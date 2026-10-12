@@ -86,12 +86,15 @@ with tempfile.TemporaryDirectory() as tmp:
     current = [{"player_id": 1, "name": "Snap Hitter", "game_pk": 900900,
                 "season_iso": 0.310,          # leaked: tonight's HR inflated it
                 "last5_hr": 2,                 # leaked
+                "season_sb": 3,                # leaked, and in neither headline map: only the snapshot reaches it
                 "best_bet_type": "Avoid for HR",  # rebuilt post-game
                 "hr_score": 88.0}]
-    out, _ = lrt.apply_locked_features(current, "2026-08-23", d)
+    # apply_locked_features overlays IN PLACE, so hand it a copy: the legacy-log check below needs the published values untouched
+    out, _ = lrt.apply_locked_features([dict(current[0])], "2026-08-23", d)
     g = out[0]
     check("snapshot overlays a leaked season field", g["season_iso"], 0.240)
     check("snapshot overlays a leaked recency field", g["last5_hr"], 1)
+    check("snapshot overlays a field no headline map covers", g["season_sb"], 12)
     check("snapshot overlays a rebuilt verdict field", g["best_bet_type"], "HR")
     check("hr_score still overlaid from the scores map", g["hr_score"], 61.0)
     check("identity NEVER overlaid: player_id", g["player_id"], 1)
@@ -105,8 +108,10 @@ with tempfile.TemporaryDirectory() as tmp:
     out2, _ = lrt.apply_locked_features([dict(current[0])], "2026-08-23", d)
     check("legacy log (no snapshot): headline maps still apply",
           out2[0]["hr_score"], 61.0)
+    # season_iso joined the headline component map after this was written (it now comes from `components`
+    # even without a snapshot), so the field that proves "legacy keeps the published value" is one no map covers.
     check("legacy log: un-mapped field keeps its published value",
-          out2[0]["season_iso"], 0.310)
+          out2[0]["season_sb"], 3)
 
 # ── 2. stolen bases v1 ────────────────────────────────────────────────────
 flat = md.flatten_season_hitting({
