@@ -1490,6 +1490,7 @@ def write_nfl_signal_log(run_meta: dict, players: list[dict], out_dir: Path, pre
 # only the keys they read (~340 KB), rewritten by each run until the week's
 # first Sunday kickoff and never after, so the copy left standing is the last
 # one built before the main slate. Best effort: a failure prints and returns.
+USAGE_SLIM = ("tgt_share", "car_share", "rz_tgt_share", "rz_car_share", "gl_car_share", "air_share", "games")
 MATCHUP_WEEK_KEYS = ("season", "alt_season", "dvp", "dvp_trend", "dvp_roles", "dvp_stats", "dvp_labels", "roles", "red_zone", "snaps")
 
 
@@ -1625,6 +1626,16 @@ def main() -> int:
     # nfl_disruption.py itself via MIN_GAMES/MIN_PRESSURES) -- these describe
     # the OPPOSING defense, not the slate, so there is no slate id to filter
     # them down to.
+    # DEFENSIVE SNAP SHARE (bot task 5). player_snaps() already computes it for
+    # defenders (side "defense", defense_pct); the on-slate filter below keeps
+    # only offensive ids, so none ever shipped. Parked in matchup_extra.json
+    # (where the site's defender table already reads) for clubs on this slate.
+    _slate_clubs = {g[s] for g in payload.get("games", []) for s in ("home", "away")}
+    _def_snaps = {i: {k: v.get(k) for k in ("team", "position", "side", "games", "snap_pct",
+                                            "recent_pct", "trend")}
+                  for i, v in (extras.get("snaps") or {}).items()
+                  if isinstance(v, dict) and v.get("side") == "defense"
+                  and v.get("team") in _slate_clubs}
     for k in ("coverage_player", "player_explosive", "roles", "red_zone", "route_value", "snaps"):
         if extras.get(k):
             extras[k] = {i: v for i, v in extras[k].items() if i in on_slate}
@@ -1651,6 +1662,7 @@ def main() -> int:
     # not. But an unread file is still #28: if nothing consumes this by the
     # end of the season, cut it rather than carrying it forever.
     _extra = {k: extras.get(k, {}) for k in ("disruption", "usage", "snap_movers")}
+    _extra["defense_snaps"] = _def_snaps
     if any(_extra.values()):
         (out / f"{a.prefix}matchup_extra.json").write_text(json.dumps(_extra))
         print(f"  wrote {a.prefix}matchup_extra.json "
@@ -1716,6 +1728,12 @@ def main() -> int:
         # matchup_extra.json write below. `field` stays: MatchupMap on the
         # Matchups tab reads matchup.field.player_pass on first paint.
         "field": extras.get("field", {}),
+        # SHARE OF CLUB (bot task 5, 2026-10-11): the slim usage the share
+        # columns read -- only the on-slate players and only the share fields
+        # (the full per-player counts stay in matchup_extra.json). Percent 0-100,
+        # season to date, offence only; `games` = weeks with a target or carry.
+        "usage": {t: {i: {k: v[k] for k in USAGE_SLIM if k in v} for i, v in pl_.items() if i in on_slate}
+                  for t, pl_ in (extras.get("usage") or {}).items()},
         "disruption_team": extras.get("disruption_team", {}),
         "disruption_groups": nfl_disruption.GROUP_ORDER,
         "disruption_stats": nfl_disruption.STATS,
