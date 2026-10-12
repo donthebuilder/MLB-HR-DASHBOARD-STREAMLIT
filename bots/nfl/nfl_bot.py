@@ -54,7 +54,9 @@ import nfl_snaps
 from nfl_features import (build, season_baseline, upcoming_rows, stats_season_for,
                           current_roster, newcomer_rows, played_weeks,
                           schedule_weeks, PLAYER_FORM, USAGE_FORM)
-from nfl_scoring import MODELS, OUTCOME, score, derive, _pctile, V1_MODELS, score_def_td, SHADOW_MODELS
+from nfl_scoring import (MODELS, OUTCOME, score, derive, _pctile, V1_MODELS, score_def_td, SHADOW_MODELS,
+                         QB_TD_MODEL)
+import nfl_qb_td
 
 # MODEL FOUNDATION (2026-08-24) -- the NFL side of the same provenance work
 # bots/model_registry.py / bots/config_fingerprint.py did for MLB on
@@ -359,7 +361,9 @@ def score_all(tbl: pl.DataFrame, context_ok: bool, ref: pl.DataFrame | None = No
         # end's red-zone work against quarterbacks would be meaningless.
         rd = None
         if rdv is not None:
-            rd = rdv.filter(pl.col("position").is_in(m["pos"]))
+            # `ref_pos` lets a model score one position group against another's
+            # league (QB anytime TD vs RB/WR/TE); absent, it is `pos` as ever.
+            rd = rdv.filter(pl.col("position").is_in(m.get("ref_pos") or m["pos"]))
             # HOW THIN IS TOO THIN. This floor exists to stop a handful of rows
             # being treated as a league. It was 30, which is fine for the skill
             # positions (300+ rows) and quietly wrong for kickers: the NFL has
@@ -375,6 +379,11 @@ def score_all(tbl: pl.DataFrame, context_ok: bool, ref: pl.DataFrame | None = No
             # there genuinely isn't a distribution to rank against.
             if rd.height < 20:
                 rd = None
+        if m.get("ref_pos") and rd is None:
+            # A cross-position score only means something on the other group's
+            # reference. Without it the fallback is a QB-only slate percentile,
+            # which would rank the 32nd-best passer at the top: publish nothing.
+            continue
 
         parts, ref_parts = [], []
         for raw, w in avail.items():
@@ -813,6 +822,41 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
                 if col in r and keeps_stat(r.get("position"), short, v):
                     p["stats"][short] = v
 
+    # QB ANYTIME TD (bot task 1). Scored through the SAME pipeline, against the
+    # RB/WR/TE league reference, as its own model_version. It writes only QB
+    # rows' scores.TD / components.TD; no RB/WR/TE row is touched. A failure
+    # costs the QB score, never the slate.
+    qb_td_ok = False
+    try:
+        qb_scored = score_all(tbl, context_ok, ref, models={"TD": QB_TD_MODEL}).get("TD")
+        if qb_scored:
+            qb_td_ok = True
+            comp_cols = [c for c in qb_scored["df"].columns if c.startswith("c_")]
+            for r in qb_scored["df"].iter_rows(named=True):
+                p = players.get(r["player_id"])
+                if p is None or p.get("position") != "QB":
+                    continue
+                p["scores"]["TD"] = _num(r.get("score"))
+                p["components"]["TD"] = {c[2:]: _num(r.get(c)) for c in comp_cols
+                                         if _num(r.get(c)) is not None}
+                p["model_versions"] = {"TD": QB_TD_MODEL["model_version"]}
+    except Exception as exc:  # noqa: BLE001
+        print(f"  QB anytime TD skipped ({type(exc).__name__}: {exc})")
+
+    # QB TD CONTEXT (rates beside the score, not weights). Pregame by
+    # construction: the current season is cut to weeks before this one.
+    if qb_td_ok and mode != "preseason":
+        try:
+            import nfl_features
+            pbp = {s: nfl_features._pbp(s) for s in (season, season - 1)}
+            qb_ctx = nfl_qb_td.build(pbp, season, week,
+                                     [{"player_id": pid, "opp": p.get("opp")}
+                                      for pid, p in players.items() if p.get("position") == "QB"])
+            for pid, blk in qb_ctx.items():
+                players[pid]["qb_td"] = blk
+        except Exception as exc:  # noqa: BLE001
+            print(f"  QB TD context skipped ({type(exc).__name__}: {exc})")
+
     # preseason: attach opponent from the game list
     if mode == "preseason":
         opp = {}
@@ -1105,9 +1149,13 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
         "games": upcoming,
         "players": rows,
         "markets": [
-            {"key": k, "label": m["label"], "bar": m["bar"], "positions": m["pos"],
+            {"key": k, "label": m["label"], "bar": m["bar"],
+             "positions": m["pos"] + (["QB"] if (k == "TD" and qb_td_ok) else []),
              "weights": scored.get(k, {}).get("weights", m["w"]),
-             "dropped": scored.get(k, {}).get("dropped", [])}
+             "dropped": scored.get(k, {}).get("dropped", []),
+             **({"qb_model_version": QB_TD_MODEL["model_version"],
+                 "qb_weights": qb_scored["weights"], "qb_dropped": qb_scored["dropped"]}
+                if (k == "TD" and qb_td_ok) else {})}
             for k, m in MODELS.items() if k in scored
         ] + ([
             {"key": "DEF_TD", "label": V1_MODELS["DEF_TD"]["label"],
@@ -1224,6 +1272,13 @@ def build_nfl_run_meta(mode: str, season: int, week: int | None, args: "argparse
         except Exception as exc:
             print(f"nfl_config_hash() failed ({exc}); config_hash will be empty this run.")
 
+    qb_hash = None
+    if NFL_CONFIG_FINGERPRINT is not None:
+        try:
+            qb_hash = NFL_CONFIG_FINGERPRINT.nfl_config_hash({"TD": QB_TD_MODEL}, [derive, score])
+        except Exception as exc:
+            print(f"nfl_config_hash() failed for the QB TD model ({exc}).")
+
     return {
         "run_id": run_id,
         "generated_at": now.isoformat(),
@@ -1240,7 +1295,7 @@ def build_nfl_run_meta(mode: str, season: int, week: int | None, args: "argparse
         # fails, so "we tried and it failed" is distinguishable from "this
         # run predates config_hash existing" at analysis time -- same
         # reasoning as build_run_meta()'s own config_hashes dict.
-        "config_hashes": {"nfl": config_hash},
+        "config_hashes": {"nfl": config_hash, "nfl_td_qb": qb_hash},
         "schema_version": schema_version,
         "env": _run_env_metadata(),
     }
@@ -1292,7 +1347,8 @@ def build_nfl_prediction_log_lines(run_meta: dict, players: list[dict],
                 "market": market,
                 "run_id": run_meta.get("run_id"),
                 "generated_at": run_meta.get("generated_at"),
-                "model_version": (run_meta.get("model_versions") or {}).get(market),
+                "model_version": ((pl_row.get("model_versions") or {}).get(market)
+                                  or (run_meta.get("model_versions") or {}).get(market)),
                 "config_hash": (run_meta.get("config_hashes") or {}).get("nfl"),
                 "score": sc,
                 "components": (pl_row.get("components") or {}).get(market, {}),

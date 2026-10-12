@@ -197,6 +197,46 @@ SHADOW_MODELS = {
 }
 
 
+# ── QB ANYTIME TD (2026-10-11, bot task 1) ───────────────────────────────────
+# Donovan: "add QB anytime TDs too" -- he scores a touchdown himself, rushing or
+# receiving. Passing TDs are a different market and are NOT in the outcome
+# (OUTCOME["TD"] is rushing_tds + receiving_tds).
+#
+# SAME METHOD, SAME WEIGHTS AS THE TD MODEL (v2), written out as literals so a
+# later change to MODELS["TD"] cannot silently move a QB (tests assert the two
+# are equal today). The score is a QB-ONLY pool scored against the SAME league
+# reference as RB/WR/TE (`ref_pos`), so a QB's percentile on each input is "where
+# would this number rank among RB/WR/TE" and his 0-100 score sits on the same
+# scale as theirs. No RB/WR/TE score moves: their reference, their pool and
+# their weights are untouched. A NEW model_version, new rows, nothing rewritten.
+#
+# Why v2's weights are usable for QBs (nfl_features.build, 2023/24/25, within-
+# week percentiles, TD hit = rush+rec TD >= 1): QBs ranked in the combined top
+# 15 hit 51.7 / 58.3 / 23.8% (n = 29 / 24 / 21); the combined top-15 hit rate
+# WITH QBs was 53.3 / 55.9 / 47.0% against 51.9 / 54.4 / 49.6% without. QBs
+# averaging 4+ carries a game scored 25.3 / 26.3 / 24.9% against 10.3 / 7.6 /
+# 7.9% below that. So volume rushers (the Hurts / Jackson / Daniels type) rank
+# with the best skill players and a pocket passer does not float up on team
+# context. QB-specific weights (designed-run share, opponent QB-rush TDs
+# allowed) are a CANDIDATE to test against 2023-25 before any weight moves;
+# they are published beside the score as context only (nfl_qb_td.py).
+QB_TD_MODEL = {
+    "model_version": "nfl_td_qb_v1",
+    "label": "Anytime TD (QB)", "pos": ["QB"], "ref_pos": ["RB", "WR", "TE"], "bar": 1,
+    "w": {
+        "f_rz_opp":       0.2222,
+        "implied_total":  0.1830,
+        "f_touches":      0.1569,
+        "f_xtd":          0.1569,
+        "f_gl_opp":       0.1503,
+        "f_snap_pct":     0.1307,
+    },
+}
+
+# Positions a TD can be GRADED for: the board's three plus the QB.
+TD_GRADE_POS = ["RB", "WR", "TE", "QB"]
+
+
 # what each market actually grades against
 OUTCOME = {
     "TD":       pl.col("rushing_tds") + pl.col("receiving_tds"),

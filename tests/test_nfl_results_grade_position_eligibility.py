@@ -121,10 +121,11 @@ check("matching position, real miss: counted, not void", totals["TD"]["void"], 0
 
 # 3. THE BUG ITSELF: a card rung exists for TD (he was RB/WR/TE-eligible
 # when priced), but `positions` -- the current, post-change record -- now
-# says QB. Must void, not grade his structurally-0.0 TD outcome as a miss.
+# says K. Must void, not grade his structurally-0.0 TD outcome as a miss.
+# (A QB is graded for TD since nfl_td_qb_v1, so a kicker is the ineligible case.)
 card = _card("TD", [{"player_id": "P3"}])
-actual = {"P3": {"TD": 0.0}}          # a QB's rush+rec TDs default to 0.0
-positions = {"P3": "QB"}              # position changed since the card priced him
+actual = {"P3": {"TD": 0.0}}          # a kicker's rush+rec TDs default to 0.0
+positions = {"P3": "K"}               # position changed since the card priced him
 graded, totals = grade(card, actual, positions)
 check("position changed since pricing: voided, not graded",
       graded["TD"]["rungs"][0]["actual"], None)
@@ -168,7 +169,7 @@ check("positions omitted: old behavior, counted a hit",
 card = _card("TD", [{"player_id": "RB1"}, {"player_id": "RB2"},
                      {"player_id": "P3"}, {"player_id": "GHOST"}])
 actual = {"RB1": {"TD": 1.0}, "RB2": {"TD": 0.0}, "P3": {"TD": 0.0}}
-positions = {"RB1": "RB", "RB2": "RB", "P3": "QB"}
+positions = {"RB1": "RB", "RB2": "RB", "P3": "K"}
 graded, totals = grade(card, actual, positions)
 check("mixed slate: n counts only the two real (RB) grades", totals["TD"]["n"], 2)
 check("mixed slate: hit counts the one real hit", totals["TD"]["hit"], 1)

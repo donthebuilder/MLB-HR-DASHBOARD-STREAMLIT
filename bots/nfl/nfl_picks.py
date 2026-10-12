@@ -34,7 +34,7 @@ plays cleared 12+ carries 86.7% of the time. That is worth knowing even though
 """
 from __future__ import annotations
 
-from nfl_scoring import MODELS
+from nfl_scoring import MODELS, TD_GRADE_POS
 
 DEPTH = 5
 
@@ -128,7 +128,7 @@ def build(rows: list[dict], edges: dict | None = None, depth: int = DEPTH) -> di
             "key": key,
             "label": m["label"],
             "bar": m["bar"],
-            "positions": m["pos"],
+            "positions": TD_GRADE_POS if key == "TD" else m["pos"],
             "edge": edges.get(key),
             "rungs": [_rung(r, key, i + 1) for i, r in enumerate(use)],
         }
