@@ -1797,6 +1797,17 @@ def main() -> int:
         logs = {}
     (out / f"{a.prefix}logs.json").write_text(json.dumps({
         "bars": nfl_gamelog.MARKET_VALUE, "logs": logs}, separators=(",", ":")))
+    # Per-player files + a slim team-games index (bot task 3): the header tiles
+    # read the index, a player's card reads his own file. Additive; a failure
+    # costs the split, never nfl_logs.json.
+    try:
+        import nfl_logs_split
+        _ls = nfl_logs_split.write(out, a.prefix, nfl_gamelog.MARKET_VALUE, logs,
+                                   int(payload.get("season") or a.season))
+        print(f"  wrote {a.prefix}logs_index.json ({_ls['team_games']} team games) "
+              f"+ {_ls['players']} {a.prefix}logs/<id>.json")
+    except Exception as exc:  # noqa: BLE001
+        print(f"  logs split failed ({type(exc).__name__}: {exc}) -- nfl_logs.json is unaffected")
 
     # SIGNAL FLAGS (B10(b)/(e), 2026-09-16). NFL has had zero flags like
     # MLB's SignalAudit.js grades (weak_spot_flag, hrw_score, ...) -- these
@@ -1955,6 +1966,14 @@ def main() -> int:
                   f"{sum(len(g['calls']) for g in _gc['games'])} call(s), board {_gc['board_n']}")
         except Exception as exc:  # noqa: BLE001
             print(f"  game calls failed ({type(exc).__name__}: {exc}) -- slate ships without them")
+
+    # DEPTH ROLE on the week row (bot task 3), so the header and tables need
+    # not load matchup.json for it. Same value as matchup.roles[player_id]
+    # (nfl_dvp.current_roles: "WR1", "RB2"...); absent when he has none.
+    _roles = extras.get("roles") or {}
+    for _p in payload.get("players", []):
+        if _roles.get(_p.get("player_id")):
+            _p["depth_role"] = _roles[_p["player_id"]]
 
     (out / f"{a.prefix}week.json").write_text(json.dumps(payload, separators=(",", ":")))
     (out / f"{a.prefix}meta.json").write_text(json.dumps({
