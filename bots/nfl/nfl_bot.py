@@ -1957,6 +1957,21 @@ def main() -> int:
     }, separators=(",", ":"))
     (out / f"{a.prefix}picks.json").write_text(picks_body)
 
+    # THE HIGH-BAR LADDER (bot task 4B): its own file and model_version, never a
+    # key inside the card above. Best-effort; a failure costs only this file.
+    try:
+        import nfl_ladder
+        (out / f"{a.prefix}ladder.json").write_text(json.dumps({
+            "model_version": nfl_ladder.MODEL_VERSION,
+            "season": a.season, "week": a.week, "mode": a.mode,
+            "built_at": payload["built_at"], "window_games": nfl_ladder.LADDER_GAMES,
+            "min_games": nfl_ladder.MIN_GAMES, "depth": nfl_ladder.DEPTH,
+            "note": "rate = share of his last n logged games at or above the bar; a count, not a probability. Prices come only from the odds capture.",
+            "markets": nfl_ladder.build(payload["players"], logs),
+        }, separators=(",", ":")))
+    except Exception as exc:  # noqa: BLE001
+        print(f"  ladder failed ({type(exc).__name__}: {exc}) -- card unaffected")
+
     # THE CARD, KEPT PER WEEK. nfl_picks.json is overwritten every run, so the
     # moment the board rolls to week N+1 the card week N was graded against is
     # gone. That is why grading used to be pinned to whatever week the live card

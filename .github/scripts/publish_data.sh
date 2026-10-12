@@ -141,6 +141,8 @@ PUBLISH_FILES=(
   # player's own log is nfl_logs/<gsis_id>.json, a directory copied below
   nfl_logs_index.json
   nfl_picks.json
+  # high-bar ladder (bot task 4B): rec/rush 100+, pass 300+, 7+ catches, by his own clear rate
+  nfl_ladder.json
   nfl_results.json
   # nfl_signal_audit.json (2026-09-23) -- every TUDDY signal flag graded
   # against real touchdowns, frozen per game at the last run before kickoff.
@@ -157,6 +159,7 @@ PUBLISH_FILES=(
   nfl_next_logs.json
   nfl_next_logs_index.json
   nfl_next_picks.json
+  nfl_next_ladder.json
   # nfl_pick_lock.json (B10(b)/(e), 2026-09-15) -- TUDDY's sibling of
   # pick_lock.json above, same reason, same failure mode already documented
   # twice on this file for MLB: it is fetched back over HTTPS next run
