@@ -1360,9 +1360,13 @@ def build_nfl_prediction_log_lines(run_meta: dict, players: list[dict],
                 "questionable": pl_row.get("questionable", False),
                 "low_sample": pl_row.get("low_sample", False),
             })
-            sh = ((shadow.get(market) or {}).get("scores") or {}).get(str(pl_row.get("player_id")))
-            if sh is not None:
-                lines[-1]["shadow"] = {shadow[market].get("model_version") or f"{market}_shadow": sh}
+            # every shadow of this market: the plain key (v3, snap variants) and "<MARKET>#<version>" ones
+            for skey, sblk in shadow.items():
+                if skey != market and not skey.startswith(f"{market}#"):
+                    continue
+                sh = ((sblk or {}).get("scores") or {}).get(str(pl_row.get("player_id")))
+                if sh is not None:
+                    lines[-1].setdefault("shadow", {})[sblk.get("model_version") or f"{market}_shadow"] = sh
     return lines
 
 

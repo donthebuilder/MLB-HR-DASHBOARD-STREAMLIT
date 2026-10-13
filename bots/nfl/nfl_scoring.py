@@ -160,6 +160,39 @@ SHADOW_MODELS = {
             "f_snap_pct":     0.1887,   # .1307 / .6928
         },
     },
+    # ── MODEL LAB SHADOWS (2026-10-13) ────────────────────────────────────────
+    # Two more TD shadows beside v3, keyed "TD#<version>" so the market key stays unique while score_all
+    # still treats each as an ordinary model (the key is only a label on the way out). Logged next to v2 and
+    # v3 in the prediction log, never published; compare with bots/nfl/nfl_shadow_report.py.
+    #
+    # nfl_td_reweight_v1: the weight vector frozen from the model lab's three selection folds (2022-24) and
+    # scored ONCE on the untouched 2025 holdout: log loss -0.0043 [-0.0074, -0.0015] vs v2, Holm p = 0.004
+    # over 7 markets, AUC .731 -> .739 (docs/model-lab/PICK_FORMULA_AUDIT.md, model_lab/nfl_weight_candidates.py).
+    # Same inputs as v2 with goal-line touches dropped (fitted weight under 0.02 in every fold); touches and
+    # snap share carry more.
+    "TD#nfl_td_reweight_v1": {
+        "model_version": "nfl_td_reweight_v1",
+        "label": "Anytime TD (shadow, lab re-weight)", "pos": ["RB", "WR", "TE"], "bar": 1,
+        "w": {
+            "f_touches":      0.384,
+            "f_snap_pct":     0.232,
+            "implied_total":  0.172,
+            "f_rz_opp":       0.131,
+            "f_xtd":          0.081,
+        },
+    },
+    # nfl_td_rzonly_v1 ("red zone on its own", Donovan 2026-10-13): ONLY v2's red-zone family, at v2's own
+    # relative weights (rz .2222 : xTD .1569 : goal-line .1503, renormalised), so no new weight is invented.
+    # It answers "how good is the red-zone idea alone" on live picks; the lab expects it to rank below v2.
+    "TD#nfl_td_rzonly_v1": {
+        "model_version": "nfl_td_rzonly_v1",
+        "label": "Anytime TD (shadow, red zone only)", "pos": ["RB", "WR", "TE"], "bar": 1,
+        "w": {
+            "f_rz_opp":  0.4197,
+            "f_xtd":     0.2964,
+            "f_gl_opp":  0.2839,
+        },
+    },
     # ── PLAYING TIME (2026-10-03, BATCH-MODEL-V2 M2) ──────────────────────────
     # Only TD carried playing time. nfl_playtime_lab.py adds the trailing snap
     # share (f_snap_pct, the TD model's own 4-game roll) to the receiving and
