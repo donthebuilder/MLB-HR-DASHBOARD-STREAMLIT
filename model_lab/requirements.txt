@@ -1,3 +1,4 @@
 # Research lab only (model_lab/). Not installed by any production workflow; tests/test_model_lab.py needs it, so tests.yml installs it.
 scikit-learn>=1.4,<2
 pyarrow>=15,<30
+scipy>=1.11,<2

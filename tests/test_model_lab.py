@@ -79,6 +79,31 @@ def test_calibration_bins_cover_every_row():
     assert sum(b["n"] for b in c) == 1000 and len(c) == 10
 
 
+def test_fitted_weights_are_nonnegative_and_sum_to_one():
+    import nfl_formula_audit as A
+    rng = np.random.default_rng(5)
+    P = rng.uniform(0, 1, (3000, 4))
+    y = (rng.uniform(0, 1, 3000) < 0.1 + 0.6 * P[:, 0] * P[:, 1]).astype(float)   # columns 0 and 1 matter, 2 and 3 are noise
+    w, _ = A.fit_nonneg_weights(P, y)
+    assert (w >= 0).all() and abs(w.sum() - 1) < 1e-9
+    assert w[0] + w[1] > 0.6
+
+
+def test_blend_uses_weights_on_percentile_columns():
+    import nfl_formula_audit as A
+    f = pl.DataFrame({"p_a": [0.0, 1.0], "p_b": [1.0, 0.0]})
+    out = A.blend(f, {"a": 0.75, "b": 0.25})
+    assert list(np.round(out, 6)) == [25.0, 75.0]
+
+
+def test_availability_drops_constant_components_and_renormalises():
+    import nfl_formula_audit as A
+    f = pl.DataFrame({"f_touches": [1.0, 2.0, 3.0], "f_snap_pct": [0.5, 0.5, 0.5], "f_rz_opp": [0.0, 1.0, 2.0],
+                      "implied_total": [20.0, 21.0, 22.0], "f_xtd": [0.1, 0.2, 0.3], "f_gl_opp": [0.0, 0.0, 1.0]})
+    got = dict(A.available(f, "TD"))
+    assert "f_snap_pct" not in got and abs(sum(got.values()) - 1) < 1e-9
+
+
 if __name__ == "__main__":
     # the repo's CI runs each test file as a script (exit 0 = pass): hand off to pytest so the tests actually run
     raise SystemExit(pytest.main([__file__, "-q"]))

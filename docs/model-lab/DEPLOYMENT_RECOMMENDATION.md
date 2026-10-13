@@ -35,3 +35,6 @@ No NHL model, data or grading code exists in this repository, so nothing was tes
 3. Route participation and end-zone targets for 2026 (the participation file is published once a year).
 4. The full-board MLB dataset above, and any NHL feed.
 5. 2019-2020 NFL feature tables (the production builder fails on those seasons' schema), for a longer backtest.
+
+## Update 2026-10-13: full pick-formula audit
+`PICK_FORMULA_AUDIT.md` and `FORMULA_COMPARISON.md` cover every market in every sport. The NFL touchdown formula's red-zone family is over-weighted (three overlapping terms); a re-weighted version passed the untouched 2025 holdout (dLL -0.0043, Holm p = 0.004) and is the one change ready for shadow. MLB defects 1-5 in that audit are confirmed by reading the code and need your approval before any change. NHL and NBA could not be tested.
