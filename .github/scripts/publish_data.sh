@@ -60,6 +60,10 @@ PUBLISH_FILES=(
   rosters_mlb.json
   # playoff + World Series odds (2026-09-03) -- ~10 KB, rebuilt daily
   playoff_odds.json
+  # championship odds for the other sports (2026-10-14) -- ~15 KB each, rebuilt daily in season
+  nfl_playoff_odds.json
+  nhl_playoff_odds.json
+  nba_playoff_odds.json
   # comeback wins / blown leads (2026-09-03) -- ~40 KB, rebuilt daily
   comeback_board.json
   # moneyline disagreement log + running grade (2026-09-03)

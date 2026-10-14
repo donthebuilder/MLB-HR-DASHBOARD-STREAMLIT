@@ -1,0 +1,357 @@
+{
+ "sport": "nfl",
+ "test_season": "2025",
+ "chosen_constants": {
+  "prior": 4,
+  "blend": 0.75,
+  "fit_seasons": [
+   2023,
+   2024
+  ],
+  "grid": [
+   {
+    "prior": 2,
+    "blend": 0.0,
+    "game_logloss": 0.67904
+   },
+   {
+    "prior": 2,
+    "blend": 0.25,
+    "game_logloss": 0.66418
+   },
+   {
+    "prior": 2,
+    "blend": 0.5,
+    "game_logloss": 0.65484
+   },
+   {
+    "prior": 2,
+    "blend": 0.75,
+    "game_logloss": 0.65024
+   },
+   {
+    "prior": 2,
+    "blend": 1.0,
+    "game_logloss": 0.65006
+   },
+   {
+    "prior": 4,
+    "blend": 0.0,
+    "game_logloss": 0.6591
+   },
+   {
+    "prior": 4,
+    "blend": 0.25,
+    "game_logloss": 0.65152
+   },
+   {
+    "prior": 4,
+    "blend": 0.5,
+    "game_logloss": 0.6469
+   },
+   {
+    "prior": 4,
+    "blend": 0.75,
+    "game_logloss": 0.64501
+   },
+   {
+    "prior": 4,
+    "blend": 1.0,
+    "game_logloss": 0.64575
+   },
+   {
+    "prior": 6,
+    "blend": 0.0,
+    "game_logloss": 0.65322
+   },
+   {
+    "prior": 6,
+    "blend": 0.25,
+    "game_logloss": 0.64855
+   },
+   {
+    "prior": 6,
+    "blend": 0.5,
+    "game_logloss": 0.64585
+   },
+   {
+    "prior": 6,
+    "blend": 0.75,
+    "game_logloss": 0.64503
+   },
+   {
+    "prior": 6,
+    "blend": 1.0,
+    "game_logloss": 0.64604
+   },
+   {
+    "prior": 8,
+    "blend": 0.0,
+    "game_logloss": 0.65157
+   },
+   {
+    "prior": 8,
+    "blend": 0.25,
+    "game_logloss": 0.64845
+   },
+   {
+    "prior": 8,
+    "blend": 0.5,
+    "game_logloss": 0.64677
+   },
+   {
+    "prior": 8,
+    "blend": 0.75,
+    "game_logloss": 0.6465
+   },
+   {
+    "prior": 8,
+    "blend": 1.0,
+    "game_logloss": 0.6476
+   },
+   {
+    "prior": 12,
+    "blend": 0.0,
+    "game_logloss": 0.65234
+   },
+   {
+    "prior": 12,
+    "blend": 0.25,
+    "game_logloss": 0.65079
+   },
+   {
+    "prior": 12,
+    "blend": 0.5,
+    "game_logloss": 0.65015
+   },
+   {
+    "prior": 12,
+    "blend": 0.75,
+    "game_logloss": 0.65039
+   },
+   {
+    "prior": 12,
+    "blend": 1.0,
+    "game_logloss": 0.65151
+   },
+   {
+    "prior": 16,
+    "blend": 0.0,
+    "game_logloss": 0.65464
+   },
+   {
+    "prior": 16,
+    "blend": 0.25,
+    "game_logloss": 0.65385
+   },
+   {
+    "prior": 16,
+    "blend": 0.5,
+    "game_logloss": 0.65369
+   },
+   {
+    "prior": 16,
+    "blend": 0.75,
+    "game_logloss": 0.65415
+   },
+   {
+    "prior": 16,
+    "blend": 1.0,
+    "game_logloss": 0.65522
+   },
+   {
+    "prior": 24,
+    "blend": 0.0,
+    "game_logloss": 0.65949
+   },
+   {
+    "prior": 24,
+    "blend": 0.25,
+    "game_logloss": 0.65937
+   },
+   {
+    "prior": 24,
+    "blend": 0.5,
+    "game_logloss": 0.6596
+   },
+   {
+    "prior": 24,
+    "blend": 0.75,
+    "game_logloss": 0.66019
+   },
+   {
+    "prior": 24,
+    "blend": 1.0,
+    "game_logloss": 0.66113
+   },
+   {
+    "prior": 32,
+    "blend": 0.0,
+    "game_logloss": 0.6635
+   },
+   {
+    "prior": 32,
+    "blend": 0.25,
+    "game_logloss": 0.66363
+   },
+   {
+    "prior": 32,
+    "blend": 0.5,
+    "game_logloss": 0.664
+   },
+   {
+    "prior": 32,
+    "blend": 0.75,
+    "game_logloss": 0.66459
+   },
+   {
+    "prior": 32,
+    "blend": 1.0,
+    "game_logloss": 0.66542
+   }
+  ]
+ },
+ "home_win_rate": 0.5331,
+ "game_logloss_test": 0.63538,
+ "game_logloss_baseline_home_rate_only": 0.69022,
+ "checkpoints": {
+  "after_week_4": {
+   "make_playoffs": {
+    "brier": 0.1735,
+    "logloss": 0.5199,
+    "brier_baseline_constant": 0.2461,
+    "logloss_baseline_constant": 0.6853
+   },
+   "champion": {
+    "team": "SEA",
+    "model_share": 0.0954,
+    "model_rank": 3,
+    "logloss_model": 2.3497,
+    "logloss_uniform_field": 2.6391,
+    "logloss_win_pct_only": 3.0603
+   }
+  },
+  "after_week_8": {
+   "make_playoffs": {
+    "brier": 0.1769,
+    "logloss": 0.5758,
+    "brier_baseline_constant": 0.2461,
+    "logloss_baseline_constant": 0.6853
+   },
+   "champion": {
+    "team": "SEA",
+    "model_share": 0.0728,
+    "model_rank": 6,
+    "logloss_model": 2.62,
+    "logloss_uniform_field": 2.6391,
+    "logloss_win_pct_only": 3.113
+   }
+  },
+  "after_week_12": {
+   "make_playoffs": {
+    "brier": 0.1254,
+    "logloss": 0.3584,
+    "brier_baseline_constant": 0.2461,
+    "logloss_baseline_constant": 0.6853
+   },
+   "champion": {
+    "team": "SEA",
+    "model_share": 0.0982,
+    "model_rank": 4,
+    "logloss_model": 2.3207,
+    "logloss_uniform_field": 2.6391,
+    "logloss_win_pct_only": 3.0901
+   }
+  },
+  "after_week_15": {
+   "make_playoffs": {
+    "brier": 0.0283,
+    "logloss": 0.0995,
+    "brier_baseline_constant": 0.2461,
+    "logloss_baseline_constant": 0.6853
+   },
+   "champion": {
+    "team": "SEA",
+    "model_share": 0.1779,
+    "model_rank": 1,
+    "logloss_model": 1.7265,
+    "logloss_uniform_field": 2.6391,
+    "logloss_win_pct_only": 3.0138
+   }
+  }
+ },
+ "pooled_make_playoffs": {
+  "brier": 0.126,
+  "logloss": 0.3884,
+  "n": 128,
+  "calibration": [
+   {
+    "bucket": "0%-10%",
+    "n": 44,
+    "mean_prediction": 0.0167,
+    "actual_rate": 0.0227
+   },
+   {
+    "bucket": "10%-20%",
+    "n": 10,
+    "mean_prediction": 0.1447,
+    "actual_rate": 0.2
+   },
+   {
+    "bucket": "20%-30%",
+    "n": 6,
+    "mean_prediction": 0.2413,
+    "actual_rate": 0.5
+   },
+   {
+    "bucket": "30%-40%",
+    "n": 6,
+    "mean_prediction": 0.3417,
+    "actual_rate": 0.3333
+   },
+   {
+    "bucket": "40%-50%",
+    "n": 3,
+    "mean_prediction": 0.4403,
+    "actual_rate": 0.6667
+   },
+   {
+    "bucket": "50%-60%",
+    "n": 6,
+    "mean_prediction": 0.5557,
+    "actual_rate": 0.5
+   },
+   {
+    "bucket": "60%-70%",
+    "n": 6,
+    "mean_prediction": 0.6478,
+    "actual_rate": 0.8333
+   },
+   {
+    "bucket": "70%-80%",
+    "n": 10,
+    "mean_prediction": 0.7622,
+    "actual_rate": 0.6
+   },
+   {
+    "bucket": "80%-90%",
+    "n": 12,
+    "mean_prediction": 0.8425,
+    "actual_rate": 0.8333
+   },
+   {
+    "bucket": "90%-100%",
+    "n": 25,
+    "mean_prediction": 0.9618,
+    "actual_rate": 0.88
+   }
+  ]
+ },
+ "champion_mean_logloss": {
+  "model": 2.2542,
+  "uniform_field": 2.6391,
+  "win_pct_only": 3.0693
+ },
+ "headline": "Backtested on 2025: playoff-field Brier 0.126; champion log loss 2.25 (uniform 2.64, win% only 3.07); 128 team-checkpoints, one season, small sample.",
+ "caveat": "One test season, a handful of checkpoints, one champion per checkpoint: this cannot separate good calibration from luck. Read the calibration table as a sanity check, not a proof."
+}
