@@ -725,8 +725,16 @@ def oaio(path: str, key: str, **params) -> object:
     q["apiKey"] = key
     url = f"{OAIO}{path}?" + urllib.parse.urlencode(q)
     try:
-        with urllib.request.urlopen(urllib.request.Request(url), **_open_kw()) as r:
-            body = r.read().decode()
+        # identity asked for, and gzip handled anyway: the 2026-10-16 probes
+        # showed /events answering gzip bytes (0x1f 0x8b) for football, hockey
+        # and basketball, which .decode() choked on as "invalid start byte".
+        req = urllib.request.Request(url, headers={"Accept-Encoding": "identity"})
+        with urllib.request.urlopen(req, **_open_kw()) as r:
+            raw = r.read()
+            if raw[:2] == b"\x1f\x8b":
+                import gzip
+                raw = gzip.decompress(raw)
+            body = raw.decode()
             _rec("oddsapiio", path, key, http=getattr(r, "status", 200), bytes=len(body))
             return json.loads(body)
     except urllib.error.HTTPError as e:
