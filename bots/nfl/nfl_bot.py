@@ -1868,6 +1868,12 @@ def main() -> int:
         "built_at_human": payload["built_at_human"],
         "depth": nfl_picks.DEPTH,
         "label": payload["label"],
+        # WHAT BUILT THIS CARD (2026-10-16). The week's results grade this very
+        # card, so the version of record rides on it and the grader copies it
+        # from here -- never from today's registry, which may have moved since.
+        "model_versions": (run_meta or {}).get("model_versions") or {},
+        "schema_version": (run_meta or {}).get("schema_version"),
+        "run_id": (run_meta or {}).get("run_id"),
         "card": card,
     }, separators=(",", ":"))
     (out / f"{a.prefix}picks.json").write_text(picks_body)
