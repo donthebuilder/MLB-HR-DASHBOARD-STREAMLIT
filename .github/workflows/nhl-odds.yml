@@ -42,7 +42,7 @@ jobs:
           ODDSAPI_IO_KEY: ${{ secrets.ODDSAPI_IO_KEY }}
         run: |
           python bots/nhl/nhl_odds_fetch.py --probe --dump /tmp/nhl_odds_raw.json || true
-          test -f /tmp/nhl_odds_raw.json && head -c 60000 /tmp/nhl_odds_raw.json || echo "no raw payload"
+          test -f /tmp/nhl_odds_raw.json && head -c 2500 /tmp/nhl_odds_raw.json || echo "no raw payload"
       - name: Restore today's and yesterday's history (so a started game keeps its pregame row)
         if: github.event.inputs.probe != 'true'
         run: |
