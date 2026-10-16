@@ -11,7 +11,7 @@ workflows), so members content cannot leave from here. This test pins that:
   2. with ONLY a members URL in the environment (every bot variable unset), every bot sender
      sends nothing.
   3. with every bot variable set AND a members URL, no bot sender ever calls the members URL.
-  4. documented behaviour (not a members leak): ops alerts fall back to DISCORD_WEBHOOK, the fan
+  4. documented behaviour: ops alerts no longer fall back to DISCORD_WEBHOOK (2026-10-16); the fan
      room, while DISCORD_OPS_WEBHOOK is unset.
 
 Run: PYTHONPATH=. python3 tests/test_discord_members_no_leak.py
@@ -155,11 +155,11 @@ class AllBotUrlsSet(unittest.TestCase):
 class OpsFallback(unittest.TestCase):
     """Documented: while DISCORD_OPS_WEBHOOK is unset, ops alerts post to the fan room."""
 
-    def test_ops_alert_lands_in_the_fan_room_when_no_ops_channel(self):
+    def test_ops_alert_goes_nowhere_when_no_ops_channel(self):
         set_env(DISCORD_WEBHOOK=FAN, DISCORD_MEMBERS_WEBHOOK=MEMBERS)
         with Net() as net:
             ok, bad, used_ops = discord_post.post_ops({"content": "TEST ops"})
-        self.assertEqual(net.urls, [FAN])
+        self.assertEqual(net.urls, [])
         self.assertFalse(used_ops)
 
     def test_ops_alert_uses_the_ops_channel_when_set_and_not_the_fan_room(self):
