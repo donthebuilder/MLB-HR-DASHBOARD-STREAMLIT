@@ -41,7 +41,7 @@ import re
 from pathlib import Path
 from typing import Callable
 
-TOP_N = 10            # the top N of a night
+TOP_N = 15            # the top N of a night: the board ranking is graded on its top 15 (Donovan, 2026-10-16)
 MIN_GAMES = 150       # promotion needs at least this many games
 PROMOTE_POINTS = 3.0  # ...and this many percentage points over the score in use
 Z_NEEDED = 1.64       # one-sided 95% on the paired test
@@ -240,7 +240,7 @@ def main() -> int:
     result = build(Path(a.data))
     for key, b in result["boards"].items():
         print(f"\n{b['label']}  ·  {b['nights']} nights, {b['games_compared']} games  ·  every player {b['board']['pct']}%")
-        print(f"  {'score':14}{'role':11}{'best in game':>16}{'top 10 of night':>20}   vs production        vs baseline")
+        print(f"  {'score':14}{'role':11}{'best in game':>16}{'top 15 of night':>20}   vs production        vs baseline")
         for r in b["scores"]:
             bg, tn = r["best_in_game"], r["top_of_night"]
             vp = r.get("vs_production"); vb = r.get("vs_baseline")
