@@ -1,0 +1,38 @@
+name: Model harness (private scoreboard)
+
+# Grades every score on the same games (MLB HR, NFL anytime TD, NHL goal) and prints the board to the run summary.
+# PRIVATE FIRST (Donovan, 2026-10-16): it does not publish model_scoreboard.json to the public data branch. Manual run.
+# NHL needs two repo secrets that are the PUBLIC read-only pair the site already uses (project URL + anon key):
+# SUPABASE_URL and SUPABASE_ANON_KEY. Without them the NHL board says "no rows yet".
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  harness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Restore the locked records and graded results from the data branch
+        run: |
+          set -euo pipefail
+          git fetch origin data --depth 1
+          rm -rf /tmp/restore && mkdir -p /tmp/restore public/data/current
+          git archive origin/data public/data | tar -x -C /tmp/restore
+          cp /tmp/restore/public/data/current/{por_rows_*.jsonl,outcome_log_*.jsonl,nfl_por_log_*.jsonl,nfl_results_20*.json,nfl_prediction_log_20*.jsonl} public/data/current/ 2>/dev/null || true
+          echo "restored $(ls public/data/current | wc -l) files"
+      - name: Export the graded NHL goal board
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: python3 bots/export_lamp_goal_log.py --out public/data/current
+      - name: Run the harness
+        run: |
+          python3 bots/model_harness.py --data public/data/current | tee /tmp/harness.txt
+          { echo '### Model harness'; echo '```'; cat /tmp/harness.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
