@@ -2,10 +2,12 @@
 """export_lamp_goal_log.py -- copy the graded NHL goal board into a file the harness can read.
 
 The NHL board's prediction of record is lamp_goal_log in Supabase (one row per game, player and model_version; the last pregame
-write is the lock; graded once after the final). The table is the PUBLIC record -- the site reads it with the anon key -- so this
-needs only the project URL and that anon key, nothing private:
+write is the lock; graded once after the final). The table is the PUBLIC record. By default this asks the SITE for it (GET /api/record/lamp-goal-export, added 2026-10-16), so the bot
+repo needs no database secret at all:
 
-    SUPABASE_URL=https://xxxx.supabase.co SUPABASE_ANON_KEY=... python3 bots/export_lamp_goal_log.py --out public/data/current
+    python3 bots/export_lamp_goal_log.py --out public/data/current            # site = https://dashnetwork.vercel.app, or $SITE_URL
+
+If the site is unreachable and SUPABASE_URL + SUPABASE_ANON_KEY are set, it falls back to reading the table directly.
 
 Writes lamp_goal_log_export.json: a list of {game_id, player_id, model_version, game_date, score, pct, legs, dressed, goals, hit}
 for graded rows only. Read-only: nothing in Supabase is touched. bots/model_harness.py (nhl_goal_rows) is the only reader.
@@ -41,16 +43,33 @@ def fetch(url: str, key: str, since: str | None = None) -> list[dict]:
         start += PAGE
 
 
+def fetch_site(site: str) -> list[dict]:
+    req = urllib.request.Request(f"{site.rstrip('/')}/api/record/lamp-goal-export", headers={"User-Agent": "dash-model-harness"})
+    with urllib.request.urlopen(req, timeout=60) as r:
+        data = json.loads(r.read().decode("utf-8"))
+    if not isinstance(data, list):
+        raise ValueError(f"unexpected answer: {str(data)[:120]}")
+    return data
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="public/data/current")
     ap.add_argument("--since", default=None, help="only game dates on or after this (YYYY-MM-DD)")
     a = ap.parse_args()
-    url, key = os.environ.get("SUPABASE_URL", "").strip(), os.environ.get("SUPABASE_ANON_KEY", "").strip()
-    if not url or not key:
-        print("SUPABASE_URL / SUPABASE_ANON_KEY not set -- nothing exported (the NHL board stays 'no rows yet')")
-        return 0
-    rows = fetch(url, key, a.since)
+    site = os.environ.get("SITE_URL", "").strip() or "https://dashnetwork.vercel.app"
+    rows = None
+    try:
+        rows = fetch_site(site)
+        print(f"asked {site}: {len(rows)} graded rows")
+    except Exception as e:
+        print(f"the site export failed ({type(e).__name__}: {e})")
+    if rows is None:
+        url, key = os.environ.get("SUPABASE_URL", "").strip(), os.environ.get("SUPABASE_ANON_KEY", "").strip()
+        if not url or not key:
+            print("no site export and no SUPABASE_URL / SUPABASE_ANON_KEY -- nothing exported (the NHL board stays 'no rows yet')")
+            return 0
+        rows = fetch(url, key, a.since)
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     (out / "lamp_goal_log_export.json").write_text(json.dumps(rows, separators=(",", ":")), encoding="utf-8")
