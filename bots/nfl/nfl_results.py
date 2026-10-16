@@ -557,6 +557,7 @@ def main() -> int:
     # from there, the same way pick_lock.py fetches its ledger back. Fails soft
     # to the live card, which is correct whenever the two weeks agree.
     card = {}
+    card_versions = None   # the card's own stamp; None = a card from before 2026-10-16, left unstamped (pre_registry)
     cp = Path(a.card)
     if a.week:
         arch = cp.parent / f"{a.prefix}picks_{a.season}_w{int(a.week):02d}.json"
@@ -572,6 +573,7 @@ def main() -> int:
         try:
             _card_doc = json.loads(cp.read_text()) or {}
             card = _card_doc.get("card", {})
+            card_versions = _card_doc.get("model_versions") or None
             # THE WEEKS MUST AGREE (2026-10-01, NFL audit). With no week-1
             # archive the fallback graded the LIVE card -- already week 2's,
             # built with week-1 results in its form features -- against week-1
@@ -631,6 +633,9 @@ def main() -> int:
         "names": {str(r["player_id"]): r["name"] for r in lines.iter_rows(named=True)},
         "card": graded,
         "totals": totals,
+        # The versions that BUILT the graded card, copied from the card itself.
+        # null = the card predates the stamp: unstamped history, never guessed.
+        "model_versions": card_versions,
     }
     if line_totals is not None:
         payload["line_totals"] = line_totals
