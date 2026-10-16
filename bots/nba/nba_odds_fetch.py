@@ -105,7 +105,8 @@ def fetch(key: str, books: str = "fanatics,draftkings") -> list[dict]:
     try:
         rows = mlb_odds.fetch_oddsapiio(
             key, books, slugs=("basketball", "nba"),
-            league_words=("nba", "national basketball"), days=2, hints=BASKETBALL_HINTS)
+            league_words=("nba", "national basketball"), days=2, hints=BASKETBALL_HINTS,
+            league_slugs=("usa-nba", "usa-nba-preseason"))
     except Exception as e:
         print(f"  odds-api.io: {type(e).__name__}: {e}")
         rows = []
