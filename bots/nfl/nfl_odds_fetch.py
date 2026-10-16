@@ -239,6 +239,7 @@ def fetch_oaio(key: str, books: str = "fanatics,draftkings") -> list[dict]:
         rows = mlb_odds.fetch_oddsapiio(
             key, books, slugs=("american-football", "nfl", "football"),
             league_words=("nfl", "national football"), days=8,
+            league_slugs=("usa-nfl", "nfl"),
             hints=FOOTBALL_HINTS)
     except Exception as e:
         print(f"  odds-api.io: {type(e).__name__}: {e}")
@@ -698,7 +699,9 @@ def main() -> int:
         return 0
 
     if a.probe:
-        return probe(key, a.regions)
+        rc = probe(key, a.regions)
+        _write_dump(a.dump)
+        return rc
 
     # ── the lock: a light rate limit, not MLB's per-slate cap (see module
     # docstring #3 for why the cap itself was left out) ──────────────────────

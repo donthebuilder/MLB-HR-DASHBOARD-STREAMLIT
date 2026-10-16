@@ -1018,7 +1018,8 @@ def _harvest(node, ctx: dict, rows: list, depth: int = 0) -> None:
 
 def fetch_oddsapiio(key: str, books: str, _wide: bool = False, *,
                     slugs: tuple = ("mlb", "baseball"), league_words: tuple = ("mlb", "major league"),
-                    days: int = 2, hints: "list | None" = None) -> list[dict]:
+                    days: int = 2, hints: "list | None" = None,
+                    league_slugs: tuple = ()) -> list[dict]:
     """Defaults are MLB's, unchanged. The keyword-only args let another sport
     (bots/nfl/nfl_odds_fetch.py) reuse the same call-shape ladder, parser and
     harvester: `slugs` the sport slugs to try, `league_words` the league names
@@ -1029,12 +1030,13 @@ def fetch_oddsapiio(key: str, books: str, _wide: bool = False, *,
     if hints is not None:
         PROP_HINTS = hints
     try:
-        return _fetch_oddsapiio(key, books, slugs, league_words, days)
+        return _fetch_oddsapiio(key, books, slugs, league_words, days, league_slugs)
     finally:
         PROP_HINTS = saved
 
 
-def _fetch_oddsapiio(key: str, books: str, slugs: tuple, league_words: tuple, days: int) -> list[dict]:
+def _fetch_oddsapiio(key: str, books: str, slugs: tuple, league_words: tuple, days: int,
+                     league_slugs: tuple = ()) -> list[dict]:
     # Their documented listing is GET /events?sport={slug}&to=&limit=&skip= —
     # the old call sent status/from params the docs don't know. The slug for
     # baseball isn't published anywhere reachable, so try the two candidates
@@ -1046,16 +1048,44 @@ def _fetch_oddsapiio(key: str, books: str, slugs: tuple, league_words: tuple, da
     now = dt.datetime.now(dt.timezone.utc)
 
     evs = []
+    def _lg(e):
+        l = e.get("league") if isinstance(e, dict) else None
+        return str((l.get("slug") or l.get("name")) if isinstance(l, dict) else l or "?")
+
     for slug in slugs:
-        try:
-            evs = _listish(oaio("/events", key, sport=slug, status="pending,live",
-                                to=(now + dt.timedelta(days=days)).isoformat(),
-                                limit=200), "events")
-        except Exception as e:
-            print(f"  odds-api.io: events sport={slug} failed ({type(e).__name__}: {e})")
-            continue
+        # A league slug asks the API for just that league (2026-10-16: the
+        # unfiltered football/hockey lists are a 200-event page of every
+        # league in the world, and the NFL / NHL games were not on it).
+        # Candidates are tried in order and their events pooled.
+        pooled, seen_ids = [], set()
+        for lg in (league_slugs or (None,)):
+            try:
+                got = _listish(oaio("/events", key, sport=slug, league=lg, status="pending,live",
+                                    to=(now + dt.timedelta(days=days)).isoformat(),
+                                    limit=200), "events")
+            except Exception as e:
+                print(f"  odds-api.io: events sport={slug} league={lg} failed ({type(e).__name__}: {e})")
+                continue
+            for e in got:
+                k = e.get("id") if isinstance(e, dict) else None
+                if k is None or k not in seen_ids:
+                    seen_ids.add(k)
+                    pooled.append(e)
+            if lg:
+                print(f"  odds-api.io: league '{lg}' returned {len(got)} event(s)")
+        if league_slugs and not pooled:
+            print("  odds-api.io: no league slug matched -- falling back to the unfiltered list")
+            try:
+                pooled = _listish(oaio("/events", key, sport=slug, status="pending,live",
+                                       to=(now + dt.timedelta(days=days)).isoformat(),
+                                       limit=200), "events")
+            except Exception as e:
+                print(f"  odds-api.io: events sport={slug} failed ({type(e).__name__}: {e})")
+        evs = pooled
         if evs:
-            print(f"  odds-api.io: sport slug '{slug}' returned {len(evs)} event(s)")
+            from collections import Counter
+            print(f"  odds-api.io: sport slug '{slug}' returned {len(evs)} event(s); leagues: "
+                  + ", ".join(f"{k} x{v}" for k, v in Counter(_lg(e) for e in evs).most_common(12)))
             break
     if not evs:
         return []
