@@ -178,6 +178,9 @@ PUBLISH_FILES=(
   # NHL_ODDS_GLOB below.
   nhl_odds_latest.json
   nhl_odds_status.json
+  # NBA ODDS (2026-10-16). bots/nba/nba_odds_fetch.py; history is NBA_ODDS_GLOB.
+  nba_odds_latest.json
+  nba_odds_status.json
   # FRANCHISE LIVE SCORING (2026-09-14). Per-player box-score lines for the
   # current week, written by bots/nfl/nfl_fantasy_stats.py every 15 min in
   # game windows (nfl-fantasy-stats.yml). ~60 KB. Until this file existed
@@ -407,6 +410,10 @@ NFL_ODDS_KEEP=90
 # ~82 games x 2 seasons of dates fits in 400 small files.
 NHL_ODDS_GLOB="nhl_odds_20*.json"
 NHL_ODDS_KEEP=400
+
+# nba_odds_<game date>.json (2026-10-16): same shape and reason as NHL above.
+NBA_ODDS_GLOB="nba_odds_20*.json"
+NBA_ODDS_KEEP=400
 
 # nfl_picks_<season>_w03.json (2026-09-06): ONE FILE PER WEEK'S CARD, the
 # companion to NFL_RESULTS_GLOB above.
@@ -665,6 +672,7 @@ stage_local() {
            "$SRC"/data/$NFL_RESULTS_GLOB "$SRC"/data/current/$NFL_RESULTS_GLOB \
            "$SRC"/data/$NFL_ODDS_GLOB "$SRC"/data/current/$NFL_ODDS_GLOB \
            "$SRC"/data/$NHL_ODDS_GLOB "$SRC"/data/current/$NHL_ODDS_GLOB \
+           "$SRC"/data/$NBA_ODDS_GLOB "$SRC"/data/current/$NBA_ODDS_GLOB \
            "$SRC"/data/$NFL_PICKS_GLOB "$SRC"/data/current/$NFL_PICKS_GLOB \
            "$SRC"/data/$NFL_POR_LOG_GLOB "$SRC"/data/current/$NFL_POR_LOG_GLOB \
            "$SRC"/data/$NFL_SIGNAL_LOG_GLOB "$SRC"/data/current/$NFL_SIGNAL_LOG_GLOB \
@@ -831,7 +839,7 @@ carry_forward() {
               "$NFL_RESULTS_GLOB:$NFL_RESULTS_KEEP" \
               "$NFL_PICKS_GLOB:$NFL_PICKS_KEEP" "$NFL_NEXT_PICKS_GLOB:$NFL_NEXT_PICKS_KEEP" \
               "$NFL_POR_LOG_GLOB:$NFL_POR_LOG_KEEP" \
-              "$NFL_ODDS_GLOB:$NFL_ODDS_KEEP" "$NHL_ODDS_GLOB:$NHL_ODDS_KEEP" \
+              "$NFL_ODDS_GLOB:$NFL_ODDS_KEEP" "$NHL_ODDS_GLOB:$NHL_ODDS_KEEP" "$NBA_ODDS_GLOB:$NBA_ODDS_KEEP" \
               "$NFL_NEXT_PRED_LOG_GLOB:$NFL_NEXT_PRED_LOG_KEEP" \
               "$NFL_SIGNAL_LOG_GLOB:$NFL_SIGNAL_LOG_KEEP" \
               "$NFL_MATCHUP_WEEK_GLOB:$NFL_MATCHUP_WEEK_KEEP" \
