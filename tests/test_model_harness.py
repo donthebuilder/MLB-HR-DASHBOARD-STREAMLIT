@@ -37,3 +37,57 @@ picks2 = {"truth": lambda g: g % 3, "prod": lambda g: (g + 1) % 3, "good": lambd
 held = H.evaluate(rows(300, picks2), ["prod", "good", "base"], "prod", "base")
 assert "hold" in {r["score"]: r["verdict"] for r in held["scores"]}["good"] or "no clear" in {r["score"]: r["verdict"] for r in held["scores"]}["good"]
 print("ok   model_harness: wilson, paired test, promotion rule (needs production AND baseline), determinism (TEST data)")
+
+
+# ── NFL and NHL adapters. TEST DATA, labelled: invented players and games, never real results. ──
+import json as _json
+from pathlib import Path as _Path
+import model_harness as _mh
+
+
+def _nfl_fixture(tmp_path, locked_late=False):
+    d = _Path(tmp_path)
+    por = [{"season": 2026, "week": 9, "game_id": "G1", "run_id": "RUN1", "home": "AAA", "away": "BBB",
+            "locked_late": locked_late, "model_versions": {"TD": "nfl_td_v2"}}]
+    (d / "nfl_por_log_2026_w09.jsonl").write_text("\n".join(_json.dumps(x) for x in por))
+    plog = [{"run_id": "RUN1"}] + [
+        {"player_id": "P1", "team": "AAA", "market": "TD", "score": 80, "components": {"f_touches": 10, "f_xtd": 90}, "shadow": {"nfl_td_v3": {"score": 70}}},
+        {"player_id": "P2", "team": "BBB", "market": "TD", "score": 60, "components": {"f_touches": 90, "f_xtd": 10}, "shadow": {"nfl_td_v3": {"score": 95}}},
+        {"player_id": "P3", "team": "CCC", "market": "TD", "score": 99, "components": {}, "shadow": {}},      # another game: ignored
+        {"player_id": "P4", "team": "AAA", "market": "REC", "score": 50, "components": {}, "shadow": {}},     # another market: ignored
+        {"player_id": "P5", "team": "AAA", "market": "TD", "score": 40, "components": {}, "shadow": {}},     # no graded line: left out
+    ]
+    (d / "nfl_prediction_log_RUN1.jsonl").write_text("\n".join(_json.dumps(x) for x in plog))
+    (d / "nfl_results_2026_w09.json").write_text(_json.dumps({"lines": {"P1": {"TD": 0.0}, "P2": {"TD": 2.0}, "P3": {"TD": 1.0}}}))
+    return d
+
+
+def test_nfl_adapter_joins_locked_run_to_graded_lines(tmp_path):
+    rows = _mh.nfl_td_rows(_nfl_fixture(tmp_path))
+    by = {r["id"]: r for r in rows}
+    assert set(by) == {"P1", "P2"}                       # other game, other market and ungraded players are out
+    assert by["P1"]["y"] == 0 and by["P2"]["y"] == 1     # 2 TDs counts as a hit
+    assert by["P2"]["s"]["td_v3"] == 95 and by["P1"]["s"]["f_touches"] == 10
+    assert by["P1"]["night"] == "2026-w09" and by["P1"]["version"] == "nfl_td_v2"
+
+
+def test_nfl_adapter_drops_a_game_locked_late(tmp_path):
+    assert _mh.nfl_td_rows(_nfl_fixture(tmp_path, locked_late=True)) == []
+
+
+def test_nhl_adapter_reads_graded_dressed_rows_only(tmp_path):
+    data = [
+        {"game_id": 1, "player_id": 7, "model_version": "v1", "game_date": "2026-10-20", "score": 80, "pct": {"shotsPg": 90, "goalsPg": 70, "toi": 60},
+         "legs": {"shotsPg": 3.1, "goalsPg": 0.4}, "dressed": True, "goals": 1, "hit": True},
+        {"game_id": 1, "player_id": 8, "model_version": "v1", "game_date": "2026-10-20", "score": 40, "pct": {}, "legs": {}, "dressed": False, "goals": 0, "hit": False},
+        {"game_id": 1, "player_id": 9, "model_version": "v1", "game_date": "2026-10-20", "score": 50, "pct": {}, "legs": {}, "dressed": True, "goals": None, "hit": None},
+    ]
+    (_Path(tmp_path) / "lamp_goal_log_export.json").write_text(_json.dumps(data))
+    rows = _mh.nhl_goal_rows(_Path(tmp_path))
+    assert [r["id"] for r in rows] == ["7"] and rows[0]["y"] == 1
+    assert rows[0]["s"]["shots_pg"] == 3.1 and rows[0]["s"]["pct_goals"] == 70
+
+
+def test_build_survives_a_market_with_no_rows(tmp_path):
+    out = _mh.build(_Path(tmp_path))
+    assert out["boards"]["nhl_goal"]["scores"] == [] and "no locked" in out["boards"]["nhl_goal"]["note"]

@@ -217,14 +217,105 @@ def mlb_hr_rows(data_dir: Path, market: dict = MLB_HR) -> list[dict]:
     return rows
 
 
-ADAPTERS: dict[str, Callable[[Path], list[dict]]] = {"mlb_hr": mlb_hr_rows}
-MARKETS = {"mlb_hr": MLB_HR}
+# ── NFL adapter: the anytime-TD board ────────────────────────────────────────
+# nfl_por_log_<season>_wNN.jsonl says, per game, WHICH pregame run was locked for it (and whether it locked late);
+# that run's nfl_prediction_log_<run_id>.jsonl holds the score and its components for every player on the board; the graded
+# week (nfl_results_<season>_wNN.json `lines`) holds what each player actually did. A game that locked late is not a
+# pregame record and is left out. A player with no graded TD line (not eligible, did not play) is left out, not counted a miss.
+NFL_TD = {
+    "market": "nfl_td", "label": "NFL anytime TD (1+ TD)", "production": "td", "baseline": "f_touches",
+    # td = the score in use; td_v3 = the shadow beside it; the rest are the board's own components, each a one-number
+    # rule the harness grades like any score. f_touches (workload) is the plain baseline. implied_total is a TEAM number
+    # (the same for every player in a game), so it cannot pick a player and is not graded here.
+    "scores": ["td", "td_v3", "f_xtd", "f_touches", "f_snap_pct", "f_rz_opp", "f_gl_opp"],
+}
+
+
+def _nfl_score(row: dict, key: str):
+    comp = row.get("components") or {}
+    if key == "td":
+        return row.get("score")
+    if key == "td_v3":
+        return ((row.get("shadow") or {}).get("nfl_td_v3") or {}).get("score")
+    return comp.get(key)
+
+
+def nfl_td_rows(data_dir: Path, market: dict = NFL_TD) -> list[dict]:
+    rows: list[dict] = []
+    for por in sorted(data_dir.glob("nfl_por_log_*_w*.jsonl")):
+        games = read_jsonl(por)
+        if not games:
+            continue
+        season, week = games[0].get("season"), games[0].get("week")
+        res_path = data_dir / f"nfl_results_{season}_w{int(week):02d}.json"
+        if not res_path.exists():
+            continue
+        lines = (json.loads(res_path.read_text(encoding="utf-8")) or {}).get("lines") or {}
+        night = f"{season}-w{int(week):02d}"
+        td_rows_by_run: dict[str, list[dict]] = {}
+        for g in games:
+            if g.get("locked_late"):
+                continue
+            run = g.get("run_id")
+            if run not in td_rows_by_run:
+                td_rows_by_run[run] = [r for r in read_jsonl(data_dir / f"nfl_prediction_log_{run}.jsonl") if r.get("market") == "TD"]
+            for r in td_rows_by_run[run]:
+                if r.get("team") not in (g.get("home"), g.get("away")):
+                    continue
+                td = (lines.get(str(r.get("player_id"))) or {}).get("TD")
+                if td is None:
+                    continue
+                rows.append({
+                    "night": night, "game": str(g["game_id"]), "id": str(r["player_id"]),
+                    "y": 1 if td >= 1 else 0,
+                    "version": (g.get("model_versions") or {}).get("TD"),
+                    "s": {k: _nfl_score(r, k) for k in market["scores"]},
+                })
+    return rows
+
+
+# ── NHL adapter: the goal board (lamp_goal_log) ───────────────────────────────
+# The NHL board is scored on the site and its prediction of record lives in Supabase (lamp_goal_log: one row per game,
+# player, model_version, written until puck drop and never after; graded once). bots/export_lamp_goal_log.py copies the graded
+# rows into lamp_goal_log_export.json next to the other data files; this adapter only reads that file. No file, no rows.
+NHL_GOAL = {
+    "market": "nhl_goal", "label": "NHL goal (1+ goal)", "production": "score", "baseline": "shots_pg",
+    # score = the LAMP score in use; the three percentiles are its own legs, each graded alone; shots_pg (raw shots per
+    # game) is the plain baseline every skater's score has to beat.
+    "scores": ["score", "pct_shots", "pct_goals", "pct_toi", "goals_pg", "shots_pg"],
+}
+
+
+def nhl_goal_rows(data_dir: Path, market: dict = NHL_GOAL) -> list[dict]:
+    path = data_dir / "lamp_goal_log_export.json"
+    if not path.exists():
+        return []
+    rows: list[dict] = []
+    for r in json.loads(path.read_text(encoding="utf-8")) or []:
+        if r.get("dressed") is not True or r.get("hit") is None:      # not graded, or he did not dress: not a miss
+            continue
+        legs, pct = r.get("legs") or {}, r.get("pct") or {}
+        rows.append({
+            "night": str(r["game_date"]), "game": str(r["game_id"]), "id": str(r["player_id"]),
+            "y": 1 if r["hit"] else 0, "version": r.get("model_version"),
+            "s": {"score": r.get("score"), "pct_shots": pct.get("shotsPg"), "pct_goals": pct.get("goalsPg"), "pct_toi": pct.get("toi"),
+                  "goals_pg": legs.get("goalsPg"), "shots_pg": legs.get("shotsPg")},
+        })
+    return rows
+
+
+ADAPTERS: dict[str, Callable[[Path], list[dict]]] = {"mlb_hr": mlb_hr_rows, "nfl_td": nfl_td_rows, "nhl_goal": nhl_goal_rows}
+MARKETS = {"mlb_hr": MLB_HR, "nfl_td": NFL_TD, "nhl_goal": NHL_GOAL}
 
 
 def build(data_dir: Path) -> dict:
     boards = {}
     for key, market in MARKETS.items():
         rows = ADAPTERS[key](data_dir)
+        if not rows:
+            boards[key] = {"label": market["label"], "nights": 0, "games_compared": 0, "board": {"hit": 0, "n": 0, "pct": None}, "scores": [],
+                           "note": "no locked, graded rows for this market yet"}
+            continue
         by_ver = collections.Counter(r.get("version") for r in rows)
         board = evaluate(rows, market["scores"], market["production"], market["baseline"])
         board.update({"label": market["label"], "versions_in_sample": dict(by_ver)})
@@ -239,6 +330,9 @@ def main() -> int:
     a = ap.parse_args()
     result = build(Path(a.data))
     for key, b in result["boards"].items():
+        if not b["scores"]:
+            print(f"\n{b['label']}  ·  {b.get('note', 'no rows')}")
+            continue
         print(f"\n{b['label']}  ·  {b['nights']} nights, {b['games_compared']} games  ·  every player {b['board']['pct']}%")
         print(f"  {'score':14}{'role':11}{'best in game':>16}{'top 15 of night':>20}   vs production        vs baseline")
         for r in b["scores"]:
