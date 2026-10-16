@@ -1,0 +1,66 @@
+name: NHL odds (price history)
+
+# Purpose: the dated pregame-price history for NHL goal / shots props, graded
+# later against the locked board. Four fetches on NHL game days, none off-season
+# worth anything: 16:17 / 20:17 / 22:17 / 22:52 UTC = 12:17, 4:17, 6:17, 6:52 pm
+# ET, the last one inside the 7 pm ET drop. The script's own lock (45 min) stops
+# a manual re-run from burning quota; it freezes a player's row at his game's
+# start. Manual run with probe=true is read-only and prints every market name.
+on:
+  schedule:
+    - cron: "17 16,20,22 * * *"
+    - cron: "52 22 * * *"
+  workflow_dispatch:
+    inputs:
+      probe:
+        description: "read-only: print what the books serve, write nothing"
+        required: false
+        default: "false"
+
+concurrency:
+  group: nhl-odds
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  odds:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Probe (read-only)
+        if: github.event.inputs.probe == 'true'
+        env:
+          ODDSAPI_IO_KEY: ${{ secrets.ODDSAPI_IO_KEY }}
+        run: |
+          python bots/nhl/nhl_odds_fetch.py --probe --dump /tmp/nhl_odds_raw.json || true
+          test -f /tmp/nhl_odds_raw.json && head -c 60000 /tmp/nhl_odds_raw.json || echo "no raw payload"
+      - name: Restore today's and yesterday's history (so a started game keeps its pregame row)
+        if: github.event.inputs.probe != 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p public/data/current
+          if git fetch origin data --depth 1; then
+            rm -rf /tmp/nhl-restore && mkdir -p /tmp/nhl-restore
+            git archive origin/data public/data | tar -x -C /tmp/nhl-restore
+            cp /tmp/nhl-restore/public/data/current/nhl_odds_20*.json public/data/current/ 2>/dev/null || true
+            echo "restored $(ls public/data/current/nhl_odds_20*.json 2>/dev/null | wc -l) dated file(s)"
+          fi
+      - name: Fetch NHL odds
+        if: github.event.inputs.probe != 'true'
+        continue-on-error: true
+        env:
+          ODDSAPI_IO_KEY: ${{ secrets.ODDSAPI_IO_KEY }}
+          NHL_ODDS_MIN_INTERVAL_MIN: ${{ vars.NHL_ODDS_MIN_INTERVAL_MIN }}
+        run: python bots/nhl/nhl_odds_fetch.py --out "$GITHUB_WORKSPACE/public/data/current"
+      - name: Publish to data branch
+        if: github.event.inputs.probe != 'true'
+        run: bash .github/scripts/publish_data.sh "NHL odds"
