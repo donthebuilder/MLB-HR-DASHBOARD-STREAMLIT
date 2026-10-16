@@ -4,7 +4,10 @@ name: Model harness (private scoreboard)
 # PRIVATE FIRST (Donovan, 2026-10-16): it does not publish model_scoreboard.json to the public data branch. Manual run.
 # NHL: the graded goal board comes from the SITE (/api/record/lamp-goal-export), so no secret is needed. SUPABASE_URL / SUPABASE_ANON_KEY
 # remain an optional fallback only.
+# Nightly at 11:23 UTC (7:23 am ET): after the night's games are final and graded. It only reads and prints; nothing is published.
 on:
+  schedule:
+    - cron: "23 11 * * *"
   workflow_dispatch:
 
 permissions:
