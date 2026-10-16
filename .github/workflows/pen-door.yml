@@ -76,6 +76,9 @@ jobs:
           # as before.
           DISCORD_PENDOOR_WEBHOOK: ${{ secrets.DISCORD_PENDOOR_WEBHOOK }}
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          # PEN_DOOR_FOLD_ON (repo variable, default off): one updated Game status per game. PEN_DOOR_OWN_WEBHOOK: Donovan's own server
+          PEN_DOOR_FOLD_ON: ${{ vars.PEN_DOOR_FOLD_ON }}
+          PEN_DOOR_OWN_WEBHOOK: ${{ secrets.PEN_DOOR_OWN_WEBHOOK }}
         run: python bots/pen_door_watch.py
 
       - name: Save alert state

@@ -121,6 +121,44 @@ def pick_at_plate(name: str, role: str, runners: int, half: str, inning, away: s
     return f"🚨 **{name}** ({role} pick) is up with {spot} · {away} at {home}, {inning_text(half, inning)}"
 
 
+# ── GAME STATUS (PEN_DOOR_FOLD_ON): ONE message per game, edited in place; only when a CALLED pick is touched ───
+GAME_STATUS_FOOTER = "one message per game, updated in place"
+FINALS_FOOTER = "one post a night"
+
+
+def game_status_title(away: str, home: str) -> str:
+    return f"📋 Game status · {away} at {home}"
+
+
+def pregame_change_line(name: str, role: str, team: str) -> str:
+    """A CALLED pick is not in the posted lineup BEFORE the game: a pregame lineup change."""
+    return f"**Pregame lineup change:** **{name}** ({role} pick) is not in the posted {team} lineup."
+
+
+def ingame_change_line(label: str, incoming: str, outgoing: str, role: str, picked_out: bool, half: str, inning) -> str:
+    """A CALLED pick is involved in a substitution DURING the game (pinch-hit, pinch-run, defensive move).
+    picked_out=True: the pick is the man who left; False: he is the man who came in."""
+    where = inning_text(half, inning)
+    tag = f"{where}: " if where else ""
+    pick = outgoing if picked_out else incoming
+    rest = f"{incoming} {label} {outgoing}"
+    return f"**In-game change** · {tag}{rest}. {pick} is a {role} pick." if role else f"**In-game change** · {tag}{rest}."
+
+
+def pitching_change_status_line(pitching_team: str, half: str, inning, new_pitcher: str, old_pitcher: str,
+                                stats: str, attackers: list[str]) -> str:
+    """Carries the NEW pitcher by name and his stats when we have them; never a stale description."""
+    where = inning_text(half, inning)
+    head = f"**{pitching_team} pitching change** · {where}: {new_pitcher} in" + (f" for {old_pitcher}" if old_pitcher else "")
+    bits = [head + (f" ({stats})" if stats else "")]
+    bits.append(f"Your {'pick' if len(attackers) == 1 else 'picks'} facing him: {', '.join(attackers)}")
+    return ". ".join(bits)
+
+
+def finals_title(day: str) -> str:
+    return f"🏁 Finals · {day}"
+
+
 # ── samples for the preview page (TEST data) ────────────────────────────────
 def samples() -> list[dict]:
     return [

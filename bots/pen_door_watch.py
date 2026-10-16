@@ -65,9 +65,11 @@ from pathlib import Path
 try:
     import discord_post
     import copy_pendoor as words
+    import pen_door_fold as fold
 except ImportError:
     from bots import discord_post
     from bots import copy_pendoor as words
+    from bots import pen_door_fold as fold
 
 API = "https://statsapi.mlb.com/api/v1"
 FEED_FIELDS = ("gameData,teams,home,away,abbreviation,liveData,plays,allPlays,"
@@ -78,6 +80,8 @@ SLATE_URL = ("https://raw.githubusercontent.com/donthebuilder/MLB-HR-DASHBOARD-S
              "data/public/data/current/today_slim.json")
 PITCH_LOOKBACK_MIN = 70  # generous vs. the 10-min cron grain; startTime keys do the real dedup
 STATE_PATH = Path("state/pen_door_state.json")
+# PEN_DOOR_FOLD_ON also reads who came in / went out of a substitution (field filters only add, they never change the old fields)
+FEED_FIELDS_FOLD = FEED_FIELDS + ",player,replacedPlayer"
 
 # Live sweep: catch a pitching change or an at-bat opportunity closer to when
 # it happens, without turning this into a long-running process. Budgeted well
@@ -351,7 +355,212 @@ def gather_status_sections(st: dict, games: list[dict], picks: dict[int, list[di
     return sections, pending
 
 
-def live_sweep(st: dict) -> tuple[int, int]:
+# ── PEN_DOOR_FOLD_ON: one edited "Game status" message per game, only when a CALLED pick is touched ──────────
+_PITCHER_MEMO: dict = {}
+
+
+def pitcher_stats(pid) -> str:
+    """The new pitcher's season line from the MLB stats API ('3.45 ERA · 60.1 IP · 70 K · 20 BB'), or '' when it is not there.
+    Read at the moment of the change and remembered for this process; never filled in from anything else."""
+    try:
+        pid = int(pid)
+    except (TypeError, ValueError):
+        return ""
+    if pid not in _PITCHER_MEMO:
+        j = get_json(f"{API}/people/{pid}?hydrate=stats(group=[pitching],type=[season])"
+                     "&fields=people,id,stats,splits,stat,era,inningsPitched,strikeOuts,baseOnBalls")
+        stat = {}
+        for person in (j or {}).get("people") or []:
+            for grp in person.get("stats") or []:
+                for sp in grp.get("splits") or []:
+                    stat = sp.get("stat") or stat
+        _PITCHER_MEMO[pid] = fold.pitcher_stats_text(stat)
+    return _PITCHER_MEMO[pid]
+
+
+def fold_substitution(st: dict, pk, ev: dict, det: dict, about: dict, gp: list[dict], cutoff, upd: dict) -> None:
+    """A pinch-hit / pinch-run / defensive change DURING the game that involves a CALLED pick: adds one line to `upd`.
+    Not the same thing as a pregame lineup change (that is gather_fold's scratch line, before first pitch)."""
+    ts = str(ev.get("startTime") or "")
+    try:
+        t = dt.datetime.fromisoformat(ts.replace("Z", "+00:00"))
+    except ValueError:
+        return
+    if t < cutoff:
+        return
+    k = f"sub:{pk}:{ts}"
+    if seen(st, k) or k in upd["keys"]:
+        return
+    c = fold.classify_substitution(det, ev, fold.called_only(gp))
+    if not c:
+        mark(st, k)          # nobody called is involved: closed, never reconsidered
+        return
+    upd["lines"].append(words.ingame_change_line(c["label"], c["incoming"], c["outgoing"], c["pick"].get("role", ""),
+                                                 c["pick_out"], str(about.get("halfInning") or ""), about.get("inning")))
+    upd["keys"].append(k)
+
+
+def gather_fold(st: dict, games: list[dict], picks: dict[int, list[dict]], abbrs: dict[int, str]) -> dict:
+    """Pregame and status changes that touch a CALLED pick, per game: {pk: {away, home, lines, keys, day}}.
+    A pregame lineup change (a called pick is not in the posted order before the game) and a delay / postponement
+    of a game that has a called pick. Nothing is posted for a game with no called pick."""
+    out: dict = {}
+    for g in games:
+        pk = g.get("gamePk")
+        if not pk:
+            continue
+        status = g.get("status") or {}
+        abstract = status.get("abstractGameState")
+        detailed = str(status.get("detailedState") or "")
+        gp = picks.get(pk, [])
+        designated = fold.called_only(gp)
+        if not designated:
+            continue
+        home = (g.get("teams") or {}).get("home") or {}
+        away = (g.get("teams") or {}).get("away") or {}
+        h_ab = abbrs.get((home.get("team") or {}).get("id"), "?")
+        a_ab = abbrs.get((away.get("team") or {}).get("id"), "?")
+        rec = {"away": a_ab, "home": h_ab, "lines": [], "keys": [], "day": str(g.get("_date") or "")}
+
+        if any(w in detailed for w in ("Delayed", "Postponed", "Suspended")) and "delay" in STATUS_SECTIONS_ON:
+            k = f"delay:{pk}:{detailed}"
+            if not seen(st, k):
+                order = batting_order(pk)
+                posted = bool(order["home"]) and bool(order["away"])
+                played = [p for p in designated if p["pid"] in order["home"] + order["away"]]
+                postponed = "postpon" in detailed.lower()
+                rec["keys"].append(k)
+                if postponed or not posted or played:
+                    count = len(designated) if postponed else (len(played) if posted else None)
+                    rec["lines"].append(words.delay_line(a_ab, h_ab, detailed, count))
+
+        if abstract == "Preview" and "scratch" in STATUS_SECTIONS_ON:
+            box = get_json(f"{API}/game/{pk}/boxscore?fields=teams,home,away,team,id,battingOrder,players,person")
+            for side in ("home", "away"):
+                t = ((box or {}).get("teams") or {}).get(side) or {}
+                order = t.get("battingOrder") or []
+                ab2 = abbrs.get((t.get("team") or {}).get("id"), "?")
+                if not order:
+                    continue
+                for p in [x for x in designated if x["team"] == ab2 and x["pid"] not in order]:
+                    ks = f"scratch:{pk}:{p['pid']}"
+                    if not seen(st, ks):
+                        rec["keys"].append(ks)
+                        rec["lines"].append(words.pregame_change_line(p["name"], p["role"], ab2))
+        if rec["keys"]:
+            out[pk] = rec
+    return out
+
+
+def gather_finals(st: dict, games: list[dict], picks: dict[int, list[dict]], abbrs: dict[int, str]) -> dict:
+    """ONE finals post per night: {date: {lines, keys}} for each game date whose games with a called pick are ALL over
+    (Final, or postponed / cancelled) and not posted yet. Goes to PEN_DOOR_OWN_WEBHOOK only (the caller checks it is set)."""
+    by_date: dict[str, list[dict]] = {}
+    for g in games:
+        if g.get("gamePk") and fold.called_only(picks.get(g["gamePk"], [])):
+            by_date.setdefault(str(g.get("_date") or ""), []).append(g)
+    out: dict = {}
+    for day, gs in by_date.items():
+        key = f"finalnight:{day}"
+        if not day or seen(st, key):
+            continue
+        done = lambda g: (g.get("status") or {}).get("abstractGameState") == "Final" or any(  # noqa: E731
+            w in str((g.get("status") or {}).get("detailedState") or "") for w in ("Postponed", "Cancelled"))
+        if not all(done(g) for g in gs):
+            continue
+        lines = []
+        for g in gs:
+            if (g.get("status") or {}).get("abstractGameState") != "Final":
+                continue
+            pk = g["gamePk"]
+            box = get_json(f"{API}/game/{pk}/boxscore")
+            if not box:
+                lines = []
+                break
+            allp = {}
+            for side in ("home", "away"):
+                allp.update(((box.get("teams") or {}).get(side) or {}).get("players") or {})
+            pl = []
+            for p in fold.called_only(picks.get(pk, [])):
+                bat = ((allp.get(f"ID{p['pid']}") or {}).get("stats") or {}).get("batting") or {}
+                if not bat:
+                    continue
+                hr = int(bat.get("homeRuns") or 0)
+                pl.append(f"{'💥 ' if hr else ''}{surname(p['name'])} {int(bat.get('hits') or 0)}-{int(bat.get('atBats') or 0)}"
+                          + (f" {hr}HR" if hr else ""))
+            home = (g.get("teams") or {}).get("home") or {}
+            away = (g.get("teams") or {}).get("away") or {}
+            h_ab = abbrs.get((home.get("team") or {}).get("id"), "?")
+            a_ab = abbrs.get((away.get("team") or {}).get("id"), "?")
+            lines.append(words.final_line(f"{a_ab} {away.get('score', '?')}–{home.get('score', '?')} {h_ab}", pl))
+        if lines:
+            out[day] = {"lines": lines, "keys": [key]}
+    return out
+
+
+def main_fold() -> int:
+    """PEN_DOOR_FOLD_ON: one edited Game status message per game (only for a CALLED pick), finals once a night, pick-at-plate and
+    finals to PEN_DOOR_OWN_WEBHOOK. The old digest, its separate pings and its state keys are not touched."""
+    now = dt.datetime.now(dt.UTC)
+    today, yday = now.date().isoformat(), (now.date() - dt.timedelta(days=1)).isoformat()
+    st = load_state()
+    fold.prune_state(st, today)
+    picks = slate_picks()
+    abbrs = team_abbrs()
+    sched = get_json(f"{API}/schedule?sportId=1&startDate={yday}&endDate={today}"
+                     "&fields=dates,date,games,gamePk,status,abstractGameState,detailedState,"
+                     "teams,home,away,team,id,score")
+    games = []
+    for d in (sched or {}).get("dates", []):
+        for g in d.get("games", []):
+            g["_date"] = d.get("date")
+            games.append(g)
+
+    sent = failed = 0
+    attempted = False
+    ups = gather_fold(st, games, picks, abbrs)
+    for pk, rec in ups.items():
+        if not rec["lines"]:
+            for k in rec["keys"]:
+                mark(st, k)          # nothing to say (every pick is out of that delayed game): closed
+            continue
+        attempted = True
+        ok, bad = fold.publish_game_status(st, pk, rec["day"] or today, words.game_status_title(rec["away"], rec["home"]),
+                                           rec["lines"], words.GAME_STATUS_FOOTER, discord_urls())
+        sent += ok
+        failed += bad
+        if ok:
+            for k in rec["keys"]:
+                mark(st, k)
+
+    own = fold.own_urls()
+    if own:                           # unset = finals are not read, not built and not sent
+        for day, rec in gather_finals(st, games, picks, abbrs).items():
+            attempted = True
+            body = {"embeds": [{"title": words.finals_title(day), "description": "\n".join(f"· {ln}" for ln in rec["lines"])[:4000],
+                                "color": fold.EMBED_COLOR, "footer": {"text": words.FINALS_FOOTER}}]}
+            ok, bad = fold.send_plain(own, body)
+            sent += ok
+            failed += bad
+            if ok:
+                for k in rec["keys"]:
+                    mark(st, k)
+
+    live_ok, live_bad = live_sweep(st, fold_mode=True)
+    save_state(st)
+    sent += live_ok
+    failed += live_bad
+    if not attempted and (live_ok + live_bad) == 0:
+        print("quiet window")
+        return 0
+    print(f"folded: {sent} delivered, {failed} failed")
+    if sent == 0:
+        print("DELIVERED NOTHING — every webhook refused or none configured. Unmarked items will retry next run.", file=sys.stderr)
+        return 1
+    return 0
+
+
+def live_sweep(st: dict, fold_mode: bool = False) -> tuple[int, int]:
     """Up to MAX_LIVE_SWEEPS passes over whatever is live right now, ~90s
     apart, each pitching change or opportunity posted the instant it's
     found. Returns (alerts_sent, alerts_failed) across every sweep."""
@@ -374,7 +583,7 @@ def live_sweep(st: dict) -> tuple[int, int]:
 
         orders: dict[int, dict[str, list[int]]] = {}   # posted batting orders, fetched once per game per sweep
         for pk in live_pks:
-            feed = get_json(f"https://statsapi.mlb.com/api/v1.1/game/{pk}/feed/live?fields={FEED_FIELDS}")
+            feed = get_json(f"https://statsapi.mlb.com/api/v1.1/game/{pk}/feed/live?fields={FEED_FIELDS_FOLD if fold_mode else FEED_FIELDS}")
             if not feed:
                 continue
             gteams = (feed.get("gameData", {}) or {}).get("teams", {}) or {}
@@ -382,6 +591,7 @@ def live_sweep(st: dict) -> tuple[int, int]:
             away_ab = (gteams.get("away") or {}).get("abbreviation", "")
             gp = picks.get(pk, [])
             cutoff = dt.datetime.now(dt.UTC) - dt.timedelta(minutes=PITCH_LOOKBACK_MIN)
+            upd = {"away": away_ab, "home": home_ab, "lines": [], "keys": []}   # PEN_DOOR_FOLD_ON: this game's new status lines
 
             # 🚪 pitching changes — keyed by their own timestamp, not the run's
             # window, so a change seen on sweep 1 is never re-announced on
@@ -391,6 +601,8 @@ def live_sweep(st: dict) -> tuple[int, int]:
                 for ev in play.get("playEvents") or []:
                     det = ev.get("details") or {}
                     if det.get("eventType") != "pitching_substitution":
+                        if fold_mode:
+                            fold_substitution(st, pk, ev, det, about, gp, cutoff, upd)   # a pinch-hit / in-game change touching a CALLED pick
                         continue
                     ts = str(ev.get("startTime") or "")
                     try:
@@ -431,6 +643,17 @@ def live_sweep(st: dict) -> tuple[int, int]:
                     if not our:
                         mark(st, k)
                         continue
+                    if fold_mode:
+                        # the NEW pitcher by name plus his season line, read now; never the feed's stale sentence
+                        newp, oldp = ev.get("player") or {}, ev.get("replacedPlayer") or {}
+                        desc = words.clean_change(str(det.get("description") or ""))
+                        new_name = str(newp.get("fullName") or "") or desc.split(" replaces ")[0].strip()
+                        old_name = str(oldp.get("fullName") or "") or (desc.split(" replaces ", 1)[1].strip() if " replaces " in desc else "")
+                        line = words.pitching_change_status_line(pitching_ab, half, about.get("inning"), new_name, old_name,
+                                                                 pitcher_stats(newp.get("id")), our)
+                        upd["lines"].append(line)
+                        upd["keys"].append(k)
+                        continue
                     line = words.pitching_change(pitching_ab, half, about.get("inning"), str(det.get("description") or ""), our)
                     ok, bad = post(line)
                     sent += ok
@@ -453,11 +676,26 @@ def live_sweep(st: dict) -> tuple[int, int]:
                     if not seen(st, k):
                         line = words.pick_at_plate(p["name"], p["role"], runners,
                                                    "top" if ls.get("isTopInning") else "bottom", inn, away_ab, home_ab)
-                        ok, bad = post(line)
+                        if fold_mode:
+                            # PEN_DOOR_FOLD_ON: pick-at-the-plate goes to Donovan's own server only; unset = not sent
+                            own = fold.own_urls()
+                            ok, bad = fold.send_plain(own, {"content": line[:1900]}) if own else (0, 0)
+                        else:
+                            ok, bad = post(line)
                         sent += ok
                         failed += bad
                         if ok:
                             mark(st, k)
+
+            if fold_mode and upd["lines"]:
+                ok, bad = fold.publish_game_status(st, pk, dt.datetime.now(dt.UTC).date().isoformat(),
+                                                   words.game_status_title(away_ab, home_ab), upd["lines"],
+                                                   words.GAME_STATUS_FOOTER, discord_urls())
+                sent += ok
+                failed += bad
+                if ok:
+                    for k in upd["keys"]:
+                        mark(st, k)
 
         last_sweep_s = time.monotonic() - t0
 
@@ -465,6 +703,8 @@ def live_sweep(st: dict) -> tuple[int, int]:
 
 
 def main() -> int:
+    if fold.fold_on():
+        return main_fold()
     now = dt.datetime.now(dt.UTC)
     today, yday = now.date().isoformat(), (now.date() - dt.timedelta(days=1)).isoformat()
 
