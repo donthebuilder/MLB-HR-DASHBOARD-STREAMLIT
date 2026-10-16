@@ -1008,7 +1008,25 @@ def _harvest(node, ctx: dict, rows: list, depth: int = 0) -> None:
             _harvest(v, c, rows, depth + 1)
 
 
-def fetch_oddsapiio(key: str, books: str, _wide: bool = False) -> list[dict]:
+def fetch_oddsapiio(key: str, books: str, _wide: bool = False, *,
+                    slugs: tuple = ("mlb", "baseball"), league_words: tuple = ("mlb", "major league"),
+                    days: int = 2, hints: "list | None" = None) -> list[dict]:
+    """Defaults are MLB's, unchanged. The keyword-only args let another sport
+    (bots/nfl/nfl_odds_fetch.py) reuse the same call-shape ladder, parser and
+    harvester: `slugs` the sport slugs to try, `league_words` the league names
+    to keep, `days` how far ahead to list events, `hints` that sport's
+    PROP_HINTS (swapped in for the call and restored after)."""
+    global PROP_HINTS
+    saved = PROP_HINTS
+    if hints is not None:
+        PROP_HINTS = hints
+    try:
+        return _fetch_oddsapiio(key, books, slugs, league_words, days)
+    finally:
+        PROP_HINTS = saved
+
+
+def _fetch_oddsapiio(key: str, books: str, slugs: tuple, league_words: tuple, days: int) -> list[dict]:
     # Their documented listing is GET /events?sport={slug}&to=&limit=&skip= —
     # the old call sent status/from params the docs don't know. The slug for
     # baseball isn't published anywhere reachable, so try the two candidates
@@ -1020,10 +1038,10 @@ def fetch_oddsapiio(key: str, books: str, _wide: bool = False) -> list[dict]:
     now = dt.datetime.now(dt.timezone.utc)
 
     evs = []
-    for slug in ("mlb", "baseball"):
+    for slug in slugs:
         try:
             evs = _listish(oaio("/events", key, sport=slug, status="pending,live",
-                                to=(now + dt.timedelta(days=2)).isoformat(),
+                                to=(now + dt.timedelta(days=days)).isoformat(),
                                 limit=200), "events")
         except Exception as e:
             print(f"  odds-api.io: events sport={slug} failed ({type(e).__name__}: {e})")
@@ -1037,11 +1055,10 @@ def fetch_oddsapiio(key: str, books: str, _wide: bool = False) -> list[dict]:
     # Baseball is not only MLB. Keep the ones whose league says so, and if no
     # league field exists at all, keep everything rather than filter to nothing.
     mlb = [e for e in evs if isinstance(e, dict)
-           and ("mlb" in str(e.get("league", "")).lower()
-                or "major league" in str(e.get("league", "")).lower())]
+           and any(w in str(e.get("league", "")).lower() for w in league_words)]
     if not mlb and evs:
         mlb = [e for e in evs if isinstance(e, dict)]
-        print("  odds-api.io: no league field matched MLB — using all baseball events")
+        print(f"  odds-api.io: no league field matched {league_words[0]} — using all {slug} events")
     ids = [str(e.get("id") or e.get("eventId")) for e in mlb]
     ids = [i for i in ids if i and i != "None"]
     print(f"  odds-api.io: {len(ids)} event(s)")

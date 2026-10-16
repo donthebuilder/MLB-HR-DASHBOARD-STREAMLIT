@@ -325,3 +325,78 @@ if __name__ == "__main__":
           f"room's line and the best price correctly, key resolution follows "
           f"ODDS_API_KEY -> ODDSAPI_IO_KEY -> ODDSPAPI_KEY, and the "
           f"empty/status files publish valid, explicit JSON.")
+
+
+# ── odds-api.io football wiring (2026-10-16). TEST DATA, not real quotes. ────
+import datetime as _dt  # noqa: E402
+import odds_fetch as _mlb  # noqa: E402
+
+
+def _kind(label):
+    saved = _mlb.PROP_HINTS
+    _mlb.PROP_HINTS = odds.FOOTBALL_HINTS
+    try:
+        return _mlb._prop_key(label)
+    finally:
+        _mlb.PROP_HINTS = saved
+
+
+def test_football_hints_file_each_market_under_its_own_key():
+    cases = {
+        "Anytime Touchdown Scorer": "player_anytime_td",
+        "First Touchdown Scorer": "player_1st_td",
+        "Receiving Yards": "player_reception_yds",
+        "Receptions": "player_receptions",
+        "Longest Reception": "player_longest_reception",
+        "Rushing Yards": "player_rush_yds",
+        "Rushing Attempts": "player_rush_attempts",
+        "Passing Yards": "player_pass_yds",
+        "Kicking Points": "player_kicking_points",
+    }
+    for label, want in cases.items():
+        assert _kind(label) == want, label
+        assert want in MARKETS
+
+
+def test_football_compounds_are_never_filed_as_a_single_market():
+    for label in ("Rushing + Receiving Yards", "Passing Touchdowns", "Passing + Rushing Yards"):
+        assert _kind(label) == "_other", label
+    assert "_other" not in MARKETS
+
+
+def test_fetch_oaio_swaps_hints_and_restores_them(monkeypatch):
+    before = _mlb.PROP_HINTS
+    seen = {}
+
+    def fake(key, books, **kw):
+        seen.update(kw)
+        seen["hints_live"] = _mlb.PROP_HINTS
+        return [{"name": "TEST Player", "norm": "test player", "market": "player_rush_yds",
+                 "side": "over", "book": "DraftKings", "point": 60.5, "price": -115},
+                {"name": "TEST Player", "norm": "test player", "market": "_other",
+                 "side": "over", "book": "DraftKings", "point": 1.5, "price": 100}]
+    monkeypatch.setattr(_mlb, "fetch_oddsapiio", lambda k, b, **kw: fake(k, b, **kw))
+    rows = odds.fetch_oaio("TESTKEY")
+    assert [r["market"] for r in rows] == ["player_rush_yds"]       # _other dropped
+    assert seen["slugs"][0] == "american-football"
+    assert _mlb.PROP_HINTS is before                                 # MLB hints untouched
+
+
+def test_mlb_defaults_unchanged_by_the_generalisation():
+    import inspect
+    sig = inspect.signature(_mlb.fetch_oddsapiio)
+    assert sig.parameters["slugs"].default == ("mlb", "baseball")
+    assert sig.parameters["days"].default == 2
+
+
+def test_snapshot_freeze_keeps_pregame_row_once_game_started(tmp_path):
+    now = _dt.datetime(2026, 10, 18, 18, 0, tzinfo=_dt.timezone.utc)
+    snap = tmp_path / "nfl_odds_2026-10-18.json"
+    snap.write_text(json.dumps({"rows": {"1": {"player_rush_yds": [60.5, -115, 53.5]},
+                                         "2": {"player_rush_yds": [40.5, -110, 52.4]}},
+                                "commence": {"1": "2026-10-18T17:00:00Z", "2": "2026-10-18T20:25:00Z"}}))
+    fresh = {"1": {"player_rush_yds": [70.5, -300, 75.0]},   # live price, game started
+             "2": {"player_rush_yds": [41.5, -112, 52.8]}}   # not started: takes the new price
+    rows, com = odds.freeze_started(snap, fresh, {"1": "2026-10-18T17:00:00Z", "2": "2026-10-18T20:25:00Z"}, now)
+    assert rows["1"]["player_rush_yds"][0] == 60.5
+    assert rows["2"]["player_rush_yds"][0] == 41.5
