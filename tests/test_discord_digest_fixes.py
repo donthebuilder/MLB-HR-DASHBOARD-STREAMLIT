@@ -245,10 +245,10 @@ class Poster(unittest.TestCase):
         self.assertTrue(all(u == OPS for u, _ in seen[:4]), seen[:4])
         self.assertTrue(all(u == FAN for u, _ in seen[4:]), seen[4:])
 
-    def test_ops_falls_back_to_fan_room_only_when_unset(self):
+    def test_ops_is_off_when_unset_and_never_the_fan_room(self):
         os.environ["DISCORD_WEBHOOK"] = FAN
         os.environ.pop("DISCORD_OPS_WEBHOOK", None)
-        self.assertEqual(discord_post.ops_secret(), FAN)
+        self.assertEqual(discord_post.ops_secret(), "")
 
     def test_failures_are_loud(self):
         import validate_context

@@ -9,8 +9,8 @@ stack).
 
 Ops alerts (staleness, a blocked slate publish, a held pick lock, a failed
 check) are for the people running the site, not the fan room: ops_secret()
-returns DISCORD_OPS_WEBHOOK when it is set. It falls back to DISCORD_WEBHOOK
-only so an alert is never lost while no ops channel exists.
+returns DISCORD_OPS_WEBHOOK when it is set and NOTHING otherwise (2026-10-16:
+no fallback to the shared room; unset = the alarms are off).
 """
 from __future__ import annotations
 
@@ -33,12 +33,12 @@ def webhook_urls(raw: str) -> list[str]:
 
 
 def ops_secret() -> str:
-    """The webhook secret for operational alerts: the ops channel when one is
-    configured, else the shared room (so the alert still lands somewhere)."""
+    """The webhook secret for operational alerts: ONLY the ops channel, when one
+    is configured. Donovan, 2026-10-16: the safety alarms no longer fall back to
+    the shared room, so with DISCORD_OPS_WEBHOOK unset they go nowhere. Set it
+    to a private channel to get them back."""
     ops = os.environ.get(OPS_ENV, "")
-    if webhook_urls(ops):
-        return ops
-    return os.environ.get(FAN_ENV, "")
+    return ops if webhook_urls(ops) else ""
 
 
 def ops_channel_is_set() -> bool:
