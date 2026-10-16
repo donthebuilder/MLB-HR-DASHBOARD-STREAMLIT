@@ -400,3 +400,17 @@ def test_snapshot_freeze_keeps_pregame_row_once_game_started(tmp_path):
     rows, com = odds.freeze_started(snap, fresh, {"1": "2026-10-18T17:00:00Z", "2": "2026-10-18T20:25:00Z"}, now)
     assert rows["1"]["player_rush_yds"][0] == 60.5
     assert rows["2"]["player_rush_yds"][0] == 41.5
+
+
+def test_oaio_reads_a_gzip_body(monkeypatch):
+    """The 2026-10-16 probes got gzip bytes from /events. TEST DATA."""
+    import gzip
+    import io
+
+    class R(io.BytesIO):
+        status = 200
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+    body = gzip.compress(json.dumps({"events": [{"id": 1}]}).encode())
+    monkeypatch.setattr(_mlb.urllib.request, "urlopen", lambda req, **kw: R(body))
+    assert _mlb.oaio("/events", "TESTKEY") == {"events": [{"id": 1}]}
