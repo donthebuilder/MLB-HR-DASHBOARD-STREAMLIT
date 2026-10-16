@@ -2,8 +2,8 @@ name: Model harness (private scoreboard)
 
 # Grades every score on the same games (MLB HR, NFL anytime TD, NHL goal) and prints the board to the run summary.
 # PRIVATE FIRST (Donovan, 2026-10-16): it does not publish model_scoreboard.json to the public data branch. Manual run.
-# NHL needs two repo secrets that are the PUBLIC read-only pair the site already uses (project URL + anon key):
-# SUPABASE_URL and SUPABASE_ANON_KEY. Without them the NHL board says "no rows yet".
+# NHL: the graded goal board comes from the SITE (/api/record/lamp-goal-export), so no secret is needed. SUPABASE_URL / SUPABASE_ANON_KEY
+# remain an optional fallback only.
 on:
   workflow_dispatch:
 
