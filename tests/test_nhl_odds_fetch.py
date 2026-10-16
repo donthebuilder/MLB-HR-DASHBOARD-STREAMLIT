@@ -22,6 +22,7 @@ def test_hockey_hints_file_markets_correctly():
     cases = {"Anytime Goalscorer": "player_anytime_goal", "First Goalscorer": "player_first_goal",
              "Shots on Goal": "player_shots_on_goal", "Player Points": "player_points",
              "Assists": "player_assists", "Goalie Saves": "player_saves",
+             "Andrei Kuzmenko (Goals)": "player_anytime_goal", "Artturi Lehkonen (Shots On Goal)": "player_shots_on_goal",
              "Power Play Points": "_other", "2+ Goals": "_other", "Blocked Shots": "_other"}
     for label, want in cases.items():
         assert _kind(label) == want, label

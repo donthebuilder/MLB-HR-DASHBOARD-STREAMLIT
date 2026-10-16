@@ -68,7 +68,10 @@ HOCKEY_HINTS = [
                 "goals against", "shutout")),
     ("player_first_goal", ("first goal", "1st goal", "first scorer", "1st scorer")),
     ("player_anytime_goal", ("anytime goal", "any time goal", "to score a goal",
-                             "goalscorer", "goal scorer", "anytime scorer", "player goals")),
+                             "goalscorer", "goal scorer", "anytime scorer", "player goals",
+                             # live probe 2026-10-16: the book writes it "Name (Goals)" with
+                             # hdp 0.5 (anytime) and 1.5 (2+). consensus() takes the 0.5 line.
+                             "(goals)")),
     ("player_shots_on_goal", ("shots on goal", "shot on goal", "sog", "shots on target",
                               "player shots", "shots")),
     ("player_saves", ("saves",)),
