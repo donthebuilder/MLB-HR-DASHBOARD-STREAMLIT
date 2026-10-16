@@ -204,7 +204,8 @@ def repair(current: Path, date: str, apply: bool) -> dict:
     if apply:
         gpath.write_text(json.dumps(g, indent=2), encoding="utf-8")
         (current / f"graded_results_{date}.txt").write_text(summary + "\n", encoding="utf-8")
-        with (current / f"repairs_{date}.jsonl").open("w", encoding="utf-8") as fh:
+        # APPEND-ONLY (2026-10-16): a re-run adds its lines (each carries its own `at`); it never rewrites an earlier repair's record
+        with (current / f"repairs_{date}.jsonl").open("a", encoding="utf-8") as fh:
             for c in changes:
                 if c["kind"] in ("standin", "added"):
                     fh.write(json.dumps({"date": date, **c, "at": stamp}) + "\n")

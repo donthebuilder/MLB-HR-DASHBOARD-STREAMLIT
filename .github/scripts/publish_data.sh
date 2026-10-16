@@ -275,6 +275,12 @@ POR_LOG_KEEP=150
 POR_ROWS_GLOB="por_rows_*.jsonl"
 POR_ROWS_KEEP=400
 
+# repairs_<date>.jsonl (2026-10-16): the record repair's own log, one line per
+# stand-in or added holder, APPENDED by every run (bots/mlb_record_repair.py).
+# Published so a corrected night's change history is public, not just its result.
+REPAIRS_GLOB="repairs_*.jsonl"
+REPAIRS_KEEP=400
+
 # slate_<date>_slim.json: ONE FILE PER SLATE DATE (2026-09-06), a copy of the
 # winning today_slim.json stamped with its slate_date. Exists because the
 # grader's input for a PAST date used to be whatever today_slim.json held at
@@ -660,6 +666,7 @@ stage_local() {
            "$SRC"/data/$OUTCOME_LOG_GLOB "$SRC"/data/current/$OUTCOME_LOG_GLOB \
            "$SRC"/data/$POR_LOG_GLOB "$SRC"/data/current/$POR_LOG_GLOB \
            "$SRC"/data/$POR_ROWS_GLOB "$SRC"/data/current/$POR_ROWS_GLOB \
+           "$SRC"/data/$REPAIRS_GLOB "$SRC"/data/current/$REPAIRS_GLOB \
            "$SRC"/data/$NFL_PRED_LOG_GLOB "$SRC"/data/current/$NFL_PRED_LOG_GLOB \
            "$SRC"/data/$NFL_OUTCOME_LOG_GLOB "$SRC"/data/current/$NFL_OUTCOME_LOG_GLOB \
            "$SRC"/data/$NFL_RESULTS_GLOB "$SRC"/data/current/$NFL_RESULTS_GLOB \
@@ -827,7 +834,7 @@ carry_forward() {
   for spec in "$GRADED_GLOB:$GRADED_KEEP" "$GRADED_JSON_GLOB:$GRADED_KEEP" "$ODDS_GLOB:$ODDS_KEEP" \
               "$ML_PRICES_GLOB:$ML_PRICES_KEEP" \
               "$PRED_LOG_GLOB:$PRED_LOG_KEEP" "$OUTCOME_LOG_GLOB:$OUTCOME_LOG_KEEP" \
-              "$POR_LOG_GLOB:$POR_LOG_KEEP" "$POR_ROWS_GLOB:$POR_ROWS_KEEP" "$SLATE_GLOB:$SLATE_KEEP" \
+              "$POR_LOG_GLOB:$POR_LOG_KEEP" "$POR_ROWS_GLOB:$POR_ROWS_KEEP" "$REPAIRS_GLOB:$REPAIRS_KEEP" "$SLATE_GLOB:$SLATE_KEEP" \
               "$NFL_PRED_LOG_GLOB:$NFL_PRED_LOG_KEEP" "$NFL_OUTCOME_LOG_GLOB:$NFL_OUTCOME_LOG_KEEP" \
               "$NFL_RESULTS_GLOB:$NFL_RESULTS_KEEP" \
               "$NFL_PICKS_GLOB:$NFL_PICKS_KEEP" "$NFL_NEXT_PICKS_GLOB:$NFL_NEXT_PICKS_KEEP" \

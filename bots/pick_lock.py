@@ -81,6 +81,7 @@ import datetime as dt
 import json
 import os
 import sys
+import urllib.error
 import urllib.request
 from pathlib import Path
 from typing import Any
@@ -184,8 +185,18 @@ def iter_rows(payload: Any):
                     yield r
 
 
+class LockLedgerUnreadable(RuntimeError):
+    """The previous lock ledger could not be read (not: does not exist)."""
+
+
 def fetch_lock(date: str) -> dict:
-    """Last run's ledger. A miss is a fresh start.
+    """Last run's ledger. A MISSING ledger (404) or one for another slate is a
+    fresh start; a FAILED read is not -- it raises LockLedgerUnreadable.
+
+    A failed read used to return {} and the run carried on as if nothing had
+    been locked, rebuilding every lock from this run's rows (the NFL side hit
+    exactly this on 2026-10-05, see nfl_pick_lock.fetch_lock). Stop instead;
+    the next run retries.
 
     LOCAL FIRST. In CI the runner checks out `main`, which never carries this
     file — it's published to `data` — so the network fetch below is the real
@@ -211,9 +222,13 @@ def fetch_lock(date: str) -> dict:
             return j
         # A ledger for a different slate is not this slate's ledger.
         return {}
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            print(f"  · no previous lock on the branch (404) — starting fresh for {date}")
+            return {}
+        raise LockLedgerUnreadable(f"previous lock ledger unreadable (HTTP {e.code})") from e
     except Exception as e:
-        print(f"  · no previous lock fetched ({e}) — starting fresh for {date}")
-        return {}
+        raise LockLedgerUnreadable(f"previous lock ledger unreadable ({type(e).__name__}: {e})") from e
 
 
 def current_designations(rows: list[dict]) -> dict[str, dict[str, dict]]:
@@ -727,7 +742,11 @@ def main() -> int:
     if not date:
         date = slate_date_fallback(first_pitch_of(rows))
 
-    lock = fetch_lock(date)
+    try:
+        lock = fetch_lock(date)
+    except LockLedgerUnreadable as e:
+        print(f"  ✗ {e} -- not rebuilding locks from scratch; the next run retries")
+        return 1
     games: dict[str, dict] = lock.get("games") or {}
     rejected: list[dict] = lock.get("rejected") or []
     por: dict[str, dict] = lock.get("prediction_of_record") or {}
