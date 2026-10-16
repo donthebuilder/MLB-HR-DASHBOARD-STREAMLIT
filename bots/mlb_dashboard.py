@@ -14843,6 +14843,10 @@ def build_prediction_log_lines(run_meta: Dict[str, Any], rows_payload: List[Dict
                 # board but never logged pregame, so neither could be measured
                 # from the locked record (por_rows). Now they can.
                 "power3": row.get("power3_score"),
+                # 2026-10-16: the rank and the flag too, so every flagged hitter (top 10 on the slate)
+                # is identifiable from the locked record, not only re-derivable from the score.
+                "power3_rank": row.get("power3_rank"),
+                "power3_flag": bool(row.get("power3_flag")),
                 "board": row.get("board_score"),
                 "board_rank": row.get("board_rank"),
                 "board_of": row.get("board_of"),   # 2026-10-03: the n the rank is out of

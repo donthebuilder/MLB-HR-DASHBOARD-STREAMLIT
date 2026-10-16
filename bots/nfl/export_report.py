@@ -2,9 +2,11 @@
 """export_report.py — writes report_card.json for the site's Report Card tab.
 
 Runs the same backtest the terminal prints, across every season given, and
-publishes it as JSON. Weights were tuned on 2025; every other season in here
-is out-of-sample and the payload says which is which, because a report card
-that hides that is marketing.
+publishes it as JSON. The weights this file scores were first tuned on 2025,
+so 2025 is the tuned season and the payload says so. Do NOT read the other
+seasons as clean out-of-sample for TD: nfl_td_v2 (2026-09-14) was tuned on one
+season and checked on the other, both ways (bots/nfl/SCORING.md), so 2024 took
+part in choosing it. A report card that hides that is marketing.
 """
 from __future__ import annotations
 import argparse, json
@@ -116,8 +118,9 @@ def main() -> int:
     payload = {
         "topk": a.topk,
         "tuned_on": TUNED_ON,
-        "note": ("Weights were tuned on %d and run untouched everywhere else. "
-                 "Out-of-sample seasons are the honest ones." % TUNED_ON),
+        "note": ("Weights were first tuned on %d; that season flatters them. Other seasons are not the tuned "
+                 "season, but TD's current weights (nfl_td_v2) were also checked against 2024, so 2024 is "
+                 "not a clean holdout for TD -- see SCORING.md." % TUNED_ON),
         "seasons": {str(s): season_block(s, a.topk) for s in a.seasons},
         "markets": [{"key": k, "label": v["label"], "bar": v["bar"]} for k, v in MODELS.items()],
         "card_edges": card_edges(a.seasons, a.card_depth),
@@ -126,7 +129,7 @@ def main() -> int:
     (p / f"{a.prefix}report_card.json").write_text(json.dumps(payload, separators=(",", ":")))
     print(f"wrote {p}/{a.prefix}report_card.json ({(p/(a.prefix+'report_card.json')).stat().st_size/1024:.0f} KB)")
     for s, blk in payload["seasons"].items():
-        tag = "tuned" if int(s) == TUNED_ON else "OUT-OF-SAMPLE"
+        tag = "tuned" if int(s) == TUNED_ON else "not the tuned season"
         print(f"  {s} ({tag}):", {k: v["vs_form"] for k, v in blk.items()})
     if payload["card_edges"]:
         print(f"\n  card edges (top {a.card_depth}/wk, out of sample):")
