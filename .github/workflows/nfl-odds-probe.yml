@@ -30,4 +30,4 @@ jobs:
       - name: Raw payload (keys stripped)
         if: always()
         run: |
-          test -f /tmp/nfl_odds_raw.json && head -c 60000 /tmp/nfl_odds_raw.json || echo "no raw payload"
+          test -f /tmp/nfl_odds_raw.json && head -c 2500 /tmp/nfl_odds_raw.json || echo "no raw payload"
