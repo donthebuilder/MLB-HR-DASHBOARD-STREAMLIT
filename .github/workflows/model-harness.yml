@@ -34,5 +34,6 @@ jobs:
         run: python3 bots/export_lamp_goal_log.py --out public/data/current
       - name: Run the harness
         run: |
+          set -o pipefail
           python3 bots/model_harness.py --data public/data/current | tee /tmp/harness.txt
           { echo '### Model harness'; echo '```'; cat /tmp/harness.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"

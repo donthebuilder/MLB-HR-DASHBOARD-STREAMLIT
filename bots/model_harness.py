@@ -338,9 +338,10 @@ def main() -> int:
         for r in b["scores"]:
             bg, tn = r["best_in_game"], r["top_of_night"]
             vp = r.get("vs_production"); vb = r.get("vs_baseline")
-            print(f"  {r['score']:14}{r['role']:11}{str(bg['pct']) + '% (' + str(bg['hit']) + '/' + str(bg['n']) + ')':>16}"
-                  f"{str(tn['pct']) + '% (' + str(tn['hit']) + '/' + str(tn['n']) + ')':>20}   "
-                  f"{(f'{vp['diff_pts']:+.1f} z={vp['z']:+.2f}' if vp else '-'):20} {(f'{vb['diff_pts']:+.1f} z={vb['z']:+.2f}' if vb else '-'):16} {r['verdict']}")
+            fmt = lambda v: "-" if not v else "{:+.1f} z={:+.2f}".format(v["diff_pts"], v["z"])
+            best = "{}% ({}/{})".format(bg["pct"], bg["hit"], bg["n"])
+            top = "{}% ({}/{})".format(tn["pct"], tn["hit"], tn["n"])
+            print("  {:14}{:11}{:>16}{:>20}   {:20} {:16} {}".format(r["score"], r["role"], best, top, fmt(vp), fmt(vb), r["verdict"]))
     if a.out:
         out = Path(a.out)
         out.mkdir(parents=True, exist_ok=True)
