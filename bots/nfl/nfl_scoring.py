@@ -49,7 +49,7 @@ MODELS = {
     # in places. Ranking a 200-man pool by team context floats scrubs on good
     # offenses into the top 15 — context modulates, it must never select.
     "REC_YDS": {
-        "label": "Receiving yards", "pos": ["WR", "TE", "RB"], "bar": 40,
+        "label": "Receiving yards", "pos": ["WR", "TE", "RB"], "bar": 80,   # 40 until 2026-10-16 (Donovan: 80+; nfl_recyds_v2). 40 was cleared by 77% of the picks
         "w": {
             "f_wopr":                 0.42,   # target share + air yards share
             "f_receiving_yards":      0.36,
@@ -67,7 +67,7 @@ MODELS = {
         },
     },
     "RUSH_YDS": {
-        "label": "Rushing yards", "pos": ["RB", "QB"], "bar": 50,
+        "label": "Rushing yards", "pos": ["RB", "QB"], "bar": 80,   # 50 until 2026-10-16 (Donovan: 80+; nfl_rushyds_v2). 50 was cleared by 84% of the picks
         "w": {
             "f_carries":        0.65,
             "f_rushing_yards":  0.20,
@@ -99,7 +99,7 @@ MODELS = {
     # QBs are the exception: the pool is 32 starters, all of whom have volume,
     # so context IS selective here rather than diluting.
     "PASS_YDS": {
-        "label": "Passing yards", "pos": ["QB"], "bar": 225,
+        "label": "Passing yards", "pos": ["QB"], "bar": 300,   # 225 until 2026-10-16 (Donovan: 300+; nfl_passyds_v2). 225 was cleared by 75% of the picks
         "w": {
             "total_line":       0.26,   # shootout environment
             "opp_pass_soft":    0.22,

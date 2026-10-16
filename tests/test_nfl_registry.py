@@ -59,11 +59,11 @@ def test_versions_are_pinned_deliberately():
     # when a market's version changes, never silently.
     assert R.MODEL_VERSIONS == {
         "TD": "nfl_td_v2",
-        "REC_YDS": "nfl_recyds_v1",
+        "REC_YDS": "nfl_recyds_v2",
         "REC": "nfl_rec_v1",
-        "RUSH_YDS": "nfl_rushyds_v1",
+        "RUSH_YDS": "nfl_rushyds_v2",
         "RUSH_ATT": "nfl_rushatt_v1",
-        "PASS_YDS": "nfl_passyds_v1",
+        "PASS_YDS": "nfl_passyds_v2",
         "KICK_PTS": "nfl_kickpts_v1",
     }
     for market, version in R.MODEL_VERSIONS.items():

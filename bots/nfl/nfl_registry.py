@@ -91,11 +91,11 @@ MODEL_FAMILY = "moonshot-nfl"
 # string, never rewrite a version string in place.
 MODEL_VERSIONS: Dict[str, str] = {
     "TD":       "nfl_td_v2",   # v2 2026-09-14: candidate C weights (see nfl_scoring.py)
-    "REC_YDS":  "nfl_recyds_v1",
+    "REC_YDS":  "nfl_recyds_v2",   # v2 2026-10-16: bar 40 -> 80 (a bar change is a new model; v1 rows keep their own grade)
     "REC":      "nfl_rec_v1",
-    "RUSH_YDS": "nfl_rushyds_v1",
+    "RUSH_YDS": "nfl_rushyds_v2",   # v2 2026-10-16: bar 50 -> 80
     "RUSH_ATT": "nfl_rushatt_v1",
-    "PASS_YDS": "nfl_passyds_v1",
+    "PASS_YDS": "nfl_passyds_v2",   # v2 2026-10-16: bar 225 -> 300
     "KICK_PTS": "nfl_kickpts_v1",
 }
 
