@@ -1,0 +1,55 @@
+{
+  "_note": "Reviewed NFL odds-name -> slate-name aliases. Exact, one-to-one, same team. Same file name and content in the bot (bots/nfl/) and the site (lib/nfl/nameAliases.js holds the same rows). Never fuzzy.",
+  "aliases": [
+    {
+      "odds": "Cameron Ward",
+      "ours": "Cam Ward",
+      "team": "TEN"
+    },
+    {
+      "odds": "Cameron Skattebo",
+      "ours": "Cam Skattebo",
+      "team": "NYG"
+    },
+    {
+      "odds": "Chigoziem Okonkwo",
+      "ours": "Chig Okonkwo",
+      "team": "WAS"
+    },
+    {
+      "odds": "Joshua Palmer",
+      "ours": "Josh Palmer",
+      "team": "BUF"
+    },
+    {
+      "odds": "Kenneth Gainwell",
+      "ours": "Kenny Gainwell",
+      "team": "TB"
+    },
+    {
+      "odds": "Andres Borregales",
+      "ours": "Andy Borregales",
+      "team": "NE"
+    },
+    {
+      "odds": "Drew Ogletree",
+      "ours": "Andrew Ogletree",
+      "team": "IND"
+    },
+    {
+      "odds": "Zonovan Knight",
+      "ours": "Bam Knight",
+      "team": "ARI"
+    },
+    {
+      "odds": "Michael Sturdivant",
+      "ours": "J. Michael Sturdivant",
+      "team": "GB"
+    },
+    {
+      "odds": "Hollywood Brown",
+      "ours": "Marquise Brown",
+      "team": "PHI"
+    }
+  ]
+}

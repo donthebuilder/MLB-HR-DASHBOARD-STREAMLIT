@@ -85,6 +85,7 @@ import argparse
 import datetime as dt
 import json
 import os
+import re
 import sys
 import unicodedata
 import urllib.error
@@ -269,6 +270,80 @@ def norm_name(s: str) -> str:
     while len(parts) > 1 and parts[-1] in SUFFIXES:
         parts.pop()
     return " ".join(parts)
+
+
+# ── JOIN KEY + REVIEWED ALIASES (2026-10-17) ─────────────────────────────────
+# norm_name above is unchanged: it keys the published by_name and the site's
+# three normName copies must stay identical to it. The join to the slate adds
+# two exact layers on top: (1) adjacent single-letter tokens fuse ("a j brown"
+# == "aj brown"), (2) bots/nfl/name_aliases.json -- reviewed one-to-one rows
+# {odds, ours, team}, applied only when the slate player's team agrees. Never a
+# nearest name. The site holds the same rows in lib/nfl/nameAliases.js.
+ALIASES_PATH = Path(__file__).with_name("name_aliases.json")
+
+
+def join_key(norm: str) -> str:
+    out = []
+    for t in (norm or "").split():
+        if len(t) == 1 and out and len(out[-1]) and out[-1][1]:
+            out[-1][0] += t
+        else:
+            out.append([t, len(t) == 1])
+    return " ".join(x[0] for x in out)
+
+
+def load_aliases(path=None) -> list:
+    try:
+        return json.loads(Path(path or ALIASES_PATH).read_text()).get("aliases", [])
+    except Exception:
+        return []
+
+
+def is_team_line(name: str) -> bool:
+    """A club's special-teams line ('BUF Bills ST', 'SF ST', 'Saints ST'): not a player."""
+    return bool(re.search(r"\bST$", str(name or "").strip(), re.I))
+
+
+def match_slate(board: dict, players: list, aliases=None):
+    """({player_id: markets}, [unmatched real names]) -- exact, never fuzzy."""
+    aliases = load_aliases() if aliases is None else aliases
+    by_norm, by_key = {}, {}
+    for p in players or []:
+        n = norm_name(p.get("name") or p.get("player_name"))
+        if n:
+            by_norm.setdefault(n, p)  # exact first, first row wins: as before
+            by_key.setdefault(join_key(n), []).append(p)
+    matched, unmatched, late = {}, [], []
+    for norm, mkts in board.items():
+        p = by_norm.get(norm)
+        exact = p is not None
+        if p is None:  # initials key: only when exactly one slate player owns it
+            c = by_key.get(join_key(norm), [])
+            p = c[0] if len(c) == 1 else None
+        if p is None:  # reviewed alias, same team, exactly one slate player
+            for a in aliases:
+                if join_key(norm_name(a["odds"])) != join_key(norm):
+                    continue
+                hit = [c for c in by_key.get(join_key(norm_name(a["ours"])), [])
+                       if str(c.get("team") or "").upper() == a["team"].upper()]
+                if len(hit) == 1:
+                    p = hit[0]
+                    break
+        if p is None:
+            nm = next(iter(mkts.values()), {}).get("name") or norm
+            if not is_team_line(nm):
+                unmatched.append(nm)
+            continue
+        (matched.__setitem__(str(p.get("player_id")), dict(mkts)) if exact
+         else late.append((str(p.get("player_id")), mkts)))
+    # The book can list one player under two spellings ("Cam Ward" and "Cameron
+    # Ward") with different market sets. Exact-name quotes go in first and are
+    # never replaced; a second spelling only ADDS markets the first lacked.
+    for pid, mkts in late:
+        have = matched.setdefault(pid, {})
+        for mk, q in mkts.items():
+            have.setdefault(mk, q)
+    return matched, unmatched
 
 
 # ── FORENSICS ────────────────────────────────────────────────────────────────
@@ -775,17 +850,7 @@ def main() -> int:
             players = slate.get("players") if isinstance(slate, dict) else slate
             week, season, mode = (slate.get("week"), slate.get("season"), slate.get("mode")) \
                 if isinstance(slate, dict) else (None, None, None)
-            by_norm = {}
-            for p in players or []:
-                n = norm_name(p.get("name") or p.get("player_name"))
-                if n:
-                    by_norm.setdefault(n, p)
-            for norm, mkts in board.items():
-                p = by_norm.get(norm)
-                if not p:
-                    unmatched.append(next(iter(mkts.values()), {}).get("name") or norm)
-                    continue
-                matched[str(p.get("player_id"))] = mkts
+            matched, unmatched = match_slate(board, players)
             rate = round(100 * len(matched) / max(1, len(board)), 1)
             print(f"joined {len(matched)}/{len(board)} priced players to the slate ({rate}%)")
             if unmatched:

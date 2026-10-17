@@ -123,6 +123,68 @@ def test_norm_name_strips_accents():
     assert norm_name("Amon-Ra St. Brown") == "amon ra st brown"
 
 
+# ── JOIN KEY, REVIEWED ALIASES, ST FILTER (TEST data, no network) ───────────
+
+def _q(name):
+    return {"player_anytime_td": {"name": name, "line": 0.5, "over": 100, "books": 1}}
+
+
+def _slate(*rows):  # TEST slate rows: (player_id, name, team)
+    return [{"player_id": i, "name": n, "team": t} for i, n, t in rows]
+
+
+def test_norm_name_itself_is_unchanged_by_the_join_layer():
+    assert odds.norm_name("A.J. Brown") == "a j brown"  # the published by_name key and the site's normName
+
+
+def test_join_key_fuses_adjacent_initials_only():
+    assert odds.join_key("a j brown") == "aj brown"
+    assert odds.join_key("c j williams") == odds.join_key("cj williams")
+    assert odds.join_key("j michael sturdivant") == "j michael sturdivant"
+    assert odds.join_key("amon ra st brown") == "amon ra st brown"
+
+
+def test_initials_meet_without_an_alias():
+    board = {"d j moore": _q("D.J. Moore")}
+    m, u = odds.match_slate(board, _slate(("p1", "DJ Moore", "BUF")), aliases=[])
+    assert list(m) == ["p1"] and u == []
+
+
+def test_alias_needs_the_same_team_and_is_exact():
+    al = [{"odds": "Cameron Ward", "ours": "Cam Ward", "team": "TEN"}]
+    board = {"cameron ward": _q("Cameron Ward")}
+    m, _ = odds.match_slate(board, _slate(("p1", "Cam Ward", "TEN")), aliases=al)
+    assert list(m) == ["p1"]
+    m, u = odds.match_slate(board, _slate(("p1", "Cam Ward", "DAL")), aliases=al)
+    assert m == {} and u == ["Cameron Ward"]
+    m, u = odds.match_slate(board, _slate(("p1", "Cam Wardle", "TEN")), aliases=al)  # no nearest name
+    assert m == {} and u == ["Cameron Ward"]
+
+
+def test_second_spelling_only_adds_markets_never_replaces():
+    al = [{"odds": "Kenneth Gainwell", "ours": "Kenny Gainwell", "team": "TB"}]
+    a = {"player_anytime_td": {"name": "Kenny Gainwell", "over": 100}}
+    b = {"player_anytime_td": {"name": "Kenneth Gainwell", "over": 999},
+         "player_rush_yds": {"name": "Kenneth Gainwell", "over": 110}}
+    m, _ = odds.match_slate({"kenny gainwell": a, "kenneth gainwell": b},
+                            _slate(("p1", "Kenny Gainwell", "TB")), aliases=al)
+    assert m["p1"]["player_anytime_td"]["over"] == 100 and "player_rush_yds" in m["p1"]
+
+
+def test_team_special_teams_lines_are_not_reported_unmatched():
+    board = {"buf bills st": _q("BUF Bills ST"), "sf st": _q("SF ST"), "saints st": _q("Saints ST"),
+             "nobody real": _q("Nobody Real")}
+    m, u = odds.match_slate(board, _slate(("p1", "Someone Else", "BUF")), aliases=[])
+    assert m == {} and u == ["Nobody Real"]
+
+
+def test_shipped_alias_table_is_well_formed():
+    rows = odds.load_aliases()
+    assert rows and all(set(r) == {"odds", "ours", "team"} for r in rows)
+    assert len({odds.norm_name(r["odds"]) for r in rows}) == len(rows)
+    assert all(odds.norm_name(r["odds"]) != odds.norm_name(r["ours"]) for r in rows)
+
+
 # ── AMERICAN ODDS MATH ───────────────────────────────────────────────────────
 
 def test_implied_probability_matches_known_values():
