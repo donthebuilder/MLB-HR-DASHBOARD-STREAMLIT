@@ -58,3 +58,5 @@ _to_delete/
 *.bundle
 *.patch
 bots/twitter_replies.json
+model_lab/cache/
+model_lab/__pycache__/

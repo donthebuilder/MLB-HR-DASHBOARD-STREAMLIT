@@ -111,7 +111,10 @@ def td_board(payload: dict) -> list[dict]:
     """The site's tdPool(): eligible, not on bye, finite TD score -- in the
     tie-broken order this module ranks by."""
     m = td_market(payload)
-    elig = set(m.get("positions") or DEFAULT_POSITIONS)
+    # The call rule (game-calls-v1) is RB/WR/TE. The market's published list now
+    # also carries QB (nfl_td_qb_v1); intersecting keeps this record's rule and
+    # every earlier call exactly as they were.
+    elig = set(m.get("positions") or DEFAULT_POSITIONS) & set(DEFAULT_POSITIONS)
     legs = weight_order(m)
     rows = [p for p in payload.get("players") or []
             if isinstance(p, dict) and not p.get("on_bye")

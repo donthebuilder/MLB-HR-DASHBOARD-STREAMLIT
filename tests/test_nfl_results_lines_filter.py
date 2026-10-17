@@ -29,7 +29,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "bots", "nfl"))
 import polars as pl  # noqa: E402
 
 from nfl_results import STATS, eligible_lines, outcomes  # noqa: E402
-from nfl_scoring import MODELS  # noqa: E402
+from nfl_scoring import MODELS, TD_GRADE_POS  # noqa: E402
 
 
 def _lines_df(rows):
@@ -70,10 +70,9 @@ def test_rb_with_zero_tds_is_a_real_published_miss():
     assert lines["RB1"]["TD"] == 0.0
 
 
-def test_qb_never_gets_a_td_line_at_all():
-    """A QB is not in MODELS['TD']['pos'] -- his (rushing_tds+receiving_tds)
-    outcome is structurally always 0 in this dataset shape, and must not
-    appear as a TD key at all, published or not."""
+def test_qb_gets_a_real_td_line_since_nfl_td_qb_v1():
+    """A QB is graded for anytime TD (rushing_tds+receiving_tds, never passing)
+    since the QB model shipped (nfl_scoring.TD_GRADE_POS): 0 is a real miss."""
     lines_df = _lines_df([
         {"player_id": "QB1", "name": "Pocket Passer", "position": "QB",
          "passing_yards": 245.0},
@@ -82,7 +81,7 @@ def test_qb_never_gets_a_td_line_at_all():
     positions = _positions_from(lines_df)
     lines = eligible_lines(actual, positions)
 
-    assert "TD" not in lines["QB1"], "TD must not apply to a QB"
+    assert lines["QB1"]["TD"] == 0.0, "a QB's TD is a real, published outcome"
     # PASS_YDS is QB-eligible and genuinely nonzero -- must still publish.
     assert lines["QB1"]["PASS_YDS"] == 245.0
 
@@ -166,11 +165,11 @@ def test_every_market_key_seen_is_actually_eligible_for_its_player():
     for pid, vals in lines.items():
         pos = positions[pid]
         for market in vals:
-            assert pos in MODELS[market]["pos"], (
+            assert pos in (TD_GRADE_POS if market == "TD" else MODELS[market]["pos"]), (
                 f"{pid} ({pos}) published ineligible market {market}"
             )
 
     # And the genuine-zero RB TD case is present in this mixed slate too.
     assert lines["RB1"]["TD"] == 0.0
-    assert "TD" not in lines["QB1"]
+    assert lines["QB1"]["TD"] == 0.0
     assert "TD" not in lines["K1"]

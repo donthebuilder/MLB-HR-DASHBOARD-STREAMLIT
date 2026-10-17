@@ -38,7 +38,7 @@ from pathlib import Path
 import polars as pl
 
 import nfl_espn
-from nfl_scoring import MODELS, OUTCOME
+from nfl_scoring import MODELS, OUTCOME, TD_GRADE_POS
 
 # The columns every source must produce. OUTCOME is written against these.
 STATS = ["passing_yards", "carries", "rushing_yards", "rushing_tds",
@@ -161,6 +161,14 @@ def outcomes(lines: pl.DataFrame) -> dict[str, dict[str, float]]:
     return out
 
 
+def _grade_pos(key: str) -> "list[str] | None":
+    """Positions a market is graded for. TD adds the QB (rushing + receiving TDs
+    only, per OUTCOME["TD"]) -- the QB anytime-TD model, nfl_scoring.QB_TD_MODEL."""
+    if key == "TD":
+        return TD_GRADE_POS
+    return MODELS.get(key, {}).get("pos")
+
+
 def eligible_lines(actual: dict[str, dict[str, float]],
                     positions: dict[str, str]) -> dict[str, dict[str, float]]:
     """Filter outcomes()'s {player_id: {market: value}} down to the markets
@@ -178,7 +186,7 @@ def eligible_lines(actual: dict[str, dict[str, float]],
     every market -- the same drop-rather-than-guess call _espn_to_gsis()
     already makes for an unjoined line."""
     return {
-        pid: {k: v for k, v in vals.items() if positions.get(pid) in MODELS[k]["pos"]}
+        pid: {k: v for k, v in vals.items() if positions.get(pid) in _grade_pos(k)}
         for pid, vals in actual.items()
     }
 
@@ -244,7 +252,7 @@ def grade(card: dict, actual: dict, positions: dict[str, str] | None = None) -> 
     graded, totals = {}, {}
     for key, blk in (card or {}).items():
         bar = float(blk.get("bar", 1))
-        eligible_pos = MODELS.get(key, {}).get("pos")
+        eligible_pos = _grade_pos(key)
         rungs, hit, n = [], 0, 0
         seen: set[str] = set()
         for r in blk.get("rungs", []):

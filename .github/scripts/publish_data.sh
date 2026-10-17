@@ -60,6 +60,10 @@ PUBLISH_FILES=(
   rosters_mlb.json
   # playoff + World Series odds (2026-09-03) -- ~10 KB, rebuilt daily
   playoff_odds.json
+  # championship odds for the other sports (2026-10-14) -- ~15 KB each, rebuilt daily in season
+  nfl_playoff_odds.json
+  nhl_playoff_odds.json
+  nba_playoff_odds.json
   # comeback wins / blown leads (2026-09-03) -- ~40 KB, rebuilt daily
   comeback_board.json
   # moneyline disagreement log + running grade (2026-09-03)
@@ -137,7 +141,12 @@ PUBLISH_FILES=(
   # guard stays quiet about a file that IS deliberate.
   nfl_matchup_extra.json
   nfl_logs.json
+  # slim team-games index for the header/Games tiles (bot task 3, 2026-10-11); a
+  # player's own log is nfl_logs/<gsis_id>.json, a directory copied below
+  nfl_logs_index.json
   nfl_picks.json
+  # high-bar ladder (bot task 4B): rec/rush 100+, pass 300+, 7+ catches, by his own clear rate
+  nfl_ladder.json
   nfl_results.json
   # nfl_signal_audit.json (2026-09-23) -- every TUDDY signal flag graded
   # against real touchdowns, frozen per game at the last run before kickoff.
@@ -152,7 +161,9 @@ PUBLISH_FILES=(
   nfl_next_week.json
   nfl_next_matchup.json
   nfl_next_logs.json
+  nfl_next_logs_index.json
   nfl_next_picks.json
+  nfl_next_ladder.json
   # nfl_pick_lock.json (B10(b)/(e), 2026-09-15) -- TUDDY's sibling of
   # pick_lock.json above, same reason, same failure mode already documented
   # twice on this file for MLB: it is fetched back over HTTPS next run
@@ -707,6 +718,11 @@ stage_local() {
   [ -d "$SRC/data/current/splits" ] && cp -r "$SRC/data/current/splits" "$STAGE/public/data/current/" || true
   # Zone profiles from spray_cache.py.
   [ -d "$SRC/data/current/zones" ] && cp -r "$SRC/data/current/zones" "$STAGE/public/data/current/" || true
+  # Per-player NFL game logs (bot task 3), one small file per player, fetched on
+  # demand when a card opens. Replaced wholesale by the NFL build.
+  for _d in nfl_logs nfl_next_logs; do
+    [ -d "$SRC/data/current/$_d" ] && cp -r "$SRC/data/current/$_d" "$STAGE/public/data/current/" || true
+  done
   unpublished_report
   return 0
 }
@@ -739,7 +755,7 @@ stage_local() {
 # KNOWN-LOCAL patterns are listed rather than guessed -- an intermediate this
 # script deliberately does not publish should be named here, so the report only
 # ever contains genuine surprises.
-UNPUBLISHED_IGNORE='^(detail|splits|zones)$|\.(log|tmp|lock|part)$|^\.|^nfl_next_(meta|matchup_extra|matchup_prev)\.json$'
+UNPUBLISHED_IGNORE='^(detail|splits|zones|nfl_logs|nfl_next_logs)$|\.(log|tmp|lock|part)$|^\.|^nfl_next_(meta|matchup_extra|matchup_prev)\.json$'
 
 unpublished_report() {
   local d="$SRC/data/current" found=0 line=""
@@ -883,8 +899,13 @@ carry_forward() {
   # skipped and detail/today was dropped from the branch entirely. Every
   # night after the tomorrow run, today's spray charts, pitch profiles and
   # splits silently vanished until the next today run rebuilt them.
-  for sub in detail splits zones; do
+  for sub in detail splits zones nfl_logs nfl_next_logs; do
     [ -d "$PREV/public/data/current/$sub" ] || continue
+    # The NFL log directories are rebuilt whole by every NFL run; carrying an old
+    # player's file beside a fresh set would serve a stale log, so only carry the
+    # directory when this run did not stage one.
+    case "$sub" in nfl_logs|nfl_next_logs)
+      [ -d "$STAGE/public/data/current/$sub" ] && continue ;; esac
     mkdir -p "$STAGE/public/data/current/$sub"
     for slate_dir in "$PREV/public/data/current/$sub"/*; do
       # ── DO NOT CARRY FORWARD ANOTHER NIGHT'S DETAIL (2026-08-29) ────────

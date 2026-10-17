@@ -39,8 +39,18 @@ digest = hashlib.sha256(json.dumps(dump, sort_keys=True, default=str).encode()).
 check("120-row scored slate is byte-identical to the base commit", digest,
       "58060d5151c56b55cdc68b082854da1020e8a3cd8f3a91c3b33c2958f9b49fd7")
 check("an unstamped row carries no shadow", rows[0].hr_label_shadow, {})
-check("config_hash is unmoved", m.hr_config_hash(),
-      "sha256:c795e06c4352ce7b22d4a3320a07642ededc60143ab0a7f29f9a9d97d8caf5cb")
+# The fingerprint hashes ast.dump() of the scoring functions (bots/config_fingerprint.py says so itself), and ast.dump()
+# differs between Python versions, so the same unchanged code has one hash per interpreter. Both values below are the
+# hash of the BASE commit f5009a5c (computed there, not here); CI and production run 3.11, the author's machine 3.13.
+_UNMOVED = {
+    (3, 11): "sha256:b0639430bd37655d6e383e6f896d84e9f13bfa1324c6543478a8ff5344b4a7d0",
+    (3, 13): "sha256:c795e06c4352ce7b22d4a3320a07642ededc60143ab0a7f29f9a9d97d8caf5cb",
+}
+_py = sys.version_info[:2]
+if _py in _UNMOVED:
+    check("config_hash is unmoved", m.hr_config_hash(), _UNMOVED[_py])
+else:
+    print(f"  (config_hash check skipped: no base-commit hash recorded for Python {_py[0]}.{_py[1]})")
 
 # ── 2. THE SHADOW FIXES THE ORDERING ────────────────────────────────────────
 # Mimic the pipeline: call the live label at bpp==0.0, THEN assign bpp (as the pipeline does at :8688), stamp.

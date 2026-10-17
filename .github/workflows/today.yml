@@ -367,6 +367,24 @@ jobs:
         run: python bots/playoff_odds.py --out public/data/current/playoff_odds.json
         continue-on-error: true
 
+      # CHAMPIONSHIP ODDS for the other three sports (2026-10-14, bot task
+      # BOT-TASK-CHAMPIONSHIP-ODDS). Same job, same rule as the MLB step above:
+      # a few seconds of numpy each, a sport out of season exits without
+      # touching its last file, and a failure can never stop a slate publishing.
+      - name: NFL championship odds
+        run: |
+          pip install -r bots/nfl/requirements.txt pyarrow
+          python bots/championship/nfl.py --out public/data/current/nfl_playoff_odds.json
+        continue-on-error: true
+
+      - name: NHL championship odds
+        run: python bots/championship/nhl.py --out public/data/current/nhl_playoff_odds.json
+        continue-on-error: true
+
+      - name: NBA championship odds
+        run: python bots/championship/nba.py --out public/data/current/nba_playoff_odds.json
+        continue-on-error: true
+
       # 🔄 COMEBACK BOARD (2026-09-03). Line scores for the whole season, one
       # request per month rather than one per game -- six or seven calls, not
       # two and a half thousand. Same continue-on-error rule: a season-long

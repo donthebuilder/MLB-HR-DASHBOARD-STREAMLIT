@@ -1,0 +1,633 @@
+{
+ "full": {
+  "n": 14329,
+  "base_rate": 0.1953,
+  "logloss": 0.44404888265864306,
+  "brier": 0.14122674889208042,
+  "auc": 0.7235622233232863,
+  "top15": 0.4925925925925926,
+  "top30": 0.44382716049382714,
+  "mean_pred": 0.19880454511645523
+ },
+ "logo": {
+  "opp": {
+   "d_logloss_full_minus_without": -0.004051327727705765,
+   "lo": -0.005258571409076595,
+   "hi": -0.002971554046147579,
+   "without_logloss": 0.4481002103863488
+  },
+  "share": {
+   "d_logloss_full_minus_without": -7.925681138095446e-05,
+   "lo": -0.00029712101770228887,
+   "hi": 0.00015815669370523497,
+   "without_logloss": 0.44412813947002405
+  },
+  "xtd": {
+   "d_logloss_full_minus_without": 0.00018479515557841142,
+   "lo": 8.780901645849492e-06,
+   "hi": 0.0003572719925383268,
+   "without_logloss": 0.4438640875030646
+  },
+  "eff": {
+   "d_logloss_full_minus_without": -0.0003195748800997491,
+   "lo": -0.0008607267948584205,
+   "hi": 0.00017638874347994157,
+   "without_logloss": 0.44436845753874277
+  },
+  "team": {
+   "d_logloss_full_minus_without": -0.0028181330032081755,
+   "lo": -0.0037665565097906232,
+   "hi": -0.0018593992376916874,
+   "without_logloss": 0.4468670156618512
+  },
+  "matchup": {
+   "d_logloss_full_minus_without": -0.00010140569058068448,
+   "lo": -0.001084821820788464,
+   "hi": 0.0010462848134700734,
+   "without_logloss": 0.4441502883492237
+  },
+  "env": {
+   "d_logloss_full_minus_without": 0.00029011263166248336,
+   "lo": -0.00011944828377534057,
+   "hi": 0.000704604846202264,
+   "without_logloss": 0.44375877002698055
+  },
+  "ctx": {
+   "d_logloss_full_minus_without": -0.0002061790117850269,
+   "lo": -0.0007957045137624193,
+   "hi": 0.00035815957537107027,
+   "without_logloss": 0.4442550616704281
+  }
+ },
+ "segments": {
+  "position RB": {
+   "n": 4242,
+   "base_rate": 0.2454,
+   "ll_full": 0.48691834030565345,
+   "ll_v2": 0.4971552789597371,
+   "d": -0.010236938654083757,
+   "lo": -0.01565611736799789,
+   "hi": -0.004283898023154934,
+   "auc_full": 0.7464946262890348,
+   "auc_v2": 0.7303625398042939
+  },
+  "position WR": {
+   "n": 6767,
+   "base_rate": 0.1886,
+   "ll_full": 0.44181275873718673,
+   "ll_v2": 0.44736335870366745,
+   "d": -0.005550599966480665,
+   "lo": -0.008430225224785348,
+   "hi": -0.002698603324509711,
+   "auc_full": 0.7100520429839879,
+   "auc_v2": 0.6957690526932359
+  },
+  "position TE": {
+   "n": 3320,
+   "base_rate": 0.1449,
+   "ll_full": 0.3938318980917385,
+   "ll_v2": 0.3973582264393729,
+   "d": -0.0035263283476344508,
+   "lo": -0.008049183031308152,
+   "hi": 0.0010625999754142654,
+   "auc_full": 0.6611665991729394,
+   "auc_v2": 0.6554612433443008
+  },
+  "carryover inputs (stale)": {
+   "n": 2687,
+   "base_rate": 0.1522,
+   "ll_full": 0.3910006494359479,
+   "ll_v2": 0.39755612608138763,
+   "d": -0.006555476645439678,
+   "lo": -0.011039001677746763,
+   "hi": -0.002716602514282276,
+   "auc_full": 0.7115708670798174,
+   "auc_v2": 0.7015848415051165
+  },
+  "own-season inputs": {
+   "n": 11642,
+   "base_rate": 0.2052,
+   "ll_full": 0.4562925351813523,
+   "ll_v2": 0.46274149997362585,
+   "d": -0.006448964792273485,
+   "lo": -0.009378804509047179,
+   "hi": -0.0035726103922242803,
+   "auc_full": 0.7228732215275558,
+   "auc_v2": 0.7079835001529264
+  },
+  "touches/g < 4": {
+   "n": 6272,
+   "base_rate": 0.0915,
+   "ll_full": 0.29710234644391503,
+   "ll_v2": 0.30164103277710075,
+   "d": -0.004538686333185716,
+   "lo": -0.0071992821206384545,
+   "hi": -0.0017986705989556475,
+   "auc_full": 0.6360071325228119,
+   "auc_v2": 0.620037075176448
+  },
+  "touches/g 4-8": {
+   "n": 4439,
+   "base_rate": 0.2068,
+   "ll_full": 0.4962544880150024,
+   "ll_v2": 0.505003979248255,
+   "d": -0.008749491233252726,
+   "lo": -0.013154730147239562,
+   "hi": -0.003856959508929539,
+   "auc_full": 0.6134453781512605,
+   "auc_v2": 0.5848865722564706
+  },
+  "touches/g 8-14": {
+   "n": 2139,
+   "base_rate": 0.3114,
+   "ll_full": 0.606677260875154,
+   "ll_v2": 0.6135435365276307,
+   "d": -0.0068662756524767755,
+   "lo": -0.014258216592850531,
+   "hi": 0.001119345579834155,
+   "auc_full": 0.6047157136770172,
+   "auc_v2": 0.5814949368920855
+  },
+  "touches/g >= 14": {
+   "n": 1479,
+   "base_rate": 0.4327,
+   "ll_full": 0.675317234218331,
+   "ll_v2": 0.6825524052603505,
+   "d": -0.0072351710420195045,
+   "lo": -0.018572487211994736,
+   "hi": 0.0065618305744765204,
+   "auc_full": 0.5927685488676997,
+   "auc_v2": 0.5865855929678189
+  },
+  "weeks 1-4": {
+   "n": 3109,
+   "base_rate": 0.1907,
+   "ll_full": 0.4462983146179783,
+   "ll_v2": 0.4511067799272593,
+   "d": -0.004808465309280992,
+   "lo": -0.010212693938012088,
+   "hi": 0.001509213126906843,
+   "auc_full": 0.7085271463309357,
+   "auc_v2": 0.6935987420810354
+  },
+  "weeks 5-12": {
+   "n": 6251,
+   "base_rate": 0.195,
+   "ll_full": 0.44173984426849866,
+   "ll_v2": 0.4506753640488592,
+   "d": -0.008935519780360633,
+   "lo": -0.012292914913710089,
+   "hi": -0.00547803376242335,
+   "auc_full": 0.7277095171705026,
+   "auc_v2": 0.7074974470199581
+  },
+  "weeks 13+": {
+   "n": 4969,
+   "base_rate": 0.1984,
+   "ll_full": 0.44554622921030723,
+   "ll_v2": 0.4499511318193545,
+   "d": -0.004404902609047175,
+   "lo": -0.008493042441263376,
+   "hi": -0.0006092969090394298,
+   "auc_full": 0.7279332192242997,
+   "auc_v2": 0.7185618747832446
+  }
+ },
+ "rank_buckets_v2": {
+  "1-5": {
+   "n": 270,
+   "hit": 0.5777777777777777
+  },
+  "6-15": {
+   "n": 540,
+   "hit": 0.4462962962962963
+  },
+  "16-30": {
+   "n": 810,
+   "hit": 0.38271604938271603
+  },
+  "31-60": {
+   "n": 1620,
+   "hit": 0.32222222222222224
+  },
+  "61-120": {
+   "n": 3240,
+   "hit": 0.22314814814814815
+  },
+  "121-999": {
+   "n": 7849,
+   "hit": 0.10778443113772455
+  }
+ },
+ "coef_stability": {
+  "f_air_yards_share": {
+   "coefs": [
+    -0.031,
+    0.019,
+    0.022
+   ],
+   "same_sign": false
+  },
+  "f_carries": {
+   "coefs": [
+    0.038,
+    0.164,
+    0.151
+   ],
+   "same_sign": true
+  },
+  "f_gl_opp": {
+   "coefs": [
+    0.122,
+    0.114,
+    0.086
+   ],
+   "same_sign": true
+  },
+  "f_gp": {
+   "coefs": [
+    0.079,
+    0.097,
+    0.051
+   ],
+   "same_sign": true
+  },
+  "f_opp_d_rec_td": {
+   "coefs": [
+    -0.04,
+    -0.011,
+    -0.027
+   ],
+   "same_sign": true
+  },
+  "f_opp_d_rush_td": {
+   "coefs": [
+    0.01,
+    0.015,
+    -0.004
+   ],
+   "same_sign": false
+  },
+  "f_oppr_dr_car": {
+   "coefs": [
+    0.233,
+    0.205,
+    0.193
+   ],
+   "same_sign": true
+  },
+  "f_oppr_dr_td": {
+   "coefs": [
+    0.006,
+    -0.036,
+    -0.012
+   ],
+   "same_sign": false
+  },
+  "f_receiving_20": {
+   "coefs": [
+    0.038,
+    0.059,
+    0.054
+   ],
+   "same_sign": true
+  },
+  "f_receiving_air_yards": {
+   "coefs": [
+    -0.001,
+    -0.01,
+    0.029
+   ],
+   "same_sign": false
+  },
+  "f_receiving_tds": {
+   "coefs": [
+    0.033,
+    0.006,
+    -0.008
+   ],
+   "same_sign": false
+  },
+  "f_rushing_20": {
+   "coefs": [
+    0.027,
+    0.017,
+    0.018
+   ],
+   "same_sign": true
+  },
+  "f_rushing_tds": {
+   "coefs": [
+    0.067,
+    0.056,
+    0.072
+   ],
+   "same_sign": true
+  },
+  "f_rz_car": {
+   "coefs": [
+    -0.003,
+    -0.052,
+    -0.056
+   ],
+   "same_sign": true
+  },
+  "f_rz_opp": {
+   "coefs": [
+    0.063,
+    0.046,
+    0.012
+   ],
+   "same_sign": true
+  },
+  "f_rz_tgt": {
+   "coefs": [
+    0.026,
+    0.035,
+    0.034
+   ],
+   "same_sign": true
+  },
+  "f_snap_pct": {
+   "coefs": [
+    0.321,
+    0.298,
+    0.322
+   ],
+   "same_sign": true
+  },
+  "f_target_share": {
+   "coefs": [
+    0.061,
+    0.066,
+    0.041
+   ],
+   "same_sign": true
+  },
+  "f_targets": {
+   "coefs": [
+    0.132,
+    0.057,
+    0.075
+   ],
+   "same_sign": true
+  },
+  "f_td_actual": {
+   "coefs": [
+    0.071,
+    0.042,
+    0.042
+   ],
+   "same_sign": true
+  },
+  "f_tm_drives": {
+   "coefs": [
+    -0.009,
+    -0.032,
+    -0.033
+   ],
+   "same_sign": true
+  },
+  "f_tm_rz_td_rate": {
+   "coefs": [
+    -0.024,
+    -0.021,
+    -0.017
+   ],
+   "same_sign": true
+  },
+  "f_touches": {
+   "coefs": [
+    0.051,
+    0.094,
+    0.113
+   ],
+   "same_sign": true
+  },
+  "f_wopr": {
+   "coefs": [
+    0.063,
+    0.08,
+    0.064
+   ],
+   "same_sign": true
+  },
+  "f_xtd": {
+   "coefs": [
+    -0.205,
+    -0.172,
+    -0.102
+   ],
+   "same_sign": true
+  },
+  "implied_total": {
+   "coefs": [
+    0.093,
+    0.092,
+    0.104
+   ],
+   "same_sign": true
+  },
+  "indoors": {
+   "coefs": [
+    0.033,
+    0.041,
+    0.04
+   ],
+   "same_sign": true
+  },
+  "is_carryover": {
+   "coefs": [
+    -0.053,
+    -0.065,
+    -0.064
+   ],
+   "same_sign": true
+  },
+  "is_home": {
+   "coefs": [
+    0.002,
+    0.008,
+    0.028
+   ],
+   "same_sign": true
+  },
+  "spread": {
+   "coefs": [
+    0.092,
+    0.068,
+    0.076
+   ],
+   "same_sign": true
+  },
+  "total_line": {
+   "coefs": [
+    0.027,
+    0.065,
+    0.071
+   ],
+   "same_sign": true
+  },
+  "wind_mph": {
+   "coefs": [
+    -0.063,
+    -0.013,
+    -0.016
+   ],
+   "same_sign": true
+  },
+  "pos_RB": {
+   "coefs": [
+    0.085,
+    0.048,
+    0.049
+   ],
+   "same_sign": true
+  },
+  "pos_WR": {
+   "coefs": [
+    -0.045,
+    -0.037,
+    -0.035
+   ],
+   "same_sign": true
+  },
+  "pos_TE": {
+   "coefs": [
+    -0.039,
+    -0.008,
+    -0.011
+   ],
+   "same_sign": true
+  }
+ },
+ "discovery": {
+  "f_ngs_rush_pct_over_expected": {
+   "why": "backs who beat their blocking score more near the goal line",
+   "d_logloss": 8.457170342960375e-05,
+   "lo": -1.5780865340249927e-05,
+   "hi": 0.00018605545551498933,
+   "p": 0.10048137821128234,
+   "coverage": 0.14128035320088306,
+   "holm_threshold": 0.00625,
+   "significant_after_holm": false
+  },
+  "f_ngs_avg_separation": {
+   "why": "separation -> catchable red-zone targets",
+   "d_logloss": 0.00026323279341532234,
+   "lo": 1.1618539580325907e-05,
+   "hi": 0.0005252579059835177,
+   "p": 0.04454310869178901,
+   "coverage": 0.3507434711983006,
+   "holm_threshold": 0.005555555555555556,
+   "significant_after_holm": false
+  },
+  "f_ngs_avg_cushion": {
+   "why": "soft coverage -> easier touchdowns",
+   "d_logloss": 4.9067406983899614e-05,
+   "lo": -7.243291822192411e-05,
+   "hi": 0.00016263095374189225,
+   "p": 0.4132066246083702,
+   "coverage": 0.35057686700820523,
+   "holm_threshold": 0.016666666666666666,
+   "significant_after_holm": false
+  },
+  "f_receiving_40": {
+   "why": "big-play receivers score on long plays, a different route to a TD",
+   "d_logloss": 0.00016530215608705356,
+   "lo": -7.839336752682337e-05,
+   "hi": 0.0004304752802270964,
+   "p": 0.202882329551474,
+   "coverage": 1.0,
+   "holm_threshold": 0.008333333333333333,
+   "significant_after_holm": false
+  },
+  "f_ngs_avg_yac_above_expectation": {
+   "why": "receivers who create after the catch convert short-field targets",
+   "d_logloss": -0.0001041162977296004,
+   "lo": -0.0003018730362973512,
+   "hi": 8.63439067512939e-05,
+   "p": 0.2931167884082948,
+   "coverage": 0.35032696072306213,
+   "holm_threshold": 0.0125,
+   "significant_after_holm": false
+  },
+  "div_game": {
+   "why": "division games are lower-scoring / more familiar defences",
+   "d_logloss": 3.226887446029424e-05,
+   "lo": -1.9482621910196075e-05,
+   "hi": 8.575571183863362e-05,
+   "p": 0.22937269263775772,
+   "coverage": 1.0,
+   "holm_threshold": 0.01,
+   "significant_after_holm": false
+  },
+  "f_snap_pct_sq": {
+   "why": "non-linear snap-share effect (starters vs committee)",
+   "d_logloss": -0.0005019490035488357,
+   "lo": -0.0008071290662322933,
+   "hi": -0.00019451213034058304,
+   "p": 0.0013187842836136499,
+   "coverage": 1.0,
+   "holm_threshold": 0.005,
+   "significant_after_holm": true
+  },
+  "touch_x_implied": {
+   "why": "opportunity matters more on high-scoring teams (interaction)",
+   "d_logloss": -4.2652261508257686e-05,
+   "lo": -0.0001850108400414981,
+   "hi": 9.5284427088833e-05,
+   "p": 0.5508394948295648,
+   "coverage": 1.0,
+   "holm_threshold": 0.05,
+   "significant_after_holm": false
+  },
+  "xtd_x_opp_soft": {
+   "why": "expected TDs matter more against soft red-zone defences (interaction)",
+   "d_logloss": 0.00013891866181009105,
+   "lo": -0.00021362198978572825,
+   "hi": 0.00046488359817743085,
+   "p": 0.4222123002468088,
+   "coverage": 1.0,
+   "holm_threshold": 0.025,
+   "significant_after_holm": false
+  },
+  "td_over_exp": {
+   "why": "his TDs above expected last window (regression-to-the-mean test)",
+   "d_logloss": 2.2633367999326275e-05,
+   "lo": -8.457018654766082e-06,
+   "hi": 5.5179979643011e-05,
+   "p": 0.1632567457927726,
+   "coverage": 1.0,
+   "holm_threshold": 0.0071428571428571435,
+   "significant_after_holm": false
+  }
+ },
+ "qb": {
+  "n": 1742,
+  "base_rate": 0.151,
+  "lr": {
+   "n": 1742,
+   "base_rate": 0.151,
+   "logloss": 0.3912325414233273,
+   "brier": 0.11818247976088031,
+   "auc": 0.697066921694599,
+   "top15": 0.2271604938271605,
+   "top30": 0.1595744680851064,
+   "mean_pred": 0.13872855255450117
+  },
+  "baseline": {
+   "n": 1742,
+   "base_rate": 0.151,
+   "logloss": 0.4255357376873553,
+   "brier": 0.12845073773874818,
+   "auc": 0.49558842810757453,
+   "top15": 0.10987654320987654,
+   "top30": 0.14893617021276595,
+   "mean_pred": 0.13725574580346775
+  },
+  "d": -0.034303196264027995,
+  "lo": -0.04401148328288473,
+  "hi": -0.02505962252425064
+ }
+}

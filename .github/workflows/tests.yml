@@ -12,7 +12,7 @@ name: Bot tests
 on:
   push:
     branches: [main]
-    paths: ["bots/**", "tests/**", ".github/workflows/tests.yml"]
+    paths: ["bots/**", "tests/**", "model_lab/**", ".github/workflows/tests.yml"]
   pull_request:
     paths: ["bots/**", "tests/**"]
 
@@ -30,11 +30,11 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
-      - run: pip install -r bots/requirements.txt -r bots/nfl/requirements.txt pytest
+      - run: pip install -r bots/requirements.txt -r bots/nfl/requirements.txt -r model_lab/requirements.txt pytest
       - name: Run every test file
         env:
           PYTHONPATH: .
-          KNOWN_BROKEN: "test_savant_feeds.py test_snapshot_and_sb.py"
+          KNOWN_BROKEN: ""
         run: |
           set -u
           failed=""; passed=0
