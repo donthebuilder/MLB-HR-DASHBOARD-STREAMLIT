@@ -1,0 +1,190 @@
+RESULTS TRACKER - 2026-08-30
+------------------------------------------
+BETTABLE RESULTS
+Top 15 HR: 4/15 (26.7%)
+HR Picks: 5/14 (35.7%)
+Top Picks: 5/14 (35.7%)
+
+FULL SHEET BASE HIT PERFORMANCE
+Base Hit Accuracy: 77.6%
+
+HR CAPTURE (BETTABLE)
+Total Slate HRs: 37
+Caught in Top 15: 4
+Caught in HR Picks: 5
+Top 15 Capture Rate: 10.8%
+HR Pick Capture Rate: 13.5%
+
+MODEL VISION (Top 40)
+Model Caught HRs: 13 / 37
+Vision Rate: 35.1%
+
+UNIQUE PLAYER HR ACCURACY
+Unique Players Tracked: 59
+Players Who Homered: 15
+Unique HR Accuracy: 25.4%
+
+HR CATEGORY BREAKDOWN
+------------------------------------------
+🏆 TOP 15 BOARD → 4 HR
+🔥 TOP PICKS → 5 HR
+🧨 HR PICKS → 5 HR
+🏁 HRR PICKS → 2 HR
+💠 HIT PICKS → 4 HR
+⚾ CONTACT PICKS → 2 HR
+Best HR-producing category: 🔥 TOP PICKS
+
+LONGEST HR (BOARD)
+------------------------------------------
+- Junior Caminero — 440 ft · 111.3 mph · 24.0°
+- Jeremy Peña — 435 ft · 105.9 mph · 29.0°
+- Pete Crow-Armstrong — 431 ft · 108.0 mph · 33.0°
+- Sal Stewart — 418 ft · 101.7 mph · 28.0°
+- Jared Triolo — 412 ft · 104.1 mph · 33.0°
+Longest on the board: Junior Caminero (440 ft)
+
+
+HR RESULTS BY PLAYER
+------------------------------------------
+- Coby Mayo — 🏆#1 + 🧨 + 🔥 + ⭐
+- Jeremy Peña — 🏆#11 + 🔥 + ⚾ + ⭐
+- Pete Crow-Armstrong — 🏆#3 + 🔥
+- Sal Stewart — 🏆#5 + 🧨
+- Francisco Lindor — 🧨
+- Nathaniel Lowe — 🧨 + ⭐
+- Paul Goldschmidt — 🧨
+- Junior Caminero — 🔥
+- Kazuma Okamoto — 🔥
+- Juan Soto — 🏁
+- Otto Lopez — 🏁 + ⭐
+- J.T. Realmuto — 💠 + ⭐
+- Jake McCarthy — 💠
+- Jared Triolo — 💠
+- José Ramírez — 💠 + ⚾ + ⭐
+
+MISSED HRs (NOT IN MODEL SHEET)
+------------------------------------------
+- LaMonte Wade Jr. (HOU) — not in model sheet / lineup pool
+
+POOL PERFORMANCE
+------------------------------------------
+4-MAN Pool A — Strongest → 1/4 HR (Jeremy Peña)
+4-MAN Pool B — HRR+Power → 1/4 HR (Joc Pederson)
+4-MAN Pool C — Balanced → 0/4 HR (none)
+4-MAN Pool D — Variance → 1/4 HR (Kazuma Okamoto)
+3-MAN Pool A — Strongest → 1/3 HR (Juan Soto)
+3-MAN Pool B — HRR+Var → 0/3 HR (none)
+3-MAN Pool C — Balanced → 1/3 HR (Héctor Rodríguez)
+3-MAN Pool D — Variance → 0/3 HR (none)
+
+PAIR PERFORMANCE
+------------------------------------------
+Pair 1 → 0/2 HR (none) | Hunter Goodman + Kyle Schwarber
+Pair 2 → 0/2 HR (none) | Heriberto Hernández + Yordan Alvarez
+Pair 3 → 1/2 HR (Pete Crow-Armstrong) | Pete Crow-Armstrong + Matt Olson
+Pair 4 → 0/2 HR (none) | Luis García Jr. + Pete Alonso
+Pair 5 → 0/2 HR (none) | Rafael Flores Jr. + Cal Raleigh
+Pair 6 → 0/2 HR (none) | Christian Encarnacion-Strand + Esmerlyn Valdez
+Pair 7 → 1/2 HR (Sal Stewart) | Sal Stewart + Christian Encarnacion-Strand
+Pair 8 → 1/2 HR (Sal Stewart) | Sal Stewart + Jackson Chourio
+Pair 9 → 1/2 HR (Coby Mayo) | Seiya Suzuki + Coby Mayo
+Pair 10 → 1/2 HR (Junior Caminero) | Seiya Suzuki + Junior Caminero
+
+PLAYER TYPE PERFORMANCE
+------------------------------------------
+🏆 TOP 15 BOARD (15)
+HR: 26.7% | 1+ Hit: 93.3% | XBH: 33.3% | 2+ TB: 46.7% | 2+ HRR: 73.3% | 3+ HRR: 40.0%
+
+🔥 TOP PICKS (14)
+HR: 35.7% | 1+ Hit: 85.7% | XBH: 42.9% | 2+ TB: 42.9% | 2+ HRR: 64.3% | 3+ HRR: 50.0%
+
+🧨 HR PICKS (14)
+HR: 35.7% | 1+ Hit: 78.6% | XBH: 35.7% | 2+ TB: 42.9% | 2+ HRR: 64.3% | 3+ HRR: 42.9%
+
+🏁 HRR PICKS (14)
+HR: 14.3% | 1+ Hit: 78.6% | XBH: 35.7% | 2+ TB: 50.0% | 2+ HRR: 57.1% | 3+ HRR: 35.7%
+
+💠 HIT PICKS (14)
+HR: 28.6% | 1+ Hit: 64.3% | XBH: 35.7% | 2+ TB: 42.9% | 2+ HRR: 57.1% | 3+ HRR: 35.7%
+
+⚾ CONTACT PICKS (14)
+HR: 14.3% | 1+ Hit: 64.3% | XBH: 21.4% | 2+ TB: 28.6% | 2+ HRR: 42.9% | 3+ HRR: 14.3%
+
+
+DESIGNED OUTCOME (did the pick do its job)
+------------------------------------------
+🏆 TOP 15 BOARD (15) -> 4/15 (26.7%)  ·  needs: HR
+🔥 TOP PICKS (14) -> 7/14 (50.0%)  ·  needs: most productive of our picks in his game (HRR or TB)
+🧨 HR PICKS (14) -> 5/14 (35.7%)  ·  needs: HR
+🏁 HRR PICKS (14) -> 8/14 (57.1%)  ·  needs: 2+ hits+runs+RBI
+💠 HIT PICKS (14) -> 9/14 (64.3%)  ·  needs: 1+ hit
+⚾ CONTACT PICKS (14) -> 4/14 (28.6%)  ·  needs: 2+ TB or XBH
+ALL PICKS -> 37/85 (43.5%)
+
+HIT RESULTS BY CATEGORY
+------------------------------------------
+
+🔥 TOP PICKS (1+ Hit)
+- Jeremy Peña — 2H ⭐
+- Junior Caminero — 2H ⭐
+- Pete Crow-Armstrong — 2H ⭐
+- Carter Jensen — 1H
+- Coby Mayo — 1H
+- Hunter Goodman — 1H
+- Jackson Chourio — 1H
+- Kazuma Okamoto — 1H
+- Kyle Schwarber — 1H
+- Luis García Jr. — 1H
+- Oneil Cruz — 1H
+- Tristan Peters — 1H
+
+🧨 HR PICKS (1+ Hit)
+- Paul Goldschmidt — 3H 🔥
+- Brooks Lee — 2H ⭐
+- Sal Stewart — 2H ⭐
+- Andrés Chaparro — 1H
+- Coby Mayo — 1H
+- Francisco Lindor — 1H
+- Jackson Merrill — 1H
+- Jake Burger — 1H
+- Matt Olson — 1H
+- Nathaniel Lowe — 1H
+- Vaughn Grissom — 1H
+
+🏁 HRR PICKS (1+ Hit)
+- Bryan Reynolds — 2H ⭐
+- Cody Bellinger — 2H ⭐
+- Elly De La Cruz — 2H ⭐
+- George Springer — 2H ⭐
+- Blaze Alexander — 1H
+- Juan Soto — 1H
+- Miguel Vargas — 1H
+- Mike Trout — 1H
+- Otto Lopez — 1H
+- TJ Rumfield — 1H
+- Vinnie Pasquantino — 1H
+
+💠 HIT PICKS (1+ Hit)
+- Freddie Freeman — 2H ⭐
+- J.T. Realmuto — 2H ⭐
+- José Ramírez — 2H ⭐
+- Wilyer Abreu — 2H ⭐
+- Daylen Lile — 1H
+- Jake Bauers — 1H
+- Jake McCarthy — 1H
+- Jared Triolo — 1H
+- Yandy Díaz — 1H
+
+⚾ CONTACT PICKS (1+ Hit)
+- Jeremy Peña — 2H ⭐
+- José Ramírez — 2H ⭐
+- Wilyer Abreu — 2H ⭐
+- Cal Raleigh — 1H
+- Daylen Lile — 1H
+- Jackson Merrill — 1H
+- Kyle Schwarber — 1H
+- Michael Harris II — 1H
+- Tristan Peters — 1H
+
+MODEL DIAGNOSTIC (LOW PRIORITY)
+Full Sheet HR Coverage: 36 / 37 (97.3%)

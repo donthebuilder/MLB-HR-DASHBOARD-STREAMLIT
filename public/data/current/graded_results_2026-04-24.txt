@@ -1,0 +1,120 @@
+RESULTS TRACKER - 2026-04-24
+------------------------------------------
+FULL SHEET TRACKED PICKS: 113 | HR Accuracy: 12.4%
+FULL SHEET BASE HIT PICKS: 113 | Base Hit Accuracy: 64.6%
+
+PAIRS TRACKED: 4 | HR Accuracy: 0.0%
+4-MAN POOLS TRACKED: 4 | HR Accuracy: 0.0%
+6-MAN POOLS TRACKED: 4 | HR Accuracy: 0.0%
+
+TOP 15 TRACKED: 15 | HR Accuracy: 13.3%
+HR PICKS TRACKED: 14 | HR Accuracy: 7.1%
+TOP PICKS TRACKED: 14 | HR Accuracy: 21.4%
+
+HRR PICKS TRACKED: 28 | 2+ HRR Accuracy: 46.4% | 3+ HRR Accuracy: 32.1%
+HIT PICKS TRACKED: 28 | Hit Accuracy: 67.9% | HR Accuracy: 10.7%
+CONTACT PICKS TRACKED: 14 | XBH Accuracy: 35.7% | 2+ TB Accuracy: 35.7% | HR Accuracy: 14.3%
+
+TRACKED PICKS THAT HOMERED
+- 🏆#9 🧨 Ben Rice - HR 39.3
+  BA(S) 0.311 | BA vs RHP 0.320 | ISO 0.405 | 350+ 4/17 | L5 3H/2HR/2XBH
+- 🏆#1 🔥 Munetaka Murakami - HR 56.7
+  BA(S) 0.253 | BA vs LHP 0.174 | ISO 0.345 | 350+ 8/20 | L5 9H/4HR/4XBH
+- 🔥 Adley Rutschman - HR 22.5
+  BA(S) 0.316 | BA vs RHP 0.360 | ISO 0.237 | 350+ 1/25 | L5 7H/1HR/3XBH
+- 🔥 Liam Hicks - HR 15.5
+  BA(S) 0.321 | BA vs RHP 0.350 | ISO 0.192 | 350+ 1/29 | L5 7H/0HR/1XBH
+- 🏁 Bryce Harper - HR 23.9
+  BA(S) 0.261 | BA vs RHP 0.280 | ISO 0.239 | 350+ 4/22 | L5 4H/1HR/1XBH
+- 🏁 Junior Caminero - HR 24.1
+  BA(S) 0.260 | BA vs RHP 0.257 | ISO 0.219 | 350+ 4/32 | L5 7H/2HR/3XBH
+- 🏁 Wilyer Abreu - HR 15.4
+  BA(S) 0.286 | BA vs RHP 0.292 | ISO 0.165 | 350+ 3/24 | L5 3H/0HR/0XBH
+- 💠 Carlos Cortes - HR 24.8
+  BA(S) 0.327 | BA vs RHP 0.286 | ISO 0.192 | 350+ 3/25 | L5 8H/1HR/3XBH
+- 💠 Daniel Schneemann - HR 27.3
+  BA(S) 0.310 | BA vs RHP 0.250 | ISO 0.207 | 350+ 2/14 | L5 5H/1HR/1XBH
+- 💠 Riley Greene - HR 13.7
+  BA(S) 0.289 | BA vs LHP 0.333 | ISO 0.155 | 350+ 0/16 | L5 8H/1HR/3XBH
+- ⚾ Gunnar Henderson - HR 22.4
+  BA(S) 0.189 | BA vs RHP 0.181 | ISO 0.254 | 350+ 2/22 | L5 3H/1HR/2XBH
+- ⚾ Tyler Soderstrom - HR 21.8
+  BA(S) 0.219 | BA vs RHP 0.261 | ISO 0.177 | 350+ 2/27 | L5 6H/0HR/4XBH
+
+TRACKED PICKS THAT GOT A BASE HIT
+- Ben Rice (NYY) | TOP15#9 | 2 H
+- Matt Olson (ATL) | TOP15#10 | 2 H
+- Miguel Vargas (CWS) | TOP15#5 | 2 H
+- Yordan Alvarez (HOU) | TOP15#3 | 2 H
+- Colson Montgomery (CWS) | TOP15#2 | 1 H
+- Everson Pereira (CWS) | TOP15#14 | 1 H
+- Hunter Goodman (COL) | TOP15#13 | 1 H
+- Max Muncy (LAD) | TOP15#6 | 1 H
+- Mickey Moniak (COL) | TOP15#7 | 1 H
+- Munetaka Murakami (CWS) | TOP15#1 | 1 H
+- Taylor Ward (BAL) | HR | 4 H
+- Ben Rice (NYY) | HR | 2 H
+- Matt Olson (ATL) | HR | 2 H
+- Colson Montgomery (CWS) | HR | 1 H
+- Heliot Ramos (SF) | HR | 1 H
+- Hunter Goodman (COL) | HR | 1 H
+- José Ramírez (CLE) | HR | 1 H
+- Adley Rutschman (BAL) | TOP | 3 H
+- Yordan Alvarez (HOU) | TOP | 2 H
+- Austin Martin (MIN) | TOP | 1 H
+- Brandon Lowe (PIT) | TOP | 1 H
+- Josh Jung (TEX) | TOP | 1 H
+- Liam Hicks (MIA) | TOP | 1 H
+- Max Muncy (LAD) | TOP | 1 H
+- Mickey Moniak (COL) | TOP | 1 H
+- Munetaka Murakami (CWS) | TOP | 1 H
+- Kyle Stowers (MIA) | HRR | 3 H
+- Otto Lopez (MIA) | HRR | 3 H
+- Carter Jensen (KC) | HRR | 2 H
+- Christian Walker (HOU) | HRR | 2 H
+- Elly De La Cruz (CIN) | HRR | 2 H
+- Junior Caminero (TB) | HRR | 2 H
+- Ozzie Albies (ATL) | HRR | 2 H
+- Wilyer Abreu (BOS) | HRR | 2 H
+- Bobby Witt Jr. (KC) | HRR | 1 H
+- Bryce Harper (PHI) | HRR | 1 H
+- Dane Myers (CIN) | HRR | 1 H
+- Iván Herrera (STL) | HRR | 1 H
+- Jonny DeLuca (TB) | HRR | 1 H
+- Nathan Lukes (TOR) | HRR | 1 H
+- Nico Hoerner (CHC) | HRR | 1 H
+- TJ Rumfield (COL) | HRR | 1 H
+- Tyler Freeman (COL) | HRR | 1 H
+- Xavier Edwards (MIA) | HIT | 3 H
+- Carlos Cortes (ATH) | HIT | 2 H
+- Daniel Schneemann (CLE) | HIT | 2 H
+- Moisés Ballesteros (CHC) | HIT | 2 H
+- Riley Greene (DET) | HIT | 2 H
+- Ryan O'Hearn (PIT) | HIT | 2 H
+- Brandon Marsh (PHI) | HIT | 1 H
+- Cody Bellinger (NYY) | HIT | 1 H
+- Daylen Lile (WSH) | HIT | 1 H
+- Dominic Smith (ATL) | HIT | 1 H
+- Elias Díaz (KC) | HIT | 1 H
+- Ernie Clement (TOR) | HIT | 1 H
+- Jorbit Vivas (WSH) | HIT | 1 H
+- Juan Soto (NYM) | HIT | 1 H
+- Kevin McGonigle (DET) | HIT | 1 H
+- Masataka Yoshida (BOS) | HIT | 1 H
+- Randy Arozarena (SEA) | HIT | 1 H
+- Troy Johnston (COL) | HIT | 1 H
+- Yandy Díaz (TB) | HIT | 1 H
+- Andrés Giménez (TOR) | CONTACT | 3 H
+- Gunnar Henderson (BAL) | CONTACT | 3 H
+- Spencer Steer (CIN) | CONTACT | 2 H
+- Casey Schmitt (SF) | CONTACT | 1 H
+- Dominic Canzone (SEA) | CONTACT | 1 H
+- Ian Happ (CHC) | CONTACT | 1 H
+- Jake Bauers (MIL) | CONTACT | 1 H
+- Kyle Karros (COL) | CONTACT | 1 H
+- Michael Massey (KC) | CONTACT | 1 H
+- Tristan Gray (MIN) | CONTACT | 1 H
+- Tyler Soderstrom (ATH) | CONTACT | 1 H
+
+PAIRS / POOLS THAT CLEARED
+- none

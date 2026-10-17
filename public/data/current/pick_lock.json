@@ -1,0 +1,1252 @@
+{
+ "date": "2026-10-17",
+ "updated": "2026-10-17T18:45:50+00:00",
+ "runs": 5,
+ "games": {
+  "849816": {
+   "first_pitch": "2026-10-18T00:00:00+00:00",
+   "cats": {
+    "TOP": {
+     "pid": 691406,
+     "name": "Junior Caminero",
+     "at": "2026-10-17T11:36:00+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 691406,
+       "name": "Junior Caminero",
+       "at": "2026-10-17T11:36:00+00:00"
+      }
+     ]
+    },
+    "HIT": {
+     "pid": 650490,
+     "name": "Yandy D\u00edaz",
+     "at": "2026-10-17T11:36:00+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 650490,
+       "name": "Yandy D\u00edaz",
+       "at": "2026-10-17T11:36:00+00:00"
+      }
+     ]
+    },
+    "HR": {
+     "pid": 666176,
+     "name": "Jo Adell",
+     "at": "2026-10-17T11:36:00+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 666176,
+       "name": "Jo Adell",
+       "at": "2026-10-17T11:36:00+00:00"
+      }
+     ]
+    },
+    "HRR": {
+     "pid": 680757,
+     "name": "Steven Kwan",
+     "at": "2026-10-17T11:36:00+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 680757,
+       "name": "Steven Kwan",
+       "at": "2026-10-17T11:36:00+00:00"
+      }
+     ]
+    },
+    "CONTACT": {
+     "pid": 677587,
+     "name": "Brayan Rocchio",
+     "at": "2026-10-17T11:36:00+00:00",
+     "locked": false,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 677587,
+       "name": "Brayan Rocchio",
+       "at": "2026-10-17T11:36:00+00:00"
+      }
+     ]
+    }
+   }
+  }
+ },
+ "rejected": [],
+ "gone_from_slate": [],
+ "tickets": {
+  "recommended_pairs|B|0": {
+   "section": "recommended_pairs",
+   "first_pitch": "2026-10-18T00:00:00+00:00",
+   "pids": [
+    691406,
+    672275
+   ],
+   "meta": {
+    "type": "STATCAST HR PAIRS",
+    "lane_key": "B",
+    "pair_key": "672275|691406",
+    "pair_score": 14.93,
+    "risk": "High",
+    "tags": [
+     "HRW",
+     "Recent HR"
+    ],
+    "reason": "EV 96.9+92.4 | L7 1HR+2HR"
+   },
+   "stubs": {
+    "691406": {
+     "player_id": 691406,
+     "name": "Junior Caminero",
+     "team": "TB",
+     "opponent": "CLE",
+     "game_pk": 849816,
+     "lineup_spot": 3
+    },
+    "672275": {
+     "player_id": 672275,
+     "name": "Patrick Bailey",
+     "team": "CLE",
+     "opponent": "TB",
+     "game_pk": 849816,
+     "lineup_spot": 8
+    }
+   },
+   "at": "2026-10-17T11:36:00+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      691406,
+      672275
+     ],
+     "at": "2026-10-17T11:36:00+00:00"
+    }
+   ]
+  },
+  "recommended_pairs|B|1": {
+   "section": "recommended_pairs",
+   "first_pitch": "2026-10-18T00:00:00+00:00",
+   "pids": [
+    676356,
+    681807
+   ],
+   "meta": {
+    "type": "STATCAST HR PAIRS",
+    "lane_key": "B",
+    "pair_key": "676356|681807",
+    "pair_score": 11.82,
+    "risk": "Medium",
+    "tags": [
+     "Recent HR"
+    ],
+    "reason": "L5 8H+6H hot | L7 2HR+1HR"
+   },
+   "stubs": {
+    "676356": {
+     "player_id": 676356,
+     "name": "Jonny DeLuca",
+     "team": "TB",
+     "opponent": "CLE",
+     "game_pk": 849816,
+     "lineup_spot": 5
+    },
+    "681807": {
+     "player_id": 681807,
+     "name": "David Fry",
+     "team": "CLE",
+     "opponent": "TB",
+     "game_pk": 849816,
+     "lineup_spot": 9
+    }
+   },
+   "at": "2026-10-17T11:36:00+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      676356,
+      681807
+     ],
+     "at": "2026-10-17T11:36:00+00:00"
+    }
+   ]
+  },
+  "recommended_pairs|D|0": {
+   "section": "recommended_pairs",
+   "first_pitch": "2026-10-18T00:00:00+00:00",
+   "pids": [
+    677587,
+    682657
+   ],
+   "meta": {
+    "type": "VARIANCE POWER PAIRS",
+    "lane_key": "D",
+    "pair_key": "677587|682657",
+    "pair_score": 11.91,
+    "risk": "Medium",
+    "tags": [
+     "HRW",
+     "Recent HR"
+    ],
+    "reason": "L7 2HR+1HR"
+   },
+   "stubs": {
+    "677587": {
+     "player_id": 677587,
+     "name": "Brayan Rocchio",
+     "team": "CLE",
+     "opponent": "TB",
+     "game_pk": 849816,
+     "lineup_spot": 6
+    },
+    "682657": {
+     "player_id": 682657,
+     "name": "Angel Mart\u00ednez",
+     "team": "CLE",
+     "opponent": "TB",
+     "game_pk": 849816,
+     "lineup_spot": 7
+    }
+   },
+   "at": "2026-10-17T11:36:00+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      677587,
+      682657
+     ],
+     "at": "2026-10-17T11:36:00+00:00"
+    }
+   ]
+  },
+  "pools_4man|Pool A \u2014 Strongest|0": {
+   "section": "pools_4man",
+   "first_pitch": "2026-10-18T00:00:00+00:00",
+   "pids": [
+    666018
+   ],
+   "meta": {
+    "name": "Pool A \u2014 Strongest",
+    "pool_score": 22.8,
+    "size": 1,
+    "risk": "Lower",
+    "tags": [
+     "Recent HR"
+    ],
+    "reason": "Pool A \u2014 Strongest build \u00b7 optimized for 2+ \u00b7 1/1 players filled"
+   },
+   "stubs": {
+    "666018": {
+     "player_id": 666018,
+     "name": "Jonathan Aranda",
+     "team": "TB",
+     "opponent": "CLE",
+     "game_pk": 849816,
+     "lineup_spot": 1
+    }
+   },
+   "at": "2026-10-17T11:36:00+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      666018
+     ],
+     "at": "2026-10-17T11:36:00+00:00"
+    }
+   ]
+  },
+  "pools_4man|Pool B \u2014 HRR+Power|0": {
+   "section": "pools_4man",
+   "first_pitch": "2026-10-18T00:00:00+00:00",
+   "pids": [
+    689414
+   ],
+   "meta": {
+    "name": "Pool B \u2014 HRR+Power",
+    "pool_score": 22.2,
+    "size": 1,
+    "risk": "Lower",
+    "tags": [],
+    "reason": "Pool B \u2014 HRR+Power build \u00b7 optimized for 2+ \u00b7 1/1 players filled"
+   },
+   "stubs": {
+    "689414": {
+     "player_id": 689414,
+     "name": "Liam Hicks",
+     "team": "TB",
+     "opponent": "CLE",
+     "game_pk": 849816,
+     "lineup_spot": 6
+    }
+   },
+   "at": "2026-10-17T11:36:00+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      689414
+     ],
+     "at": "2026-10-17T11:36:00+00:00"
+    }
+   ]
+  },
+  "pools_4man|Pool C \u2014 Balanced|0": {
+   "section": "pools_4man",
+   "first_pitch": "2026-10-18T00:00:00+00:00",
+   "pids": [
+    680700
+   ],
+   "meta": {
+    "name": "Pool C \u2014 Balanced",
+    "pool_score": 14.5,
+    "size": 1,
+    "risk": "Lower",
+    "tags": [],
+    "reason": "Pool C \u2014 Balanced build \u00b7 optimized for 2+ \u00b7 1/1 players filled"
+   },
+   "stubs": {
+    "680700": {
+     "player_id": 680700,
+     "name": "Richie Palacios",
+     "team": "TB",
+     "opponent": "CLE",
+     "game_pk": 849816,
+     "lineup_spot": 2
+    }
+   },
+   "at": "2026-10-17T11:36:00+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      680700
+     ],
+     "at": "2026-10-17T11:36:00+00:00"
+    }
+   ]
+  },
+  "pools_4man|Pool D \u2014 Variance|0": {
+   "section": "pools_4man",
+   "first_pitch": "2026-10-18T00:00:00+00:00",
+   "pids": [
+    666176
+   ],
+   "meta": {
+    "name": "Pool D \u2014 Variance",
+    "pool_score": 24.8,
+    "size": 1,
+    "risk": "Lower",
+    "tags": [
+     "Recent HR"
+    ],
+    "reason": "Pool D \u2014 Variance build \u00b7 optimized for 2+ \u00b7 1/1 players filled"
+   },
+   "stubs": {
+    "666176": {
+     "player_id": 666176,
+     "name": "Jo Adell",
+     "team": "CLE",
+     "opponent": "TB",
+     "game_pk": 849816,
+     "lineup_spot": 3
+    }
+   },
+   "at": "2026-10-17T11:36:00+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      666176
+     ],
+     "at": "2026-10-17T11:36:00+00:00"
+    }
+   ]
+  },
+  "pools_3man|Pool A \u2014 Strongest|0": {
+   "section": "pools_3man",
+   "first_pitch": "2026-10-18T00:00:00+00:00",
+   "pids": [
+    656775,
+    691406,
+    676356
+   ],
+   "meta": {
+    "name": "Pool A \u2014 Strongest",
+    "pool_score": 37.3,
+    "size": 3,
+    "risk": "Lower",
+    "tags": [
+     "Recent HR"
+    ],
+    "reason": "Pool A \u2014 Strongest build \u00b7 optimized for 2+ \u00b7 includes same-game legs \u00b7 3/3 players filled"
+   },
+   "stubs": {
+    "656775": {
+     "player_id": 656775,
+     "name": "Cedric Mullins",
+     "team": "TB",
+     "opponent": "CLE",
+     "game_pk": 849816,
+     "lineup_spot": 7
+    },
+    "691406": {
+     "player_id": 691406,
+     "name": "Junior Caminero",
+     "team": "TB",
+     "opponent": "CLE",
+     "game_pk": 849816,
+     "lineup_spot": 3
+    },
+    "676356": {
+     "player_id": 676356,
+     "name": "Jonny DeLuca",
+     "team": "TB",
+     "opponent": "CLE",
+     "game_pk": 849816,
+     "lineup_spot": 5
+    }
+   },
+   "at": "2026-10-17T11:36:00+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      656775,
+      691406,
+      676356
+     ],
+     "at": "2026-10-17T11:36:00+00:00"
+    }
+   ]
+  },
+  "pools_3man|Pool B \u2014 HRR+Var|0": {
+   "section": "pools_3man",
+   "first_pitch": "2026-10-18T00:00:00+00:00",
+   "pids": [
+    663993,
+    666176,
+    650490
+   ],
+   "meta": {
+    "name": "Pool B \u2014 HRR+Var",
+    "pool_score": 25.3,
+    "size": 3,
+    "risk": "Lower",
+    "tags": [
+     "Due",
+     "Recent HR"
+    ],
+    "reason": "Pool B \u2014 HRR+Var build \u00b7 optimized for 2+ \u00b7 includes same-game legs \u00b7 3/3 players filled"
+   },
+   "stubs": {
+    "663993": {
+     "player_id": 663993,
+     "name": "Nathaniel Lowe",
+     "team": "CLE",
+     "opponent": "TB",
+     "game_pk": 849816,
+     "lineup_spot": 4
+    },
+    "666176": {
+     "player_id": 666176,
+     "name": "Jo Adell",
+     "team": "CLE",
+     "opponent": "TB",
+     "game_pk": 849816,
+     "lineup_spot": 3
+    },
+    "650490": {
+     "player_id": 650490,
+     "name": "Yandy D\u00edaz",
+     "team": "TB",
+     "opponent": "CLE",
+     "game_pk": 849816,
+     "lineup_spot": 4
+    }
+   },
+   "at": "2026-10-17T11:36:00+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      663993,
+      666176,
+      650490
+     ],
+     "at": "2026-10-17T11:36:00+00:00"
+    }
+   ]
+  },
+  "pools_3man|Pool C \u2014 Balanced|0": {
+   "section": "pools_3man",
+   "first_pitch": "2026-10-18T00:00:00+00:00",
+   "pids": [
+    690984,
+    677587,
+    680700
+   ],
+   "meta": {
+    "name": "Pool C \u2014 Balanced",
+    "pool_score": 14.9,
+    "size": 3,
+    "risk": "Lower",
+    "tags": [
+     "HRW",
+     "Recent HR"
+    ],
+    "reason": "Pool C \u2014 Balanced build \u00b7 optimized for 2+ \u00b7 includes same-game legs \u00b7 3/3 players filled"
+   },
+   "stubs": {
+    "690984": {
+     "player_id": 690984,
+     "name": "Petey Halpin",
+     "team": "CLE",
+     "opponent": "TB",
+     "game_pk": 849816,
+     "lineup_spot": 2
+    },
+    "677587": {
+     "player_id": 677587,
+     "name": "Brayan Rocchio",
+     "team": "CLE",
+     "opponent": "TB",
+     "game_pk": 849816,
+     "lineup_spot": 6
+    },
+    "680700": {
+     "player_id": 680700,
+     "name": "Richie Palacios",
+     "team": "TB",
+     "opponent": "CLE",
+     "game_pk": 849816,
+     "lineup_spot": 2
+    }
+   },
+   "at": "2026-10-17T11:36:00+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      690984,
+      677587,
+      680700
+     ],
+     "at": "2026-10-17T11:36:00+00:00"
+    }
+   ]
+  },
+  "pools_3man|Pool D \u2014 Variance|0": {
+   "section": "pools_3man",
+   "first_pitch": "2026-10-18T00:00:00+00:00",
+   "pids": [
+    663743,
+    672275,
+    608070
+   ],
+   "meta": {
+    "name": "Pool D \u2014 Variance",
+    "pool_score": 13.6,
+    "size": 3,
+    "risk": "Lower",
+    "tags": [
+     "Recent HR",
+     "HRW"
+    ],
+    "reason": "Pool D \u2014 Variance build \u00b7 optimized for 2+ \u00b7 includes same-game legs \u00b7 3/3 players filled"
+   },
+   "stubs": {
+    "663743": {
+     "player_id": 663743,
+     "name": "Nick Fortes",
+     "team": "TB",
+     "opponent": "CLE",
+     "game_pk": 849816,
+     "lineup_spot": 9
+    },
+    "672275": {
+     "player_id": 672275,
+     "name": "Patrick Bailey",
+     "team": "CLE",
+     "opponent": "TB",
+     "game_pk": 849816,
+     "lineup_spot": 8
+    },
+    "608070": {
+     "player_id": 608070,
+     "name": "Jos\u00e9 Ram\u00edrez",
+     "team": "CLE",
+     "opponent": "TB",
+     "game_pk": 849816,
+     "lineup_spot": 1
+    }
+   },
+   "at": "2026-10-17T11:36:00+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      663743,
+      672275,
+      608070
+     ],
+     "at": "2026-10-17T11:36:00+00:00"
+    }
+   ]
+  },
+  "pools_6man_legacy|Pool A \u2014 Strongest|0": {
+   "section": "pools_6man_legacy",
+   "first_pitch": "2026-10-18T00:00:00+00:00",
+   "pids": [
+    656775,
+    691406,
+    676356,
+    666176,
+    650490,
+    677587
+   ],
+   "meta": {
+    "name": "Pool A \u2014 Strongest",
+    "pool_score": 29.6,
+    "size": 6,
+    "risk": "Lower",
+    "tags": [
+     "Recent HR",
+     "HRW"
+    ],
+    "reason": "Pool A \u2014 Strongest build \u00b7 optimized for 2+ \u00b7 includes same-game legs \u00b7 6/6 players filled",
+    "model_version": "pools_6man_legacy_v1"
+   },
+   "stubs": {
+    "656775": {
+     "player_id": 656775,
+     "name": "Cedric Mullins",
+     "team": "TB",
+     "opponent": "CLE",
+     "game_pk": 849816,
+     "lineup_spot": 7
+    },
+    "691406": {
+     "player_id": 691406,
+     "name": "Junior Caminero",
+     "team": "TB",
+     "opponent": "CLE",
+     "game_pk": 849816,
+     "lineup_spot": 3
+    },
+    "676356": {
+     "player_id": 676356,
+     "name": "Jonny DeLuca",
+     "team": "TB",
+     "opponent": "CLE",
+     "game_pk": 849816,
+     "lineup_spot": 5
+    },
+    "666176": {
+     "player_id": 666176,
+     "name": "Jo Adell",
+     "team": "CLE",
+     "opponent": "TB",
+     "game_pk": 849816,
+     "lineup_spot": 3
+    },
+    "650490": {
+     "player_id": 650490,
+     "name": "Yandy D\u00edaz",
+     "team": "TB",
+     "opponent": "CLE",
+     "game_pk": 849816,
+     "lineup_spot": 4
+    },
+    "677587": {
+     "player_id": 677587,
+     "name": "Brayan Rocchio",
+     "team": "CLE",
+     "opponent": "TB",
+     "game_pk": 849816,
+     "lineup_spot": 6
+    }
+   },
+   "at": "2026-10-17T11:36:00+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      656775,
+      691406,
+      676356,
+      666176,
+      650490,
+      677587
+     ],
+     "at": "2026-10-17T11:36:00+00:00"
+    }
+   ]
+  },
+  "pools_6man_legacy|Pool B \u2014 Balanced|0": {
+   "section": "pools_6man_legacy",
+   "first_pitch": "2026-10-18T00:00:00+00:00",
+   "pids": [
+    663993,
+    680700,
+    680757,
+    682657,
+    681807,
+    666018
+   ],
+   "meta": {
+    "name": "Pool B \u2014 Balanced",
+    "pool_score": 21.0,
+    "size": 6,
+    "risk": "Lower",
+    "tags": [
+     "Due",
+     "Recent HR"
+    ],
+    "reason": "Pool B \u2014 Balanced build \u00b7 optimized for 2+ \u00b7 includes same-game legs \u00b7 6/6 players filled",
+    "model_version": "pools_6man_legacy_v1"
+   },
+   "stubs": {
+    "663993": {
+     "player_id": 663993,
+     "name": "Nathaniel Lowe",
+     "team": "CLE",
+     "opponent": "TB",
+     "game_pk": 849816,
+     "lineup_spot": 4
+    },
+    "680700": {
+     "player_id": 680700,
+     "name": "Richie Palacios",
+     "team": "TB",
+     "opponent": "CLE",
+     "game_pk": 849816,
+     "lineup_spot": 2
+    },
+    "680757": {
+     "player_id": 680757,
+     "name": "Steven Kwan",
+     "team": "CLE",
+     "opponent": "TB",
+     "game_pk": 849816,
+     "lineup_spot": 5
+    },
+    "682657": {
+     "player_id": 682657,
+     "name": "Angel Mart\u00ednez",
+     "team": "CLE",
+     "opponent": "TB",
+     "game_pk": 849816,
+     "lineup_spot": 7
+    },
+    "681807": {
+     "player_id": 681807,
+     "name": "David Fry",
+     "team": "CLE",
+     "opponent": "TB",
+     "game_pk": 849816,
+     "lineup_spot": 9
+    },
+    "666018": {
+     "player_id": 666018,
+     "name": "Jonathan Aranda",
+     "team": "TB",
+     "opponent": "CLE",
+     "game_pk": 849816,
+     "lineup_spot": 1
+    }
+   },
+   "at": "2026-10-17T11:36:00+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      663993,
+      680700,
+      680757,
+      682657,
+      681807,
+      666018
+     ],
+     "at": "2026-10-17T11:36:00+00:00"
+    }
+   ]
+  },
+  "pools_6man_legacy|Pool C \u2014 Mid / Var|0": {
+   "section": "pools_6man_legacy",
+   "first_pitch": "2026-10-18T00:00:00+00:00",
+   "pids": [
+    690984,
+    672275,
+    608070,
+    663743,
+    689414,
+    802415
+   ],
+   "meta": {
+    "name": "Pool C \u2014 Mid / Var",
+    "pool_score": 12.4,
+    "size": 6,
+    "risk": "Lower",
+    "tags": [
+     "HRW",
+     "Recent HR"
+    ],
+    "reason": "Pool C \u2014 Mid / Var build \u00b7 optimized for 2+ \u00b7 includes same-game legs \u00b7 6/6 players filled",
+    "model_version": "pools_6man_legacy_v1"
+   },
+   "stubs": {
+    "690984": {
+     "player_id": 690984,
+     "name": "Petey Halpin",
+     "team": "CLE",
+     "opponent": "TB",
+     "game_pk": 849816,
+     "lineup_spot": 2
+    },
+    "672275": {
+     "player_id": 672275,
+     "name": "Patrick Bailey",
+     "team": "CLE",
+     "opponent": "TB",
+     "game_pk": 849816,
+     "lineup_spot": 8
+    },
+    "608070": {
+     "player_id": 608070,
+     "name": "Jos\u00e9 Ram\u00edrez",
+     "team": "CLE",
+     "opponent": "TB",
+     "game_pk": 849816,
+     "lineup_spot": 1
+    },
+    "663743": {
+     "player_id": 663743,
+     "name": "Nick Fortes",
+     "team": "TB",
+     "opponent": "CLE",
+     "game_pk": 849816,
+     "lineup_spot": 9
+    },
+    "689414": {
+     "player_id": 689414,
+     "name": "Liam Hicks",
+     "team": "TB",
+     "opponent": "CLE",
+     "game_pk": 849816,
+     "lineup_spot": 6
+    },
+    "802415": {
+     "player_id": 802415,
+     "name": "Chandler Simpson",
+     "team": "TB",
+     "opponent": "CLE",
+     "game_pk": 849816,
+     "lineup_spot": 8
+    }
+   },
+   "at": "2026-10-17T11:36:00+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      690984,
+      672275,
+      608070,
+      663743,
+      689414,
+      802415
+     ],
+     "at": "2026-10-17T11:36:00+00:00"
+    }
+   ]
+  },
+  "pools_3man_legacy|Pool A1|0": {
+   "section": "pools_3man_legacy",
+   "first_pitch": "2026-10-18T00:00:00+00:00",
+   "pids": [
+    656775,
+    691406,
+    676356
+   ],
+   "meta": {
+    "name": "Pool A1",
+    "pool_score": 37.3,
+    "size": 3,
+    "risk": "Lower",
+    "tags": [
+     "Recent HR"
+    ],
+    "reason": "Pool A1 build \u00b7 optimized for 2+ \u00b7 includes same-game legs \u00b7 3/3 players filled",
+    "model_version": "pools_6man_legacy_v1_half",
+    "parent": "Pool A \u2014 Strongest"
+   },
+   "stubs": {
+    "656775": {
+     "player_id": 656775,
+     "name": "Cedric Mullins",
+     "team": "TB",
+     "opponent": "CLE",
+     "game_pk": 849816,
+     "lineup_spot": 7
+    },
+    "691406": {
+     "player_id": 691406,
+     "name": "Junior Caminero",
+     "team": "TB",
+     "opponent": "CLE",
+     "game_pk": 849816,
+     "lineup_spot": 3
+    },
+    "676356": {
+     "player_id": 676356,
+     "name": "Jonny DeLuca",
+     "team": "TB",
+     "opponent": "CLE",
+     "game_pk": 849816,
+     "lineup_spot": 5
+    }
+   },
+   "at": "2026-10-17T11:36:00+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      656775,
+      691406,
+      676356
+     ],
+     "at": "2026-10-17T11:36:00+00:00"
+    }
+   ]
+  },
+  "pools_3man_legacy|Pool A2|0": {
+   "section": "pools_3man_legacy",
+   "first_pitch": "2026-10-18T00:00:00+00:00",
+   "pids": [
+    666176,
+    650490,
+    677587
+   ],
+   "meta": {
+    "name": "Pool A2",
+    "pool_score": 21.9,
+    "size": 3,
+    "risk": "Lower",
+    "tags": [
+     "Recent HR",
+     "HRW"
+    ],
+    "reason": "Pool A2 build \u00b7 optimized for 2+ \u00b7 includes same-game legs \u00b7 3/3 players filled",
+    "model_version": "pools_6man_legacy_v1_half",
+    "parent": "Pool A \u2014 Strongest"
+   },
+   "stubs": {
+    "666176": {
+     "player_id": 666176,
+     "name": "Jo Adell",
+     "team": "CLE",
+     "opponent": "TB",
+     "game_pk": 849816,
+     "lineup_spot": 3
+    },
+    "650490": {
+     "player_id": 650490,
+     "name": "Yandy D\u00edaz",
+     "team": "TB",
+     "opponent": "CLE",
+     "game_pk": 849816,
+     "lineup_spot": 4
+    },
+    "677587": {
+     "player_id": 677587,
+     "name": "Brayan Rocchio",
+     "team": "CLE",
+     "opponent": "TB",
+     "game_pk": 849816,
+     "lineup_spot": 6
+    }
+   },
+   "at": "2026-10-17T11:36:00+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      666176,
+      650490,
+      677587
+     ],
+     "at": "2026-10-17T11:36:00+00:00"
+    }
+   ]
+  },
+  "pools_3man_legacy|Pool B1|0": {
+   "section": "pools_3man_legacy",
+   "first_pitch": "2026-10-18T00:00:00+00:00",
+   "pids": [
+    663993,
+    680700,
+    680757
+   ],
+   "meta": {
+    "name": "Pool B1",
+    "pool_score": 14.5,
+    "size": 3,
+    "risk": "Lower",
+    "tags": [
+     "Due"
+    ],
+    "reason": "Pool B1 build \u00b7 optimized for 2+ \u00b7 includes same-game legs \u00b7 3/3 players filled",
+    "model_version": "pools_6man_legacy_v1_half",
+    "parent": "Pool B \u2014 Balanced"
+   },
+   "stubs": {
+    "663993": {
+     "player_id": 663993,
+     "name": "Nathaniel Lowe",
+     "team": "CLE",
+     "opponent": "TB",
+     "game_pk": 849816,
+     "lineup_spot": 4
+    },
+    "680700": {
+     "player_id": 680700,
+     "name": "Richie Palacios",
+     "team": "TB",
+     "opponent": "CLE",
+     "game_pk": 849816,
+     "lineup_spot": 2
+    },
+    "680757": {
+     "player_id": 680757,
+     "name": "Steven Kwan",
+     "team": "CLE",
+     "opponent": "TB",
+     "game_pk": 849816,
+     "lineup_spot": 5
+    }
+   },
+   "at": "2026-10-17T11:36:00+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      663993,
+      680700,
+      680757
+     ],
+     "at": "2026-10-17T11:36:00+00:00"
+    }
+   ]
+  },
+  "pools_3man_legacy|Pool B2|0": {
+   "section": "pools_3man_legacy",
+   "first_pitch": "2026-10-18T00:00:00+00:00",
+   "pids": [
+    682657,
+    681807,
+    666018
+   ],
+   "meta": {
+    "name": "Pool B2",
+    "pool_score": 27.4,
+    "size": 3,
+    "risk": "Lower",
+    "tags": [
+     "Recent HR"
+    ],
+    "reason": "Pool B2 build \u00b7 optimized for 2+ \u00b7 includes same-game legs \u00b7 3/3 players filled",
+    "model_version": "pools_6man_legacy_v1_half",
+    "parent": "Pool B \u2014 Balanced"
+   },
+   "stubs": {
+    "682657": {
+     "player_id": 682657,
+     "name": "Angel Mart\u00ednez",
+     "team": "CLE",
+     "opponent": "TB",
+     "game_pk": 849816,
+     "lineup_spot": 7
+    },
+    "681807": {
+     "player_id": 681807,
+     "name": "David Fry",
+     "team": "CLE",
+     "opponent": "TB",
+     "game_pk": 849816,
+     "lineup_spot": 9
+    },
+    "666018": {
+     "player_id": 666018,
+     "name": "Jonathan Aranda",
+     "team": "TB",
+     "opponent": "CLE",
+     "game_pk": 849816,
+     "lineup_spot": 1
+    }
+   },
+   "at": "2026-10-17T11:36:00+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      682657,
+      681807,
+      666018
+     ],
+     "at": "2026-10-17T11:36:00+00:00"
+    }
+   ]
+  },
+  "pools_3man_legacy|Pool C1|0": {
+   "section": "pools_3man_legacy",
+   "first_pitch": "2026-10-18T00:00:00+00:00",
+   "pids": [
+    690984,
+    672275,
+    608070
+   ],
+   "meta": {
+    "name": "Pool C1",
+    "pool_score": 14.5,
+    "size": 3,
+    "risk": "Lower",
+    "tags": [
+     "HRW",
+     "Recent HR"
+    ],
+    "reason": "Pool C1 build \u00b7 optimized for 2+ \u00b7 includes same-game legs \u00b7 3/3 players filled",
+    "model_version": "pools_6man_legacy_v1_half",
+    "parent": "Pool C \u2014 Mid / Var"
+   },
+   "stubs": {
+    "690984": {
+     "player_id": 690984,
+     "name": "Petey Halpin",
+     "team": "CLE",
+     "opponent": "TB",
+     "game_pk": 849816,
+     "lineup_spot": 2
+    },
+    "672275": {
+     "player_id": 672275,
+     "name": "Patrick Bailey",
+     "team": "CLE",
+     "opponent": "TB",
+     "game_pk": 849816,
+     "lineup_spot": 8
+    },
+    "608070": {
+     "player_id": 608070,
+     "name": "Jos\u00e9 Ram\u00edrez",
+     "team": "CLE",
+     "opponent": "TB",
+     "game_pk": 849816,
+     "lineup_spot": 1
+    }
+   },
+   "at": "2026-10-17T11:36:00+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      690984,
+      672275,
+      608070
+     ],
+     "at": "2026-10-17T11:36:00+00:00"
+    }
+   ]
+  },
+  "pools_3man_legacy|Pool C2|0": {
+   "section": "pools_3man_legacy",
+   "first_pitch": "2026-10-18T00:00:00+00:00",
+   "pids": [
+    663743,
+    689414,
+    802415
+   ],
+   "meta": {
+    "name": "Pool C2",
+    "pool_score": 10.2,
+    "size": 3,
+    "risk": "Lower",
+    "tags": [
+     "Recent HR"
+    ],
+    "reason": "Pool C2 build \u00b7 optimized for 2+ \u00b7 includes same-game legs \u00b7 3/3 players filled",
+    "model_version": "pools_6man_legacy_v1_half",
+    "parent": "Pool C \u2014 Mid / Var"
+   },
+   "stubs": {
+    "663743": {
+     "player_id": 663743,
+     "name": "Nick Fortes",
+     "team": "TB",
+     "opponent": "CLE",
+     "game_pk": 849816,
+     "lineup_spot": 9
+    },
+    "689414": {
+     "player_id": 689414,
+     "name": "Liam Hicks",
+     "team": "TB",
+     "opponent": "CLE",
+     "game_pk": 849816,
+     "lineup_spot": 6
+    },
+    "802415": {
+     "player_id": 802415,
+     "name": "Chandler Simpson",
+     "team": "TB",
+     "opponent": "CLE",
+     "game_pk": 849816,
+     "lineup_spot": 8
+    }
+   },
+   "at": "2026-10-17T11:36:00+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      663743,
+      689414,
+      802415
+     ],
+     "at": "2026-10-17T11:36:00+00:00"
+    }
+   ]
+  }
+ },
+ "prediction_of_record": {},
+ "rule": "Before a game's first pitch a designation may change and every change is kept in history[]. At first pitch it freezes: the published sheet is rewritten to match the lock and any later change is recorded in rejected[] instead of being applied. locked_late marks games first seen after they had already started. Pools and pairs follow the same rule keyed on their slot (label / lane_key), freezing when their EARLIEST leg starts; a locked ticket is never re-rostered when a leg scratches \u2014 that leg voids, which is what a real ticket does. prediction_of_record locks, per game_pk, the run_id standing at that game's first pitch -- the one official run for every player in that game, not just the picks; a player who joins the slate after that lock has no row in it, which is honest, not a bug."
+}

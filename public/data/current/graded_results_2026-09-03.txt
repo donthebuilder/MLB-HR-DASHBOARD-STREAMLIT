@@ -1,0 +1,143 @@
+RESULTS TRACKER - 2026-09-03
+------------------------------------------
+BETTABLE RESULTS
+Top 15 HR: 2/8 (25.0%)
+HR Picks: 1/7 (14.3%)
+Top Picks: 3/7 (42.9%)
+
+FULL SHEET BASE HIT PERFORMANCE
+Base Hit Accuracy: 46.5%
+
+HR CAPTURE (BETTABLE)
+Total Slate HRs: 16
+Caught in Top 15: 2
+Caught in HR Picks: 1
+Top 15 Capture Rate: 12.5%
+HR Pick Capture Rate: 6.2%
+
+MODEL VISION (Top 40)
+Model Caught HRs: 4 / 16
+Vision Rate: 25.0%
+
+UNIQUE PLAYER HR ACCURACY
+Unique Players Tracked: 30
+Players Who Homered: 4
+Unique HR Accuracy: 13.3%
+
+HR CATEGORY BREAKDOWN
+------------------------------------------
+🏆 TOP 15 BOARD → 2 HR
+🔥 TOP PICKS → 3 HR
+🧨 HR PICKS → 1 HR
+🏁 HRR PICKS → 0 HR
+💠 HIT PICKS → 0 HR
+⚾ CONTACT PICKS → 3 HR
+Best HR-producing category: 🔥 TOP PICKS
+
+LONGEST HR (BOARD)
+------------------------------------------
+- Carter Jensen — 440 ft · 108.4 mph · 28.0°
+- Pete Crow-Armstrong — 413 ft · 104.3 mph · 27.0°
+- Heriberto Hernández — 389 ft · 96.6 mph · 32.0°
+- Roman Anthony — 370 ft · 100.9 mph · 26.0°
+Longest on the board: Carter Jensen (440 ft)
+
+
+HR RESULTS BY PLAYER
+------------------------------------------
+- Heriberto Hernández — 🏆#7 + 🧨 + ⭐
+- Pete Crow-Armstrong — 🏆#1 + 🔥 + ⚾
+- Carter Jensen — 🔥 + ⚾
+- Roman Anthony — 🔥 + ⚾
+
+MISSED HRs (NOT IN MODEL SHEET)
+------------------------------------------
+- Donovan Walton (ATH) — not in model sheet / lineup pool
+
+POOL PERFORMANCE
+------------------------------------------
+4-MAN Pool A — Strongest → 0/4 HR (none)
+4-MAN Pool B — HRR+Power → 0/4 HR (none)
+4-MAN Pool C — Balanced → 0/4 HR (none)
+4-MAN Pool D — Variance → 1/4 HR (Pete Alonso)
+3-MAN Pool A — Strongest → 0/3 HR (none)
+3-MAN Pool B — HRR+Var → 0/3 HR (none)
+3-MAN Pool C — Balanced → 0/3 HR (none)
+3-MAN Pool D — Variance → 2/3 HR (Christian Encarnacion-Strand, Zack Gelof)
+
+PAIR PERFORMANCE
+------------------------------------------
+Pair 1 → 1/2 HR (Pete Crow-Armstrong) | Pete Crow-Armstrong + Yordan Alvarez
+Pair 2 → 0/2 HR (none) | Rafael Devers + Joshua Báez
+Pair 3 → 0/2 HR (none) | Junior Caminero + Brandon Lowe
+Pair 4 → 0/2 HR (none) | Jordan Walker + Dominic Canzone
+Pair 5 → 0/2 HR (none) | Dominic Canzone + Joc Pederson
+Pair 6 → 0/2 HR (none) | Joc Pederson + Coby Mayo
+Pair 7 → 0/2 HR (none) | Kyle Stowers + Lazaro Montes
+Pair 8 → 0/2 HR (none) | Coby Mayo + Kyle Stowers
+Pair 9 → 0/2 HR (none) | Justin Foscue + Coby Mayo
+Pair 10 → 0/2 HR (none) | Seiya Suzuki + Munetaka Murakami
+
+PLAYER TYPE PERFORMANCE
+------------------------------------------
+🏆 TOP 15 BOARD (8)
+HR: 25.0% | 1+ Hit: 37.5% | XBH: 37.5% | 2+ TB: 37.5% | 2+ HRR: 25.0% | 3+ HRR: 25.0%
+
+🔥 TOP PICKS (7)
+HR: 42.9% | 1+ Hit: 57.1% | XBH: 42.9% | 2+ TB: 42.9% | 2+ HRR: 42.9% | 3+ HRR: 42.9%
+
+🧨 HR PICKS (7)
+HR: 14.3% | 1+ Hit: 42.9% | XBH: 28.6% | 2+ TB: 28.6% | 2+ HRR: 42.9% | 3+ HRR: 28.6%
+
+🏁 HRR PICKS (7)
+HR: 0.0% | 1+ Hit: 42.9% | XBH: 0.0% | 2+ TB: 28.6% | 2+ HRR: 57.1% | 3+ HRR: 0.0%
+
+💠 HIT PICKS (7)
+HR: 0.0% | 1+ Hit: 28.6% | XBH: 14.3% | 2+ TB: 14.3% | 2+ HRR: 0.0% | 3+ HRR: 0.0%
+
+⚾ CONTACT PICKS (7)
+HR: 42.9% | 1+ Hit: 71.4% | XBH: 42.9% | 2+ TB: 57.1% | 2+ HRR: 57.1% | 3+ HRR: 42.9%
+
+
+DESIGNED OUTCOME (did the pick do its job)
+------------------------------------------
+🏆 TOP 15 BOARD (8) -> 2/8 (25.0%)  ·  needs: HR
+🔥 TOP PICKS (7) -> 3/7 (42.9%)  ·  needs: most productive of our picks in his game (HRR or TB)
+🧨 HR PICKS (7) -> 1/7 (14.3%)  ·  needs: HR
+🏁 HRR PICKS (7) -> 4/7 (57.1%)  ·  needs: 2+ hits+runs+RBI
+💠 HIT PICKS (7) -> 2/7 (28.6%)  ·  needs: 1+ hit
+⚾ CONTACT PICKS (7) -> 4/7 (57.1%)  ·  needs: 2+ TB or XBH
+ALL PICKS -> 16/43 (37.2%)
+
+HIT RESULTS BY CATEGORY
+------------------------------------------
+
+🔥 TOP PICKS (1+ Hit)
+- Carter Jensen — 3H 🔥
+- Nathaniel Lowe — 1H
+- Pete Crow-Armstrong — 1H
+- Roman Anthony — 1H
+
+🧨 HR PICKS (1+ Hit)
+- Nathan Lukes — 2H ⭐
+- Gunnar Henderson — 1H
+- Heriberto Hernández — 1H
+
+🏁 HRR PICKS (1+ Hit)
+- Miguel Vargas — 2H ⭐
+- Yandy Díaz — 2H ⭐
+- Blaze Alexander — 1H
+
+💠 HIT PICKS (1+ Hit)
+- Chase DeLauter — 1H
+- Javier Sanoja — 1H
+
+⚾ CONTACT PICKS (1+ Hit)
+- Carter Jensen — 3H 🔥
+- Yandy Díaz — 2H ⭐
+- José Ramírez — 1H
+- Pete Crow-Armstrong — 1H
+- Roman Anthony — 1H
+
+MODEL DIAGNOSTIC (LOW PRIORITY)
+Full Sheet HR Coverage: 15 / 16 (93.8%)

@@ -1,0 +1,137 @@
+RESULTS TRACKER - 2026-08-27
+------------------------------------------
+BETTABLE RESULTS
+Top 15 HR: 2/15 (13.3%)
+HR Picks: 0/7 (0.0%)
+Top Picks: 0/7 (0.0%)
+
+FULL SHEET BASE HIT PERFORMANCE
+Base Hit Accuracy: 46.0%
+
+HR CAPTURE (BETTABLE)
+Total Slate HRs: 16
+Caught in Top 15: 2
+Caught in HR Picks: 0
+Top 15 Capture Rate: 12.5%
+HR Pick Capture Rate: 0.0%
+
+MODEL VISION (Top 40)
+Model Caught HRs: 4 / 16
+Vision Rate: 25.0%
+
+UNIQUE PLAYER HR ACCURACY
+Unique Players Tracked: 35
+Players Who Homered: 4
+Unique HR Accuracy: 11.4%
+
+HR CATEGORY BREAKDOWN
+------------------------------------------
+🏆 TOP 15 BOARD → 2 HR
+🔥 TOP PICKS → 0 HR
+🧨 HR PICKS → 0 HR
+🏁 HRR PICKS → 1 HR
+💠 HIT PICKS → 1 HR
+⚾ CONTACT PICKS → 2 HR
+Best HR-producing category: 🏆 TOP 15 BOARD
+
+LONGEST HR (BOARD)
+------------------------------------------
+- Carter Jensen — 421 ft · 107.5 mph · 34.0°
+- Drake Baldwin — 402 ft · 106.2 mph · 27.0°
+- Daylen Lile — 399 ft · 104.5 mph · 36.0°
+- Vinnie Pasquantino — 370 ft · 95.6 mph · 36.0°
+Longest on the board: Carter Jensen (421 ft)
+
+
+HR RESULTS BY PLAYER
+------------------------------------------
+- Carter Jensen — 🏆#9 + ⭐
+- Daylen Lile — 🏆#5 + 💠 + ⭐
+- Vinnie Pasquantino — 🏁 + ⚾ + ⭐
+- Drake Baldwin — ⚾
+
+MISSED HRs (NOT IN MODEL SHEET)
+------------------------------------------
+- Blaze Jordan (STL) — not in model sheet / lineup pool
+
+POOL PERFORMANCE
+------------------------------------------
+4-MAN HR POOL A → 1/4 HR (Carter Jensen)
+4-MAN HR POOL B → 2/4 HR (Drake Baldwin, Jackson Chourio)
+4-MAN HR POOL C → 1/4 HR (Keibert Ruiz)
+4-MAN HR POOL D → 0/4 HR (none)
+3-MAN HR POOL A → 1/3 HR (Drew Gilbert)
+3-MAN HR POOL B → 0/3 HR (none)
+3-MAN HR POOL C → 0/3 HR (none)
+3-MAN HR POOL D → 1/3 HR (Gabriel Moreno)
+
+PAIR PERFORMANCE
+------------------------------------------
+Pair 1 → 0/2 HR (none) | Rafael Devers + Luis García Jr.
+Pair 2 → 1/2 HR (Daylen Lile) | Pete Alonso + Daylen Lile
+Pair 3 → 0/2 HR (none) | Hunter Goodman + Shay Whitcomb
+Pair 4 → 0/2 HR (none) | Jonah Cox + Ben Rice
+
+PLAYER TYPE PERFORMANCE
+------------------------------------------
+🏆 TOP 15 BOARD (15)
+HR: 13.3% | 1+ Hit: 40.0% | XBH: 20.0% | 2+ TB: 40.0% | 2+ HRR: 40.0% | 3+ HRR: 33.3%
+
+🔥 TOP PICKS (7)
+HR: 0.0% | 1+ Hit: 14.3% | XBH: 0.0% | 2+ TB: 14.3% | 2+ HRR: 14.3% | 3+ HRR: 14.3%
+
+🧨 HR PICKS (7)
+HR: 0.0% | 1+ Hit: 71.4% | XBH: 28.6% | 2+ TB: 42.9% | 2+ HRR: 57.1% | 3+ HRR: 14.3%
+
+🏁 HRR PICKS (7)
+HR: 14.3% | 1+ Hit: 57.1% | XBH: 28.6% | 2+ TB: 28.6% | 2+ HRR: 57.1% | 3+ HRR: 28.6%
+
+💠 HIT PICKS (7)
+HR: 14.3% | 1+ Hit: 57.1% | XBH: 28.6% | 2+ TB: 57.1% | 2+ HRR: 57.1% | 3+ HRR: 42.9%
+
+⚾ CONTACT PICKS (7)
+HR: 28.6% | 1+ Hit: 42.9% | XBH: 28.6% | 2+ TB: 42.9% | 2+ HRR: 42.9% | 3+ HRR: 42.9%
+
+
+DESIGNED OUTCOME (did the pick do its job)
+------------------------------------------
+🏆 TOP 15 BOARD (15) -> 2/15 (13.3%)  ·  needs: HR
+🔥 TOP PICKS (7) -> 1/7 (14.3%)  ·  needs: most productive of our picks in his game (HRR or TB)
+🧨 HR PICKS (7) -> 0/7 (0.0%)  ·  needs: HR
+🏁 HRR PICKS (7) -> 4/7 (57.1%)  ·  needs: 2+ hits+runs+RBI
+💠 HIT PICKS (7) -> 4/7 (57.1%)  ·  needs: 1+ hit
+⚾ CONTACT PICKS (7) -> 3/7 (42.9%)  ·  needs: 2+ TB or XBH
+ALL PICKS -> 14/50 (28.0%)
+
+HIT RESULTS BY CATEGORY
+------------------------------------------
+
+🔥 TOP PICKS (1+ Hit)
+- Rafael Devers — 2H ⭐
+
+🧨 HR PICKS (1+ Hit)
+- Ben Rice — 2H ⭐
+- Jordan Walker — 2H ⭐
+- CJ Abrams — 1H
+- Kazuma Okamoto — 1H
+- Luis Robert Jr. — 1H
+
+🏁 HRR PICKS (1+ Hit)
+- Christian Encarnacion-Strand — 2H ⭐
+- Vinnie Pasquantino — 2H ⭐
+- Luis Lara — 1H
+- Turner Hill — 1H
+
+💠 HIT PICKS (1+ Hit)
+- Daylen Lile — 3H 🔥
+- Alec Burleson — 2H ⭐
+- Bobby Witt Jr. — 2H ⭐
+- Geraldo Perdomo — 2H ⭐
+
+⚾ CONTACT PICKS (1+ Hit)
+- Rafael Devers — 2H ⭐
+- Vinnie Pasquantino — 2H ⭐
+- Drake Baldwin — 1H
+
+MODEL DIAGNOSTIC (LOW PRIORITY)
+Full Sheet HR Coverage: 15 / 16 (93.8%)

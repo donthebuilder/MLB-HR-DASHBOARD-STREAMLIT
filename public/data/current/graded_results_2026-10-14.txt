@@ -1,0 +1,126 @@
+RESULTS TRACKER - 2026-10-14
+------------------------------------------
+BETTABLE RESULTS
+Top 15 HR: 2/15 (13.3%)
+HR Picks: 0/1 (0.0%)
+Top Picks: 1/1 (100.0%)
+
+FULL SHEET BASE HIT PERFORMANCE
+Base Hit Accuracy: 65.0%
+
+HR CAPTURE (BETTABLE)
+Total Slate HRs: 3
+Caught in Top 15: 2
+Caught in HR Picks: 0
+Top 15 Capture Rate: 66.7%
+HR Pick Capture Rate: 0.0%
+
+MODEL VISION (Top 40)
+Model Caught HRs: 2 / 3
+Vision Rate: 66.7%
+
+UNIQUE PLAYER HR ACCURACY
+Unique Players Tracked: 16
+Players Who Homered: 2
+Unique HR Accuracy: 12.5%
+
+HR CATEGORY BREAKDOWN
+------------------------------------------
+🏆 TOP 15 BOARD → 2 HR
+🔥 TOP PICKS → 1 HR
+🧨 HR PICKS → 0 HR
+🏁 HRR PICKS → 0 HR
+💠 HIT PICKS → 0 HR
+⚾ CONTACT PICKS → 0 HR
+Best HR-producing category: 🏆 TOP 15 BOARD
+
+LONGEST HR (BOARD)
+------------------------------------------
+- Jake Bauers — 412 ft · 109.4 mph · 34.0°
+- Jackson Chourio — 391 ft · 106.1 mph · 22.0°
+Longest on the board: Jake Bauers (412 ft)
+
+
+HR RESULTS BY PLAYER
+------------------------------------------
+- Jackson Chourio — 🏆#5 + 🔥
+- Jake Bauers — 🏆#10
+
+POOL PERFORMANCE
+------------------------------------------
+4-MAN Pool A — Strongest → 0/1 HR (none)
+4-MAN Pool B — HRR+Power → 1/1 HR (Garrett Mitchell)
+4-MAN Pool C — Balanced → 0/1 HR (none)
+4-MAN Pool D — Variance → 0/1 HR (none)
+3-MAN Pool A — Strongest → 1/3 HR (Jackson Chourio)
+3-MAN Pool B — HRR+Var → 1/3 HR (Jake Bauers)
+3-MAN Pool C — Balanced → 0/3 HR (none)
+3-MAN Pool D — Variance → 0/3 HR (none)
+SIX-MAN LEGACY Pool A — Strongest → 1/6 HR (Jackson Chourio)
+SIX-MAN LEGACY Pool B — Balanced → 1/6 HR (Jake Bauers)
+SIX-MAN LEGACY Pool C — Mid / Var → 1/6 HR (Garrett Mitchell)
+OLD-RECIPE 3-MAN Pool A1 → 1/3 HR (Jackson Chourio)
+OLD-RECIPE 3-MAN Pool A2 → 0/3 HR (none)
+OLD-RECIPE 3-MAN Pool B1 → 1/3 HR (Jake Bauers)
+OLD-RECIPE 3-MAN Pool B2 → 0/3 HR (none)
+OLD-RECIPE 3-MAN Pool C1 → 0/3 HR (none)
+OLD-RECIPE 3-MAN Pool C2 → 1/3 HR (Garrett Mitchell)
+
+PAIR PERFORMANCE
+------------------------------------------
+Pair 1 → 1/2 HR (Jackson Chourio) | Andy Pages + Jackson Chourio
+Pair 2 → 0/2 HR (none) | Will Smith + Max Muncy
+Pair 3 → 0/2 HR (none) | Freddie Freeman + Enrique Hernández
+
+PLAYER TYPE PERFORMANCE
+------------------------------------------
+🏆 TOP 15 BOARD (15)
+HR: 13.3% | 1+ Hit: 60.0% | XBH: 20.0% | 2+ TB: 20.0% | 2+ HRR: 40.0% | 3+ HRR: 20.0%
+
+🔥 TOP PICKS (1)
+HR: 100.0% | 1+ Hit: 100.0% | XBH: 100.0% | 2+ TB: 100.0% | 2+ HRR: 100.0% | 3+ HRR: 100.0%
+
+🧨 HR PICKS (1)
+HR: 0.0% | 1+ Hit: 100.0% | XBH: 0.0% | 2+ TB: 0.0% | 2+ HRR: 0.0% | 3+ HRR: 0.0%
+
+🏁 HRR PICKS (1)
+HR: 0.0% | 1+ Hit: 100.0% | XBH: 0.0% | 2+ TB: 0.0% | 2+ HRR: 100.0% | 3+ HRR: 0.0%
+
+💠 HIT PICKS (1)
+HR: 0.0% | 1+ Hit: 0.0% | XBH: 0.0% | 2+ TB: 0.0% | 2+ HRR: 0.0% | 3+ HRR: 0.0%
+
+⚾ CONTACT PICKS (1)
+HR: 0.0% | 1+ Hit: 100.0% | XBH: 0.0% | 2+ TB: 0.0% | 2+ HRR: 100.0% | 3+ HRR: 0.0%
+
+
+DESIGNED OUTCOME (did the pick do its job)
+------------------------------------------
+🏆 TOP 15 BOARD (15) -> 2/15 (13.3%)  ·  needs: HR
+🔥 TOP PICKS (1) -> 1/1 (100.0%)  ·  needs: most productive of our picks in his game (HRR or TB)
+🧨 HR PICKS (1) -> 0/1 (0.0%)  ·  needs: HR
+🏁 HRR PICKS (1) -> 1/1 (100.0%)  ·  needs: 2+ hits+runs+RBI
+💠 HIT PICKS (1) -> 0/1 (0.0%)  ·  needs: 1+ hit
+⚾ CONTACT PICKS (1) -> 0/1 (0.0%)  ·  needs: 2+ TB or XBH
+ALL PICKS -> 4/20 (20.0%)
+
+HIT RESULTS BY CATEGORY
+------------------------------------------
+
+🔥 TOP PICKS (1+ Hit)
+- Jackson Chourio — 1H
+
+🧨 HR PICKS (1+ Hit)
+- Shohei Ohtani — 1H
+
+🏁 HRR PICKS (1+ Hit)
+- Brice Turang — 1H
+
+💠 HIT PICKS (1+ Hit)
+- none
+
+⚾ CONTACT PICKS (1+ Hit)
+- Brice Turang — 1H
+
+MODEL DIAGNOSTIC (LOW PRIORITY)
+Full Sheet HR Coverage: 3 / 3 (100.0%)
+Pregame Pool HR Coverage: 3 / 3 (100.0%) over 1 locked games; 0 HR by late adds

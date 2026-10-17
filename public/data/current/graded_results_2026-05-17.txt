@@ -1,0 +1,86 @@
+RESULTS TRACKER — 2026-05-17
+------------------------------------------
+HR Picks: 15 | HR Accuracy: 13.3%
+Base Hit Picks: 60 | Base Hit Accuracy: 71.7%
+HRR Picks: 30 | HRR 2+ Accuracy: 50.0%
+HRR Picks: 30 | HRR 3+ Accuracy: 40.0%
+
+HR PICKS THAT HOMERED
+- Bryce Harper (PHI) | HR Score 59.0
+- Salvador Perez (KC) | HR Score 59.56
+
+TRACKED PICKS THAT GOT A BASE HIT
+- Junior Caminero (TB) | TOP | 1 H
+- Xavier Edwards (MIA) | HR | 2 H
+- Yandy Díaz (TB) | HIT | 1 H
+- Jonny DeLuca (TB) | CONTACT | 2 H
+- Daylen Lile (WSH) | TOP | 1 H
+- Keibert Ruiz (WSH) | HR | 1 H
+- Samuel Basallo (BAL) | HIT | 1 H
+- CJ Abrams (WSH) | HIT | 1 H
+- Luis García Jr. (WSH) | HRR | 2 H
+- Brady House (WSH) | HRR | 1 H
+- James Wood (WSH) | CONTACT | 2 H
+- Bryce Harper (PHI) | HR | 1 H
+- Nick Gonzales (PIT) | HIT | 1 H
+- Brandon Marsh (PHI) | HIT | 1 H
+- Brandon Lowe (PIT) | HRR | 1 H
+- Spencer Horwitz (PIT) | HRR | 1 H
+- Dominic Smith (ATL) | HIT | 1 H
+- Mike Yastrzemski (ATL) | HRR | 2 H
+- Austin Riley (ATL) | HRR | 2 H
+- Ceddanne Rafaela (BOS) | CONTACT | 1 H
+- Spencer Steer (CIN) | TOP | 2 H
+- Matt McLain (CIN) | HR | 1 H
+- Elly De La Cruz (CIN) | HIT | 2 H
+- Brayan Rocchio (CLE) | HIT | 2 H
+- Angel Martínez (CLE) | HRR | 1 H
+- José Ramírez (CLE) | HRR | 1 H
+- Kyle Manzardo (CLE) | CONTACT | 2 H
+- Daulton Varsho (TOR) | TOP | 2 H
+- Vladimir Guerrero Jr. (TOR) | HIT | 2 H
+- Dillon Dingler (DET) | HRR | 2 H
+- Juan Soto (NYM) | TOP | 1 H
+- Marcus Semien (NYM) | HR | 2 H
+- Carson Benge (NYM) | HIT | 1 H
+- Mark Vientos (NYM) | HIT | 2 H
+- Cody Bellinger (NYY) | HRR | 1 H
+- Jazz Chisholm Jr. (NYY) | HRR | 2 H
+- Brett Baty (NYM) | CONTACT | 1 H
+- Jake Burger (TEX) | TOP | 2 H
+- Ezequiel Duran (TEX) | HIT | 1 H
+- Brice Matthews (HOU) | HRR | 1 H
+- Miguel Vargas (CWS) | TOP | 1 H
+- Colson Montgomery (CWS) | HR | 1 H
+- Alex Bregman (CHC) | HIT | 2 H
+- Munetaka Murakami (CWS) | HIT | 1 H
+- Andrew Benintendi (CWS) | HRR | 3 H
+- Michael Busch (CHC) | CONTACT | 1 H
+- Ryan Jeffers (MIN) | TOP | 2 H
+- Kody Clemens (MIN) | HR | 2 H
+- William Contreras (MIL) | HIT | 2 H
+- Salvador Perez (KC) | HR | 2 H
+- Alec Burleson (STL) | HIT | 1 H
+- Iván Herrera (STL) | HRR | 1 H
+- Maikel Garcia (KC) | HRR | 1 H
+- Nolan Gorman (STL) | CONTACT | 1 H
+- Corbin Carroll (ARI) | TOP | 2 H
+- Ildemaro Vargas (ARI) | HIT | 1 H
+- Nolan Arenado (ARI) | HIT | 1 H
+- TJ Rumfield (COL) | HRR | 1 H
+- Geraldo Perdomo (ARI) | HRR | 2 H
+- Troy Johnston (COL) | CONTACT | 2 H
+- Casey Schmitt (SF) | HR | 2 H
+- Luis Arraez (SF) | HIT | 3 H
+- Carlos Cortes (ATH) | HIT | 2 H
+- Rafael Devers (SF) | HRR | 1 H
+- Willy Adames (SF) | HRR | 1 H
+- Zack Gelof (ATH) | CONTACT | 1 H
+- Teoscar Hernández (LAD) | TOP | 1 H
+- Shohei Ohtani (LAD) | HIT | 3 H
+- Kyle Tucker (LAD) | HIT | 3 H
+- Andy Pages (LAD) | HRR | 1 H
+- Gavin Sheets (SD) | TOP | 3 H
+- Manny Machado (SD) | HR | 1 H
+- Luke Raley (SEA) | HRR | 1 H
+- Miguel Andujar (SD) | CONTACT | 1 H
