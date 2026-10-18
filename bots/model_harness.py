@@ -107,12 +107,20 @@ def evaluate(rows: list[dict], scores: list[str], production: str, baseline: str
     # the games every score can pick in (so every comparison is on identical games)
     common = set(games)
     picks = {k: _picks_by_game(rows, k) for k in scores + [baseline]}
+    # a CANDIDATE with no rows at all yet (a shadow that has not run: e.g. the NHL composite before its first night) must not
+    # empty the common set and blank every comparison: it is reported as 'no rows yet' and left out of the intersection
+    empty = {k for k in picks if not picks[k] and k not in (production, baseline)}
     for k in picks:
-        common &= set(picks[k])
+        if k not in empty:
+            common &= set(picks[k])
     games_common = sorted(common)
 
     table = []
     for k in scores + ([baseline] if baseline not in scores else []):
+        if k in empty:
+            table.append({"score": k, "role": "candidate", "best_in_game": {"hit": 0, "n": 0, "pct": None, "ci": (0.0, 0.0)},
+                          "top_of_night": {"hit": 0, "n": 0, "pct": None, "ci": (0.0, 0.0)}, "verdict": "no rows yet"})
+            continue
         pg = picks[k]
         pg_hits = [pg[g]["y"] for g in games_common]
         top = _top_by_night(rows, k, top_n)
@@ -282,7 +290,7 @@ NHL_GOAL = {
     "market": "nhl_goal", "label": "NHL goal (1+ goal)", "production": "score", "baseline": "shots_pg",
     # score = the LAMP score in use; the three percentiles are its own legs, each graded alone; shots_pg (raw shots per
     # game) is the plain baseline every skater's score has to beat.
-    "scores": ["score", "pct_shots", "pct_goals", "pct_toi", "goals_pg", "shots_pg"],
+    "scores": ["score", "comp", "comp_v1", "pct_shots", "pct_goals", "pct_toi", "goals_pg", "shots_pg"],
 }
 
 
@@ -298,7 +306,7 @@ def nhl_goal_rows(data_dir: Path, market: dict = NHL_GOAL) -> list[dict]:
         rows.append({
             "night": str(r["game_date"]), "game": str(r["game_id"]), "id": str(r["player_id"]),
             "y": 1 if r["hit"] else 0, "version": r.get("model_version"),
-            "s": {"score": r.get("score"), "pct_shots": pct.get("shotsPg"), "pct_goals": pct.get("goalsPg"), "pct_toi": pct.get("toi"),
+            "s": {"score": r.get("score"), "comp": r.get("comp"), "comp_v1": r.get("comp_v1"), "pct_shots": pct.get("shotsPg"), "pct_goals": pct.get("goalsPg"), "pct_toi": pct.get("toi"),
                   "goals_pg": legs.get("goalsPg"), "shots_pg": legs.get("shotsPg")},
         })
     return rows

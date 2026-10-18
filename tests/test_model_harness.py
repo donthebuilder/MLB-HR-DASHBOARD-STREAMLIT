@@ -91,3 +91,28 @@ def test_nhl_adapter_reads_graded_dressed_rows_only(tmp_path):
 def test_build_survives_a_market_with_no_rows(tmp_path):
     out = _mh.build(_Path(tmp_path))
     assert out["boards"]["nhl_goal"]["scores"] == [] and "no locked" in out["boards"]["nhl_goal"]["note"]
+
+
+def test_a_shadow_with_no_rows_yet_does_not_blank_the_other_comparisons():
+    """TEST data: the NHL composite is a candidate that has not run yet (its score is None on every row). The comparisons of the
+    other scores must still be drawn on all games, and the empty shadow is reported 'no rows yet'."""
+    picks = {"truth": lambda g: g % 3, "prod": lambda g: (g + 1) % 3, "good": lambda g: g % 3, "base": lambda g: (g + 2) % 3}
+    rs = rows(200, picks)
+    for r in rs:
+        r["s"]["comp"] = None
+    out = H.evaluate(rs, ["prod", "good", "comp", "base"], "prod", "base")
+    assert out["games_compared"] == 200, out["games_compared"]
+    by = {r["score"]: r for r in out["scores"]}
+    assert by["comp"]["verdict"] == "no rows yet" and by["comp"]["best_in_game"]["n"] == 0
+    assert by["good"]["best_in_game"]["n"] == 200
+
+
+def test_nhl_adapter_carries_the_composite_scores(tmp_path):
+    """TEST data: comp and comp_v1 ride from the site export into the row's scores."""
+    import json
+    (tmp_path / "lamp_goal_log_export.json").write_text(json.dumps([
+        {"game_id": 1, "player_id": 9, "model_version": "lamp-goal-v3", "game_date": "2099-01-01", "score": 80, "pct": {}, "legs": {},
+         "dressed": True, "goals": 1, "hit": True, "comp": 71.5, "comp_v1": 69.0}]))
+    rs = H.nhl_goal_rows(tmp_path)
+    assert rs[0]["s"]["comp"] == 71.5 and rs[0]["s"]["comp_v1"] == 69.0
+    assert "comp" in H.NHL_GOAL["scores"]
