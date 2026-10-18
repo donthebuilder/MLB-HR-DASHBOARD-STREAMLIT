@@ -24,11 +24,11 @@ import polars as pl
 # market -> (column expression name, default bar)
 MARKET_VALUE = {
     "TD":       ("g_td",    1),
-    "REC_YDS":  ("g_recyd", 40),
+    "REC_YDS":  ("g_recyd", 100),
     "REC":      ("g_rec",   4),
-    "RUSH_YDS": ("g_ruyd",  50),
+    "RUSH_YDS": ("g_ruyd",  100),
     "RUSH_ATT": ("g_car",   12),
-    "PASS_YDS": ("g_payd",  225),
+    "PASS_YDS": ("g_payd",  300),
     "KICK_PTS": ("g_kick",  6),
 }
 
