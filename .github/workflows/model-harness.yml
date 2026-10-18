@@ -40,3 +40,9 @@ jobs:
           set -o pipefail
           python3 bots/model_harness.py --data public/data/current | tee /tmp/harness.txt
           { echo '### Model harness'; echo '```'; cat /tmp/harness.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - name: NHL residual scan (research printout; never fails the run)
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          python3 bots/nhl_residual_scan.py --data public/data/current --out /tmp/residual | tee /tmp/residual.txt
+          { echo '### NHL residual scan (one short season: cannot confirm a signal)'; echo '```'; cat /tmp/residual.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
