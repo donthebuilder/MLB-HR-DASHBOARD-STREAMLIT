@@ -105,14 +105,20 @@ def _pass_grid(df: pl.DataFrame, key: str) -> dict:
 EXPLOSIVE_RUN = 10
 
 
-def _rush_grid(df: pl.DataFrame, key: str, outcomes: bool = False) -> dict:
+def _laned(df: pl.DataFrame) -> pl.DataFrame:
+    """Carries with a charted lane, as `lane` = side|gap. A carry with no
+    run_gap (scrambles, most QB runs) is dropped, not bucketed."""
     d = df.filter(pl.col("run_location").is_in(SIDES))
     # 'middle' has no gap charted — it IS the lane.
-    d = d.with_columns(
+    return d.with_columns(
         pl.when(pl.col("run_location") == "middle").then(pl.lit("middle|middle"))
           .when(pl.col("run_gap").is_in(GAPS))
           .then(pl.concat_str([pl.col("run_location"), pl.lit("|"), pl.col("run_gap")]))
           .otherwise(pl.lit(None)).alias("lane")).filter(pl.col("lane").is_not_null())
+
+
+def _rush_grid(df: pl.DataFrame, key: str, outcomes: bool = False) -> dict:
+    d = _laned(df)
     g = d.group_by([key, "lane"]).agg(
         pl.len().alias("att"),
         pl.col("yards_gained").fill_null(0).sum().alias("yds"),
@@ -132,8 +138,55 @@ def _rush_grid(df: pl.DataFrame, key: str, outcomes: bool = False) -> dict:
     return out
 
 
+# WHO MAKES THE STOP, BY LANE (2026-10-18, BOT-DATA-REQUESTS.md "NFL run
+# defence by gap"). The tackle credits nflverse charts on every play, on the
+# same laned carries as def_rush (same lane keys, same unlabelled-play rule),
+# so a lane's def_rush.att is the denominator: "n stops on m carries". A
+# tackle LOCATION, not an alignment: where he brings the runner down, not
+# where he lined up. Columns checked on the 2026 load (wk 1-6): solo_tackle_1-2,
+# assist_tackle_1-4, tackle_with_assist_1-2 (each with a _team), and
+# tackle_for_loss_1-2 (no _team column).
+STOP_TACKLE = ["solo_tackle_1", "solo_tackle_2", "assist_tackle_1", "assist_tackle_2",
+               "assist_tackle_3", "assist_tackle_4", "tackle_with_assist_1", "tackle_with_assist_2"]
+STOP_TFL = ["tackle_for_loss_1", "tackle_for_loss_2"]
+STOPS_PER_LANE = 3
+
+
+def _def_stops(rushes: pl.DataFrame) -> dict:
+    """{DEF: {lane: [{player_id, name, tkl, tfl}, ...top 3 by tkl]}}. tkl is
+    carries in that lane he is credited with a tackle on (solo or assisted,
+    once a carry however he is credited); tfl the carries he made a TFL on.
+    A tackle credited to the OFFENCE's team (after a turnover) is not a stop."""
+    d = _laned(rushes.filter(pl.col("defteam").is_not_null()))
+    parts = []
+    for pre, kind in [(c, "tkl") for c in STOP_TACKLE] + [(c, "tfl") for c in STOP_TFL]:
+        if f"{pre}_player_id" not in d.columns:
+            continue
+        team = pl.col(f"{pre}_team") if f"{pre}_team" in d.columns else pl.col("defteam")
+        parts.append(d.filter(pl.col(f"{pre}_player_id").is_not_null(), team == pl.col("defteam"))
+                      .select("game_id", "play_id", "defteam", "lane",
+                              pl.col(f"{pre}_player_id").alias("pid"),
+                              pl.col(f"{pre}_player_name").alias("name"),
+                              pl.lit(kind).alias("kind")))
+    if not parts:
+        return {}
+    c = pl.concat(parts).unique(["game_id", "play_id", "pid", "kind"])
+    g = (c.group_by(["defteam", "lane", "pid"]).agg(
+            pl.col("name").drop_nulls().first(),
+            (pl.col("kind") == "tkl").sum().alias("tkl"),
+            (pl.col("kind") == "tfl").sum().alias("tfl"))
+          .sort(["defteam", "lane", "tkl", "tfl", "pid"], descending=[False, False, True, True, False]))
+    out: dict = {}
+    for r in g.iter_rows(named=True):
+        lane = out.setdefault(r["defteam"], {}).setdefault(r["lane"], [])
+        if len(lane) < STOPS_PER_LANE:
+            lane.append({"player_id": r["pid"], "name": r["name"] or r["pid"],
+                         "tkl": int(r["tkl"]), "tfl": int(r["tfl"])})
+    return out
+
+
 def build(season: int, player_ids: set[str] | None = None) -> dict:
-    """{'def_pass', 'def_rush', 'player_pass', 'player_rush', 'qb_pass'} keyed by team / id."""
+    """{'def_pass', 'def_rush', 'def_stops', 'player_pass', 'player_rush', 'qb_pass'} keyed by team / id."""
     p = _pbp(season)
     passes = p.filter(pl.col("pass_attempt") == 1)
     rushes = p.filter(pl.col("rush_attempt") == 1)
@@ -152,6 +205,8 @@ def build(season: int, player_ids: set[str] | None = None) -> dict:
         # What each defence gives up, by zone. The headline use.
         "def_pass": _pass_grid(targets.filter(pl.col("defteam").is_not_null()), "defteam"),
         "def_rush": _rush_grid(rushes.filter(pl.col("defteam").is_not_null()), "defteam", outcomes=True),
+        # Who brings the runner down in each of those lanes (_def_stops).
+        "def_stops": _def_stops(rushes),
     }
 
     pp = passes.filter(pl.col("receiver_player_id").is_not_null()) \
