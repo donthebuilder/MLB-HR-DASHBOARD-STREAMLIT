@@ -641,6 +641,47 @@ def current_roster(season: int, week: int | None = None) -> pl.DataFrame:
               .drop("_src"))
 
 
+# THE SCORING CUTOFF (Donovan 2026-10-18: "score depth chart QB1, RB1-2, WR1-3,
+# TE1-2 plus 20%+ snaps; everyone else a visible not-scored row"). Before this the
+# week's population was last season's baseline only (4+ games in `prior`), so a
+# rookie or a new starter was never scored however many games he played THIS
+# season -- the "once he has MIN_GP games he joins" promise in newcomer_rows was
+# not true. Men who pass the cutoff and have at least one game of their own this
+# season are scored on that form; under MIN_GP games they are `thin`.
+DEPTH_CUT = {"QB": 1, "RB": 2, "WR": 3, "TE": 2}
+SNAP_FLOOR = 0.20     # offensive snap share in any of his team's last SNAP_WEEKS games
+SNAP_WEEKS = 3
+
+
+def scoring_cutoff(season: int, week: int) -> pl.DataFrame:
+    """player_id -> why he is in (`depth`: "WR2", or `snaps`: True). Empty when neither source answered."""
+    frames = []
+    dc = _try(lambda: nfl.load_depth_charts(seasons=[season]), f"{season} depth charts")
+    if not dc.is_empty() and {"dt", "team", "pos_abb", "pos_rank", "gsis_id"} <= set(dc.columns):
+        latest = dc.group_by("team").agg(pl.col("dt").max().alias("dt"))
+        d = dc.join(latest, on=["team", "dt"]).filter(pl.col("gsis_id").is_not_null())
+        d = d.filter(pl.any_horizontal([(pl.col("pos_abb") == k) & (pl.col("pos_rank") <= n)
+                                        for k, n in DEPTH_CUT.items()]))
+        frames.append(d.select(pl.col("gsis_id").alias("player_id"),
+                               (pl.col("pos_abb") + pl.col("pos_rank").cast(pl.Utf8)).alias("depth"))
+                       .unique(subset=["player_id"], keep="first"))
+    sn = _try(lambda: snap_share(season), f"{season} snaps")
+    if not sn.is_empty():
+        recent = sorted({w for w in sn["week"].to_list() if w < week})[-SNAP_WEEKS:]
+        ok = (sn.filter(pl.col("week").is_in(recent) & (pl.col("snap_pct") >= SNAP_FLOOR))
+                .select("player_id").unique().with_columns(pl.lit(True).alias("snaps")))
+        frames.append(ok)
+    if not frames:
+        return pl.DataFrame(schema={"player_id": pl.Utf8, "depth": pl.Utf8, "snaps": pl.Boolean})
+    out = frames[0]
+    for f in frames[1:]:
+        out = out.join(f, on="player_id", how="full", coalesce=True)
+    for c, t in (("depth", pl.Utf8), ("snaps", pl.Boolean)):
+        if c not in out.columns:
+            out = out.with_columns(pl.lit(None, dtype=t).alias(c))
+    return out.with_columns(pl.col("snaps").fill_null(False))
+
+
 def upcoming_rows(season: int, week: int) -> tuple[pl.DataFrame, pl.DataFrame]:
     """One row per player for a week that has NOT been played.
 
@@ -680,6 +721,31 @@ def upcoming_rows(season: int, week: int) -> tuple[pl.DataFrame, pl.DataFrame]:
                   .with_columns(pl.col("team_now").alias("team")).drop("team_now"))
 
     rows = season_baseline(prior).join(who, on="player_id", how="inner")
+    rows = rows.with_columns(pl.lit(0).cast(pl.Int8).alias("fresh"))
+    # THE CUTOFF'S MEN WITH NO BASELINE (see scoring_cutoff). Name, position and
+    # team from this season's roster; their numbers come from this season's form
+    # below, never last season's (they have none).
+    cut = scoring_cutoff(season, week)
+    if not cut.is_empty() and not roster.is_empty():
+        reg = _try(lambda: nfl.load_rosters(seasons=[season]), f"{season} roster detail")
+        if not reg.is_empty() and {"gsis_id", "full_name", "position"} <= set(reg.columns):
+            names = (reg.filter(pl.col("gsis_id").is_not_null())
+                        .select(pl.col("gsis_id").alias("player_id"), pl.col("full_name").alias("name"),
+                                pl.col("position"))
+                        .unique(subset=["player_id"], keep="first", maintain_order=True))
+            fresh = (cut.join(names, on="player_id", how="inner")
+                        .join(roster, on="player_id", how="inner")
+                        .rename({"team_now": "team"})
+                        .filter(pl.col("position").is_in(list(DEPTH_CUT)))
+                        .filter(~pl.col("player_id").is_in(rows["player_id"].to_list()))
+                        .select("player_id", "name", "position", "team")
+                        .with_columns(pl.lit(1).cast(pl.Int8).alias("fresh")))
+            if not fresh.is_empty():
+                print(f"  scoring cutoff: {fresh.height} men with no {prior} baseline join the pool")
+                rows = pl.concat([rows, fresh], how="diagonal_relaxed")
+    rows = rows.join(cut.select("player_id", "depth", "snaps"), on="player_id", how="left") \
+        if not cut.is_empty() else rows.with_columns(pl.lit(None, dtype=pl.Utf8).alias("depth"),
+                                                       pl.lit(None, dtype=pl.Boolean).alias("snaps"))
 
     # FORM. Whatever of this season has been played, rolled forward INTO week w.
     # No season_type filter: a playoff week's trailing form is the games that
@@ -755,12 +821,13 @@ def upcoming_rows(season: int, week: int) -> tuple[pl.DataFrame, pl.DataFrame]:
         f = "f_" + b[2:]
         if f in rows.columns:
             rows = rows.with_columns(
-                pl.when(pl.col("f_gp") >= MIN_GP).then(pl.col(f))
+                pl.when((pl.col("f_gp") >= MIN_GP) | (pl.col("fresh") == 1)).then(pl.col(f))
                   .otherwise(pl.col(b)).alias(f))
         else:
             rows = rows.with_columns(pl.col(b).alias(f))
     rows = rows.with_columns(
-        (pl.col("f_gp") < MIN_GP).cast(pl.Int8).alias("is_carryover"),
+        ((pl.col("f_gp") < MIN_GP) & (pl.col("fresh") == 0)).cast(pl.Int8).alias("is_carryover"),
+        ((pl.col("f_gp") < MIN_GP) & (pl.col("fresh") == 1)).cast(pl.Int8).alias("thin"),
         pl.max_horizontal(pl.col("f_gp"), pl.col("b_gp").fill_null(0)).alias("f_gp"))
 
     # PREGAME. An inner join on the schedule is also the bye-week filter: a team
@@ -836,7 +903,9 @@ def upcoming_rows(season: int, week: int) -> tuple[pl.DataFrame, pl.DataFrame]:
             pl.when(pl.col("inj_q") == 1).then(pl.col(c) * QUESTIONABLE_DAMP)
               .otherwise(pl.col(c)).alias(c) for c in damp])
 
-    rows = rows.filter(pl.col("f_gp") >= MIN_GP) \
+    # A cutoff man scores from his first game of his own (thin until MIN_GP).
+    keep = (pl.col("f_gp") >= MIN_GP) | ((pl.col("fresh") == 1) & (pl.col("f_gp") >= 1))
+    rows = rows.filter(keep) \
                .with_columns(pl.lit(season).alias("season_yr"),
                              pl.col("name").alias("player_display_name"))
     # SLATE AND REFERENCE ARE THE SAME FRAME IN WEEK MODE, deliberately.
@@ -853,10 +922,13 @@ def upcoming_rows(season: int, week: int) -> tuple[pl.DataFrame, pl.DataFrame]:
     # In-season the honest population is everyone playing this week, which is
     # what build(season).filter(week == w) always was. A man on bye is not part
     # of this week's league.
-    bye = bye.filter(pl.col("f_gp") >= MIN_GP) \
+    bye = bye.filter(keep) \
              .with_columns(pl.lit(season).alias("season_yr"),
                            pl.col("name").alias("player_display_name"))
-    return rows, rows, bye
+    # THE RULER STAYS THE OLD POPULATION (2026-10-18). The cutoff's men are scored
+    # AGAINST it, not added to it, so nobody already on the board moves because
+    # the pool widened: same weights, same percentiles, more men measured.
+    return rows, rows.filter(pl.col("fresh") == 0), bye
 
 
 
