@@ -52,7 +52,7 @@ import nfl_offense_value
 import nfl_picks
 import nfl_snaps
 from nfl_features import (build, season_baseline, upcoming_rows, stats_season_for,
-                          current_roster, newcomer_rows, played_weeks,
+                          current_roster, newcomer_rows, played_weeks, season_per_game,
                           schedule_weeks, PLAYER_FORM, USAGE_FORM)
 from nfl_scoring import MODELS, OUTCOME, score, derive, _pctile, V1_MODELS, score_def_td, SHADOW_MODELS
 
@@ -890,7 +890,11 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
     # measured.
     if not new_tbl.is_empty():
         pos_ok = sorted({p for m in MODELS.values() for p in m["pos"]})
+        per_game = season_per_game(season, week) if mode != "preseason" else {}
         for r in new_tbl.filter(pl.col("position").is_in(pos_ok)).iter_rows(named=True):
+            pg = per_game.get(r["player_id"], {})
+            stats = {k: round(float(v), 2) for k, v in pg.items()
+                     if k == "GP" or keeps_stat(r.get("position"), k, v)}
             rows.append({
                 "player_id": r["player_id"],
                 "name": r.get("name") or "—",
@@ -902,7 +906,7 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
                 "on_bye": bool(r.get("on_bye")),
                 "no_data": True,
                 "low_sample": True,
-                "scores": {}, "components": {}, "stats": {},
+                "scores": {}, "components": {}, "stats": stats,
                 "splits": {},
             })
 

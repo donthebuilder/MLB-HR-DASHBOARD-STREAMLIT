@@ -978,6 +978,30 @@ def newcomer_rows(season: int, week: int, known: set[str]) -> pl.DataFrame:
         pl.lit(season).alias("season_yr"))
 
 
+# A NOT-SCORED MAN STILL HAS NUMBERS (Donovan 2026-10-18: "still want their
+# stats"). newcomer_rows' men shipped `stats: {}` even after real games this
+# season. Plain per-game means of this season's own box lines, weeks < w, keyed
+# by the RESEARCH short names nfl_bot publishes -- a count, never a model.
+PER_GAME = {"targets": "TGT", "receptions": "REC", "receiving_yards": "RECYD",
+            "carries": "CAR", "rushing_yards": "RUYD", "passing_yards": "PAYD",
+            "passing_tds": "PATD", "attempts": "ATT", "fg_made": "FGM", "pat_made": "PAT"}
+
+
+def season_per_game(season: int, week: int) -> dict:
+    """player_id -> {"GP": games, "TGT": 4.3, ..., "TD": rec+rush TDs a game}."""
+    wk = _try(lambda: nfl.load_player_stats(seasons=[season], summary_level="week")
+                        .filter(pl.col("week") < week), f"{season} per-game")
+    if wk.is_empty():
+        return {}
+    cols = [c for c in PER_GAME if c in wk.columns]
+    td = [c for c in ("receiving_tds", "rushing_tds") if c in wk.columns]
+    wk = wk.with_columns([pl.col(c).fill_null(0) for c in cols + td])
+    agg = wk.group_by("player_id").agg(
+        [pl.len().alias("GP")] + [pl.col(c).mean().alias(PER_GAME[c]) for c in cols]
+        + ([pl.sum_horizontal(td).mean().alias("TD")] if td else []))
+    return {r.pop("player_id"): r for r in agg.iter_rows(named=True)}
+
+
 def build_multi(seasons: list[int]) -> pl.DataFrame:
     """Stack seasons so the report card isn't a single sample."""
     frames = [build(s) for s in seasons]
