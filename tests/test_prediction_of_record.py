@@ -468,7 +468,11 @@ with tempfile.TemporaryDirectory() as d:
     # and every delivery script that runs the suite refused to push during it.
     # Anchor to the same instant the bot keys off.
     _SLATE_REF = _NOW - dt.timedelta(minutes=30)
-    today_str = _SLATE_REF.date().isoformat()
+    # ...and the bot keys the slate on the US-EASTERN date of the earliest first pitch
+    # (pick_lock.slate_date_fallback), not the UTC date, so the expected file name must too.
+    # With the UTC date this was red from 00:30 to 04:00 UTC every night, not just the half hour.
+    from zoneinfo import ZoneInfo
+    today_str = _SLATE_REF.astimezone(ZoneInfo("America/New_York")).date().isoformat()
     por_log_path = cur / f"por_log_{today_str}.jsonl"
 
     rid_a = opaque_run_id("g10a")

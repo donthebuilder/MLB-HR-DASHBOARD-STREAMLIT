@@ -54,7 +54,10 @@ import nfl_snaps
 from nfl_features import (build, season_baseline, upcoming_rows, stats_season_for,
                           current_roster, newcomer_rows, played_weeks, season_per_game,
                           schedule_weeks, PLAYER_FORM, USAGE_FORM)
-from nfl_scoring import MODELS, OUTCOME, score, derive, _pctile, V1_MODELS, score_def_td, SHADOW_MODELS
+from nfl_scoring import (MODELS, OUTCOME, score, derive, _pctile, V1_MODELS, score_def_td, SHADOW_MODELS,
+                         QB_TD_MODEL)
+import nfl_qb_td
+import nfl_alignment
 
 # MODEL FOUNDATION (2026-08-24) -- the NFL side of the same provenance work
 # bots/model_registry.py / bots/config_fingerprint.py did for MLB on
@@ -374,7 +377,9 @@ def score_all(tbl: pl.DataFrame, context_ok: bool, ref: pl.DataFrame | None = No
         # end's red-zone work against quarterbacks would be meaningless.
         rd = None
         if rdv is not None:
-            rd = rdv.filter(pl.col("position").is_in(m["pos"]))
+            # `ref_pos` lets a model score one position group against another's
+            # league (QB anytime TD vs RB/WR/TE); absent, it is `pos` as ever.
+            rd = rdv.filter(pl.col("position").is_in(m.get("ref_pos") or m["pos"]))
             # HOW THIN IS TOO THIN. This floor exists to stop a handful of rows
             # being treated as a league. It was 30, which is fine for the skill
             # positions (300+ rows) and quietly wrong for kickers: the NFL has
@@ -390,6 +395,11 @@ def score_all(tbl: pl.DataFrame, context_ok: bool, ref: pl.DataFrame | None = No
             # there genuinely isn't a distribution to rank against.
             if rd.height < 20:
                 rd = None
+        if m.get("ref_pos") and rd is None:
+            # A cross-position score only means something on the other group's
+            # reference. Without it the fallback is a QB-only slate percentile,
+            # which would rank the 32nd-best passer at the top: publish nothing.
+            continue
 
         parts, ref_parts = [], []
         for raw, w in avail.items():
@@ -832,6 +842,41 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
                 if col in r and keeps_stat(r.get("position"), short, v):
                     p["stats"][short] = v
 
+    # QB ANYTIME TD (bot task 1). Scored through the SAME pipeline, against the
+    # RB/WR/TE league reference, as its own model_version. It writes only QB
+    # rows' scores.TD / components.TD; no RB/WR/TE row is touched. A failure
+    # costs the QB score, never the slate.
+    qb_td_ok = False
+    try:
+        qb_scored = score_all(tbl, context_ok, ref, models={"TD": QB_TD_MODEL}).get("TD")
+        if qb_scored:
+            qb_td_ok = True
+            comp_cols = [c for c in qb_scored["df"].columns if c.startswith("c_")]
+            for r in qb_scored["df"].iter_rows(named=True):
+                p = players.get(r["player_id"])
+                if p is None or p.get("position") != "QB":
+                    continue
+                p["scores"]["TD"] = _num(r.get("score"))
+                p["components"]["TD"] = {c[2:]: _num(r.get(c)) for c in comp_cols
+                                         if _num(r.get(c)) is not None}
+                p["model_versions"] = {"TD": QB_TD_MODEL["model_version"]}
+    except Exception as exc:  # noqa: BLE001
+        print(f"  QB anytime TD skipped ({type(exc).__name__}: {exc})")
+
+    # QB TD CONTEXT (rates beside the score, not weights). Pregame by
+    # construction: the current season is cut to weeks before this one.
+    if qb_td_ok and mode != "preseason":
+        try:
+            import nfl_features
+            pbp = {s: nfl_features._pbp(s) for s in (season, season - 1)}
+            qb_ctx = nfl_qb_td.build(pbp, season, week,
+                                     [{"player_id": pid, "opp": p.get("opp")}
+                                      for pid, p in players.items() if p.get("position") == "QB"])
+            for pid, blk in qb_ctx.items():
+                players[pid]["qb_td"] = blk
+        except Exception as exc:  # noqa: BLE001
+            print(f"  QB TD context skipped ({type(exc).__name__}: {exc})")
+
     # preseason: attach opponent from the game list
     if mode == "preseason":
         opp = {}
@@ -1015,6 +1060,9 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
         ("def_explosive", nfl_explosive.defense_explosive, stat_season),
         ("player_explosive", nfl_explosive.player_explosive, stat_season),
         ("usage", nfl_explosive.team_usage, stat_season),
+        # ALIGNMENT (bot task 2): club-level run front / personnel / formation from
+        # participation (the charting season); per-man stays empty, no free feed.
+        ("alignment", nfl_alignment.build, chart_season),
         ("field", nfl_field.build, stat_season),
         # Every target and red-zone touch, per offence (The Field). Written to
         # its own nfl_field_{TEAM}.json files below, never into matchup.json.
@@ -1128,9 +1176,13 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
         "games": upcoming,
         "players": rows,
         "markets": [
-            {"key": k, "label": m["label"], "bar": m["bar"], "positions": m["pos"],
+            {"key": k, "label": m["label"], "bar": m["bar"],
+             "positions": m["pos"] + (["QB"] if (k == "TD" and qb_td_ok) else []),
              "weights": scored.get(k, {}).get("weights", m["w"]),
-             "dropped": scored.get(k, {}).get("dropped", [])}
+             "dropped": scored.get(k, {}).get("dropped", []),
+             **({"qb_model_version": QB_TD_MODEL["model_version"],
+                 "qb_weights": qb_scored["weights"], "qb_dropped": qb_scored["dropped"]}
+                if (k == "TD" and qb_td_ok) else {})}
             for k, m in MODELS.items() if k in scored
         ] + ([
             {"key": "DEF_TD", "label": V1_MODELS["DEF_TD"]["label"],
@@ -1247,6 +1299,13 @@ def build_nfl_run_meta(mode: str, season: int, week: int | None, args: "argparse
         except Exception as exc:
             print(f"nfl_config_hash() failed ({exc}); config_hash will be empty this run.")
 
+    qb_hash = None
+    if NFL_CONFIG_FINGERPRINT is not None:
+        try:
+            qb_hash = NFL_CONFIG_FINGERPRINT.nfl_config_hash({"TD": QB_TD_MODEL}, [derive, score])
+        except Exception as exc:
+            print(f"nfl_config_hash() failed for the QB TD model ({exc}).")
+
     return {
         "run_id": run_id,
         "generated_at": now.isoformat(),
@@ -1263,7 +1322,7 @@ def build_nfl_run_meta(mode: str, season: int, week: int | None, args: "argparse
         # fails, so "we tried and it failed" is distinguishable from "this
         # run predates config_hash existing" at analysis time -- same
         # reasoning as build_run_meta()'s own config_hashes dict.
-        "config_hashes": {"nfl": config_hash},
+        "config_hashes": {"nfl": config_hash, "nfl_td_qb": qb_hash},
         "schema_version": schema_version,
         "env": _run_env_metadata(),
     }
@@ -1315,7 +1374,8 @@ def build_nfl_prediction_log_lines(run_meta: dict, players: list[dict],
                 "market": market,
                 "run_id": run_meta.get("run_id"),
                 "generated_at": run_meta.get("generated_at"),
-                "model_version": (run_meta.get("model_versions") or {}).get(market),
+                "model_version": ((pl_row.get("model_versions") or {}).get(market)
+                                  or (run_meta.get("model_versions") or {}).get(market)),
                 "config_hash": (run_meta.get("config_hashes") or {}).get("nfl"),
                 "score": sc,
                 "components": (pl_row.get("components") or {}).get(market, {}),
@@ -1323,9 +1383,13 @@ def build_nfl_prediction_log_lines(run_meta: dict, players: list[dict],
                 "questionable": pl_row.get("questionable", False),
                 "low_sample": pl_row.get("low_sample", False),
             })
-            sh = ((shadow.get(market) or {}).get("scores") or {}).get(str(pl_row.get("player_id")))
-            if sh is not None:
-                lines[-1]["shadow"] = {shadow[market].get("model_version") or f"{market}_shadow": sh}
+            # every shadow of this market: the plain key (v3, snap variants) and "<MARKET>#<version>" ones
+            for skey, sblk in shadow.items():
+                if skey != market and not skey.startswith(f"{market}#"):
+                    continue
+                sh = ((sblk or {}).get("scores") or {}).get(str(pl_row.get("player_id")))
+                if sh is not None:
+                    lines[-1].setdefault("shadow", {})[sblk.get("model_version") or f"{market}_shadow"] = sh
     return lines
 
 
@@ -1457,6 +1521,7 @@ def write_nfl_signal_log(run_meta: dict, players: list[dict], out_dir: Path, pre
 # only the keys they read (~340 KB), rewritten by each run until the week's
 # first Sunday kickoff and never after, so the copy left standing is the last
 # one built before the main slate. Best effort: a failure prints and returns.
+USAGE_SLIM = ("tgt_share", "car_share", "rz_tgt_share", "rz_car_share", "gl_car_share", "air_share", "games")
 MATCHUP_WEEK_KEYS = ("season", "alt_season", "dvp", "dvp_trend", "dvp_roles", "dvp_stats", "dvp_labels", "roles", "red_zone", "snaps")
 
 
@@ -1592,6 +1657,16 @@ def main() -> int:
     # nfl_disruption.py itself via MIN_GAMES/MIN_PRESSURES) -- these describe
     # the OPPOSING defense, not the slate, so there is no slate id to filter
     # them down to.
+    # DEFENSIVE SNAP SHARE (bot task 5). player_snaps() already computes it for
+    # defenders (side "defense", defense_pct); the on-slate filter below keeps
+    # only offensive ids, so none ever shipped. Parked in matchup_extra.json
+    # (where the site's defender table already reads) for clubs on this slate.
+    _slate_clubs = {g[s] for g in payload.get("games", []) for s in ("home", "away")}
+    _def_snaps = {i: {k: v.get(k) for k in ("team", "position", "side", "games", "snap_pct",
+                                            "recent_pct", "trend")}
+                  for i, v in (extras.get("snaps") or {}).items()
+                  if isinstance(v, dict) and v.get("side") == "defense"
+                  and v.get("team") in _slate_clubs}
     for k in ("coverage_player", "player_explosive", "roles", "red_zone", "route_value", "snaps"):
         if extras.get(k):
             extras[k] = {i: v for i, v in extras[k].items() if i in on_slate}
@@ -1618,6 +1693,7 @@ def main() -> int:
     # not. But an unread file is still #28: if nothing consumes this by the
     # end of the season, cut it rather than carrying it forever.
     _extra = {k: extras.get(k, {}) for k in ("disruption", "usage", "snap_movers")}
+    _extra["defense_snaps"] = _def_snaps
     if any(_extra.values()):
         (out / f"{a.prefix}matchup_extra.json").write_text(json.dumps(_extra))
         print(f"  wrote {a.prefix}matchup_extra.json "
@@ -1683,11 +1759,18 @@ def main() -> int:
         # matchup_extra.json write below. `field` stays: MatchupMap on the
         # Matchups tab reads matchup.field.player_pass on first paint.
         "field": extras.get("field", {}),
+        # SHARE OF CLUB (bot task 5, 2026-10-11): the slim usage the share
+        # columns read -- only the on-slate players and only the share fields
+        # (the full per-player counts stay in matchup_extra.json). Percent 0-100,
+        # season to date, offence only; `games` = weeks with a target or carry.
+        "usage": {t: {i: {k: v[k] for k in USAGE_SLIM if k in v} for i, v in pl_.items() if i in on_slate}
+                  for t, pl_ in (extras.get("usage") or {}).items()},
         "disruption_team": extras.get("disruption_team", {}),
         "disruption_groups": nfl_disruption.GROUP_ORDER,
         "disruption_stats": nfl_disruption.STATS,
         "disruption_labels": nfl_disruption.STAT_LABELS,
         "pass_rush": extras.get("pass_rush", {}),
+        "alignment": extras.get("alignment", {}),
         "red_zone": extras.get("red_zone", {}),
         # FTN in-season tendencies; carries its own `season` (nfl_tendencies.py).
         "tendencies": extras.get("tendencies", {}),
@@ -1764,6 +1847,17 @@ def main() -> int:
         logs = {}
     (out / f"{a.prefix}logs.json").write_text(json.dumps({
         "bars": nfl_gamelog.MARKET_VALUE, "logs": logs}, separators=(",", ":")))
+    # Per-player files + a slim team-games index (bot task 3): the header tiles
+    # read the index, a player's card reads his own file. Additive; a failure
+    # costs the split, never nfl_logs.json.
+    try:
+        import nfl_logs_split
+        _ls = nfl_logs_split.write(out, a.prefix, nfl_gamelog.MARKET_VALUE, logs,
+                                   int(payload.get("season") or a.season))
+        print(f"  wrote {a.prefix}logs_index.json ({_ls['team_games']} team games) "
+              f"+ {_ls['players']} {a.prefix}logs/<id>.json")
+    except Exception as exc:  # noqa: BLE001
+        print(f"  logs split failed ({type(exc).__name__}: {exc}) -- nfl_logs.json is unaffected")
 
     # SIGNAL FLAGS (B10(b)/(e), 2026-09-16). NFL has had zero flags like
     # MLB's SignalAudit.js grades (weak_spot_flag, hrw_score, ...) -- these
@@ -1901,6 +1995,21 @@ def main() -> int:
     }, separators=(",", ":"))
     (out / f"{a.prefix}picks.json").write_text(picks_body)
 
+    # THE HIGH-BAR LADDER (bot task 4B): its own file and model_version, never a
+    # key inside the card above. Best-effort; a failure costs only this file.
+    try:
+        import nfl_ladder
+        (out / f"{a.prefix}ladder.json").write_text(json.dumps({
+            "model_version": nfl_ladder.MODEL_VERSION,
+            "season": a.season, "week": a.week, "mode": a.mode,
+            "built_at": payload["built_at"], "window_games": nfl_ladder.LADDER_GAMES,
+            "min_games": nfl_ladder.MIN_GAMES, "depth": nfl_ladder.DEPTH,
+            "note": "rate = share of his last n logged games at or above the bar; a count, not a probability. Prices come only from the odds capture.",
+            "markets": nfl_ladder.build(payload["players"], logs),
+        }, separators=(",", ":")))
+    except Exception as exc:  # noqa: BLE001
+        print(f"  ladder failed ({type(exc).__name__}: {exc}) -- card unaffected")
+
     # THE CARD, KEPT PER WEEK. nfl_picks.json is overwritten every run, so the
     # moment the board rolls to week N+1 the card week N was graded against is
     # gone. That is why grading used to be pinned to whatever week the live card
@@ -1928,6 +2037,14 @@ def main() -> int:
                   f"{sum(len(g['calls']) for g in _gc['games'])} call(s), board {_gc['board_n']}")
         except Exception as exc:  # noqa: BLE001
             print(f"  game calls failed ({type(exc).__name__}: {exc}) -- slate ships without them")
+
+    # DEPTH ROLE on the week row (bot task 3), so the header and tables need
+    # not load matchup.json for it. Same value as matchup.roles[player_id]
+    # (nfl_dvp.current_roles: "WR1", "RB2"...); absent when he has none.
+    _roles = extras.get("roles") or {}
+    for _p in payload.get("players", []):
+        if _roles.get(_p.get("player_id")):
+            _p["depth_role"] = _roles[_p["player_id"]]
 
     (out / f"{a.prefix}week.json").write_text(json.dumps(payload, separators=(",", ":")))
     (out / f"{a.prefix}meta.json").write_text(json.dumps({

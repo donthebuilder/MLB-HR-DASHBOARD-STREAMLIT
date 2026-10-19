@@ -9,5 +9,5 @@
 # package is free to move its API on a minor bump. Bump the ceiling on purpose,
 # after re-running bots/nfl/nfl_backtest.py, not by surprise on a Sunday.
 nflreadpy>=0.1.5,<0.2.0
-polars>=1.0.0
-requests>=2.31.0
+polars>=1.0.0,<3
+requests>=2.31.0,<3

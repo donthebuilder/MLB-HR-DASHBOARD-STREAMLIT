@@ -161,6 +161,39 @@ SHADOW_MODELS = {
             "f_snap_pct":     0.1887,   # .1307 / .6928
         },
     },
+    # ── MODEL LAB SHADOWS (2026-10-13) ────────────────────────────────────────
+    # Two more TD shadows beside v3, keyed "TD#<version>" so the market key stays unique while score_all
+    # still treats each as an ordinary model (the key is only a label on the way out). Logged next to v2 and
+    # v3 in the prediction log, never published; compare with bots/nfl/nfl_shadow_report.py.
+    #
+    # nfl_td_reweight_v1: the weight vector frozen from the model lab's three selection folds (2022-24) and
+    # scored ONCE on the untouched 2025 holdout: log loss -0.0043 [-0.0074, -0.0015] vs v2, Holm p = 0.004
+    # over 7 markets, AUC .731 -> .739 (docs/model-lab/PICK_FORMULA_AUDIT.md, model_lab/nfl_weight_candidates.py).
+    # Same inputs as v2 with goal-line touches dropped (fitted weight under 0.02 in every fold); touches and
+    # snap share carry more.
+    "TD#nfl_td_reweight_v1": {
+        "model_version": "nfl_td_reweight_v1",
+        "label": "Anytime TD (shadow, lab re-weight)", "pos": ["RB", "WR", "TE"], "bar": 1,
+        "w": {
+            "f_touches":      0.384,
+            "f_snap_pct":     0.232,
+            "implied_total":  0.172,
+            "f_rz_opp":       0.131,
+            "f_xtd":          0.081,
+        },
+    },
+    # nfl_td_rzonly_v1 ("red zone on its own", Donovan 2026-10-13): ONLY v2's red-zone family, at v2's own
+    # relative weights (rz .2222 : xTD .1569 : goal-line .1503, renormalised), so no new weight is invented.
+    # It answers "how good is the red-zone idea alone" on live picks; the lab expects it to rank below v2.
+    "TD#nfl_td_rzonly_v1": {
+        "model_version": "nfl_td_rzonly_v1",
+        "label": "Anytime TD (shadow, red zone only)", "pos": ["RB", "WR", "TE"], "bar": 1,
+        "w": {
+            "f_rz_opp":  0.4197,
+            "f_xtd":     0.2964,
+            "f_gl_opp":  0.2839,
+        },
+    },
     # ── PLAYING TIME (2026-10-03, BATCH-MODEL-V2 M2) ──────────────────────────
     # Only TD carried playing time. nfl_playtime_lab.py adds the trailing snap
     # share (f_snap_pct, the TD model's own 4-game roll) to the receiving and
@@ -196,6 +229,46 @@ SHADOW_MODELS = {
         },
     },
 }
+
+
+# ── QB ANYTIME TD (2026-10-11, bot task 1) ───────────────────────────────────
+# Donovan: "add QB anytime TDs too" -- he scores a touchdown himself, rushing or
+# receiving. Passing TDs are a different market and are NOT in the outcome
+# (OUTCOME["TD"] is rushing_tds + receiving_tds).
+#
+# SAME METHOD, SAME WEIGHTS AS THE TD MODEL (v2), written out as literals so a
+# later change to MODELS["TD"] cannot silently move a QB (tests assert the two
+# are equal today). The score is a QB-ONLY pool scored against the SAME league
+# reference as RB/WR/TE (`ref_pos`), so a QB's percentile on each input is "where
+# would this number rank among RB/WR/TE" and his 0-100 score sits on the same
+# scale as theirs. No RB/WR/TE score moves: their reference, their pool and
+# their weights are untouched. A NEW model_version, new rows, nothing rewritten.
+#
+# Why v2's weights are usable for QBs (nfl_features.build, 2023/24/25, within-
+# week percentiles, TD hit = rush+rec TD >= 1): QBs ranked in the combined top
+# 15 hit 51.7 / 58.3 / 23.8% (n = 29 / 24 / 21); the combined top-15 hit rate
+# WITH QBs was 53.3 / 55.9 / 47.0% against 51.9 / 54.4 / 49.6% without. QBs
+# averaging 4+ carries a game scored 25.3 / 26.3 / 24.9% against 10.3 / 7.6 /
+# 7.9% below that. So volume rushers (the Hurts / Jackson / Daniels type) rank
+# with the best skill players and a pocket passer does not float up on team
+# context. QB-specific weights (designed-run share, opponent QB-rush TDs
+# allowed) are a CANDIDATE to test against 2023-25 before any weight moves;
+# they are published beside the score as context only (nfl_qb_td.py).
+QB_TD_MODEL = {
+    "model_version": "nfl_td_qb_v1",
+    "label": "Anytime TD (QB)", "pos": ["QB"], "ref_pos": ["RB", "WR", "TE"], "bar": 1,
+    "w": {
+        "f_rz_opp":       0.2222,
+        "implied_total":  0.1830,
+        "f_touches":      0.1569,
+        "f_xtd":          0.1569,
+        "f_gl_opp":       0.1503,
+        "f_snap_pct":     0.1307,
+    },
+}
+
+# Positions a TD can be GRADED for: the board's three plus the QB.
+TD_GRADE_POS = ["RB", "WR", "TE", "QB"]
 
 
 # what each market actually grades against

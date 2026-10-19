@@ -105,7 +105,25 @@ def team_usage(season: int) -> dict:
     tot = {k: {r["posteam"]: int(r["n"]) for r in v.iter_rows(named=True)}
            for k, v in team_tot.items()}
 
+    # GOAL-LINE CARRIES and AIR YARDS (2026-10-11, bot task 5): the same
+    # share-of-club shape as the rest. Goal line = inside the 5, matching
+    # nfl_features.usage's i5_car. A play with no air_yards counts as 0 in both
+    # the player's sum and the club's, so the share is over the same plays.
+    tot["gl_car"] = {r["posteam"]: int(r["n"]) for r in
+                     car.filter(pl.col("yardline_100") <= 5).group_by("posteam")
+                        .agg(pl.len().alias("n")).iter_rows(named=True)}
+    tot["air"] = {r["posteam"]: int(r["n"]) for r in
+                  tgt.group_by("posteam").agg(pl.col("air_yards").fill_null(0).sum().alias("n"))
+                     .iter_rows(named=True)}
+    # games = weeks he had a target or a carry, so a share can name its sample.
+    g_tgt = tgt.select(pl.col("receiver_player_id").alias("pid"), "week")
+    g_car = car.select(pl.col("rusher_player_id").alias("pid"), "week")
+    games = {r["pid"]: int(r["n"]) for r in
+             pl.concat([g_tgt, g_car]).unique().group_by("pid").agg(pl.len().alias("n"))
+               .iter_rows(named=True)}
+
     pr = tgt.group_by(["receiver_player_id", "posteam"]).agg(
+        pl.col("air_yards").fill_null(0).sum().alias("air"),
         pl.len().alias("tgt"),
         pl.col("complete_pass").fill_null(0).sum().alias("rec"),
         pl.col("yards_gained").fill_null(0).sum().alias("recyd"),
@@ -115,7 +133,8 @@ def team_usage(season: int) -> dict:
         pl.len().alias("car"),
         pl.col("yards_gained").fill_null(0).sum().alias("ruyd"),
         pl.col("rush_touchdown").fill_null(0).sum().alias("rshtd"),
-        (pl.col("yardline_100") <= 20).sum().alias("rz_car"))
+        (pl.col("yardline_100") <= 20).sum().alias("rz_car"),
+        (pl.col("yardline_100") <= 5).sum().alias("gl_car"))
 
     d = pr.join(ru, left_on=["receiver_player_id", "posteam"],
                 right_on=["rusher_player_id", "posteam"], how="full", coalesce=True)
@@ -136,6 +155,9 @@ def team_usage(season: int) -> dict:
             "car": int(r["car"]), "car_share": pct(r["car"], "car"),
             "ruyd": int(r["ruyd"]), "rshtd": int(r["rshtd"]),
             "rz_car": int(r["rz_car"]), "rz_car_share": pct(r["rz_car"], "rz_car"),
+            "gl_car": int(r["gl_car"]), "gl_car_share": pct(r["gl_car"], "gl_car"),
+            "air": int(r["air"]), "air_share": pct(r["air"], "air"),
+            "games": games.get(pid, 0),
         }
     return out
 

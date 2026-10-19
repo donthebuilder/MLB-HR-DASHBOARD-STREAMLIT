@@ -1,6 +1,11 @@
 # Bot-side deps. Installed by GitHub Actions only, never by Streamlit Cloud.
-requests>=2.31.0
-pandas>=2.0.0
-pybaseball>=2.2.0
-reportlab>=4.0.0
-pillow>=10.0.0
+#
+# Each line has a CEILING at the next major version (2026-10-12). They were open-ended, so an
+# unattended scheduled run took whatever upstream shipped that day. The ceilings are the versions
+# the test suite passed on when they were set (pandas 3.0, pybaseball 2.2, requests 2.34,
+# reportlab 5.0, pillow 12.3): a major bump is a deliberate change, made after running tests/.
+requests>=2.31.0,<3
+pandas>=2.0.0,<4
+pybaseball>=2.2.0,<2.3
+reportlab>=4.0.0,<6
+pillow>=10.0.0,<13
