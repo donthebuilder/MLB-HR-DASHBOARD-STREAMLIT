@@ -52,7 +52,7 @@ import nfl_offense_value
 import nfl_picks
 import nfl_snaps
 from nfl_features import (build, season_baseline, upcoming_rows, stats_season_for,
-                          current_roster, newcomer_rows, played_weeks,
+                          current_roster, newcomer_rows, played_weeks, season_per_game,
                           schedule_weeks, PLAYER_FORM, USAGE_FORM)
 from nfl_scoring import MODELS, OUTCOME, score, derive, _pctile, V1_MODELS, score_def_td, SHADOW_MODELS
 
@@ -285,6 +285,21 @@ def _mlb_scale(ref_raw: list[float]):
     return to_score
 
 
+def _slate_pct(d: pl.DataFrame, col: str, inv: bool) -> pl.Expr:
+    """_pctile, except a man already on the board ranks against the board he was
+    always on: the scoring cutoff's men (`fresh`, nfl_features.scoring_cutoff) are
+    ranked against everyone, everyone else only against each other, so widening
+    the pool moves nobody (measured 2026-10-18 wk 8: 6 backs moved up to 0.9
+    when the fallback ranked against the wider slate)."""
+    if "fresh" not in d.columns:
+        return _pctile(d, col, inv)
+    e = pl.col(col).fill_null(0)
+    if inv:
+        e = -e
+    own = (e.rank("average") / pl.len()).over(["week", "fresh"])
+    return pl.when(pl.col("fresh") == 1).then(_pctile(d, col, inv)).otherwise(own)
+
+
 def score_all(tbl: pl.DataFrame, context_ok: bool, ref: pl.DataFrame | None = None,
               models: dict | None = None) -> dict:
     """Score every market. When context is missing, its weight is redistributed
@@ -386,7 +401,7 @@ def score_all(tbl: pl.DataFrame, context_ok: bool, ref: pl.DataFrame | None = No
                 d = d.with_columns(
                     pl.col(col).map_elements(fn, return_dtype=pl.Float64).alias(nm))
                 d = d.with_columns(
-                    pl.when(pl.col(nm).is_null()).then(_pctile(d, col, inv))
+                    pl.when(pl.col(nm).is_null()).then(_slate_pct(d, col, inv))
                       .otherwise(pl.col(nm)).alias(nm))
                 # the reference gets the SAME transform, so its composite is
                 # measured on the same axis as the slate's
@@ -395,7 +410,7 @@ def score_all(tbl: pl.DataFrame, context_ok: bool, ref: pl.DataFrame | None = No
                       .fill_null(0.5).alias(nm))
                 ref_parts.append(pl.col(nm) * w)
             else:
-                d = d.with_columns(_pctile(d, col, inv).alias(nm))
+                d = d.with_columns(_slate_pct(d, col, inv).alias(nm))
             parts.append(pl.col(nm) * w)
         tot = parts[0]
         for p in parts[1:]:
@@ -788,6 +803,10 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
                 "opp": r.get("opponent_team"),
                 "position": r.get("position"),
                 "carryover": bool(r.get("is_carryover") or 0),
+                # THE SCORING CUTOFF (nfl_features.scoring_cutoff, 2026-10-18): a man
+                # with no last-season baseline scored on under MIN_GP games of his own.
+                "thin": bool(r.get("thin") or 0),
+                "depth": r.get("depth"),
                 "questionable": bool(r.get("inj_q") or 0),
                 "on_bye": False,
                 # SAMPLE GATE. A goal-line vulture with 0.3 targets a game can
@@ -871,7 +890,11 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
     # measured.
     if not new_tbl.is_empty():
         pos_ok = sorted({p for m in MODELS.values() for p in m["pos"]})
+        per_game = season_per_game(season, week) if mode != "preseason" else {}
         for r in new_tbl.filter(pl.col("position").is_in(pos_ok)).iter_rows(named=True):
+            pg = per_game.get(r["player_id"], {})
+            stats = {k: round(float(v), 2) for k, v in pg.items()
+                     if k == "GP" or keeps_stat(r.get("position"), k, v)}
             rows.append({
                 "player_id": r["player_id"],
                 "name": r.get("name") or "—",
@@ -883,7 +906,7 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
                 "on_bye": bool(r.get("on_bye")),
                 "no_data": True,
                 "low_sample": True,
-                "scores": {}, "components": {}, "stats": {},
+                "scores": {}, "components": {}, "stats": stats,
                 "splits": {},
             })
 
