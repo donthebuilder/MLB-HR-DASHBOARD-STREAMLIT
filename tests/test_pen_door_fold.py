@@ -12,9 +12,12 @@ import unittest
 import urllib.error
 from unittest import mock
 
-from bots import copy_pendoor as words
-from bots import pen_door_fold as fold
 from bots import pen_door_watch as pdw
+# The SAME module objects the watcher uses. With bots/ on the path (how production runs it: python bots/pen_door_watch.py),
+# pen_door_watch imports pen_door_fold as a top-level module; a separate `from bots import pen_door_fold` would be a second
+# copy, and patches on it would never reach the watcher (2026-10-20).
+words = pdw.words
+fold = pdw.fold
 
 HOOK = "https://discord.com/api/webhooks/111/TEST-TOKEN"
 OWN = "https://discord.com/api/webhooks/222/TEST-OWN"

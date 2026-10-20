@@ -33,7 +33,10 @@ jobs:
       - run: pip install -r bots/requirements.txt -r bots/nfl/requirements.txt pytest
       - name: Run every test file
         env:
-          PYTHONPATH: .
+          # .:bots = how the bots really run (python bots/x.py puts bots/ on the path). With only ".",
+          # model_registry / trajectory / savant_feeds / config_fingerprint failed to import and the tests
+          # passed with those features switched off (2026-10-20).
+          PYTHONPATH: .:bots
           KNOWN_BROKEN: ""
         run: |
           set -u
