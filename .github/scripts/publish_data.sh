@@ -107,6 +107,9 @@ PUBLISH_FILES=(
   # the Discord slate-board block, so it only ran when a WEBHOOK was
   # configured and had something new to post. It runs unconditionally now.
   pick_changes.json
+  # NOT SCORED (2026-10-18): the hitters the PA filter drops, with their season line (mlb_dashboard not_scored_row)
+  not_scored_today.json
+  not_scored_tomorrow.json
   # The run board -- every hitter's last 30 raw lines, written by
   # player_splits.py on the same fetch it already makes for the splits files.
   runs_latest.json

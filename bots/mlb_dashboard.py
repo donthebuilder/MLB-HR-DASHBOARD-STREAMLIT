@@ -13507,6 +13507,27 @@ def passes_global_pa_filter(rec: HitterRecord) -> bool:
 def apply_global_pa_filter(rows: List[HitterRecord]) -> List[HitterRecord]:
     return [r for r in rows if passes_global_pa_filter(r)]
 
+
+# NOT SCORED (Donovan 2026-10-18: "everyone else a visible not-scored row" ... "still want
+# their stats"). The hitters the PA filter above drops were only counted in a stderr line;
+# they now ship in their own file, current/not_scored_<today|tomorrow>.json, with their real season
+# line and nothing else -- no score, no rank, no pick. They never enter rows_payload, the
+# prediction log or any pool, so every scored row is exactly what it was.
+NOT_SCORED_FIELDS = ("game_pk", "player_id", "name", "team", "opponent", "bats", "lineup_spot",
+                     "lineup_confirmed", "season_pa", "l20pa_pa", "season_hr", "season_avg",
+                     "season_obp", "season_slg", "season_iso")
+
+
+def not_scored_row(rec: HitterRecord) -> Dict[str, Any]:
+    out = {k: getattr(rec, k, None) for k in NOT_SCORED_FIELDS}
+    if not safe_int(out.get("season_pa"), 0):
+        # no plate appearances: the rate fields are defaults, not measurements
+        for k in ("season_avg", "season_obp", "season_slg", "season_iso", "season_hr"):
+            out[k] = None
+    out["reason"] = (f"under {GLOBAL_MIN_RECENT_PA} recent PA and "
+                     f"{GLOBAL_MIN_SEASON_PA} season PA")
+    return out
+
 def render_game_block(game: Dict[str, Any], hitters: List[HitterRecord]) -> str:
 
     if not hitters:
@@ -15188,6 +15209,8 @@ def main() -> int:
 
         all_rows: List[HitterRecord] = [r for _, rows in game_rows for r in rows]
         removed_count = len(raw_rows) - len(all_rows)
+        _kept_ids = {(r.game_pk, r.player_id) for r in all_rows}
+        not_scored_rows = [not_scored_row(r) for r in raw_rows if (r.game_pk, r.player_id) not in _kept_ids]
         if removed_count > 0:
             print(f"Global PA filter removed {removed_count} low-sample players (requires recent PA 20+ when available or season PA 80+).", file=sys.stderr)
         game_blocks = [render_game_block(game, rows) for game, rows in game_rows if rows]
@@ -15754,6 +15777,20 @@ Use ALT LOOKS as quality variance, not primary plays.
 
         write_text_and_aliases(txt_path, report_text, txt_alias_paths)
         write_json_and_aliases(json_path, rows_payload, json_alias_paths)
+        # NOT SCORED: its own file (see not_scored_row), never part of rows_payload
+        try:
+            _ns = {"date": slate_date.isoformat(), "slate": slate_label, "rows": not_scored_rows}
+            # one file per slate label (today / tomorrow), like {label}_slim.json: the two runs never overwrite each other
+            _ns_name = f"not_scored_{slate_label}.json"
+            _ns_targets = [OUT_DIR / _ns_name]
+            if _is_dashboard_repo(DASHBOARD_REPO):
+                _ns_targets.append(DASHBOARD_REPO / "public" / "data" / "current" / _ns_name)
+            for _np in _ns_targets:
+                _np.parent.mkdir(parents=True, exist_ok=True)
+                _np.write_text(json.dumps(_ns, indent=1, default=str), encoding="utf-8")
+            print(f"not scored: {len(not_scored_rows)} hitters written", file=sys.stderr)
+        except Exception as _nsexc:
+            print(f"not scored file skipped: {_nsexc}", file=sys.stderr)
 
         # MODEL FOUNDATION (Tasks 2 & 4): this run's metadata + the
         # append-only prediction log, written from the fully-enriched
