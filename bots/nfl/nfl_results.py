@@ -42,7 +42,13 @@ from nfl_scoring import MODELS, OUTCOME
 
 # The columns every source must produce. OUTCOME is written against these.
 STATS = ["passing_yards", "carries", "rushing_yards", "rushing_tds",
-         "receptions", "receiving_yards", "receiving_tds", "fg_made", "pat_made"]
+         "receptions", "receiving_yards", "receiving_tds", "fg_made", "pat_made",
+         "passing_tds"]
+
+# LINE-ONLY FIELDS (2026-10-20): published on a player's line so the site can grade a story on it, but NOT a
+# market -- not in MODELS, no bar, no card, never in totals. {line key: (STATS column, eligible positions)}.
+#   PASS_TD  passing TDs, QBs only (the site's "career passing TDs" milestone grades "reached it" on it)
+LINE_ONLY = {"PASS_TD": ("passing_tds", ("QB",))}
 
 
 # ── regular season ────────────────────────────────────────────────────────────
@@ -161,6 +167,20 @@ def outcomes(lines: pl.DataFrame) -> dict[str, dict[str, float]]:
     return out
 
 
+def line_only(lines: pl.DataFrame, positions: dict[str, str]) -> dict[str, dict[str, float]]:
+    """{player_id: {LINE_ONLY key: value}} for the players each field applies to (by position, the
+    eligible_lines() rule: a non-QB's 0 passing TDs is "not his", never published as a value)."""
+    if not lines.height:
+        return {}
+    out: dict[str, dict[str, float]] = {}
+    for r in lines.iter_rows(named=True):
+        pid = str(r["player_id"])
+        for key, (col, pos) in LINE_ONLY.items():
+            if col in r and positions.get(pid) in pos:
+                out.setdefault(pid, {})[key] = float(r[col] or 0.0)
+    return out
+
+
 def eligible_lines(actual: dict[str, dict[str, float]],
                     positions: dict[str, str]) -> dict[str, dict[str, float]]:
     """Filter outcomes()'s {player_id: {market: value}} down to the markets
@@ -182,6 +202,14 @@ def eligible_lines(actual: dict[str, dict[str, float]],
         for pid, vals in actual.items()
     }
 
+
+
+def _merge_lines(a: dict[str, dict[str, float]], b: dict[str, dict[str, float]]) -> dict[str, dict[str, float]]:
+    """a's lines with b's fields added (a player only in b gets b's fields alone)."""
+    out = {pid: dict(v) for pid, v in a.items()}
+    for pid, extra in b.items():
+        out.setdefault(pid, {}).update(extra)
+    return out
 
 
 # Where the bot publishes. Same repo and branch publish_data.sh force-pushes to;
@@ -629,7 +657,8 @@ def main() -> int:
         "graded_at_human": now.strftime("%b %-d, %-I:%M %p UTC"),
         "bars": {k: m["bar"] for k, m in MODELS.items()},
         # Every player who recorded a line — see the module docstring.
-        "lines": eligible_lines(actual, positions),
+        # + the line-only fields (LINE_ONLY: PASS_TD), merged onto the same player's line
+        "lines": _merge_lines(eligible_lines(actual, positions), line_only(lines, positions)),
         "names": {str(r["player_id"]): r["name"] for r in lines.iter_rows(named=True)},
         "card": graded,
         "totals": totals,
