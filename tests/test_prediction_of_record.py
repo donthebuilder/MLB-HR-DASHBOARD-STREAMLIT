@@ -71,16 +71,16 @@ def checkTrue(name, cond):
 # once at import time and reused everywhere below, makes every date/offset
 # in this file internally consistent regardless of when the suite actually
 # runs -- no live clock read anywhere past this point.
-# ...and the midnight fix below (_SLATE_REF) can only be watched failing for
+# ...and the midnight fix below (slate_date_of) can only be watched failing for
 # half an hour a night, which by this project's own rule makes it dead code:
 # a guard that never fires is one nobody trusts. MOONSHOT_TEST_NOW forces the
 # reference instant so the broken window can be entered on demand at any hour:
 #
 #   MOONSHOT_TEST_NOW=2026-08-24T00:10:00+00:00 python3 tests/test_prediction_of_record.py
 #
-# The code under test still reads the real clock, which is exactly the point:
-# the offsets stay in the past relative to it, so games still lock, while the
-# derived slate date lands on the far side of midnight from _NOW.
+# With it set, pick_lock's own clock (now_utc) is pinned to the same instant
+# (see run_lock), so every check holds at the forced hour; without it, the
+# code under test reads the real clock as before.
 _FORCED_NOW = os.environ.get("MOONSHOT_TEST_NOW", "").strip()
 _NOW = (dt.datetime.fromisoformat(_FORCED_NOW.replace("Z", "+00:00"))
         if _FORCED_NOW else dt.datetime.now(dt.timezone.utc))
@@ -90,6 +90,15 @@ if _NOW.tzinfo is None:
 
 def iso(offset_min: int) -> str:
     return (_NOW + dt.timedelta(minutes=offset_min)).isoformat().replace("+00:00", "Z")
+
+
+def slate_date_of(first_pitch_iso: str) -> str:
+    """The slate date pick_lock.main() keys a game on: the US-Eastern calendar
+    date of its first pitch (the game's own date), never the UTC date. From
+    ~8pm ET a night game's first pitch is already tomorrow in UTC."""
+    from zoneinfo import ZoneInfo
+    t = dt.datetime.fromisoformat(first_pitch_iso.replace("Z", "+00:00"))
+    return t.astimezone(ZoneInfo("America/New_York")).date().isoformat()
 
 
 _RID_SEQ = [0]
@@ -153,6 +162,10 @@ def run_lock(tmp: Path, slate_rows, *, apply=True, seed_ledger=None, run_meta=No
     cur.mkdir(parents=True, exist_ok=True)
     pl.PUBLIC = tmp
     pl.CURRENT = cur
+    if _FORCED_NOW:
+        # a forced instant is usually in the past; the bot's own clock has to
+        # stand there too or a "not started yet" game reads as long started
+        pl.now_utc = lambda: _NOW
 
     payload = {"players": slate_rows}
     if date is not None:
@@ -367,7 +380,7 @@ with tempfile.TemporaryDirectory() as d:
     tmp = Path(d)
     started = iso(-10)
     old_shaped_ledger = {
-        "date": _NOW.date().isoformat(),
+        "date": slate_date_of(started),
         "games": {"800": {"first_pitch": started, "cats": {
             "TOP": {"pid": 1, "name": "Ann", "at": started, "locked": True, "locked_late": False,
                     "history": [{"pid": 1, "name": "Ann", "at": started}]}}}},
@@ -461,14 +474,14 @@ with tempfile.TemporaryDirectory() as d:
 with tempfile.TemporaryDirectory() as d:
     tmp = Path(d)
     cur = tmp / "current"
-    # NOT _NOW.date(). pick_lock.main() derives the slate from min(first
-    # pitch) -- fp_a below is iso(-30) -- so between 00:00 and 00:30 UTC
-    # _NOW.date() is already tomorrow while the bot is still writing
-    # yesterday's por_log. This file was red for that half hour every night,
-    # and every delivery script that runs the suite refused to push during it.
-    # Anchor to the same instant the bot keys off.
-    _SLATE_REF = _NOW - dt.timedelta(minutes=30)
-    today_str = _SLATE_REF.date().isoformat()
+    # NOT _NOW.date(), and not any UTC date. pick_lock.main() derives the
+    # slate from the US-Eastern date of min(first pitch) -- fp_a below is
+    # iso(-30) -- so from ~8:30pm ET every evening a UTC date is already
+    # tomorrow while the bot is still writing tonight's por_log. (An earlier
+    # fix anchored to the first pitch but kept the UTC date, which only moved
+    # the red window; CI went red on 2026-10-18 evening for exactly that.)
+    # Key on the same thing the bot keys on: the game's own date.
+    today_str = slate_date_of(iso(-30))
     por_log_path = cur / f"por_log_{today_str}.jsonl"
 
     rid_a = opaque_run_id("g10a")
@@ -514,7 +527,7 @@ with tempfile.TemporaryDirectory() as d:
     # new date -- prove that por_log_<today_str>.jsonl (yesterday's file, in
     # this scenario) is completely untouched by that, because archival never
     # goes through fetch_lock()/pick_lock.json at all.
-    tomorrow_str = (_SLATE_REF.date() + dt.timedelta(days=1)).isoformat()
+    tomorrow_str = (dt.date.fromisoformat(today_str) + dt.timedelta(days=1)).isoformat()
     # First pitch a genuine 10 minutes in the past (so the game actually
     # locks this run) while the payload's own "date" is explicitly
     # tomorrow_str -- forcing main() to key this run as tomorrow's slate,

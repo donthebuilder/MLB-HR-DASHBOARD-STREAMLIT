@@ -164,10 +164,24 @@ def test_every_loader_returns_a_status():
     """A caller that gets {} with no status cannot tell 'Savant is down' from
     'there are no catchers in MLB', and the second reading ships a board of
     zeroes."""
+    # Behaviour, not wording: each loader is handed a failed fetch and an
+    # empty-but-"ok" fetch, and must say so in its status rather than hand
+    # back a bare {}. (The old check grepped for "return out, status"; the
+    # loaders now return _joined_status(...), which is stricter: an "ok"
+    # fetch with nothing joinable is downgraded to an error.)
     SF._CACHE.clear()
-    src = (Path(__file__).resolve().parents[1] / "bots" / "savant_feeds.py").read_text(encoding="utf-8")
-    assert "return out, status" in src
-    assert src.count("Tuple[Dict[int, dict], str]") >= 2
+    real = SF._fetch_csv
+    try:
+        for loader in (SF.catcher_throwing, SF.team_defense):
+            SF._fetch_csv = lambda url, key: ([], "error:HTTP503")
+            out, status = loader(2026)
+            assert out == {} and status == "error:HTTP503", (loader.__name__, status)
+            SF._fetch_csv = lambda url, key: ([], "ok")
+            out, status = loader(2026)
+            assert out == {} and status.startswith("error:NoJoinableRows"), (loader.__name__, status)
+    finally:
+        SF._fetch_csv = real
+        SF._CACHE.clear()
 
 
 def test_abs_is_deliberately_not_wired():

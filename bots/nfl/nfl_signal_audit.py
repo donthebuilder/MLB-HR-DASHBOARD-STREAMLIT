@@ -127,9 +127,11 @@ def list_branch() -> list[str]:
 
 
 def read_header(name: str) -> dict | None:
-    """First line of a run file, via a Range request."""
+    """First line of a run file, via a Range request. 64 KB: the header grew past
+    4 KB in week 5 (the shadow-model block), and a cut line read as unreadable
+    -- weeks 5 and 6 dropped out of the audit without a word (fixed 2026-10-20)."""
     try:
-        body = _get(f"{RAW}/{name}", {"Range": "bytes=0-4095"})
+        body = _get(f"{RAW}/{name}", {"Range": "bytes=0-65535"})
         line = body.split(b"\n", 1)[0]
         return json.loads(line)
     except Exception as exc:
@@ -251,6 +253,17 @@ def build(season: int, files: list[str], ko: dict, now: dt.datetime) -> dict:
             pred_idx[rid] = {r["player_id"]: r for r in rows_of(v["pred"]) if r.get("market") == "TD"}
             sig_idx[rid] = ({r["player_id"]: r for r in rows_of(v["sig"])} if "sig" in v else {})
 
+        # WHO WAS CALLED FOR A TOUCHDOWN (2026-10-20, the TUDDY score bands): the
+        # TD ladder's rungs, then any locked game call (TOP or TD) -- the site's
+        # lib/nfl/tdFeed onBotFor in the TD market, read from the graded files.
+        called = {str(r.get("player_id")) for r in (((res.get("card") or {}).get("TD") or {}).get("rungs") or [])
+                  if r.get("player_id") and not r.get("dup")}
+        gc = read_json(f"nfl_game_calls_graded_{season}_w{wk:02d}.json") or {}
+        for g in gc.get("games") or []:
+            for c in g.get("calls") or []:
+                if c.get("player_id") and c.get("role") in ("TOP", "TD"):
+                    called.add(str(c["player_id"]))
+        wk_rows = []
         per = {s["key"]: {"pool_n": 0, "pool_td": 0, "n": 0, "td": 0} for s in SIGNALS}
         wk_pool = 0
         wk_td = 0
@@ -268,6 +281,8 @@ def build(season: int, files: list[str], ko: dict, now: dt.datetime) -> dict:
                     continue
                 seen.add(pid)
                 scored = float(played[pid] or 0) >= 1
+                if isinstance(pred.get("score"), (int, float)):
+                    wk_rows.append([pid, round(float(pred["score"]), 1), int(scored), int(pid in called)])
                 wk_pool += 1
                 wk_td += scored
                 sig = sig_idx[rid].get(pid)
@@ -294,6 +309,9 @@ def build(season: int, files: list[str], ko: dict, now: dt.datetime) -> dict:
             "pool_td": wk_td,
             "freeze_runs": len(set(freeze_for_team.values())),
             "unmatched_team_rows": unmatched_team,
+            # Every graded player's frozen TD score: [player_id, score, scored 0/1,
+            # called 0/1]. The site's score-band table counts these as they are.
+            "td_rows": wk_rows,
         })
 
     signals_out = []

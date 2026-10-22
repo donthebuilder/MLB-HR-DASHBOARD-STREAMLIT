@@ -39,8 +39,18 @@ digest = hashlib.sha256(json.dumps(dump, sort_keys=True, default=str).encode()).
 check("120-row scored slate is byte-identical to the base commit", digest,
       "58060d5151c56b55cdc68b082854da1020e8a3cd8f3a91c3b33c2958f9b49fd7")
 check("an unstamped row carries no shadow", rows[0].hr_label_shadow, {})
+# The live model's published hash (Actions, Python 3.11; on the data branch in
+# eval_report.json / graded_results_*). The c795e06c... this file used to expect
+# was the same code hashed by Python 3.13's ast.dump, which prints differently;
+# config_fingerprint now prints 3.11's form on every version.
 check("config_hash is unmoved", m.hr_config_hash(),
-      "sha256:c795e06c4352ce7b22d4a3320a07642ededc60143ab0a7f29f9a9d97d8caf5cb")
+      "sha256:b0639430bd37655d6e383e6f896d84e9f13bfa1324c6543478a8ff5344b4a7d0")
+if sys.version_info < (3, 12):
+    import ast, inspect, textwrap
+    for fn in m._HR_CONFIG_FORMULA_FUNCS:
+        t = ast.parse(textwrap.dedent(inspect.getsource(fn)))
+        check(f"3.11 dump form matches ast.dump ({fn.__name__})", m.CONFIG_FINGERPRINT._ast_dump_py311(t),
+              ast.dump(t, annotate_fields=True, include_attributes=False))
 
 # ── 2. THE SHADOW FIXES THE ORDERING ────────────────────────────────────────
 # Mimic the pipeline: call the live label at bpp==0.0, THEN assign bpp (as the pipeline does at :8688), stamp.
