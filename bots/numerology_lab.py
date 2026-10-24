@@ -137,7 +137,7 @@ def collect_nhl(cache):
                     if toi >= 8:
                         ax = axes_for(jersey.get(pid), birth.get(pid), goals + 1, x["skaterFullName"])
                         rows.append({"season": season, "rate": rate, "y": int(x["goals"] >= 1), "d": 100 * (int(x["goals"] >= 1) - rate),
-                                     "tags": tags_for(ax, birth.get(pid), x["gameDate"]), "ax": ax})
+                                     "tags": tags_for(ax, birth.get(pid), x["gameDate"]), "ax": ax, "date": x["gameDate"], "x": int(x["goals"] >= 2)})
                 goals += x["goals"]
     return rows
 
@@ -171,7 +171,7 @@ def collect_nfl(cache):
                     gd = game_dates.get(x["game_id"])
                     if gd:
                         rows.append({"season": season, "rate": rate, "y": int(td >= 1), "d": 100 * (int(td >= 1) - rate),
-                                     "tags": tags_for(ax, bd, gd), "ax": ax})
+                                     "tags": tags_for(ax, bd, gd), "ax": ax, "date": gd, "x": int(td >= 2)})
                 tds += td
     return rows
 
@@ -221,7 +221,7 @@ def collect_mlb(cache, seasons=(2024, 2025, 2026)):
                     ax = axes_for(p.get("primaryNumber"), p.get("birthDate"), hrs + 1, p.get("fullName"))
                     rows.append({"season": season, "rate": hr_rate, "hrate": h_rate, "y": int(g["hr"] >= 1), "yh": int(g["h"] >= 1),
                                  "d": 100 * (int(g["hr"] >= 1) - hr_rate), "dh": 100 * (int(g["h"] >= 1) - h_rate),
-                                 "tags": tags_for(ax, p.get("birthDate"), g["date"]), "ax": ax})
+                                 "tags": tags_for(ax, p.get("birthDate"), g["date"]), "ax": ax, "date": g["date"], "x": int(g["hr"] >= 2)})
                 hrs += g["hr"]
     return rows
 
@@ -264,7 +264,7 @@ def collect_nba(cache):
                         inf = info.get(p["pid"], {})
                         ax = axes_for(inf.get("jersey"), inf.get("birth"), n25 + 1, inf.get("name"))
                         rows.append({"season": season, "rate": rate, "y": int(p["pts"] >= 25), "d": 100 * (int(p["pts"] >= 25) - rate),
-                                     "tags": tags_for(ax, inf.get("birth"), g["date"]), "ax": ax})
+                                     "tags": tags_for(ax, inf.get("birth"), g["date"]), "ax": ax, "date": g["date"], "x": int(p["pts"] >= 35)})
                     h.append((p["min"], p["pts"]))
     return rows
 
