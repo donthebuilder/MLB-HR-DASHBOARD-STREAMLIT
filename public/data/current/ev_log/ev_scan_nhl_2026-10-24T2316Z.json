@@ -1,0 +1,2067 @@
+{
+ "sport": "nhl",
+ "fetched_utc": "2026-10-24T2316Z",
+ "date_et": "2026-10-24",
+ "props": 269,
+ "matched": 212,
+ "rows": [
+  {
+   "sport": "nhl",
+   "player": "Viktor Arvidsson",
+   "game": "DET@CGY",
+   "starts_at": "2026-10-25T02:00:00.000Z",
+   "market": "Any assist",
+   "line": null,
+   "book": "espnbet",
+   "price": 175,
+   "ticker": "KXNHLAST-26OCT24DETCGY-DETVARVIDSSON33-1",
+   "verdict": "PASS",
+   "green": 0,
+   "red": 0,
+   "kalshi_yes_no": "+156/-186",
+   "resting_usd": [
+    366,
+    9
+   ],
+   "top_ev_pct": 1.7,
+   "fair_pct": 37.0,
+   "fetched_utc": "2026-10-24T23:16:06.272609+00:00",
+   "flags": [
+    {
+     "source": "Kalshi top of book",
+     "quote": "+156/-186",
+     "ev": 0.0174,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side -194",
+     "quote": "+156/-194",
+     "ev": 0.004,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side -203",
+     "quote": "+156/-203",
+     "ev": -0.0103,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side +150",
+     "quote": "+150/-186",
+     "ev": 0.03,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side +144",
+     "quote": "+144/-186",
+     "ev": 0.0433,
+     "flag": "IGNORED (thin)"
+    }
+   ]
+  },
+  {
+   "sport": "nhl",
+   "player": "John Carlson",
+   "game": "TB@UTA",
+   "starts_at": "2026-10-25T01:00:00.000Z",
+   "market": "Anytime goal",
+   "line": null,
+   "book": "draftkings",
+   "price": 700,
+   "ticker": "KXNHLGOAL-26OCT24TBUTA-TBJCARLSON74-1",
+   "verdict": "PASS",
+   "green": 0,
+   "red": 0,
+   "kalshi_yes_no": "+669/-733",
+   "resting_usd": [
+    185,
+    1
+   ],
+   "top_ev_pct": -0.0,
+   "fair_pct": 12.5,
+   "fetched_utc": "2026-10-24T23:16:06.272609+00:00",
+   "flags": [
+    {
+     "source": "Kalshi top of book",
+     "quote": "+669/-733",
+     "ev": -0.0002,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side -809",
+     "quote": "+669/-809",
+     "ev": -0.0422,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side -900",
+     "quote": "+669/-900",
+     "ev": -0.0855,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side +614",
+     "quote": "+614/-733",
+     "ev": 0.0383,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side +567",
+     "quote": "+567/-733",
+     "ev": 0.0753,
+     "flag": "IGNORED (thin)"
+    }
+   ]
+  },
+  {
+   "sport": "nhl",
+   "player": "Mackenzie Weegar",
+   "game": "TB@UTA",
+   "starts_at": "2026-10-25T01:00:00.000Z",
+   "market": "Anytime goal",
+   "line": null,
+   "book": "draftkings",
+   "price": 850,
+   "ticker": "KXNHLGOAL-26OCT24TBUTA-UTAMWEEGAR52-1",
+   "verdict": "PASS",
+   "green": 0,
+   "red": 0,
+   "kalshi_yes_no": "+809/-900",
+   "resting_usd": [
+    1892,
+    16
+   ],
+   "top_ev_pct": -0.3,
+   "fair_pct": 10.49,
+   "fetched_utc": "2026-10-24T23:16:06.272609+00:00",
+   "flags": [
+    {
+     "source": "Kalshi top of book",
+     "quote": "+809/-900",
+     "ev": -0.0033,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side -1011",
+     "quote": "+809/-1011",
+     "ev": -0.0534,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side +733",
+     "quote": "+733/-900",
+     "ev": 0.0421,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side +669",
+     "quote": "+669/-900",
+     "ev": 0.086,
+     "flag": "IGNORED (thin)"
+    }
+   ]
+  },
+  {
+   "sport": "nhl",
+   "player": "Quinn Hughes",
+   "game": "MIN@SEA",
+   "starts_at": "2026-10-25T02:00:00.000Z",
+   "market": "Any assist",
+   "line": null,
+   "book": "espnbet",
+   "price": -165,
+   "ticker": "KXNHLAST-26OCT24MINSEA-MINQHUGHES43-1",
+   "verdict": "PASS",
+   "green": 0,
+   "red": 0,
+   "kalshi_yes_no": "-170/+156",
+   "resting_usd": [
+    0,
+    1
+   ],
+   "top_ev_pct": -0.5,
+   "fair_pct": 61.95,
+   "fetched_utc": "2026-10-24T23:16:06.272609+00:00",
+   "flags": [
+    {
+     "source": "Kalshi top of book",
+     "quote": "-170/+156",
+     "ev": -0.005,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side +150",
+     "quote": "-170/+150",
+     "ev": -0.0124,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side +144",
+     "quote": "-170/+144",
+     "ev": -0.0202,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side -178",
+     "quote": "-178/+156",
+     "ev": 0.0037,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side -194",
+     "quote": "-194/+156",
+     "ev": 0.0197,
+     "flag": "IGNORED (thin)"
+    }
+   ]
+  },
+  {
+   "sport": "nhl",
+   "player": "John Carlson",
+   "game": "TB@UTA",
+   "starts_at": "2026-10-25T01:00:00.000Z",
+   "market": "Any assist",
+   "line": null,
+   "book": "draftkings",
+   "price": 225,
+   "ticker": "KXNHLAST-26OCT24TBUTA-TBJCARLSON74-1",
+   "verdict": "PASS",
+   "green": 0,
+   "red": 0,
+   "kalshi_yes_no": "+223/-233",
+   "resting_usd": [
+    69,
+    228
+   ],
+   "top_ev_pct": -0.9,
+   "fair_pct": 30.49,
+   "fetched_utc": "2026-10-24T23:16:06.272609+00:00",
+   "flags": [
+    {
+     "source": "Kalshi top of book",
+     "quote": "+223/-233",
+     "ev": -0.009,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side -245",
+     "quote": "+223/-245",
+     "ev": -0.0261,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side -257",
+     "quote": "+223/-257",
+     "ev": -0.0423,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side +213",
+     "quote": "+213/-233",
+     "ev": 0.0069,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side +203",
+     "quote": "+203/-233",
+     "ev": 0.0238,
+     "flag": "IGNORED (thin)"
+    }
+   ]
+  },
+  {
+   "sport": "nhl",
+   "player": "Alex Debrincat",
+   "game": "DET@CGY",
+   "starts_at": "2026-10-25T02:00:00.000Z",
+   "market": "Any point (G+A)",
+   "line": null,
+   "book": "espnbet",
+   "price": -180,
+   "ticker": "KXNHLPTS-26OCT24DETCGY-DETADEBRINCAT93-1",
+   "verdict": "PASS",
+   "green": 0,
+   "red": 0,
+   "kalshi_yes_no": "-178/+170",
+   "resting_usd": [
+    180,
+    18
+   ],
+   "top_ev_pct": -1.2,
+   "fair_pct": 63.5,
+   "fetched_utc": "2026-10-24T23:16:06.272609+00:00",
+   "flags": [
+    {
+     "source": "Kalshi top of book",
+     "quote": "-178/+170",
+     "ev": -0.0123,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side +163",
+     "quote": "-178/+163",
+     "ev": -0.0199,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side +156",
+     "quote": "-178/+156",
+     "ev": -0.0279,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side -186",
+     "quote": "-186/+170",
+     "ev": -0.0044,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side -194",
+     "quote": "-194/+170",
+     "ev": 0.0031,
+     "flag": "IGNORED (thin)"
+    }
+   ]
+  },
+  {
+   "sport": "nhl",
+   "player": "Joel Farabee",
+   "game": "DET@CGY",
+   "starts_at": "2026-10-25T02:00:00.000Z",
+   "market": "Any point (G+A)",
+   "line": null,
+   "book": "espnbet",
+   "price": -105,
+   "ticker": "KXNHLPTS-26OCT24DETCGY-CGYJFARABEE86-1",
+   "verdict": "PASS",
+   "green": 0,
+   "red": 0,
+   "kalshi_yes_no": "-104/-100",
+   "resting_usd": [
+    1285,
+    62
+   ],
+   "top_ev_pct": -1.4,
+   "fair_pct": 50.49,
+   "fetched_utc": "2026-10-24T23:16:06.272609+00:00",
+   "flags": [
+    {
+     "source": "Kalshi top of book",
+     "quote": "-104/-100",
+     "ev": -0.0142,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side -108",
+     "quote": "-108/-100",
+     "ev": -0.005,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side -113",
+     "quote": "-113/-100",
+     "ev": 0.006,
+     "flag": "IGNORED (thin)"
+    }
+   ]
+  },
+  {
+   "sport": "nhl",
+   "player": "Ryan Hartman",
+   "game": "MIN@SEA",
+   "starts_at": "2026-10-25T02:00:00.000Z",
+   "market": "Anytime goal",
+   "line": null,
+   "book": "fanduel",
+   "price": 380,
+   "ticker": "KXNHLGOAL-26OCT24MINSEA-MINRHARTMAN38-1",
+   "verdict": "PASS",
+   "green": 0,
+   "red": 0,
+   "kalshi_yes_no": "+376/-400",
+   "resting_usd": [
+    4035,
+    241
+   ],
+   "top_ev_pct": -1.6,
+   "fair_pct": 20.5,
+   "fetched_utc": "2026-10-24T23:16:06.272609+00:00",
+   "flags": [
+    {
+     "source": "Kalshi top of book",
+     "quote": "+376/-400",
+     "ev": -0.016,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side -456",
+     "quote": "+376/-456",
+     "ev": -0.0659,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side -488",
+     "quote": "+376/-488",
+     "ev": -0.0908,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side +355",
+     "quote": "+355/-400",
+     "ev": 0.0068,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side +335",
+     "quote": "+335/-400",
+     "ev": 0.0303,
+     "flag": "IGNORED (thin)"
+    }
+   ]
+  },
+  {
+   "sport": "nhl",
+   "player": "Jordan Eberle",
+   "game": "MIN@SEA",
+   "starts_at": "2026-10-25T02:00:00.000Z",
+   "market": "Any point (G+A)",
+   "line": null,
+   "book": "espnbet",
+   "price": 105,
+   "ticker": "KXNHLPTS-26OCT24MINSEA-SEAJEBERLE7-1",
+   "verdict": "PASS",
+   "green": 0,
+   "red": 0,
+   "kalshi_yes_no": "+104/-113",
+   "resting_usd": [
+    50,
+    1
+   ],
+   "top_ev_pct": -1.6,
+   "fair_pct": 47.98,
+   "fetched_utc": "2026-10-24T23:16:06.272609+00:00",
+   "flags": [
+    {
+     "source": "Kalshi top of book",
+     "quote": "+104/-113",
+     "ev": -0.0163,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side -117",
+     "quote": "+104/-117",
+     "ev": -0.0252,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side -100",
+     "quote": "-100/-113",
+     "ev": -0.0063,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side -104",
+     "quote": "-104/-113",
+     "ev": 0.0037,
+     "flag": "IGNORED (thin)"
+    }
+   ]
+  },
+  {
+   "sport": "nhl",
+   "player": "Alex Debrincat",
+   "game": "DET@CGY",
+   "starts_at": "2026-10-25T02:00:00.000Z",
+   "market": "Anytime goal",
+   "line": null,
+   "book": "fanduel",
+   "price": 155,
+   "ticker": "KXNHLGOAL-26OCT24DETCGY-DETADEBRINCAT93-1",
+   "verdict": "PASS",
+   "green": 0,
+   "red": 0,
+   "kalshi_yes_no": "+156/-163",
+   "resting_usd": [
+    3842,
+    485
+   ],
+   "top_ev_pct": -1.7,
+   "fair_pct": 38.54,
+   "fetched_utc": "2026-10-24T23:16:06.272609+00:00",
+   "flags": [
+    {
+     "source": "Kalshi top of book",
+     "quote": "+156/-163",
+     "ev": -0.0172,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side -178",
+     "quote": "+156/-178",
+     "ev": -0.0436,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side +150",
+     "quote": "+150/-163",
+     "ev": -0.0053,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side +144",
+     "quote": "+144/-163",
+     "ev": 0.0071,
+     "flag": "IGNORED (thin)"
+    }
+   ]
+  },
+  {
+   "sport": "nhl",
+   "player": "Logan Cooley",
+   "game": "TB@UTA",
+   "starts_at": "2026-10-25T01:00:00.000Z",
+   "market": "Any assist",
+   "line": null,
+   "book": "fanduel",
+   "price": 134,
+   "ticker": "KXNHLAST-26OCT24TBUTA-UTALCOOLEY92-1",
+   "verdict": "PASS",
+   "green": 0,
+   "red": 0,
+   "kalshi_yes_no": "+133/-144",
+   "resting_usd": [
+    759,
+    205
+   ],
+   "top_ev_pct": -1.8,
+   "fair_pct": 41.95,
+   "fetched_utc": "2026-10-24T23:16:06.272609+00:00",
+   "flags": [
+    {
+     "source": "Kalshi top of book",
+     "quote": "+133/-144",
+     "ev": -0.0184,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side -150",
+     "quote": "+133/-150",
+     "ev": -0.03,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side -156",
+     "quote": "+133/-156",
+     "ev": -0.0411,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side +127",
+     "quote": "+127/-144",
+     "ev": -0.0052,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side +122",
+     "quote": "+122/-144",
+     "ev": 0.0063,
+     "flag": "IGNORED (thin)"
+    }
+   ]
+  },
+  {
+   "sport": "nhl",
+   "player": "Jordan Eberle",
+   "game": "MIN@SEA",
+   "starts_at": "2026-10-25T02:00:00.000Z",
+   "market": "Anytime goal",
+   "line": null,
+   "book": "espnbet",
+   "price": 300,
+   "ticker": "KXNHLGOAL-26OCT24MINSEA-SEAJEBERLE7-1",
+   "verdict": "PASS",
+   "green": 0,
+   "red": 0,
+   "kalshi_yes_no": "+300/-317",
+   "resting_usd": [
+    1071,
+    560
+   ],
+   "top_ev_pct": -2.0,
+   "fair_pct": 24.49,
+   "fetched_utc": "2026-10-24T23:16:06.272609+00:00",
+   "flags": [
+    {
+     "source": "Kalshi top of book",
+     "quote": "+300/-317",
+     "ev": -0.0205,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side -335",
+     "quote": "+300/-335",
+     "ev": -0.0407,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side -355",
+     "quote": "+300/-355",
+     "ev": -0.0615,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side +285",
+     "quote": "+285/-317",
+     "ev": -0.0013,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side +270",
+     "quote": "+270/-317",
+     "ev": 0.0192,
+     "flag": "IGNORED (thin)"
+    }
+   ]
+  },
+  {
+   "sport": "nhl",
+   "player": "Vince Dunn",
+   "game": "MIN@SEA",
+   "starts_at": "2026-10-25T02:00:00.000Z",
+   "market": "Any point (G+A)",
+   "line": null,
+   "book": "espnbet",
+   "price": 120,
+   "ticker": "KXNHLPTS-26OCT24MINSEA-SEAVDUNN29-1",
+   "verdict": "PASS",
+   "green": 0,
+   "red": 0,
+   "kalshi_yes_no": "+117/-133",
+   "resting_usd": [
+    1,
+    11
+   ],
+   "top_ev_pct": -2.1,
+   "fair_pct": 44.5,
+   "fetched_utc": "2026-10-24T23:16:06.272609+00:00",
+   "flags": [
+    {
+     "source": "Kalshi top of book",
+     "quote": "+117/-133",
+     "ev": -0.0211,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side -138",
+     "quote": "+117/-138",
+     "ev": -0.0311,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side -144",
+     "quote": "+117/-144",
+     "ev": -0.0426,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side +108",
+     "quote": "+108/-133",
+     "ev": 0.0007,
+     "flag": "IGNORED (thin)"
+    }
+   ]
+  },
+  {
+   "sport": "nhl",
+   "player": "Emmitt Finnie",
+   "game": "DET@CGY",
+   "starts_at": "2026-10-25T02:00:00.000Z",
+   "market": "Any point (G+A)",
+   "line": null,
+   "book": "espnbet",
+   "price": 130,
+   "ticker": "KXNHLPTS-26OCT24DETCGY-DETEFINNIE58-1",
+   "verdict": "PASS",
+   "green": 0,
+   "red": 0,
+   "kalshi_yes_no": "+127/-144",
+   "resting_usd": [
+    923,
+    19
+   ],
+   "top_ev_pct": -2.2,
+   "fair_pct": 42.51,
+   "fetched_utc": "2026-10-24T23:16:06.272609+00:00",
+   "flags": [
+    {
+     "source": "Kalshi top of book",
+     "quote": "+127/-144",
+     "ev": -0.0222,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side -150",
+     "quote": "+127/-150",
+     "ev": -0.0336,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side -163",
+     "quote": "+127/-163",
+     "ev": -0.0567,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side +122",
+     "quote": "+122/-144",
+     "ev": -0.0109,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side +117",
+     "quote": "+117/-144",
+     "ev": 0.001,
+     "flag": "IGNORED (thin)"
+    }
+   ]
+  },
+  {
+   "sport": "nhl",
+   "player": "Justin Faulk",
+   "game": "DET@CGY",
+   "starts_at": "2026-10-25T02:00:00.000Z",
+   "market": "Anytime goal",
+   "line": null,
+   "book": "fanduel",
+   "price": 750,
+   "ticker": "KXNHLGOAL-26OCT24DETCGY-DETJFAULK72-1",
+   "verdict": "PASS",
+   "green": 0,
+   "red": 0,
+   "kalshi_yes_no": "+733/-809",
+   "resting_usd": [
+    6001,
+    160
+   ],
+   "top_ev_pct": -2.3,
+   "fair_pct": 11.5,
+   "fetched_utc": "2026-10-24T23:16:06.272609+00:00",
+   "flags": [
+    {
+     "source": "Kalshi top of book",
+     "quote": "+733/-809",
+     "ev": -0.0229,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side -900",
+     "quote": "+733/-900",
+     "ev": -0.0676,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side +669",
+     "quote": "+669/-809",
+     "ev": 0.0177,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side +614",
+     "quote": "+614/-809",
+     "ev": 0.0574,
+     "flag": "IGNORED (thin)"
+    }
+   ]
+  },
+  {
+   "sport": "nhl",
+   "player": "Jordan Eberle",
+   "game": "MIN@SEA",
+   "starts_at": "2026-10-25T02:00:00.000Z",
+   "market": "Any assist",
+   "line": null,
+   "book": "espnbet",
+   "price": 210,
+   "ticker": "KXNHLAST-26OCT24MINSEA-SEAJEBERLE7-1",
+   "verdict": "PASS",
+   "green": 0,
+   "red": 0,
+   "kalshi_yes_no": "+212/-223",
+   "resting_usd": [
+    1,
+    234
+   ],
+   "top_ev_pct": -2.3,
+   "fair_pct": 31.5,
+   "fetched_utc": "2026-10-24T23:16:06.272609+00:00",
+   "flags": [
+    {
+     "source": "Kalshi top of book",
+     "quote": "+212/-223",
+     "ev": -0.0234,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side -233",
+     "quote": "+212/-233",
+     "ev": -0.038,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side -245",
+     "quote": "+212/-245",
+     "ev": -0.0545,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side +194",
+     "quote": "+194/-223",
+     "ev": 0.0066,
+     "flag": "IGNORED (thin)"
+    }
+   ]
+  },
+  {
+   "sport": "nhl",
+   "player": "Joel Eriksson Ek",
+   "game": "MIN@SEA",
+   "starts_at": "2026-10-25T02:00:00.000Z",
+   "market": "Anytime goal",
+   "line": null,
+   "book": "fanduel",
+   "price": 210,
+   "ticker": "KXNHLGOAL-26OCT24MINSEA-MINJERIKSSONEK14-1",
+   "verdict": "PASS",
+   "green": 0,
+   "red": 0,
+   "kalshi_yes_no": "+212/-223",
+   "resting_usd": [
+    2091,
+    125
+   ],
+   "top_ev_pct": -2.3,
+   "fair_pct": 31.5,
+   "fetched_utc": "2026-10-24T23:16:06.272609+00:00",
+   "flags": [
+    {
+     "source": "Kalshi top of book",
+     "quote": "+212/-223",
+     "ev": -0.0234,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side -233",
+     "quote": "+212/-233",
+     "ev": -0.038,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side -245",
+     "quote": "+212/-245",
+     "ev": -0.0545,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side +203",
+     "quote": "+203/-223",
+     "ev": -0.0088,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side +194",
+     "quote": "+194/-223",
+     "ev": 0.0066,
+     "flag": "IGNORED (thin)"
+    }
+   ]
+  },
+  {
+   "sport": "nhl",
+   "player": "Alex Debrincat",
+   "game": "DET@CGY",
+   "starts_at": "2026-10-25T02:00:00.000Z",
+   "market": "Any assist",
+   "line": null,
+   "book": "fanduel",
+   "price": 126,
+   "ticker": "KXNHLAST-26OCT24DETCGY-DETADEBRINCAT93-1",
+   "verdict": "PASS",
+   "green": 0,
+   "red": 0,
+   "kalshi_yes_no": "+127/-138",
+   "resting_usd": [
+    56,
+    284
+   ],
+   "top_ev_pct": -2.7,
+   "fair_pct": 43.03,
+   "fetched_utc": "2026-10-24T23:16:06.272609+00:00",
+   "flags": [
+    {
+     "source": "Kalshi top of book",
+     "quote": "+127/-138",
+     "ev": -0.0275,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side -144",
+     "quote": "+127/-144",
+     "ev": -0.0392,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side -150",
+     "quote": "+127/-150",
+     "ev": -0.0504,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side +122",
+     "quote": "+122/-138",
+     "ev": -0.0163,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side +117",
+     "quote": "+117/-138",
+     "ev": -0.0047,
+     "flag": "IGNORED (thin)"
+    }
+   ]
+  },
+  {
+   "sport": "nhl",
+   "player": "Joel Eriksson Ek",
+   "game": "MIN@SEA",
+   "starts_at": "2026-10-25T02:00:00.000Z",
+   "market": "Any point (G+A)",
+   "line": null,
+   "book": "betmgm",
+   "price": -155,
+   "ticker": "KXNHLPTS-26OCT24MINSEA-MINJERIKSSONEK14-1",
+   "verdict": "PASS",
+   "green": 0,
+   "red": 0,
+   "kalshi_yes_no": "-150/+138",
+   "resting_usd": [
+    4,
+    7
+   ],
+   "top_ev_pct": -2.9,
+   "fair_pct": 58.99,
+   "fetched_utc": "2026-10-24T23:16:06.272609+00:00",
+   "flags": [
+    {
+     "source": "Kalshi top of book",
+     "quote": "-150/+138",
+     "ev": -0.0294,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side +133",
+     "quote": "-150/+133",
+     "ev": -0.0368,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side +122",
+     "quote": "-150/+122",
+     "ev": -0.0542,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side -156",
+     "quote": "-156/+138",
+     "ev": -0.0217,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side -163",
+     "quote": "-163/+138",
+     "ev": -0.013,
+     "flag": "IGNORED (thin)"
+    }
+   ]
+  },
+  {
+   "sport": "nhl",
+   "player": "Viktor Arvidsson",
+   "game": "DET@CGY",
+   "starts_at": "2026-10-25T02:00:00.000Z",
+   "market": "Any point (G+A)",
+   "line": null,
+   "book": "espnbet",
+   "price": -120,
+   "ticker": "KXNHLPTS-26OCT24DETCGY-DETVARVIDSSON33-1",
+   "verdict": "PASS",
+   "green": 0,
+   "red": 0,
+   "kalshi_yes_no": "-117/+108",
+   "resting_usd": [
+    19,
+    5
+   ],
+   "top_ev_pct": -3.0,
+   "fair_pct": 52.92,
+   "fetched_utc": "2026-10-24T23:16:06.272609+00:00",
+   "flags": [
+    {
+     "source": "Kalshi top of book",
+     "quote": "-117/+108",
+     "ev": -0.0298,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side +104",
+     "quote": "-117/+104",
+     "ev": -0.0384,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side -100",
+     "quote": "-117/-100",
+     "ev": -0.0474,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side -122",
+     "quote": "-122/+108",
+     "ev": -0.0202,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side -127",
+     "quote": "-127/+108",
+     "ev": -0.0111,
+     "flag": "IGNORED (thin)"
+    }
+   ]
+  },
+  {
+   "sport": "nhl",
+   "player": "Matt Boldy",
+   "game": "MIN@SEA",
+   "starts_at": "2026-10-25T02:00:00.000Z",
+   "market": "Any point (G+A)",
+   "line": null,
+   "book": "draftkings",
+   "price": -250,
+   "ticker": "KXNHLPTS-26OCT24MINSEA-MINMBOLDY12-1",
+   "verdict": "PASS",
+   "green": 0,
+   "red": 0,
+   "kalshi_yes_no": "-233/+213",
+   "resting_usd": [
+    0,
+    1
+   ],
+   "top_ev_pct": -3.4,
+   "fair_pct": 69.02,
+   "fetched_utc": "2026-10-24T23:16:06.272609+00:00",
+   "flags": [
+    {
+     "source": "Kalshi top of book",
+     "quote": "-233/+213",
+     "ev": -0.0338,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side +203",
+     "quote": "-233/+203",
+     "ev": -0.041,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side +194",
+     "quote": "-233/+194",
+     "ev": -0.0479,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side -245",
+     "quote": "-245/+213",
+     "ev": -0.0263,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side -257",
+     "quote": "-257/+213",
+     "ev": -0.0193,
+     "flag": "IGNORED (thin)"
+    }
+   ]
+  },
+  {
+   "sport": "nhl",
+   "player": "Brandon Hagel",
+   "game": "TB@UTA",
+   "starts_at": "2026-10-25T01:00:00.000Z",
+   "market": "Any assist",
+   "line": null,
+   "book": "bovada",
+   "price": 144,
+   "ticker": "KXNHLAST-26OCT24TBUTA-TBBHAGEL38-1",
+   "verdict": "PASS",
+   "green": 0,
+   "red": 0,
+   "kalshi_yes_no": "+144/-163",
+   "resting_usd": [
+    641,
+    304
+   ],
+   "top_ev_pct": -3.6,
+   "fair_pct": 39.5,
+   "fetched_utc": "2026-10-24T23:16:06.272609+00:00",
+   "flags": [
+    {
+     "source": "Kalshi top of book",
+     "quote": "+144/-163",
+     "ev": -0.0363,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side -170",
+     "quote": "+144/-170",
+     "ev": -0.0485,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side -178",
+     "quote": "+144/-178",
+     "ev": -0.0617,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side +138",
+     "quote": "+138/-163",
+     "ev": -0.0238,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side +133",
+     "quote": "+133/-163",
+     "ev": -0.013,
+     "flag": "IGNORED (thin)"
+    }
+   ]
+  },
+  {
+   "sport": "nhl",
+   "player": "Vince Dunn",
+   "game": "MIN@SEA",
+   "starts_at": "2026-10-25T02:00:00.000Z",
+   "market": "Any assist",
+   "line": null,
+   "book": "espnbet",
+   "price": 150,
+   "ticker": "KXNHLAST-26OCT24MINSEA-SEAVDUNN29-1",
+   "verdict": "PASS",
+   "green": 0,
+   "red": 0,
+   "kalshi_yes_no": "+156/-163",
+   "resting_usd": [
+    1,
+    10
+   ],
+   "top_ev_pct": -3.6,
+   "fair_pct": 38.54,
+   "fetched_utc": "2026-10-24T23:16:06.272609+00:00",
+   "flags": [
+    {
+     "source": "Kalshi top of book",
+     "quote": "+156/-163",
+     "ev": -0.0365,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side -170",
+     "quote": "+156/-170",
+     "ev": -0.0489,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side -178",
+     "quote": "+156/-178",
+     "ev": -0.0623,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side +150",
+     "quote": "+150/-163",
+     "ev": -0.0248,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side +144",
+     "quote": "+144/-163",
+     "ev": -0.0126,
+     "flag": "IGNORED (thin)"
+    }
+   ]
+  },
+  {
+   "sport": "nhl",
+   "player": "Anders Lee",
+   "game": "TB@UTA",
+   "starts_at": "2026-10-25T01:00:00.000Z",
+   "market": "Any point (G+A)",
+   "line": null,
+   "book": "draftkings",
+   "price": 150,
+   "ticker": "KXNHLPTS-26OCT24TBUTA-UTAALEE72-1",
+   "verdict": "PASS",
+   "green": 0,
+   "red": 0,
+   "kalshi_yes_no": "+156/-163",
+   "resting_usd": [
+    1,
+    8
+   ],
+   "top_ev_pct": -3.6,
+   "fair_pct": 38.54,
+   "fetched_utc": "2026-10-24T23:16:06.272609+00:00",
+   "flags": [
+    {
+     "source": "Kalshi top of book",
+     "quote": "+156/-163",
+     "ev": -0.0365,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side -170",
+     "quote": "+156/-170",
+     "ev": -0.0489,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side +150",
+     "quote": "+150/-163",
+     "ev": -0.0248,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side +144",
+     "quote": "+144/-163",
+     "ev": -0.0126,
+     "flag": "IGNORED (thin)"
+    }
+   ]
+  },
+  {
+   "sport": "nhl",
+   "player": "Blake Coleman",
+   "game": "MIN@SEA",
+   "starts_at": "2026-10-25T02:00:00.000Z",
+   "market": "Any assist",
+   "line": null,
+   "book": "draftkings",
+   "price": 310,
+   "ticker": "KXNHLAST-26OCT24MINSEA-MINBCOLEMAN20-1",
+   "verdict": "PASS",
+   "green": 0,
+   "red": 0,
+   "kalshi_yes_no": "+300/-355",
+   "resting_usd": [
+    998,
+    6
+   ],
+   "top_ev_pct": -3.8,
+   "fair_pct": 23.46,
+   "fetched_utc": "2026-10-24T23:16:06.272609+00:00",
+   "flags": [
+    {
+     "source": "Kalshi top of book",
+     "quote": "+300/-355",
+     "ev": -0.0381,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side -376",
+     "quote": "+300/-376",
+     "ev": -0.0588,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side -400",
+     "quote": "+300/-400",
+     "ev": -0.0807,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side +285",
+     "quote": "+285/-355",
+     "ev": -0.0189,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side +270",
+     "quote": "+270/-355",
+     "ev": 0.0017,
+     "flag": "IGNORED (thin)"
+    }
+   ]
+  },
+  {
+   "sport": "nhl",
+   "player": "Emmitt Finnie",
+   "game": "DET@CGY",
+   "starts_at": "2026-10-25T02:00:00.000Z",
+   "market": "Any assist",
+   "line": null,
+   "book": "draftkings",
+   "price": 250,
+   "ticker": "KXNHLAST-26OCT24DETCGY-DETEFINNIE58-1",
+   "verdict": "PASS",
+   "green": 0,
+   "red": 0,
+   "kalshi_yes_no": "+245/-285",
+   "resting_usd": [
+    781,
+    6
+   ],
+   "top_ev_pct": -3.9,
+   "fair_pct": 27.46,
+   "fetched_utc": "2026-10-24T23:16:06.272609+00:00",
+   "flags": [
+    {
+     "source": "Kalshi top of book",
+     "quote": "+245/-285",
+     "ev": -0.0389,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side -300",
+     "quote": "+245/-300",
+     "ev": -0.0565,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side -317",
+     "quote": "+245/-317",
+     "ev": -0.0752,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side +233",
+     "quote": "+233/-285",
+     "ev": -0.0212,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side +223",
+     "quote": "+223/-285",
+     "ev": -0.0055,
+     "flag": "IGNORED (thin)"
+    }
+   ]
+  },
+  {
+   "sport": "nhl",
+   "player": "Nick Schmaltz",
+   "game": "TB@UTA",
+   "starts_at": "2026-10-25T01:00:00.000Z",
+   "market": "Any point (G+A)",
+   "line": null,
+   "book": "espnbet",
+   "price": -170,
+   "ticker": "KXNHLPTS-26OCT24TBUTA-UTANSCHMALTZ8-1",
+   "verdict": "PASS",
+   "green": 0,
+   "red": 0,
+   "kalshi_yes_no": "-156/+150",
+   "resting_usd": [
+    78,
+    15
+   ],
+   "top_ev_pct": -4.0,
+   "fair_pct": 60.47,
+   "fetched_utc": "2026-10-24T23:16:06.272609+00:00",
+   "flags": [
+    {
+     "source": "Kalshi top of book",
+     "quote": "-156/+150",
+     "ev": -0.0396,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side +144",
+     "quote": "-156/+144",
+     "ev": -0.0474,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side -163",
+     "quote": "-163/+150",
+     "ev": -0.0313,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side -170",
+     "quote": "-170/+150",
+     "ev": -0.0234,
+     "flag": "IGNORED (thin)"
+    }
+   ]
+  },
+  {
+   "sport": "nhl",
+   "player": "Jake Guentzel",
+   "game": "TB@UTA",
+   "starts_at": "2026-10-25T01:00:00.000Z",
+   "market": "Anytime goal",
+   "line": null,
+   "book": "fanduel",
+   "price": 195,
+   "ticker": "KXNHLGOAL-26OCT24TBUTA-TBJGUENTZEL59-1",
+   "verdict": "PASS",
+   "green": 0,
+   "red": 0,
+   "kalshi_yes_no": "+203/-212",
+   "resting_usd": [
+    671,
+    643
+   ],
+   "top_ev_pct": -4.0,
+   "fair_pct": 32.53,
+   "fetched_utc": "2026-10-24T23:16:06.272609+00:00",
+   "flags": [
+    {
+     "source": "Kalshi top of book",
+     "quote": "+203/-212",
+     "ev": -0.0405,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side -223",
+     "quote": "+203/-223",
+     "ev": -0.0567,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side -233",
+     "quote": "+203/-233",
+     "ev": -0.0707,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side +194",
+     "quote": "+194/-212",
+     "ev": -0.0257,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side +186",
+     "quote": "+186/-212",
+     "ev": -0.0119,
+     "flag": "IGNORED (thin)"
+    }
+   ]
+  },
+  {
+   "sport": "nhl",
+   "player": "Michael Brandseggnygard",
+   "game": "DET@CGY",
+   "starts_at": "2026-10-25T02:00:00.000Z",
+   "market": "Any assist",
+   "line": null,
+   "book": "espnbet",
+   "price": 300,
+   "ticker": "KXNHLAST-26OCT24DETCGY-DETMBRANDSEGGNYGRD28-1",
+   "verdict": "PASS",
+   "green": 0,
+   "red": 0,
+   "kalshi_yes_no": "+300/-335",
+   "resting_usd": [
+    361,
+    48
+   ],
+   "top_ev_pct": -4.1,
+   "fair_pct": 23.98,
+   "fetched_utc": "2026-10-24T23:16:06.272609+00:00",
+   "flags": [
+    {
+     "source": "Kalshi top of book",
+     "quote": "+300/-335",
+     "ev": -0.0407,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side -355",
+     "quote": "+300/-355",
+     "ev": -0.0615,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side +285",
+     "quote": "+285/-335",
+     "ev": -0.0217,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side +270",
+     "quote": "+270/-335",
+     "ev": -0.0014,
+     "flag": "IGNORED (thin)"
+    }
+   ]
+  },
+  {
+   "sport": "nhl",
+   "player": "Brandon Hagel",
+   "game": "TB@UTA",
+   "starts_at": "2026-10-25T01:00:00.000Z",
+   "market": "Any point (G+A)",
+   "line": null,
+   "book": "espnbet",
+   "price": -175,
+   "ticker": "KXNHLPTS-26OCT24TBUTA-TBBHAGEL38-1",
+   "verdict": "PASS",
+   "green": 0,
+   "red": 0,
+   "kalshi_yes_no": "-163/+150",
+   "resting_usd": [
+    1,
+    22
+   ],
+   "top_ev_pct": -4.2,
+   "fair_pct": 60.99,
+   "fetched_utc": "2026-10-24T23:16:06.272609+00:00",
+   "flags": [
+    {
+     "source": "Kalshi top of book",
+     "quote": "-163/+150",
+     "ev": -0.0416,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side +144",
+     "quote": "-163/+144",
+     "ev": -0.0492,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side +138",
+     "quote": "-163/+138",
+     "ev": -0.0572,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side -170",
+     "quote": "-170/+150",
+     "ev": -0.0337,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side -178",
+     "quote": "-178/+150",
+     "ev": -0.0252,
+     "flag": "IGNORED (thin)"
+    }
+   ]
+  },
+  {
+   "sport": "nhl",
+   "player": "Dylan Guenther",
+   "game": "TB@UTA",
+   "starts_at": "2026-10-25T01:00:00.000Z",
+   "market": "Any point (G+A)",
+   "line": null,
+   "book": "draftkings",
+   "price": -175,
+   "ticker": "KXNHLPTS-26OCT24TBUTA-UTADGUENTHER11-1",
+   "verdict": "PASS",
+   "green": 0,
+   "red": 0,
+   "kalshi_yes_no": "-163/+150",
+   "resting_usd": [
+    19,
+    15
+   ],
+   "top_ev_pct": -4.2,
+   "fair_pct": 60.99,
+   "fetched_utc": "2026-10-24T23:16:06.272609+00:00",
+   "flags": [
+    {
+     "source": "Kalshi top of book",
+     "quote": "-163/+150",
+     "ev": -0.0416,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side +144",
+     "quote": "-163/+144",
+     "ev": -0.0492,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side +138",
+     "quote": "-163/+138",
+     "ev": -0.0572,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side -170",
+     "quote": "-170/+150",
+     "ev": -0.0337,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side -178",
+     "quote": "-178/+150",
+     "ev": -0.0252,
+     "flag": "IGNORED (thin)"
+    }
+   ]
+  },
+  {
+   "sport": "nhl",
+   "player": "Matty Beniers",
+   "game": "MIN@SEA",
+   "starts_at": "2026-10-25T02:00:00.000Z",
+   "market": "Any point (G+A)",
+   "line": null,
+   "book": "betmgm",
+   "price": 115,
+   "ticker": "KXNHLPTS-26OCT24MINSEA-SEAMBENIERS10-1",
+   "verdict": "PASS",
+   "green": 0,
+   "red": 0,
+   "kalshi_yes_no": "+122/-127",
+   "resting_usd": [
+    2,
+    7
+   ],
+   "top_ev_pct": -4.2,
+   "fair_pct": 44.55,
+   "fetched_utc": "2026-10-24T23:16:06.272609+00:00",
+   "flags": [
+    {
+     "source": "Kalshi top of book",
+     "quote": "+122/-127",
+     "ev": -0.0422,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side -133",
+     "quote": "+122/-133",
+     "ev": -0.0544,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side +117",
+     "quote": "+117/-127",
+     "ev": -0.0311,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side +113",
+     "quote": "+113/-127",
+     "ev": -0.0218,
+     "flag": "IGNORED (thin)"
+    }
+   ]
+  },
+  {
+   "sport": "nhl",
+   "player": "Nikita Kucherov",
+   "game": "TB@UTA",
+   "starts_at": "2026-10-25T01:00:00.000Z",
+   "market": "Any point (G+A)",
+   "line": null,
+   "book": "draftkings",
+   "price": -280,
+   "ticker": "KXNHLPTS-26OCT24TBUTA-TBNKUCHEROV86-1",
+   "verdict": "PASS",
+   "green": 0,
+   "red": 0,
+   "kalshi_yes_no": "-245/+233",
+   "resting_usd": [
+    50,
+    1
+   ],
+   "top_ev_pct": -4.3,
+   "fair_pct": 70.49,
+   "fetched_utc": "2026-10-24T23:16:06.272609+00:00",
+   "flags": [
+    {
+     "source": "Kalshi top of book",
+     "quote": "-245/+233",
+     "ev": -0.0433,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side +223",
+     "quote": "-245/+223",
+     "ev": -0.0495,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side +213",
+     "quote": "-245/+213",
+     "ev": -0.0561,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side -257",
+     "quote": "-257/+233",
+     "ev": -0.0366,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side -270",
+     "quote": "-270/+233",
+     "ev": -0.0298,
+     "flag": "IGNORED (thin)"
+    }
+   ]
+  },
+  {
+   "sport": "nhl",
+   "player": "Chandler Stephenson",
+   "game": "MIN@SEA",
+   "starts_at": "2026-10-25T02:00:00.000Z",
+   "market": "Any point (G+A)",
+   "line": null,
+   "book": "espnbet",
+   "price": 120,
+   "ticker": "KXNHLPTS-26OCT24MINSEA-SEACSTEPHENSON9-1",
+   "verdict": "PASS",
+   "green": 0,
+   "red": 0,
+   "kalshi_yes_no": "+127/-133",
+   "resting_usd": [
+    2,
+    2
+   ],
+   "top_ev_pct": -4.3,
+   "fair_pct": 43.48,
+   "fetched_utc": "2026-10-24T23:16:06.272609+00:00",
+   "flags": [
+    {
+     "source": "Kalshi top of book",
+     "quote": "+127/-133",
+     "ev": -0.0433,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side -150",
+     "quote": "+127/-150",
+     "ev": -0.0757,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side +117",
+     "quote": "+117/-133",
+     "ev": -0.0211,
+     "flag": "IGNORED (thin)"
+    }
+   ]
+  },
+  {
+   "sport": "nhl",
+   "player": "Matvei Gridin",
+   "game": "DET@CGY",
+   "starts_at": "2026-10-25T02:00:00.000Z",
+   "market": "Any point (G+A)",
+   "line": null,
+   "book": "betmgm",
+   "price": 110,
+   "ticker": "KXNHLPTS-26OCT24DETCGY-CGYMGRIDIN92-1",
+   "verdict": "PASS",
+   "green": 0,
+   "red": 0,
+   "kalshi_yes_no": "+113/-127",
+   "resting_usd": [
+    322,
+    66
+   ],
+   "top_ev_pct": -4.5,
+   "fair_pct": 45.5,
+   "fetched_utc": "2026-10-24T23:16:06.272609+00:00",
+   "flags": [
+    {
+     "source": "Kalshi top of book",
+     "quote": "+113/-127",
+     "ev": -0.0445,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side -133",
+     "quote": "+113/-133",
+     "ev": -0.0565,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side -138",
+     "quote": "+113/-138",
+     "ev": -0.0661,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side +108",
+     "quote": "+108/-127",
+     "ev": -0.0327,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side +104",
+     "quote": "+104/-127",
+     "ev": -0.0229,
+     "flag": "IGNORED (thin)"
+    }
+   ]
+  },
+  {
+   "sport": "nhl",
+   "player": "Nick Schmaltz",
+   "game": "TB@UTA",
+   "starts_at": "2026-10-25T01:00:00.000Z",
+   "market": "Any assist",
+   "line": null,
+   "book": "fanduel",
+   "price": 122,
+   "ticker": "KXNHLAST-26OCT24TBUTA-UTANSCHMALTZ8-1",
+   "verdict": "PASS",
+   "green": 0,
+   "red": 0,
+   "kalshi_yes_no": "+127/-138",
+   "resting_usd": [
+    1,
+    15
+   ],
+   "top_ev_pct": -4.5,
+   "fair_pct": 43.03,
+   "fetched_utc": "2026-10-24T23:16:06.272609+00:00",
+   "flags": [
+    {
+     "source": "Kalshi top of book",
+     "quote": "+127/-138",
+     "ev": -0.0447,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side -144",
+     "quote": "+127/-144",
+     "ev": -0.0562,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side -150",
+     "quote": "+127/-150",
+     "ev": -0.0672,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side +122",
+     "quote": "+122/-138",
+     "ev": -0.0337,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side +117",
+     "quote": "+117/-138",
+     "ev": -0.0223,
+     "flag": "IGNORED (thin)"
+    }
+   ]
+  },
+  {
+   "sport": "nhl",
+   "player": "Lucas Raymond",
+   "game": "DET@CGY",
+   "starts_at": "2026-10-25T02:00:00.000Z",
+   "market": "Any point (G+A)",
+   "line": null,
+   "book": "betmgm",
+   "price": -165,
+   "ticker": "KXNHLPTS-26OCT24DETCGY-DETLRAYMOND23-1",
+   "verdict": "PASS",
+   "green": 0,
+   "red": 0,
+   "kalshi_yes_no": "-156/+138",
+   "resting_usd": [
+    234,
+    14
+   ],
+   "top_ev_pct": -4.5,
+   "fair_pct": 59.47,
+   "fetched_utc": "2026-10-24T23:16:06.272609+00:00",
+   "flags": [
+    {
+     "source": "Kalshi top of book",
+     "quote": "-156/+138",
+     "ev": -0.0449,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side +133",
+     "quote": "-156/+133",
+     "ev": -0.0521,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side +127",
+     "quote": "-156/+127",
+     "ev": -0.0611,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side -163",
+     "quote": "-163/+138",
+     "ev": -0.0365,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side -170",
+     "quote": "-170/+138",
+     "ev": -0.0284,
+     "flag": "IGNORED (thin)"
+    }
+   ]
+  },
+  {
+   "sport": "nhl",
+   "player": "Danila Yurov",
+   "game": "MIN@SEA",
+   "starts_at": "2026-10-25T02:00:00.000Z",
+   "market": "Any assist",
+   "line": null,
+   "book": "fanduel",
+   "price": 290,
+   "ticker": "KXNHLAST-26OCT24MINSEA-MINDYUROV22-1",
+   "verdict": "PASS",
+   "green": 0,
+   "red": 0,
+   "kalshi_yes_no": "+300/-317",
+   "resting_usd": [
+    0,
+    24
+   ],
+   "top_ev_pct": -4.5,
+   "fair_pct": 24.49,
+   "fetched_utc": "2026-10-24T23:16:06.272609+00:00",
+   "flags": [
+    {
+     "source": "Kalshi top of book",
+     "quote": "+300/-317",
+     "ev": -0.045,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side -376",
+     "quote": "+300/-376",
+     "ev": -0.1047,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side +285",
+     "quote": "+285/-317",
+     "ev": -0.0263,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side +270",
+     "quote": "+270/-317",
+     "ev": -0.0063,
+     "flag": "IGNORED (thin)"
+    }
+   ]
+  },
+  {
+   "sport": "nhl",
+   "player": "Quinn Hughes",
+   "game": "MIN@SEA",
+   "starts_at": "2026-10-25T02:00:00.000Z",
+   "market": "Any point (G+A)",
+   "line": null,
+   "book": "espnbet",
+   "price": -230,
+   "ticker": "KXNHLPTS-26OCT24MINSEA-MINQHUGHES43-1",
+   "verdict": "PASS",
+   "green": 0,
+   "red": 0,
+   "kalshi_yes_no": "-213/+186",
+   "resting_usd": [
+    27,
+    6
+   ],
+   "top_ev_pct": -4.5,
+   "fair_pct": 66.56,
+   "fetched_utc": "2026-10-24T23:16:06.272609+00:00",
+   "flags": [
+    {
+     "source": "Kalshi top of book",
+     "quote": "-213/+186",
+     "ev": -0.0451,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side +178",
+     "quote": "-213/+178",
+     "ev": -0.0521,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side -223",
+     "quote": "-223/+186",
+     "ev": -0.0378,
+     "flag": "IGNORED (thin)"
+    }
+   ]
+  },
+  {
+   "sport": "nhl",
+   "player": "Morgan Frost",
+   "game": "DET@CGY",
+   "starts_at": "2026-10-25T02:00:00.000Z",
+   "market": "Any point (G+A)",
+   "line": null,
+   "book": "espnbet",
+   "price": -110,
+   "ticker": "KXNHLPTS-26OCT24DETCGY-CGYMFROST16-1",
+   "verdict": "PASS",
+   "green": 0,
+   "red": 0,
+   "kalshi_yes_no": "-104/-104",
+   "resting_usd": [
+    98,
+    12
+   ],
+   "top_ev_pct": -4.5,
+   "fair_pct": 50.0,
+   "fetched_utc": "2026-10-24T23:16:06.272609+00:00",
+   "flags": [
+    {
+     "source": "Kalshi top of book",
+     "quote": "-104/-104",
+     "ev": -0.0455,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side -108",
+     "quote": "-104/-108",
+     "ev": -0.0545,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi no-side -113",
+     "quote": "-104/-113",
+     "ev": -0.0653,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side -108",
+     "quote": "-108/-104",
+     "ev": -0.0365,
+     "flag": "IGNORED (thin)"
+    },
+    {
+     "source": "Kalshi yes-side -113",
+     "quote": "-113/-104",
+     "ev": -0.0257,
+     "flag": "IGNORED (thin)"
+    }
+   ]
+  }
+ ]
+}
