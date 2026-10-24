@@ -97,7 +97,8 @@ def run(season, cache):
     games = sorted(load(season, cache), key=lambda g: (g["date"], g["id"]))
     team_hist = defaultdict(list)                  # team -> [(pace, pts_allowed, pts_for)]
     team_last = {}                                 # team -> date of its last game
-    player_last = {}
+    team_games = defaultdict(list)                 # team -> [{pid: (min, pts)}], oldest first
+    last_idx = {}                                  # (team, pid) -> index of the team game he last played
     ph = defaultdict(list)                         # player -> games
     out = []
     for g in games:
@@ -118,6 +119,15 @@ def run(season, cache):
             def net(tm):
                 h = team_hist[tm][-10:]
                 return sum(x[2] - x[1] for x in h) / len(h) if h else 0.0
+            tg = team_games[team["abbr"]]
+            tonight = {p["pid"] for p in team["players"] if p["min"] > 0}
+            cnt, mins, tpts = defaultdict(int), defaultdict(float), defaultdict(float)
+            for gm in tg[-10:]:
+                for pid_, (m_, pt_) in gm.items():
+                    cnt[pid_] += 1; mins[pid_] += m_; tpts[pid_] += pt_
+            # regulars (5+ of the last 10, 18+ min) who are not in tonight's box: the "teammate out" angle.
+            # Absence is read from the box score; a pregame injury report would say the same for nearly all of them.
+            out_ppg = sum(tpts[q] / cnt[q] for q in cnt if cnt[q] >= 5 and mins[q] / cnt[q] >= 18 and q not in tonight)
             gap_days = (dt.date.fromisoformat(g["date"]) - dt.date.fromisoformat(team_last[team["abbr"]])).days \
                 if team["abbr"] in team_last else 5
             for p in team["players"]:
@@ -128,6 +138,9 @@ def run(season, cache):
                     f.update({"opp_allowed": s.get("opp_pts_allowed", 113.0), "pace": (tpace + opace) / 2,
                               "strength_gap": net(team["abbr"]) - net(opp) + (3.0 if team["home"] else -3.0),
                               "is_home": float(team["home"]), "b2b": float(gap_days <= 1),
+                              "teammates_out_ppg": out_ppg,
+                              "games_missed": float(min(10, len(tg) - 1 - last_idx[(team["abbr"], p["pid"])]))
+                              if (team["abbr"], p["pid"]) in last_idx else 0.0,
                               "ppg": sum(x["pts"] for x in hist) / len(hist),
                               "l10": sum(x["pts"] for x in hist[-10:]) / len(hist[-10:])})
                     out.append({"night": g["date"], "game": g["id"], "y25": int(p["pts"] >= 25), "y30": int(p["pts"] >= 30),
@@ -137,6 +150,10 @@ def run(season, cache):
         for i, team in enumerate(t):
             team_hist[team["abbr"]].append((poss[i], pts_for[1 - i], pts_for[i]))
             team_last[team["abbr"]] = g["date"]
+            team_games[team["abbr"]].append({q["pid"]: (q["min"], q["pts"]) for q in team["players"] if q["min"] > 0})
+            for q in team["players"]:
+                if q["min"] > 0:
+                    last_idx[(team["abbr"], q["pid"])] = len(team_games[team["abbr"]]) - 1
             for p in team["players"]:
                 m = max(p["min"], 1.0)
                 ph[p["pid"]].append({"pts": p["pts"], "fga": p["fga"], "minutes": p["min"],

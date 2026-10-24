@@ -106,6 +106,29 @@ def run(season, cache, min_prior=5):
             team_sa[x["opp"]][x["game"]] += x["shots"]
             team_dates[(x["opp"], x["game"])] = x["date"]
 
+    # team -> sorted [(date, game)] and game -> {pid: (toi_min, goals)}: for "teammates out" and games missed
+    tgames = defaultdict(dict)
+    for pid, rows in by_player.items():
+        for x in rows:
+            tgames[x["team"]].setdefault(x["game"], {"date": x["date"], "pl": {}})["pl"][pid] = (x["toi_min"], x["goals"])
+    order = {t: sorted(gs, key=lambda gid: (gs[gid]["date"], gid)) for t, gs in tgames.items()}
+    pos_in = {t: {gid: i for i, gid in enumerate(o)} for t, o in order.items()}
+    out_memo = {}
+
+    def teammates_out(team, gid):
+        k = (team, gid)
+        if k not in out_memo:
+            i = pos_in[team][gid]
+            recent = [tgames[team][q]["pl"] for q in order[team][max(0, i - 10):i]]
+            tonight = tgames[team][gid]["pl"]
+            cnt, toi, gl = defaultdict(int), defaultdict(float), defaultdict(float)
+            for gm in recent:
+                for q, (t_, g_) in gm.items():
+                    cnt[q] += 1; toi[q] += t_; gl[q] += g_
+            # regulars (5+ of the last 10, 12+ min) not in tonight's lineup
+            out_memo[k] = sum(gl[q] / cnt[q] for q in cnt if cnt[q] >= 5 and toi[q] / cnt[q] >= 12 and q not in tonight)
+        return out_memo[k]
+
     out = []
     for pid, rows in by_player.items():
         rows.sort(key=lambda x: x["date"])
@@ -127,7 +150,10 @@ def run(season, cache, min_prior=5):
                           "opp_sa": sum(sa[-10:]) / len(sa[-10:]) if sa else 30.0,
                           "is_home": float(x["home"]), "b2b": float(gap <= 1), "rest": float(min(gap, 5)),
                           "is_d": float(x["pos"] == "D"), "base_goals": cg / len(hist), "base_shots": cs / len(hist),
-                          "toi": sum(h["toi_min"] for h in hist[-10:]) / len(hist[-10:])})
+                          "toi": sum(h["toi_min"] for h in hist[-10:]) / len(hist[-10:]),
+                          "teammates_out_goals": teammates_out(x["team"], x["game"]),
+                          "games_missed": float(min(10, max(0, pos_in[x["team"]][x["game"]] - pos_in[x["team"]][hist[-1]["game"]] - 1)))
+                          if hist[-1]["game"] in pos_in[x["team"]] else 0.0})      # 0 right after a trade
                 out.append({"night": x["date"], "game": x["game"], "pid": pid, "goal": int(x["goals"] >= 1),
                             "lamp": s["final_score"], "scorer_only": s["scorer_score"],
                             "base_goals": cg / len(hist), "base_shots": cs / len(hist),
