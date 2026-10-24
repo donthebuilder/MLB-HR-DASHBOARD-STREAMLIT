@@ -25,7 +25,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import buckets_scorer as bk   # noqa: E402
 
 ESPN = "https://site.api.espn.com/apis/site/v2/sports/basketball/nba"
-BOX_VERSION = "v2"          # v2 stores home/away
+BOX_VERSION = "v3"          # v2 stored home/away; v3 adds quarter scores
 RANGE = {2023: ("2023-10-24", "2024-04-14"), 2024: ("2024-10-22", "2025-04-13")}
 MIN_PRIOR = 8
 
@@ -76,8 +76,15 @@ def box(gid, day, cache):
         out["teams"].append({"abbr": t["team"]["abbreviation"], "players": rows})
     home = {m["team"]["abbreviation"]: m.get("homeAway") == "home"
             for m in ((d or {}).get("boxscore") or {}).get("teams", [])}
+    lines = {}
+    for c in (((d or {}).get("header") or {}).get("competitions") or [{}])[0].get("competitors", []):
+        try:
+            lines[c["team"]["abbreviation"]] = [int(l["displayValue"]) for l in c.get("linescores", [])]
+        except (KeyError, ValueError):
+            pass
     for tm in out["teams"]:
         tm["home"] = home.get(tm["abbr"], False)
+        tm["lines"] = lines.get(tm["abbr"], [])
     json.dump(out, open(p, "w"))
     return out
 
@@ -142,7 +149,10 @@ def run(season, cache):
                               "games_missed": float(min(10, len(tg) - 1 - last_idx[(team["abbr"], p["pid"])]))
                               if (team["abbr"], p["pid"]) in last_idx else 0.0,
                               "ppg": sum(x["pts"] for x in hist) / len(hist),
-                              "l10": sum(x["pts"] for x in hist[-10:]) / len(hist[-10:])})
+                              "l10": sum(x["pts"] for x in hist[-10:]) / len(hist[-10:]),
+                              "form3": sum(x["pts"] for x in hist[-3:]) / len(hist[-3:]) - sum(x["pts"] for x in hist[-10:]) / len(hist[-10:]),
+                              "fav_gap": max(0.0, net(team["abbr"]) - net(opp) + (3.0 if team["home"] else -3.0)),
+                              "dog_gap": max(0.0, -(net(team["abbr"]) - net(opp) + (3.0 if team["home"] else -3.0)))})
                     out.append({"night": g["date"], "game": g["id"], "y25": int(p["pts"] >= 25), "y30": int(p["pts"] >= 30),
                                 "bk": s["final_score"], "ppg": sum(x["pts"] for x in hist) / len(hist),
                                 "l10": sum(x["pts"] for x in hist[-10:]) / len(hist[-10:]),
