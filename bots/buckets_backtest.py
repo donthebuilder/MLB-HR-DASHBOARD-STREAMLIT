@@ -25,6 +25,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import buckets_scorer as bk   # noqa: E402
 
 ESPN = "https://site.api.espn.com/apis/site/v2/sports/basketball/nba"
+BOX_VERSION = "v2"          # v2 stores home/away
 RANGE = {2023: ("2023-10-24", "2024-04-14"), 2024: ("2024-10-22", "2025-04-13")}
 MIN_PRIOR = 8
 
@@ -51,7 +52,7 @@ def day_events(day, cache):
 
 
 def box(gid, day, cache):
-    p = Path(cache) / f"box_{gid}.json"
+    p = Path(cache) / f"box{BOX_VERSION}_{gid}.json"
     if p.exists():
         return json.load(open(p))
     d = get(f"{ESPN}/summary?event={gid}")
@@ -73,6 +74,10 @@ def box(gid, day, cache):
             rows.append({"pid": a["athlete"]["id"], "min": float(s["MIN"] or 0), "pts": int(s.get("PTS") or 0),
                          "fga": fg[1], "fta": ft[1], "to": int(s.get("TO") or 0), "oreb": int(s.get("OREB") or 0)})
         out["teams"].append({"abbr": t["team"]["abbreviation"], "players": rows})
+    home = {m["team"]["abbreviation"]: m.get("homeAway") == "home"
+            for m in ((d or {}).get("boxscore") or {}).get("teams", [])}
+    for tm in out["teams"]:
+        tm["home"] = home.get(tm["abbr"], False)
     json.dump(out, open(p, "w"))
     return out
 
@@ -90,7 +95,9 @@ def load(season, cache):
 
 def run(season, cache):
     games = sorted(load(season, cache), key=lambda g: (g["date"], g["id"]))
-    team_hist = defaultdict(list)                  # team -> [(pace, pts_allowed)]
+    team_hist = defaultdict(list)                  # team -> [(pace, pts_allowed, pts_for)]
+    team_last = {}                                 # team -> date of its last game
+    player_last = {}
     ph = defaultdict(list)                         # player -> games
     out = []
     for g in games:
@@ -107,16 +114,29 @@ def run(season, cache):
             tpace = sum(tp[-10:]) / len(tp[-10:]) if tp else bk.LG_PACE
             opace = sum(op[-10:]) / len(op[-10:]) if op else bk.LG_PACE
             allowed = [x[1] for x in team_hist[opp]]
+
+            def net(tm):
+                h = team_hist[tm][-10:]
+                return sum(x[2] - x[1] for x in h) / len(h) if h else 0.0
+            gap_days = (dt.date.fromisoformat(g["date"]) - dt.date.fromisoformat(team_last[team["abbr"]])).days \
+                if team["abbr"] in team_last else 5
             for p in team["players"]:
                 hist = ph[p["pid"]]
                 if len(hist) >= MIN_PRIOR and p["min"] >= 10:
                     s = bk.score_player(hist, tpace, opace, allowed)
+                    f = {k: s[k] for k in ("scoring_pts", "usage_pts", "attempts_pts", "minutes_pts", "pace_pts")}
+                    f.update({"opp_allowed": s.get("opp_pts_allowed", 113.0), "pace": (tpace + opace) / 2,
+                              "strength_gap": net(team["abbr"]) - net(opp) + (3.0 if team["home"] else -3.0),
+                              "is_home": float(team["home"]), "b2b": float(gap_days <= 1),
+                              "ppg": sum(x["pts"] for x in hist) / len(hist),
+                              "l10": sum(x["pts"] for x in hist[-10:]) / len(hist[-10:])})
                     out.append({"night": g["date"], "game": g["id"], "y25": int(p["pts"] >= 25), "y30": int(p["pts"] >= 30),
                                 "bk": s["final_score"], "ppg": sum(x["pts"] for x in hist) / len(hist),
                                 "l10": sum(x["pts"] for x in hist[-10:]) / len(hist[-10:]),
-                                "rand": ((int(p["pid"]) * 2654435761 + int(g["id"])) % 1000) / 1000})
+                                "rand": ((int(p["pid"]) * 2654435761 + int(g["id"])) % 1000) / 1000, "f": f, "season": season})
         for i, team in enumerate(t):
-            team_hist[team["abbr"]].append((poss[i], pts_for[1 - i]))
+            team_hist[team["abbr"]].append((poss[i], pts_for[1 - i], pts_for[i]))
+            team_last[team["abbr"]] = g["date"]
             for p in team["players"]:
                 m = max(p["min"], 1.0)
                 ph[p["pid"]].append({"pts": p["pts"], "fga": p["fga"], "minutes": p["min"],

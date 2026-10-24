@@ -90,7 +90,8 @@ def run(season, cache, min_prior=5):
         by_player[r["playerId"]].append({
             "date": r["gameDate"], "game": r["gameId"], "team": r["teamAbbrev"], "opp": r["opponentTeamAbbrev"],
             "shots": r["shots"], "goals": r["goals"], "pp_goals": r["ppGoals"],
-            "toi_min": r["timeOnIcePerGame"] / 60.0, "pp_toi_min": (p.get("ppTimeOnIce") or 0) / 60.0})
+            "toi_min": r["timeOnIcePerGame"] / 60.0, "pp_toi_min": (p.get("ppTimeOnIce") or 0) / 60.0,
+            "home": r.get("homeRoad") == "H", "pos": r["positionCode"]})
     goalies = defaultdict(list)                      # goalie id -> starts, oldest first
     starter = {}                                     # (gameId, goalie's opponent team) -> goalie id
     for r in sorted(data["goalie/summary"], key=lambda r: (r["gameDate"], r["gameId"])):
@@ -120,10 +121,17 @@ def run(season, cache, min_prior=5):
                 hh = [dict(h) for h in hist]
                 hh[-1]["season_goals"], hh[-1]["season_shots"] = cg, cs
                 s = nhl.score_player(hh, gh, sa)
+                gap = (dt.date.fromisoformat(x["date"]) - dt.date.fromisoformat(hist[-1]["date"])).days
+                f = {k: s[k] for k in ("sog_pts", "pp_pts", "es_pts", "quality_pts", "stability_pts")}
+                f.update({"goalie_sv": s.get("goalie_sv_pct", nhl.LG_SAVE_PCT),
+                          "opp_sa": sum(sa[-10:]) / len(sa[-10:]) if sa else 30.0,
+                          "is_home": float(x["home"]), "b2b": float(gap <= 1), "rest": float(min(gap, 5)),
+                          "is_d": float(x["pos"] == "D"), "base_goals": cg / len(hist), "base_shots": cs / len(hist),
+                          "toi": sum(h["toi_min"] for h in hist[-10:]) / len(hist[-10:])})
                 out.append({"night": x["date"], "game": x["game"], "pid": pid, "goal": int(x["goals"] >= 1),
                             "lamp": s["final_score"], "scorer_only": s["scorer_score"],
                             "base_goals": cg / len(hist), "base_shots": cs / len(hist),
-                            "rand": ((pid * 2654435761 + x["game"]) % 1000) / 1000})
+                            "rand": ((pid * 2654435761 + x["game"]) % 1000) / 1000, "f": f, "season": season})
             hist.append(x)
             cg += x["goals"]; cs += x["shots"]
     return out
