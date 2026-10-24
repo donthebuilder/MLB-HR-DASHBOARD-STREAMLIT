@@ -1,0 +1,114 @@
+name: EV scan (EV-dingers process)
+
+# Scans for prices that beat the market, on GitHub's servers -- nothing runs on anyone's computer. Every checked prop is saved with its
+# verdict (bots/ev_process.py: book price vs Kalshi's order book, probit de-vig, thin quotes ignored), then graded the next morning
+# against the real stat lines (bots/ev_log.py), so we find out whether a GREEN flag actually earns more than a PASS.
+#
+# NEEDS ONE REPO SECRET: SGO_API_KEY  (Settings > Secrets and variables > Actions). Kalshi's public API needs no key.
+# SGO bills one "object" per event; EV_MONTH_CAP (default 900 of the 2,500 a month) stops this workflow before it eats the site's share.
+# Lives on `bbe-history` (the `data` branch is rebuilt from an orphan on every publish; anything that accumulates there is destroyed).
+# GitHub cron can skip or delay a run; a skipped scan is simply a night with no log, never a wrong number.
+
+on:
+  schedule:
+    - cron: '30 22 * * *'      # 6:30pm ET: NBA + NHL (7pm tips and puck drops) + MLB if in season
+    - cron: '30 16 * * 0'      # Sunday 12:30pm ET: NFL early window
+    - cron: '30 23 * * 4'      # Thursday 7:30pm ET: NFL
+    - cron: '30 23 * * 1'      # Monday 7:30pm ET: NFL
+    - cron: '0 10 * * *'       # 6am ET: grade yesterday
+  workflow_dispatch:
+    inputs:
+      sport:
+        description: 'nba | nhl | nfl | mlb | grade'
+        required: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ev-scan
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SGO_API_KEY: ${{ secrets.SGO_API_KEY }}
+      EV_MONTH_CAP: '900'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            bots/devig.py
+            bots/devig_sgo.py
+            bots/ev_process.py
+            bots/ev_log.py
+            bots/injury_status.py
+            bots/mlb_season_guard.py
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install
+        run: pip install requests nflreadpy polars
+
+      - name: Checkout the bbe-history branch (read/write)
+        run: |
+          git config --global user.name  "moonshot-bot"
+          git config --global user.email "bot@users.noreply.github.com"
+          git clone --quiet --depth 1 --branch bbe-history \
+            "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" _data
+          mkdir -p _data/public/data/current/ev_log
+
+      - name: What to do
+        id: what
+        run: |
+          DOW=$(date -u +%u); H=$(date -u +%H)
+          IN="${{ github.event.inputs.sport }}"
+          SPORTS=""; GRADE=0
+          if [ -n "$IN" ]; then
+            if [ "$IN" = "grade" ]; then GRADE=1; else SPORTS="$IN"; fi
+          elif [ "$H" = "10" ]; then GRADE=1
+          elif [ "$H" = "22" ]; then SPORTS="nba nhl mlb"
+          else SPORTS="nfl"; fi
+          echo "sports=$SPORTS" >> "$GITHUB_OUTPUT"
+          echo "grade=$GRADE"   >> "$GITHUB_OUTPUT"
+
+      - name: MLB in season?
+        id: mlb
+        if: ${{ contains(steps.what.outputs.sports, 'mlb') }}
+        run: python3 bots/mlb_season_guard.py --back 1 --ahead 1        # writes active=true|false to $GITHUB_OUTPUT itself
+
+      - name: Scan
+        if: ${{ steps.what.outputs.sports != '' }}
+        run: |
+          for S in ${{ steps.what.outputs.sports }}; do
+            if [ "$S" = "mlb" ] && [ "${{ steps.mlb.outputs.active }}" != "true" ]; then echo "mlb: off season, skipped"; continue; fi
+            case "$S" in nfl) LIM=16; HRS=6;; *) LIM=12; HRS=8;; esac
+            python3 bots/ev_log.py snapshot "$S" _data/public/data/current/ev_log --limit $LIM --hours $HRS || echo "$S scan failed (kept going)"
+            sleep 8
+          done
+
+      - name: Grade yesterday
+        if: ${{ steps.what.outputs.grade == '1' }}
+        run: |
+          Y=$(python3 -c "from datetime import datetime,timedelta,timezone;print((datetime.now(timezone.utc)-timedelta(hours=5,days=1)).date())")
+          python3 bots/ev_log.py grade _data/public/data/current/ev_log "$Y" || true
+          python3 bots/ev_log.py report _data/public/data/current/ev_log | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Commit
+        working-directory: _data
+        run: |
+          git add public/data/current/ev_log
+          if git diff --cached --quiet; then
+            echo "nothing changed"
+          else
+            git commit -m "ev scan $(date -u +%FT%H%MZ)"
+            for i in 1 2 3 4 5; do
+              git pull --rebase origin bbe-history && git push origin HEAD:bbe-history && break
+              echo "push race, retry $i"; sleep $((i * 5))
+            done
+          fi

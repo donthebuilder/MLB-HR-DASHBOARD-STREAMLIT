@@ -31,6 +31,7 @@ Of the players who actually did the thing (homered, scored, got the hit, hit 25+
 | Angles | `angle_engine.py` + `angle_lab.py nba\|nhl` |
 | Numerology (a lane, never a score) | `numerology_lab.py` (arithmetic + backtests) · `numerology_tail.py` (extreme games, stacked on stats) · `numerology_log.py` (prospective MLB log) |
 | Why picks miss | `miss_autopsy.py` (cause) · `autopsy.py` (weekly input pattern) |
+| EV scan (prices vs the market) | `devig.py` (maths) · `ev_process.py` (the EV-dingers checklist) · `ev_log.py` (log + grade) · `.github/workflows/ev-scan.yml` (runs on GitHub; needs the `SGO_API_KEY` repo secret) |
 | Availability | `injury_status.py` (+ `.github/workflows/injury-snapshot.yml`) · `lineups.py` (posted lineups, probable goalie, spread/total, lock-later rule) |
 
 ## Where we stand (measured, not hoped) — updated 2026-10-24

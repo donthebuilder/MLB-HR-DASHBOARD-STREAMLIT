@@ -144,7 +144,8 @@ def kalshi_book(ticker):
     return yes, no
 
 
-def cmd_scan(a):
+def scan_rows(a):
+    """The live scan as data: (results, n_props, n_matched, n_skipped). `a` needs sport, limit, hours, min_ev, depth_checks, env."""
     import devig_sgo as S
     import injury_status as I
     key = S.load_key(a.env)
@@ -153,7 +154,12 @@ def cmd_scan(a):
     r = requests.get(f"{S.SGO}/events", headers={"x-api-key": key}, params={"leagueID": S.LEAGUE[a.sport], "oddsAvailable": "true", "limit": a.limit,
                      "startsAfter": now.isoformat(), "startsBefore": (now + timedelta(hours=a.hours)).isoformat()}, timeout=40)
     r.raise_for_status()
-    props = S.rows_for(a.sport, r.json().get("data", []))
+    events = r.json().get("data", [])
+    start_of = {}
+    for e in events:
+        t = e.get("teams", {})
+        start_of[f"{t.get('away', {}).get('names', {}).get('short', '?')}@{t.get('home', {}).get('names', {}).get('short', '?')}"] = (e.get("status") or {}).get("startsAt")
+    props = S.rows_for(a.sport, events)
     index = {}
     for (sp, label), series in SERIES.items():
         if sp != a.sport:
@@ -180,8 +186,6 @@ def cmd_scan(a):
             continue
         cands.append((e_top, p, m, best, yes_am, no_am))
     cands.sort(key=lambda c: c[0], reverse=True)
-    print(f"{a.sport.upper()}: {len(props)} SGO props, {len(cands)} matched to a priced Kalshi market (+{skipped} dropped as not comparable: an 'EV' over 40% means the bets differ); "
-          f"checking the order book for the top {min(a.depth_checks, len(cands))}\n")
     results = []
     for e0, p, m, best, yes_am, no_am in cands[: a.depth_checks]:
         yes_b, no_b = kalshi_book(m["ticker"])
@@ -193,16 +197,27 @@ def cmd_scan(a):
         no_lv = [(devig.to_american(1 - pb), pb * c) for pb, c in near_y]              # deeper no-ask price points
         yes_lv = [(devig.to_american(1 - pb), pb * c) for pb, c in near_n]
         rows, (v, g, r_) = run_checks(best[1], (yes_am, no_am), dollars, no_lv, yes_lv, {}, {}, a.min_ev)
-        results.append({"player": p["player"], "game": p["game"], "market": p["market"], "line": p["line"], "book": best[0], "price": best[1], "verdict": v,
-                        "green": g, "red": r_, "kalshi_yes_no": f"{fmt(yes_am)}/{fmt(no_am)}", "resting_usd": [round(d) for d in dollars],
-                        "top_ev_pct": round(100 * e0, 1), "flags": [{k: (round(x[k], 4) if isinstance(x[k], float) else x[k]) for k in ("source", "quote", "ev", "flag")} for x in rows]})
+        results.append({"sport": a.sport, "player": p["player"], "game": p["game"], "starts_at": start_of.get(p["game"]), "market": p["market"], "line": p["line"],
+                        "book": best[0], "price": best[1], "ticker": m["ticker"], "verdict": v, "green": g, "red": r_,
+                        "kalshi_yes_no": f"{fmt(yes_am)}/{fmt(no_am)}", "resting_usd": [round(d) for d in dollars], "top_ev_pct": round(100 * e0, 1),
+                        "fair_pct": round(100 * devig.fair(yes_am, no_am)[0], 2), "fetched_utc": now.isoformat(),
+                        "flags": [{k: (round(x[k], 4) if isinstance(x[k], float) else x[k]) for k in ("source", "quote", "ev", "flag")} for x in rows]})
     order = {"STRONG": 0, "GOOD": 1, "WEAK": 2, "PASS": 3}
     results.sort(key=lambda x: (order[x["verdict"]], -x["top_ev_pct"]))
+    return results, len(props), len(cands), skipped
+
+
+def cmd_scan(a):
+    results, n_props, n_cands, skipped = scan_rows(a)
+    now = datetime.now(timezone.utc)
+    print(f"{a.sport.upper()}: {n_props} SGO props, {n_cands} matched to a priced Kalshi market (+{skipped} dropped as not comparable: an 'EV' over 40% means the bets differ); "
+          f"checked the order book for the top {min(a.depth_checks, n_cands)}\n")
     print(f"{'player':<22}{'market':<14}{'book':>11}{'price':>7}{'Kalshi':>13}{'$ behind':>12}{'EV top':>8}  verdict")
     for x in results[:16]:
         ln = f"{x['market']} {x['line']}" if x["line"] is not None else x["market"]
         print(f"{x['player'][:21]:<22}{ln[:13]:<14}{x['book']:>11}{fmt(x['price']):>7}{x['kalshi_yes_no']:>13}{('/'.join(str(d) for d in x['resting_usd'])):>12}{x['top_ev_pct']:>+7.1f}%  {x['verdict']} ({x['green']}g/{x['red']}r)")
     out = Path(__file__).resolve().parent / "outputs" / f"{a.sport}_ev_process_latest.json"
+    out.parent.mkdir(exist_ok=True)
     out.write_text(json.dumps({"fetched_utc": now.isoformat(), "rows": results}, indent=1))
     print(f"\n-> {out}   (sportsbook-side: SGO book prices; Kalshi side: public order book. Circa / Novig / ProphetX quotes are not in these feeds: "
           f"add them with `check`)")
