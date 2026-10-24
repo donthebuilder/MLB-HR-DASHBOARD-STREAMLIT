@@ -31,6 +31,14 @@ from backtest_v5 import rows_of, v5_score   # noqa: E402
 DATE = re.compile(r"graded_results_(\d{4}-\d{2}-\d{2})\.json$")
 CALLED = {"TOP", "HR"}          # the roles that are a home-run call
 
+# market -> (role the bot gives, the score it ranks by, did he do it, book market + line)
+MARKETS = {
+    "HR":      ("HR",      "hr_score",      lambda r: bool(r.get("got_hr")),                "batter_home_runs",      0.5),
+    "HIT":     ("HIT",     "hit_score",     lambda r: bool(r.get("got_base_hit")),          "batter_hits",           0.5),
+    "HRR":     ("HRR",     "hrr_score",     lambda r: bool(r.get("hrr_2_plus")),            "batter_hits_runs_rbis", 1.5),
+    "CONTACT": ("CONTACT", "contact_score", lambda r: (r.get("actual_tb") or 0) >= 2,       "batter_total_bases",    1.5),
+}
+
 
 def load_nights(dirs):
     nights = {}
@@ -48,9 +56,7 @@ def load_odds(dirs):
         for f in glob.glob(str(Path(d) / "odds_2*.json")):
             doc = json.load(open(f))
             for pid, mk in (doc.get("rows") or {}).items():
-                hr = mk.get("batter_home_runs")
-                if hr and hr[0] == 0.5:
-                    out[(doc["date"], str(pid))] = hr[1]
+                out[(doc["date"], str(pid))] = {m: (v[0], v[1]) for m, v in mk.items() if v and len(v) >= 2}
     return out
 
 
@@ -80,7 +86,10 @@ def main():
                 continue                                    # void
             p = by_game[r["game_pk"]].setdefault(r["player_id"], {
                 "pid": str(r["player_id"]), "hr_score": float(r["hr_score"]), "hit": bool(r["got_hr"]),
-                "roles": set(), "v5": None, "night": night, "price": odds.get((night, str(r["player_id"])))})
+                "roles": set(), "v5": None, "night": night, "raw": r,
+                "price": (odds.get((night, str(r["player_id"]))) or {}).get("batter_home_runs", (None, None))[1]
+                if ((odds.get((night, str(r["player_id"]))) or {}).get("batter_home_runs", (0, 0))[0] == 0.5) else None,
+                "book": odds.get((night, str(r["player_id"]))) or {}})
             p["roles"].add(r.get("pick_type") or r.get("game_pick_role"))
             if p["v5"] is None:
                 try:
@@ -167,7 +176,37 @@ def main():
     if allp:
         net = sum(dollars(pr) if h else -1 for pr, h in allp)
         print(f"   every priced board player: {len(allp)} bets, ROI {100 * net / len(allp):+.1f}%  (the baseline to beat)")
+    other_markets(games)
     return 0
+
+
+def other_markets(games):
+    """The same called-vs-best-in-game question for hits, H+R+RBI and contact."""
+    print("\n4. THE OTHER MARKETS: called pick vs the best score in his game, and what it paid")
+    for mk, (role, field, did, bmarket, bline) in MARKETS.items():
+        if mk == "HR":
+            continue
+        best, notb = [0, 0, 0, 0.0], [0, 0, 0, 0.0]            # hits, n, priced, net
+        for g in games:
+            ok = [p for p in g if p["raw"].get(field) not in (None, "")]
+            if len(ok) < 2:
+                continue
+            order = sorted(ok, key=lambda p: float(p["raw"][field]), reverse=True)
+            for i, p in enumerate(order):
+                if role not in p["roles"]:
+                    continue
+                t = best if i == 0 else notb
+                won = did(p["raw"])
+                t[0] += won; t[1] += 1
+                q = p["book"].get(bmarket)
+                if q and q[0] == bline:
+                    t[2] += 1
+                    t[3] += dollars(q[1]) if won else -1.0
+        n = best[1] + notb[1]
+        print(f"   {mk:8} called {n:4}: best in game {best[1]:4} ({pct(best[1], n)}) hit {pct(best[0], best[1])}"
+              f" | not best {notb[1]:4} hit {pct(notb[0], notb[1])}")
+        for label, t in (("best", best), ("not best", notb)):
+            print(f"            ROI {label:9} {100 * t[3] / t[2] if t[2] else 0:+6.1f}% on {t[2]} priced bets")
 
 
 if __name__ == "__main__":
