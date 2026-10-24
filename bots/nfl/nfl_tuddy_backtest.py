@@ -91,6 +91,7 @@ def main() -> int:
     ap.add_argument("--cache", default=None)
     a = ap.parse_args()
     pooled = {"v2": [0, 0, 0, 0], "v4": [0, 0, 0, 0]}
+    games_n = [0, 0, 0, 0, 0]       # games, v2 #1 hit, v4 #1 hit, v2 hit when they differ, v4 hit when they differ
     for s in a.history:
         tbl = season_table(s, a.cache)
         v4 = score_v4(tbl)
@@ -100,8 +101,23 @@ def main() -> int:
             lambda x: v4.get((x["player_id"], x["week"])), return_dtype=pl.Float64).alias("v4_score"))
         d = d.filter(pl.col("v4_score").is_not_null())
         print(f"\n{s}{' (HOLDOUT)' if s == 2023 else ''}: {d.height} player-weeks, base {100 * float(d['hit'].mean()):.1f}%")
-        for name, x in (("v2 nfl_td_v2 (live)", _score(d, MODELS["TD"]["w"])),
-                        ("v4 TUDDY usage x matchup", d.with_columns(pl.col("v4_score").alias("score")))):
+        scored = {"v2": _score(d, MODELS["TD"]["w"]),
+                  "v4": d.with_columns(pl.col("v4_score").alias("score"))}
+        # per game: each model's single best player (both teams together)
+        agree = dis = 0
+        for _, g in scored["v2"].with_columns(pl.col("v4_score")).group_by("game_id"):
+            if g.height < 2:
+                continue
+            top2 = g.sort(["score", "player_id"], descending=[True, False]).row(0, named=True)
+            top4 = g.sort(["v4_score", "player_id"], descending=[True, False]).row(0, named=True)
+            games_n[0] += 1
+            games_n[1] += top2["hit"]; games_n[2] += top4["hit"]
+            if top2["player_id"] == top4["player_id"]:
+                agree += 1
+            else:
+                dis += 1; games_n[3] += top2["hit"]; games_n[4] += top4["hit"]
+        for name, x in (("v2 nfl_td_v2 (live)", scored["v2"]),
+                        ("v4 TUDDY usage x matchup", scored["v4"])):
             (h5, n5), (h15, n15) = _topk(x, 5), _topk(x, 15)
             print(f"  {name:<26} top-5 {h5}/{n5} {100*h5/n5:5.1f}%   top-15 {h15}/{n15} {100*h15/n15:5.1f}%   AUC {_auc(x):.4f}")
             k = "v2" if name.startswith("v2") else "v4"
@@ -109,6 +125,9 @@ def main() -> int:
                 pooled[k][i] += v
     print("\nPOOLED  " + "   ".join(
         f"{k}: top-5 {100*v[0]/v[1]:.1f}%  top-15 {100*v[2]/v[3]:.1f}%" for k, v in pooled.items()))
+    g, h2, h4, d2, d4 = games_n
+    print(f"\nBEST PLAYER IN EACH GAME ({g} games): v2's #1 scored {100*h2/g:.1f}%, v4's #1 scored {100*h4/g:.1f}%")
+    print(f"  they picked different players in some games; in those, v2's pick scored {d2} times, v4's {d4}")
     return 0
 
 
