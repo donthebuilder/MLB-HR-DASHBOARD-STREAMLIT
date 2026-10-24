@@ -21,6 +21,12 @@ Of the players who actually did the thing (homered, scored, got the hit, hit 25+
 5. Version bump + registry entry + a line in `dash_models.REGISTRY`.
 6. Anything the site must read is added to `PUBLISH_FILES` in `.github/scripts/publish_data.sh` (the `data` branch is rebuilt every publish; unlisted files vanish). Anything that accumulates lives on `bbe-history`.
 
+## Relationship to `bots/model_harness.py` (main)
+Two halves of one process, not duplicates.
+- `model_harness.py` is the **prospective scoreboard**: locked live records, production vs shadows vs baseline on the same games, nightly, private. It owns the **promotion rule** (Donovan, 2026-10-16): a new score replaces the one in use only when it beats it by 3.0 points over at least 150 games, same games, paired test agrees. Production is frozen four weeks from that date; new ideas run as shadows.
+- The backtests and tuners here are the **retrospective gate** (gates 1-4): they decide what is worth running as a shadow. Passing them never promotes anything; only the scoreboard's rule does.
+- So `mlb_hr_v5`, the NBA/NHL lane models and every lane in this doc are shadows. Gate 2 above is the entry bar for a shadow, and the 3.0-point / 150-game paired rule is the exit bar to production. Next step to wire them in: add the v5 / lane scores as extra score keys in the adapters in `model_harness.py` once they are logged on locked rows.
+
 ## Where things are
 | Need | File |
 |---|---|
