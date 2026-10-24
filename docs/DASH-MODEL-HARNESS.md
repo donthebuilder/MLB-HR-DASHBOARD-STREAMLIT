@@ -61,7 +61,7 @@ AVAILABILITY: `p_play` (NFL measured; others prior until snapshots accrue) · ML
 | MLB | HR, hit, H+R+RBI, contact, TOP, overall, top-board, HRW, multi-hit, longest, pairs, DUE, numerology | bot `mlb_dashboard.py` (+ v5 `moonshot_v4_scorer.py`) | HR (v4 vs v5), hit/HRR/contact (tiers only), TOP; numerology lane |
 | NFL | TD, rec yds, receptions, rush yds, rush att, pass yds, kick pts, def TD | bot `nfl_scoring.py` (percentile composites) | **TD only** (v2/v3/TUDDY v4) |
 | NHL | goal, points, assists, shots on goal, goalie quality / give-ups, team xG & projection | site JS `lib/nhl/*` (goal = `lamp-goalw-v1`, ridge on goals/shots/TOI/D) + bot `nhl_goal_v2` | **goal only** |
-| NBA | PTS 25+, REB 10+, AST 8+, 3PM 4+, PRA 35+, double-double, triple-double, first basket | site JS `lib/nba/model.js` (`buckets-*-v1`) + bot `nba_pts_v2` | **points only** |
+| NBA | PTS 25+, REB 10+, AST 8+, 3PM 4+, PRA 35+, double-double, triple-double, first basket | site JS `lib/nba/model.js` (`buckets-*-v1`) + bot `nba_pts_v2`, `nba_reb_v1`, `nba_ast_v1`, `nba_3pm_v1`, `nba_pra_v1` | **points, rebounds, assists, 3PM, PRA** (`tune_nba_lanes.py`: REB 49.2% / AST 41.7% / PRA 60.1% best-per-game vs season-average 48.5 / 40.9 / 59.9; 3PM no better than the average; all calibrated). Not yet: double-double, triple-double, first basket |
 So four of the five sports have more lanes than the harness has graded. The site's NHL and NBA models are real (not odds-ranking) but live only as JS, backtested by their own scripts, not by this harness. Next: port each remaining lane into the harness with the same fit-on-early / grade-on-late test, one at a time.
 
 ## Prices and de-vigging (read before trusting any "+EV")

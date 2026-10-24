@@ -25,7 +25,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import buckets_scorer as bk   # noqa: E402
 
 ESPN = "https://site.api.espn.com/apis/site/v2/sports/basketball/nba"
-BOX_VERSION = "v3"          # v2 stored home/away; v3 adds quarter scores
+BOX_VERSION = "v4"          # v2 stored home/away; v3 adds quarter scores; v4 adds reb/ast/3PM/3PA/stl/blk (the other lanes)
 RANGE = {2023: ("2023-10-24", "2024-04-14"), 2024: ("2024-10-22", "2025-04-13"), 2025: ("2025-10-21", "2026-04-13"),
          2026: ("2026-10-20", (dt.date.today() - dt.timedelta(days=1)).isoformat())}
 MIN_PRIOR = 8
@@ -72,8 +72,11 @@ def box(gid, day, cache):
                 except Exception:
                     return 0, 0
             fg, ft = mk(s.get("FG", "0-0")), mk(s.get("FT", "0-0"))
+            tp = mk(s.get("3PT", "0-0"))
             rows.append({"pid": a["athlete"]["id"], "min": float(s["MIN"] or 0), "pts": int(s.get("PTS") or 0),
-                         "fga": fg[1], "fta": ft[1], "to": int(s.get("TO") or 0), "oreb": int(s.get("OREB") or 0)})
+                         "fga": fg[1], "fta": ft[1], "to": int(s.get("TO") or 0), "oreb": int(s.get("OREB") or 0),
+                         "reb": int(s.get("REB") or 0), "ast": int(s.get("AST") or 0), "tpm": tp[0], "tpa": tp[1],
+                         "stl": int(s.get("STL") or 0), "blk": int(s.get("BLK") or 0)})
         out["teams"].append({"abbr": t["team"]["abbreviation"], "players": rows})
     home = {m["team"]["abbreviation"]: m.get("homeAway") == "home"
             for m in ((d or {}).get("boxscore") or {}).get("teams", [])}
@@ -120,11 +123,12 @@ def run_games(games, season, line_for, only_ids=None):
     out = []
     for g in games:
         t = g["teams"]
-        poss, pts_for = [], []
+        poss, pts_for, reb_for, ast_for, tpm_for = [], [], [], [], []
         for team in t:
             P = team["players"]
             poss.append(sum(p["fga"] + 0.44 * p["fta"] - p["oreb"] + p["to"] for p in P))
             pts_for.append(sum(p["pts"] for p in P))
+            reb_for.append(sum(p.get("reb", 0) for p in P)); ast_for.append(sum(p.get("ast", 0) for p in P)); tpm_for.append(sum(p.get("tpm", 0) for p in P))
         for i, team in enumerate(t):
             opp = t[1 - i]["abbr"]
             tp = [x[0] for x in team_hist[team["abbr"]]]
@@ -175,9 +179,10 @@ def run_games(games, season, line_for, only_ids=None):
                                 "pid": p["pid"], "team": team["abbr"], "opp": opp, "home": bool(team["home"]),
                                 "bk": s["final_score"], "ppg": sum(x["pts"] for x in hist) / len(hist),
                                 "l10": sum(x["pts"] for x in hist[-10:]) / len(hist[-10:]),
-                                "rand": ((int(p["pid"]) * 2654435761 + int(g["id"])) % 1000) / 1000, "f": f, "season": season})
+                                "rand": ((int(p["pid"]) * 2654435761 + int(g["id"])) % 1000) / 1000, "f": f, "season": season,
+                                "lanes": lane_rows(hist, p, team_hist[opp], f)})
         for i, team in enumerate(t):
-            team_hist[team["abbr"]].append((poss[i], pts_for[1 - i], pts_for[i]))
+            team_hist[team["abbr"]].append((poss[i], pts_for[1 - i], pts_for[i], reb_for[1 - i], ast_for[1 - i], tpm_for[1 - i]))   # [3:] = what the OTHER side got against him
             team_last[team["abbr"]] = g["date"]
             team_games[team["abbr"]].append({q["pid"]: (q["min"], q["pts"]) for q in team["players"] if q["min"] > 0})
             for q in team["players"]:
@@ -186,7 +191,44 @@ def run_games(games, season, line_for, only_ids=None):
             for p in team["players"]:
                 m = max(p["min"], 1.0)
                 ph[p["pid"]].append({"pts": p["pts"], "fga": p["fga"], "minutes": p["min"],
-                                     "usage": (p["fga"] + 0.44 * p["fta"] + p["to"]) / m})
+                                     "usage": (p["fga"] + 0.44 * p["fta"] + p["to"]) / m,
+                                     "reb": p.get("reb", 0), "ast": p.get("ast", 0), "tpm": p.get("tpm", 0), "tpa": p.get("tpa", 0)})
+    return out
+
+
+LANE_BARS = {"reb": 10, "ast": 8, "3pm": 4, "pra": 35}      # the site's bars: REB 10+, AST 8+, 3PM 4+, PRA 35+
+LANE_STAT = {"reb": "reb", "ast": "ast", "3pm": "tpm"}
+
+
+def lane_rows(hist, p, opp_hist, f):
+    """Features and the outcome for each non-points lane, from games BEFORE this one. Empty until the v4 box cache (reb/ast/3PM) exists."""
+    if "reb" not in p:
+        return {}
+    h10 = hist[-10:]
+    mean = lambda xs: sum(xs) / len(xs) if xs else 0.0
+    common = {"min10": mean([x["minutes"] for x in h10]), "fga10": mean([x["fga"] for x in h10]), "pace": f["pace"], "is_home": f["is_home"],
+              "b2b": f["b2b"], "teammates_out_ppg": f["teammates_out_ppg"], "games_missed": f["games_missed"], "book_fav": f["book_fav"],
+              "book_total": f["book_total"]}
+    o10 = opp_hist[-10:]
+    out = {}
+    for mk, stat in LANE_STAT.items():
+        sea = mean([x[stat] for x in hist]); l10 = mean([x[stat] for x in h10])
+        per_min = sum(x[stat] for x in h10) / max(1.0, sum(x["minutes"] for x in h10)) * 30.0
+        feats = {**common, "season_avg": sea, "l10_avg": l10, "l10_per30": per_min, "form3": mean([x[stat] for x in hist[-3:]]) - l10}
+        if mk == "reb":
+            feats["opp_allowed"] = mean([x[3] for x in o10]) if o10 else 44.0
+        elif mk == "ast":
+            feats["opp_allowed"] = mean([x[4] for x in o10]) if o10 else 25.0
+            feats["usage10"] = mean([x["usage"] for x in h10])
+        else:
+            made, att = sum(x["tpm"] for x in hist), sum(x["tpa"] for x in hist)
+            feats["tpa10"] = mean([x["tpa"] for x in h10]); feats["tp_pct"] = (made + 0.36 * 50) / (att + 50)
+            feats["opp_allowed"] = mean([x[5] for x in o10]) if o10 else 12.5
+        out[mk] = {"y": int(p[stat if mk != "3pm" else "tpm"] >= LANE_BARS[mk]), "f": feats, "avg": sea}
+    pra_h = [x["pts"] + x["reb"] + x["ast"] for x in hist]
+    out["pra"] = {"y": int(p["pts"] + p["reb"] + p["ast"] >= LANE_BARS["pra"]),
+                  "f": {**common, "season_avg": mean(pra_h), "l10_avg": mean(pra_h[-10:]), "ppg": f["ppg"], "opp_allowed": f["opp_allowed"],
+                        "form3": mean(pra_h[-3:]) - mean(pra_h[-10:])}, "avg": mean(pra_h)}
     return out
 
 
