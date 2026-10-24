@@ -33,17 +33,26 @@ Of the players who actually did the thing (homered, scored, got the hit, hit 25+
 | Why picks miss | `miss_autopsy.py` (cause) · `autopsy.py` (weekly input pattern) |
 | Availability | `injury_status.py` (+ `.github/workflows/injury-snapshot.yml`) · `lineups.py` (posted lineups, probable goalie, spread/total, lock-later rule) |
 
-## Where we stand (measured, not hoped)
-| Market | Now | Notes |
-|---|---|---|
-| MLB HR called picks | 16.1% | top-40% score + lineup 1–5: 20.4% |
-| MLB 1+ hit | 68.8% | top-40% score: 72.3%; plateaus there with current inputs |
-| MLB 2+ H+R+RBI | 50.9% | top-20%: 55.2% |
-| MLB 2+ total bases | 39.3% | tiers barely separate |
-| NFL TD best-in-game | 51.2% | `nfl_td_v2` live beats TUDDY v4 |
-| NHL goal, best per game | 37.2% | tuned; goalie save% is noise |
-| NBA 25+, best per game | 54.0% | tuned |
-80% of missed MLB picks had a full chance (3+ AB): with today's inputs most misses read as variance. About 18–20% were knowable (never played, lost time, lineup unconfirmed).
+## Where we stand (measured, not hoped) — updated 2026-10-24
+PLAYER SCORING (what picks who). "Best/game" = the model's #1 in each game; baseline = the plain stat.
+| Sport / market | Shipped | Tuned / new | Plain-stat baseline | Live? |
+|---|---|---|---|---|
+| MLB HR | `hr_score` (mlb_hr_v4) 17.1% #1/game | v5 batter×matchup **21.6%** (292 games, thin) | — | v4 drives the board; v5 written every slate |
+| MLB 1+ hit | 68.8% of called picks | top-40% score 72.3%; inputs plateau ~72% | — | board only |
+| MLB 2+ H+R+RBI / 2+ TB | 50.9% / 39.3% | top-20%: 55.2% / ≈ base | — | board only |
+| NFL TD | `nfl_td_v2` **51.2%** best/game | TUDDY v4 44.5% (worse; not wired) | — | v2 live |
+| NHL goal | LAMP v1 33.3% top-1/game | **nhl_goal_v2 37.2%**, calibrated (top tenth 34.4% pred vs 34.8% actual) | season shots/gm 35.8% | board built (`nhl_live.py`), every skater |
+| NBA 25+ pts | BUCKETS v1 48.3% | **nba_pts_v2 54.2%** | season ppg 52.5% | weights saved, no live board yet |
+GAME MODELS (spread / moneyline / blowout) — team-level, not player-level.
+| Model | Where | Measured | Status |
+|---|---|---|---|
+| NBA game line (margin) | site `lib/nba/gameLines.js` (nba-lines-v1) + bot `forecast_nba.py` | site: MAE 11.51 vs close 11.01; ours 11.13 vs book **10.58**, winner 65.6% vs book 69.9% | **the book beats both** — use the closing spread as the input, don't compete with it |
+| Book spread → blowout/star effect | `game_lines.py` (2,463 NBA games, real closes) | club favoured 13+: wins by 15+ 50%; underdog 13+: loses by 15+ 51%; star 25+ rate 43% (fav 10+) vs 23% (dog 10+) | measured; not yet a live flag in BUCKETS |
+| MLB moneyline | `moneyline_bot.py` (log5 vs market) | its own simulation: loses 4–8% against the vig at any edge floor | live, graded, honest |
+| NFL / NHL / MLB spread or moneyline model | site "Our line": club ratings + home only | not backtested against closes | **gap** (NFL/NHL closing-line study not run) |
+| In-game comebacks (NBA) | `comeback_nba.py` | down 20 after Q3: 0.7% to win even from a close pregame spread | measured; no edge at +12,000 |
+LANES (never in a score): numerology — MLB only, small lean (+0.7 pp HR for 2+ aligned, t 3.1, six seasons); prospective log running.
+AVAILABILITY: `p_play` (NFL measured; others prior until snapshots accrue) · MLB lineup posted/unposted measured (98% / 76%).
 
 ## The gap list, in the order to fill it
 1. ~~Confirmed lineups~~ MLB lineups and NHL probable goalies are live (`lineups.py`; an unposted MLB lineup = 76% to play, measured). Still missing: NBA starting fives and NFL inactives (no reachable pregame feed), minutes limits, and `pick_lock.py` calling `lock_decision()`.
