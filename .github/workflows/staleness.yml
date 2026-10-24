@@ -10,8 +10,8 @@
 #
 # It is itself a cron and can itself be skipped -- two schedules dropped in the
 # same window is far less likely than one, so this catches the common case; it
-# is not a watchdog that watches itself. Never writes, never goes red on its
-# own account (a monitor that fails is one more red X to ignore).
+# is not a watchdog that watches itself. Never writes. A stale board turns the
+# run red and GitHub emails the repo owner (no Discord webhook, 2026-10-24).
 name: Staleness watch
 
 on:
@@ -54,10 +54,6 @@ jobs:
 
       # stdlib only -- no pip install, so a run is seconds of compute.
       - name: Check board freshness
-        env:
-          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
-          DISCORD_OPS_WEBHOOK: ${{ secrets.DISCORD_OPS_WEBHOOK }}
         run: |
           python _main/bots/staleness_watch.py \
-            --dir _data/public/data/current \
-            --post
+            --dir _data/public/data/current
