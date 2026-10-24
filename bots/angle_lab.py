@@ -28,6 +28,7 @@ import buckets_backtest as bb   # noqa: E402
 def collect(cache):
     rows = []
     for season in (2023, 2024):
+        _first = len(rows)
         games = sorted(bb.load(season, cache), key=lambda g: (g["date"], g["id"]))
         hist = defaultdict(list)             # pid -> [(min, pts, fga)]
         team_dates = defaultdict(list)       # team -> dates of its games
@@ -84,6 +85,9 @@ def collect(cache):
                                  "dmin": p["min"] - m10, "dpts": p["pts"] - q10, "y25": int(p["pts"] >= 25),
                                  "tags": tag, "margin": pts[i] - pts[1 - i], "lines": (x.get("lines"), o.get("lines")),
                                  "min10": m10, "pts10": q10})
+            for r_ in rows[_first:]:
+                r_.setdefault("season", season)
+            _first = len(rows)
             for i, x in enumerate(t):
                 team_dates[x["abbr"]].append(g["date"])
                 team_res[x["abbr"]].append((pts[i], pts[1 - i], poss[i]))
@@ -129,28 +133,111 @@ def script(r):
     return out
 
 
+def collect_nhl(cache):
+    """Forwards averaging 13+ minutes, scored on 1+ goal and on shots, each minus HIS OWN trailing rate."""
+    import nhl_backtest as nb
+    rows = []
+    for season in (2023, 2024, 2025):
+        data = nb.load_season(season, cache)
+        pp = {(r["playerId"], r["gameId"]): r for r in data["skater/powerplay"]}
+        per = defaultdict(list)
+        for r in data["skater/summary"]:
+            if r["positionCode"] in ("G", "D") or not r.get("timeOnIcePerGame"):
+                continue
+            q = pp.get((r["playerId"], r["gameId"]), {})
+            per[r["playerId"]].append({"date": r["gameDate"], "game": r["gameId"], "team": r["teamAbbrev"], "opp": r["opponentTeamAbbrev"],
+                                       "shots": r["shots"], "goals": r["goals"], "toi": r["timeOnIcePerGame"] / 60.0,
+                                       "pp": (q.get("ppTimeOnIce") or 0) / 60.0, "home": r.get("homeRoad") == "H"})
+        gl = defaultdict(list)                                  # goalie -> starts
+        starter = {}
+        for r in sorted(data["goalie/summary"], key=lambda r: (r["gameDate"], r["gameId"])):
+            if r.get("gamesStarted"):
+                gl[r["playerId"]].append((r["gameDate"], r["saves"], r["shotsAgainst"]))
+                starter[(r["gameId"], r["opponentTeamAbbrev"])] = r["playerId"]
+        tgoals = defaultdict(lambda: defaultdict(int))          # game -> team -> goals (every skater, D included)
+        tdates = defaultdict(dict)                              # team -> game -> date
+        shots_against = defaultdict(lambda: defaultdict(float))  # team -> game -> shots it faced (every skater)
+        for r in data["skater/summary"]:
+            if r["positionCode"] == "G":
+                continue
+            tgoals[r["gameId"]][r["teamAbbrev"]] += r["goals"]
+            tdates[r["teamAbbrev"]][r["gameId"]] = r["gameDate"]
+            shots_against[r["opponentTeamAbbrev"]][r["gameId"]] += r["shots"]
+        for pid, rs in per.items():
+            rs.sort(key=lambda x: x["date"])
+            for i, x in enumerate(rs):
+                h = rs[:i]
+                if len(h) < 8 or sum(y["toi"] for y in h[-10:]) / len(h[-10:]) < 13:
+                    continue
+                g_rate = (sum(y["goals"] for y in h) + 0.15 * 10) / (len(h) + 10)
+                s_rate = sum(y["shots"] for y in h) / len(h)
+                gap = (dt.date.fromisoformat(x["date"]) - dt.date.fromisoformat(h[-1]["date"])).days
+                gid = starter.get((x["game"], x["team"]))
+                gh = [t for t in gl.get(gid, []) if t[0] < x["date"]][-10:] if gid else []
+                sv = (sum(t[1] for t in gh) + 0.905 * 200) / (sum(t[2] for t in gh) + 200) if gh else None
+                opp_sa = [v for gm, v in shots_against[x["opp"]].items() if tdates[x["opp"]].get(gm, "9") < x["date"]]
+                opp_games = sorted(d for d in tdates[x["opp"]].values() if d < x["date"])
+                opp_gap = (dt.date.fromisoformat(x["date"]) - dt.date.fromisoformat(opp_games[-1])).days if opp_games else 5
+                oppsa10 = sum(opp_sa[-10:]) / len(opp_sa[-10:]) if opp_sa else None
+                last3 = sum(y["shots"] for y in h[-3:]) / 3
+                tm = tgoals[x["game"]]
+                margin = tm[x["team"]] - tm[x["opp"]]
+                tags = {
+                    "home": x["home"],
+                    "back-to-back (he played yesterday)": gap <= 1,
+                    "opponent on a back-to-back": opp_gap <= 1,
+                    "3+ days rest": gap >= 3,
+                    "goalie weak (recent save% <= .895)": sv is not None and sv <= 0.895,
+                    "goalie strong (recent save% >= .915)": sv is not None and sv >= 0.915,
+                    "goalie unknown / not yet a starter": sv is None,
+                    "opponent allows many shots (31+)": oppsa10 is not None and oppsa10 >= 31,
+                    "opponent allows few shots (<=27)": oppsa10 is not None and oppsa10 <= 27,
+                    "power-play regular (2.5+ min a game)": sum(y["pp"] for y in h[-10:]) / len(h[-10:]) >= 2.5,
+                    "hot shooter (last 3 avg 1.5+ over usual)": last3 >= s_rate + 1.5,
+                    "cold shooter (last 3 avg 1.5+ under usual)": last3 <= s_rate - 1.5,
+                }
+                rows.append({"season": season, "tags": tags, "dgoal": int(x["goals"] >= 1) - g_rate, "dshots": x["shots"] - s_rate,
+                             "margin": margin, "goal": int(x["goals"] >= 1), "shots": x["shots"], "toi": x["toi"]})
+    return rows
+
+
+def main_nhl(cache):
+    import angle_engine as eng
+    rows = collect_nhl(cache)
+    print(f"{len(rows)} forward-games, base goal rate {100 * mean([r['goal'] for r in rows]):.1f}%\n")
+    names = list(rows[0]["tags"])
+    print("1. PREGAME ANGLES -- effect on goal probability (percentage points over his own usual rate)")
+    for r in rows:
+        r["dgoal_pp"] = 100 * r["dgoal"]
+    eng.print_table(eng.evaluate(rows, names, "dgoal_pp", min_effect=1.0), "pp")
+    print("\n   same angles, extra SHOTS on goal:")
+    eng.print_table(eng.evaluate(rows, names, "dshots", min_effect=0.15), "sh")
+    print("\n2. GAME SCRIPTS -- all forwards (post-game; for the live board)")
+    for label, f in (("blowout win (3+ goals)", lambda m: m >= 3), ("one-goal win", lambda m: m == 1), ("one-goal loss", lambda m: m == -1),
+                     ("blowout loss (3+ goals)", lambda m: m <= -3)):
+        rs = [r for r in rows if f(r["margin"])]
+        print(f"   {label:<26} n={len(rs):6}  goal {100 * mean([r['goal'] for r in rs]):5.1f}%  shots {mean([r['shots'] for r in rs]):4.2f}  minutes {mean([r['toi'] for r in rs]):5.1f}")
+    return 0
+
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--cache", default=str(Path.home() / ".cache/dash_nba"))
+    ap.add_argument("sport", nargs="?", default="nba", choices=["nba", "nhl"])
+    ap.add_argument("--cache", default=None)
     a = ap.parse_args()
+    if a.sport == "nhl":
+        return main_nhl(a.cache or str(Path.home() / ".cache/dash_nhl"))
+    a.cache = a.cache or str(Path.home() / ".cache/dash_nba")
     rows = collect(a.cache)
     rot = rows
     print(f"{len(rot)} rotation player-games, {sum(r['star'] for r in rot)} of them stars\n")
     base25 = 100 * mean([r["y25"] for r in rot if r["star"]])
-    print(f"1. PREGAME ANGLES -- rotation players, vs rotation players without the tag (his own last-10 is the yardstick)")
-    print(f"   {'angle':<42}{'n':>6}{'+pts':>7}{'t':>6}{'+min':>7}{'t':>6}{'star 25+ gap':>14}")
-    table = []
-    for name in rot[0]["tags"]:
-        w = [r for r in rot if r["tags"][name]]; wo = [r for r in rot if not r["tags"][name]]
-        if len(w) < 100:
-            continue
-        dp, tp = compare(w, wo, "dpts"); dm, tm = compare(w, wo, "dmin")
-        sw = [r for r in w if r["star"]]; swo = [r for r in wo if r["star"]]
-        g25 = 100 * (mean([r["y25"] for r in sw]) - mean([r["y25"] for r in swo])) if sw and swo else float("nan")
-        table.append((abs(tp), name, len(w), dp, tp, dm, tm, g25))
-    for _, name, n, dp, tp, dm, tm, g25 in sorted(table, reverse=True):
-        flag = "" if abs(tp) >= 2 else "   (noise)"
-        print(f"   {name:<42}{n:>6}{dp:>+7.2f}{tp:>6.1f}{dm:>+7.2f}{tm:>6.1f}{g25:>+13.1f}%{flag}")
+    import angle_engine as eng
+    print("1. PREGAME ANGLES -- effect = extra points vs his own last-10 average, tested by angle_engine")
+    res = eng.evaluate(rot, list(rot[0]["tags"]), "dpts", min_effect=0.3)
+    eng.print_table(res, "pts")
+    print("\n   same angles, extra MINUTES:")
+    eng.print_table(eng.evaluate(rot, list(rot[0]["tags"]), "dmin", min_effect=0.5), "min")
 
     print(f"\n2. GAME SCRIPTS -- the stars only (post-game: for the live board and for weighting scenarios)")
     stars = [r for r in rot if r["star"]]
