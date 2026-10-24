@@ -88,6 +88,16 @@ So four of the five sports have more lanes than the harness has graded. The site
 - **NFL first TD** (`nfl/nfl_first.py`, nflverse play-by-play, graded on 171 games of 2025 with ~17 candidates a game so random is 5.8%): `nfl_td_v2` 15.2% (its weights were tuned on 2024-25, so this is its best case), touches per game 15.8%, early-touch share (first 20 plays) 14.6%, first-TD history 8.8%, v2 + early usage 16.4% (top 5 52.0%), + matchup 15.2%. Nothing is separable at n=171.
 - **Calendar flavour:** `numerology_lab.pythagorean_date()` flags dates where month^2 + day^2 = yy^2 (2026-10-24: 10^2 + 24^2 = 26^2). Only two exist in 2021-26 (2025-07-24 and 2026-10-24); the next is 2105-03-04. Too few to test; it rides on MLB rows as a date fact, never a score.
 
+## MLB full-slate hit / H+R+RBI / total-bases / HR model (`mlb_hits_data.py` + `mlb_hits_study.py`, 2026-10-24)
+Every posted-lineup hitter, 2024-26 regular season (110,882 hitter-games), trailing features only, fit on 2024-25, graded once on 2026 (41,044 hitter-games). Hit rate of the top slice of ALL hitter-games by predicted chance, plain stat vs the full model (his rate + lineup spot/home/PA + his profile + opposing starter + park):
+| Outcome (2026 base) | plain stat: top 5% / 10% | full model: top 5% / 10% / 20% / 40% | best pick per game / top 10 per night (full) |
+|---|---|---|---|
+| 1+ hit (60.9%) | 66.8% / 67.7% | **70.1% / 69.9% / 68.2% / 66.6%** | 69.7% / 70.0% |
+| 2+ H+R+RBI (45.8%) | 51.9% / 51.8% | **57.5% / 55.2% / 53.4% / 52.0%** | 53.5% / 55.4% |
+| 2+ total bases (35.2%) | 40.9% / 41.6% | **46.1% / 44.2% / 42.2% / 40.9%** | 41.4% / 44.8% |
+| 1+ HR (11.6%) | 20.5% / 18.0% | 20.8% / 19.0% / 17.4% / 15.7% | 18.8% / 20.9% |
+What moved each lane: lineup spot and plate appearances (+1.5 pts on hits, more on H+R+RBI), the opposing starter (the biggest single step for H+R+RBI and total bases), the park (a further +1-2). The ceiling with these inputs: hits about 70%, H+R+RBI about 57%, total bases about 46%, HR about 21% — below the 75-80% / 60% targets; the plain rate already holds most of a lane.
+
 ## The gap list, in the order to fill it
 1. ~~Confirmed lineups~~ MLB lineups and NHL probable goalies are live (`lineups.py`; an unposted MLB lineup = 76% to play, measured). Still missing: NBA starting fives and NFL inactives (no reachable pregame feed), minutes limits, and `pick_lock.py` calling `lock_decision()`.
 2. A real game forecast — pregame spread, total, moneyline and their movement — for every sport (blowout *loss* is the star-killer: NBA stars reach 25+ only 11.9% of the time).
