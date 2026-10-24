@@ -30,7 +30,7 @@ Of the players who actually did the thing (homered, scored, got the hit, hit 25+
 | Tuning on a holdout | `tune_models.py` (NHL/NBA) · `tune_mlb_props.py` (hits/HRR/contact) |
 | Angles | `angle_engine.py` + `angle_lab.py nba\|nhl` |
 | Why picks miss | `miss_autopsy.py` (cause) · `autopsy.py` (weekly input pattern) |
-| Availability | `injury_status.py` (+ `.github/workflows/injury-snapshot.yml`) |
+| Availability | `injury_status.py` (+ `.github/workflows/injury-snapshot.yml`) · `lineups.py` (posted lineups, probable goalie, spread/total, lock-later rule) |
 
 ## Where we stand (measured, not hoped)
 | Market | Now | Notes |
@@ -45,7 +45,7 @@ Of the players who actually did the thing (homered, scored, got the hit, hit 25+
 80% of missed MLB picks had a full chance (3+ AB): with today's inputs most misses read as variance. About 18–20% were knowable (never played, lost time, lineup unconfirmed).
 
 ## The gap list, in the order to fill it
-1. Confirmed lineups / starters / minutes limits at lock, and locking later (`p_play` is built; live lineup feeds are not).
+1. ~~Confirmed lineups~~ MLB lineups and NHL probable goalies are live (`lineups.py`; an unposted MLB lineup = 76% to play, measured). Still missing: NBA starting fives and NFL inactives (no reachable pregame feed), minutes limits, and `pick_lock.py` calling `lock_decision()`.
 2. A real game forecast — pregame spread, total, moneyline and their movement — for every sport (blowout *loss* is the star-killer: NBA stars reach 25+ only 11.9% of the time).
 3. Player-level matchup, not team-level (NBA defender, MLB pitcher-vs-pitch-type, NFL coverage).
 4. Shot / touch quality (NHL xG & shot location, NBA zones, NFL routes & air yards, MLB umpire / wind / bullpen).

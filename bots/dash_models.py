@@ -20,11 +20,13 @@ from typing import Any, Dict, List, Optional, Tuple
 
 try:
     from bots import injury_status
+    from bots import lineups
     from bots import moonshot_v4_scorer as moonshot
     from bots import tuddy_v2_scorer as tuddy
     from bots import mlb_data_fixes
 except ImportError:  # run from inside bots/
     import injury_status
+    import lineups
     import moonshot_v4_scorer as moonshot
     import tuddy_v2_scorer as tuddy
     import mlb_data_fixes
@@ -43,6 +45,7 @@ REGISTRY: List[Dict[str, str]] = [
     {"sport": "NFL", "name": "TUDDY TD shadow",     "version": "nfl_td_v3",     "status": "shadow",  "where": "bots/nfl/nfl_scoring.py SHADOW_MODELS['TD']",             "out": "nfl_bot.py output"},
     {"sport": "NFL", "name": "TUDDY usage x lane",  "version": "nfl_td_v4",     "status": "live",    "where": "bots/tuddy_v2_scorer.py",                                  "out": "public/data/current/tuddy_v2_latest.json"},
     {"sport": "ALL", "name": "Availability (p_play)", "version": "-",             "status": "live",    "where": "bots/injury_status.py (ESPN injury feeds)",                "out": "p_play / expected_score on rows"},
+    {"sport": "ALL", "name": "Lineups & lines",     "version": "-",             "status": "live",    "where": "bots/lineups.py (statsapi, ESPN)",                         "out": "lineup_status / p_start; spread, total"},
     {"sport": "NHL", "name": "LAMP shooter x goalie", "version": "nhl_goal_v1", "status": "planned", "where": "bots/nhl_scorer.py",                                       "out": "public/data/current/nhl_scorer_latest.json"},
     {"sport": "NBA", "name": "BUCKETS",             "version": "nba_pts_v1",    "status": "planned", "where": "bots/buckets_scorer.py",                                   "out": "public/data/current/buckets_scorer_latest.json"},
 ]
@@ -178,6 +181,10 @@ def run_moonshot(rows: List[Dict[str, Any]], slate_date: date, out_dir: Path,
         log.info(f"moonshot v5 injury report: {injury_status.apply(scored, inj)} of {len(scored)} players on it")
     except Exception as e:
         log.warning(f"injury report skipped: {e}")
+    try:       # is he in the posted lineup? (unposted = 76% to play, measured)
+        log.info(f"moonshot v5 lineups: {lineups.apply_mlb(scored, lineups.mlb(slate_date.isoformat()))}")
+    except Exception as e:
+        log.warning(f"lineup check skipped: {e}")
     out_dir.mkdir(parents=True, exist_ok=True)
     path = moonshot.write_output(scored, str(out_dir / moonshot.LIVE_OUTPUT_FILE), shadow=False)
     log.info(f"moonshot v5 gaps: {gaps.report()}")
