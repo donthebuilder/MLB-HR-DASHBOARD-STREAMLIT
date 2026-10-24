@@ -13,9 +13,9 @@ HOW A PRICE BECOMES A "FAIR" CHANCE (plain English)
   fee comes off the winnings, and thin books mislead, so depth ($500+ resting on BOTH sides) marks a price worth trusting.
 
 THE CORRECTION THIS FILE EXISTS FOR (2026-10-24): scripts/nhl/lamp-atg-devig.py was labelled "anytime goal scorer" but reads SGO's
-`firstToScore` market -- the FIRST goal of the game (a star prices around +800 to +1,200; his anytime price is near +150). SGO's NHL
-feed carries no anytime-goal market at all (it has points, assists, goals+assists, shots, first/last to score). The anytime-goal
-price lives on Kalshi (series KXNHLGOAL, "1+ goals" and "2+ goals"), so that is what this reads, against OUR goal probability
+`firstToScore` market -- the FIRST goal of the game (a star prices around +800 to +1,200; his anytime price is near +150). SGO does
+carry the anytime-goal market, under the stat name `points` (marketName "Any Goals Yes/No"; `goals+assists` is points) -- see
+devig_sgo.py / ev_process.py. This file reads Kalshi's anytime-goal series (KXNHLGOAL), against OUR goal probability
 (nhl_live.py's nhl_goal_v2, calibrated on 42,815 holdout games).
 
   edge = our chance - the price you pay - the fee      positive = we think the market is too low on him

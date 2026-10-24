@@ -17,8 +17,8 @@ EV only says the price is generous against the market. It says nothing about who
 loses nine times in ten. Judge it over hundreds of bets, never one.
 
 Markets (SGO oddIDs, measured on live events 2026-10-24):
-  NFL  touchdowns-<P>-game-yn-yes      anytime TD        NHL  points-<P>-game-yn-yes  1+ point (SGO carries NO anytime-goal market;
-  NBA  points|rebounds|assists|points+rebounds+assists-<P>-game-ou-over      goals live on Kalshi: devig_board.py)
+  NFL  touchdowns-<P>-game-yn-yes      anytime TD        NHL  points-<P>-game-yn-yes = ANYTIME GOAL (SGO names goals 'points'),
+  NBA  points|rebounds|assists|points+rebounds+assists-<P>-game-ou-over      goals+assists = points, firstToScore = first goal
   MLB  batting_homeRuns-<P>-game-yn-yes  (verified in season)
 The key is read from SGO_API_KEY (env) or --env file, used for the request, and never printed. SGO budget: one object per event.
 """
@@ -37,7 +37,10 @@ SHARP = ("pinnacle", "circa")
 LEAGUE = {"nfl": "NFL", "nhl": "NHL", "nba": "NBA", "mlb": "MLB"}
 MARKETS = {
     "nfl": [("touchdowns", "yn", "Anytime TD")],
-    "nhl": [("points", "yn", "1+ point")],
+    # SGO's NHL stat names are not what they sound like (read from the marketName on live events, 2026-10-24):
+    #   points = GOALS ("Any Goals Yes/No", "Goals Over/Under 0.5")   <- the anytime goal market
+    #   goals+assists = POINTS     firstToScore = FIRST goal of the game     assists, shots_onGoal as named
+    "nhl": [("points", "yn", "Anytime goal"), ("goals+assists", "yn", "Any point (G+A)"), ("assists", "yn", "Any assist"), ("shots_onGoal", "ou", "Shots on goal")],
     "nba": [("points", "ou", "Points"), ("rebounds", "ou", "Rebounds"), ("assists", "ou", "Assists"), ("points+rebounds+assists", "ou", "PRA")],
     "mlb": [("batting_homeRuns", "yn", "Home run")],
 }
@@ -93,7 +96,7 @@ def rows_for(sport, events):
                 fair = o.get("fairOdds")
                 if not fair:
                     continue
-                line = o.get("fairOverUnder") or o.get("bookOverUnder") if kind == "ou" else None
+                line = o.get("fairOverUnder") or o.get("bookOverUnder")      # yes/no markets carry their line too (points yes = OVER 1.5, not 1+)
                 p = prob(fair)
                 books = {}
                 for b, d in (o.get("byBookmaker") or {}).items():
