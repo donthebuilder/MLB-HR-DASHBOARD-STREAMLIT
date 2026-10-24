@@ -21,12 +21,14 @@ from typing import Any, Dict, List, Optional, Tuple
 try:
     from bots import injury_status
     from bots import lineups
+    from bots import numerology_lab
     from bots import moonshot_v4_scorer as moonshot
     from bots import tuddy_v2_scorer as tuddy
     from bots import mlb_data_fixes
 except ImportError:  # run from inside bots/
     import injury_status
     import lineups
+    import numerology_lab
     import moonshot_v4_scorer as moonshot
     import tuddy_v2_scorer as tuddy
     import mlb_data_fixes
@@ -151,6 +153,30 @@ def moonshot_inputs(row: Dict[str, Any], season: int, gaps: Gaps) -> Tuple[Dict,
     return batter_inputs, matchup_inputs, int(_f(row.get("last10_hr"))), _f(row.get("season_hr")) / games
 
 
+NUMEROLOGY_NOTE = ("lane, not a score: MLB 2021-26, hitters with 2+ of their numbers equal to the date's root homered about "
+                   "0.7 points more often than same-quality hitters (t 3.1); nothing in NHL/NFL/NBA. Prospective log running since 2026-10-24.")
+
+
+def numerology_attach(scored: List[Dict[str, Any]], slate_date: date) -> int:
+    """Stamp every row with its numerology read. It is NEVER multiplied into final_score."""
+    import json as _json
+    import subprocess as _sp
+    day = slate_date.isoformat()
+    raw = _sp.run(["curl", "-s", "-m", "60", f"https://statsapi.mlb.com/api/v1/sports/1/players?season={slate_date.year}"],
+                  capture_output=True, text=True).stdout
+    people = {p["id"]: p for p in _json.loads(raw).get("people", [])}
+    dr = numerology_lab.digits_root(day)
+    n = 0
+    for r in scored:
+        p = people.get(int(_f(r.get("player_id"))), {})
+        f = numerology_lab.flag(p.get("primaryNumber"), p.get("birthDate"), int(_f(r.get("season_hr"))) + 1, r.get("name"), day)
+        k = sum(1 for v in f["axes"].values() if v and v == dr)
+        r["numerology"] = {"aligned": k, "axes": f["axes"], "date_root": dr, "flagged": k >= 2,
+                           "also": [t for t in f["tags"] if t.startswith(("braid", "birthday"))], "note": NUMEROLOGY_NOTE}
+        n += bool(k >= 2)
+    return n
+
+
 def run_moonshot(rows: List[Dict[str, Any]], slate_date: date, out_dir: Path,
                  season: Optional[int] = None) -> Optional[str]:
     """Score every hitter row and write moonshot_v4_latest.json. Never raises:
@@ -182,6 +208,10 @@ def run_moonshot(rows: List[Dict[str, Any]], slate_date: date, out_dir: Path,
         log.info(f"moonshot v5 injury report: {injury_status.apply(scored, inj)} of {len(scored)} players on it")
     except Exception as e:
         log.warning(f"injury report skipped: {e}")
+    try:       # numerology lane (flag only; final_score is untouched)
+        log.info(f"moonshot v5 numerology: {numerology_attach(scored, slate_date)} of {len(scored)} hitters aligned 2+")
+    except Exception as e:
+        log.warning(f"numerology lane skipped: {e}")
     try:       # is he in the posted lineup? (unposted = 76% to play, measured)
         log.info(f"moonshot v5 lineups: {lineups.apply_mlb(scored, lineups.mlb(slate_date.isoformat()))}")
     except Exception as e:

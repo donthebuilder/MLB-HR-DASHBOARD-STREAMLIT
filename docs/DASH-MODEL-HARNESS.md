@@ -29,6 +29,7 @@ Of the players who actually did the thing (homered, scored, got the hit, hit 25+
 | Backtests | `backtest_v5.py` · `backtest_picks.py` · `nfl/nfl_tuddy_backtest.py` · `nhl_backtest.py` · `buckets_backtest.py` |
 | Tuning on a holdout | `tune_models.py` (NHL/NBA) · `tune_mlb_props.py` (hits/HRR/contact) |
 | Angles | `angle_engine.py` + `angle_lab.py nba\|nhl` |
+| Numerology (a lane, never a score) | `numerology_lab.py` (arithmetic + backtests) · `numerology_tail.py` (extreme games, stacked on stats) · `numerology_log.py` (prospective MLB log) |
 | Why picks miss | `miss_autopsy.py` (cause) · `autopsy.py` (weekly input pattern) |
 | Availability | `injury_status.py` (+ `.github/workflows/injury-snapshot.yml`) · `lineups.py` (posted lineups, probable goalie, spread/total, lock-later rule) |
 
