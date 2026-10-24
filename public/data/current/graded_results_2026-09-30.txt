@@ -1,0 +1,139 @@
+RESULTS TRACKER - 2026-09-30
+------------------------------------------
+BETTABLE RESULTS
+Top 15 HR: 3/15 (20.0%)
+HR Picks: 1/4 (25.0%)
+Top Picks: 1/4 (25.0%)
+
+FULL SHEET BASE HIT PERFORMANCE
+Base Hit Accuracy: 52.8%
+
+HR CAPTURE (BETTABLE)
+Total Slate HRs: 12
+Caught in Top 15: 3
+Caught in HR Picks: 1
+Top 15 Capture Rate: 25.0%
+HR Pick Capture Rate: 8.3%
+
+MODEL VISION (Top 40)
+Model Caught HRs: 5 / 12
+Vision Rate: 41.7%
+
+UNIQUE PLAYER HR ACCURACY
+Unique Players Tracked: 25
+Players Who Homered: 5
+Unique HR Accuracy: 20.0%
+
+HR CATEGORY BREAKDOWN
+------------------------------------------
+🏆 TOP 15 BOARD → 3 HR
+🔥 TOP PICKS → 1 HR
+🧨 HR PICKS → 1 HR
+🏁 HRR PICKS → 0 HR
+💠 HIT PICKS → 1 HR
+⚾ CONTACT PICKS → 0 HR
+Best HR-producing category: 🏆 TOP 15 BOARD
+
+LONGEST HR (BOARD)
+------------------------------------------
+- Kyle Schwarber — 447 ft · 111.7 mph · 27.0°
+- Bryce Harper — 418 ft · 107.1 mph · 25.0°
+- Jeremy Peña — 395 ft · 103.6 mph · 36.0°
+- Willson Contreras — 387 ft · 102.6 mph · 23.0°
+- Cody Bellinger — 360 ft · 96.7 mph · 38.0°
+Longest on the board: Kyle Schwarber (447 ft)
+
+
+HR RESULTS BY PLAYER
+------------------------------------------
+- Bryce Harper — 🏆#14
+- Jeremy Peña — 🏆#6
+- Willson Contreras — 🏆#13 + 🧨
+- Kyle Schwarber — 🔥
+- Cody Bellinger — 💠
+
+MISSED HRs (NOT IN MODEL SHEET)
+------------------------------------------
+- Gavin Sheets (SD) — not in model sheet / lineup pool
+
+POOL PERFORMANCE
+------------------------------------------
+4-MAN Pool A — Strongest → 0/4 HR (none)
+4-MAN Pool B — HRR+Power → 0/4 HR (none)
+4-MAN Pool C — Balanced → 0/4 HR (none)
+4-MAN Pool D — Variance → 0/4 HR (none)
+3-MAN Pool A — Strongest → 2/3 HR (Jose Altuve, Alec Bohm)
+3-MAN Pool B — HRR+Var → 0/3 HR (none)
+3-MAN Pool C — Balanced → 0/3 HR (none)
+3-MAN Pool D — Variance → 2/3 HR (Cody Bellinger, Jeremy Peña)
+
+PAIR PERFORMANCE
+------------------------------------------
+Pair 1 → 0/2 HR (none) | Munetaka Murakami + Ben Rice
+Pair 2 → 0/2 HR (none) | Yordan Alvarez + Pete Crow-Armstrong
+Pair 3 → 1/2 HR (Willson Contreras) | Willson Contreras + Manny Machado
+Pair 4 → 0/2 HR (none) | Alex Bregman + Yainer Diaz
+Pair 5 → 0/2 HR (none) | Matt Olson + Manny Machado
+Pair 6 → 1/2 HR (Kyle Schwarber) | Alex Bregman + Kyle Schwarber
+Pair 7 → 0/2 HR (none) | Drake Baldwin + Fernando Tatis Jr.
+Pair 8 → 0/2 HR (none) | Isaac Paredes + Seiya Suzuki
+Pair 9 → 0/2 HR (none) | Miguel Vargas + Edmundo Sosa
+Pair 10 → 0/2 HR (none) | George Lombard Jr. + Miguel Vargas
+
+PLAYER TYPE PERFORMANCE
+------------------------------------------
+🏆 TOP 15 BOARD (15)
+HR: 20.0% | 1+ Hit: 53.3% | XBH: 20.0% | 2+ TB: 20.0% | 2+ HRR: 40.0% | 3+ HRR: 26.7%
+
+🔥 TOP PICKS (4)
+HR: 25.0% | 1+ Hit: 75.0% | XBH: 25.0% | 2+ TB: 25.0% | 2+ HRR: 50.0% | 3+ HRR: 25.0%
+
+🧨 HR PICKS (4)
+HR: 25.0% | 1+ Hit: 50.0% | XBH: 25.0% | 2+ TB: 25.0% | 2+ HRR: 50.0% | 3+ HRR: 50.0%
+
+🏁 HRR PICKS (4)
+HR: 0.0% | 1+ Hit: 25.0% | XBH: 25.0% | 2+ TB: 25.0% | 2+ HRR: 25.0% | 3+ HRR: 25.0%
+
+💠 HIT PICKS (4)
+HR: 25.0% | 1+ Hit: 50.0% | XBH: 25.0% | 2+ TB: 50.0% | 2+ HRR: 50.0% | 3+ HRR: 25.0%
+
+⚾ CONTACT PICKS (4)
+HR: 0.0% | 1+ Hit: 50.0% | XBH: 0.0% | 2+ TB: 0.0% | 2+ HRR: 25.0% | 3+ HRR: 0.0%
+
+
+DESIGNED OUTCOME (did the pick do its job)
+------------------------------------------
+🏆 TOP 15 BOARD (15) -> 3/15 (20.0%)  ·  needs: HR
+🔥 TOP PICKS (4) -> 1/4 (25.0%)  ·  needs: most productive of our picks in his game (HRR or TB)
+🧨 HR PICKS (4) -> 1/4 (25.0%)  ·  needs: HR
+🏁 HRR PICKS (4) -> 1/4 (25.0%)  ·  needs: 2+ hits+runs+RBI
+💠 HIT PICKS (4) -> 2/4 (50.0%)  ·  needs: 1+ hit
+⚾ CONTACT PICKS (4) -> 0/4 (0.0%)  ·  needs: 2+ TB or XBH
+ALL PICKS -> 8/36 (22.2%)
+
+HIT RESULTS BY CATEGORY
+------------------------------------------
+
+🔥 TOP PICKS (1+ Hit)
+- Ben Rice — 1H
+- Kyle Schwarber — 1H
+- Manny Machado — 1H
+
+🧨 HR PICKS (1+ Hit)
+- Willson Contreras — 2H ⭐
+- Matt Olson — 1H
+
+🏁 HRR PICKS (1+ Hit)
+- Drake Baldwin — 2H ⭐
+
+💠 HIT PICKS (1+ Hit)
+- Cody Bellinger — 2H ⭐
+- Mauricio Dubón — 2H ⭐
+
+⚾ CONTACT PICKS (1+ Hit)
+- Ben Rice — 1H
+- Bryson Stott — 1H
+
+MODEL DIAGNOSTIC (LOW PRIORITY)
+Full Sheet HR Coverage: 11 / 12 (91.7%)
+Pregame Pool HR Coverage: 11 / 11 (100.0%) over 3 locked games; 0 HR by late adds

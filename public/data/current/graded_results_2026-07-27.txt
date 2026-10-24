@@ -1,0 +1,169 @@
+RESULTS TRACKER - 2026-07-27
+------------------------------------------
+BETTABLE RESULTS
+Top 15 HR: 3/13 (23.1%)
+HR Picks: 1/11 (9.1%)
+Top Picks: 1/11 (9.1%)
+
+FULL SHEET BASE HIT PERFORMANCE
+Base Hit Accuracy: 71.1%
+
+HR CAPTURE (BETTABLE)
+Total Slate HRs: 28
+Caught in Top 15: 3
+Caught in HR Picks: 1
+Top 15 Capture Rate: 10.7%
+HR Pick Capture Rate: 3.6%
+
+MODEL VISION (Top 40)
+Model Caught HRs: 7 / 28
+Vision Rate: 25.0%
+
+UNIQUE PLAYER HR ACCURACY
+Unique Players Tracked: 77
+Players Who Homered: 14
+Unique HR Accuracy: 18.2%
+
+HR CATEGORY BREAKDOWN
+------------------------------------------
+🏆 TOP 15 BOARD → 3 HR
+🔥 TOP PICKS → 1 HR
+🧨 HR PICKS → 1 HR
+🏁 HRR PICKS → 5 HR
+💠 HIT PICKS → 4 HR
+⚾ CONTACT PICKS → 3 HR
+Best HR-producing category: 🏁 HRR PICKS
+
+LONGEST HR (BOARD)
+------------------------------------------
+- Ezequiel Duran — 436 ft · 106.3 mph · 27.0°
+- Andrés Chaparro — 432 ft · 108.3 mph · 27.0°
+- Joc Pederson — 418 ft · 106.4 mph · 25.0°
+- Ozzie Albies — 407 ft · 104.7 mph · 27.0°
+- Jake Burger — 403 ft · 105.1 mph · 21.0°
+Longest on the board: Ezequiel Duran (436 ft)
+
+
+HR RESULTS BY PLAYER
+------------------------------------------
+- Andrés Chaparro — 🏆#9 + ⚾ + ⭐
+- Joc Pederson — 🏆#7 + 🧨
+- Tyrone Taylor — 🏆#15 + 🔥 + ⭐
+- Alex Bregman — 🏁
+- Ezequiel Duran — 🏁 + ⭐
+- Francisco Lindor — 🏁
+- Randy Arozarena — 🏁
+- Tyler Soderstrom — 🏁
+- Heriberto Hernández — 💠
+- Nico Hoerner — 💠
+- Ozzie Albies — 💠 + ⭐
+- Vaughn Grissom — 💠 + ⭐
+- Ceddanne Rafaela — ⚾ + ⭐
+- Jake Burger — ⚾
+
+MISSED HRs (NOT IN MODEL SHEET)
+------------------------------------------
+- Tyler O'Neill (BAL) — not in model sheet / lineup pool
+- Luis Urías (TOR) — not in model sheet / lineup pool
+
+POOL PERFORMANCE
+------------------------------------------
+4-MAN HR POOL A → 0/4 HR (none)
+4-MAN HR POOL B → 1/4 HR (Tyrone Taylor)
+4-MAN HR POOL C → 0/4 HR (none)
+4-MAN HR POOL D → 1/4 HR (Heriberto Hernández)
+6-MAN HR POOL A → 0/6 HR (none)
+6-MAN HR POOL B → 1/6 HR (Bryce Harper)
+6-MAN HR POOL C → 1/6 HR (Jake Burger)
+6-MAN HR POOL D → 1/6 HR (Griffin Conine)
+
+PAIR PERFORMANCE
+------------------------------------------
+Pair 1 → 0/2 HR (none) | CJ Abrams + Yordan Alvarez
+Pair 2 → 1/2 HR (Joc Pederson) | Dylan Crews + Joc Pederson
+Pair 3 → 0/2 HR (none) | Wyatt Langford + Bryan De La Cruz
+Pair 4 → 1/2 HR (Andrés Chaparro) | Pete Crow-Armstrong + Andrés Chaparro
+
+PLAYER TYPE PERFORMANCE
+------------------------------------------
+🏁 HRR PICKS (22)
+2+ HRR: 50.0% | 3+ HRR: 27.3%
+
+💠 HIT PICKS (22)
+1+ Hit: 81.8% | HR: 18.2%
+
+⚾ CONTACT PICKS (11)
+XBH: 54.5% | 2+ TB: 54.5% | HR: 27.3%
+
+HIT RESULTS BY CATEGORY
+------------------------------------------
+
+🔥 TOP PICKS (1+ Hit)
+- Brandon Lowe — 3H 🔥
+- Tyrone Taylor — 3H 🔥
+- Bryan De La Cruz — 1H
+- Paul Goldschmidt — 1H
+- Riley Greene — 1H
+- Yordan Alvarez — 1H
+
+🧨 HR PICKS (1+ Hit)
+- Jazz Chisholm Jr. — 2H ⭐
+- Joc Pederson — 2H ⭐
+- Spencer Torkelson — 2H ⭐
+- Dylan Crews — 1H
+- Endy Rodríguez — 1H
+- Francisco Alvarez — 1H
+- Jo Adell — 1H
+- Kyle Schwarber — 1H
+
+🏁 HRR PICKS (1+ Hit)
+- Alex Bregman — 4H 🔥
+- Francisco Lindor — 3H 🔥
+- Alec Bohm — 2H ⭐
+- Ezequiel Duran — 2H ⭐
+- Xavier Edwards — 2H ⭐
+- Andrew Vaughn — 1H
+- Drake Baldwin — 1H
+- George Springer — 1H
+- Jake Bauers — 1H
+- Jake Mangum — 1H
+- Jeff McNeil — 1H
+- Miguel Vargas — 1H
+- Munetaka Murakami — 1H
+- Randy Arozarena — 1H
+- Seiya Suzuki — 1H
+- Tyler Soderstrom — 1H
+- Vladimir Guerrero Jr. — 1H
+
+💠 HIT PICKS (1+ Hit)
+- Nico Hoerner — 4H 🔥
+- Otto Lopez — 3H 🔥
+- Vaughn Grissom — 3H 🔥
+- Brandon Nimmo — 2H ⭐
+- Heriberto Hernández — 2H ⭐
+- Jasson Domínguez — 2H ⭐
+- Kevin McGonigle — 2H ⭐
+- Luis García Jr. — 2H ⭐
+- Nick Gonzales — 2H ⭐
+- Ozzie Albies — 2H ⭐
+- Andruw Monasterio — 1H
+- Chase Meidroth — 1H
+- Cole Young — 1H
+- Dillon Dingler — 1H
+- James Wood — 1H
+- Jeremy Peña — 1H
+- Luis Arraez — 1H
+- Michael Harris II — 1H
+
+⚾ CONTACT PICKS (1+ Hit)
+- Ben Rice — 2H ⭐
+- Bryson Stott — 2H ⭐
+- Pete Alonso — 2H ⭐
+- Andrés Chaparro — 1H
+- Ceddanne Rafaela — 1H
+- Corbin Carroll — 1H
+- Jake Burger — 1H
+- Zach Neto — 1H
+
+MODEL DIAGNOSTIC (LOW PRIORITY)
+Full Sheet HR Coverage: 26 / 28 (92.9%)

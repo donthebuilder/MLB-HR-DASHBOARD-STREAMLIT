@@ -1,0 +1,124 @@
+RESULTS TRACKER - 2026-04-21
+------------------------------------------
+FULL SHEET TRACKED PICKS: 120 | HR Accuracy: 11.7%
+FULL SHEET BASE HIT PICKS: 120 | Base Hit Accuracy: 61.7%
+
+PAIRS TRACKED: 4 | HR Accuracy: 0.0%
+4-MAN POOLS TRACKED: 4 | HR Accuracy: 0.0%
+6-MAN POOLS TRACKED: 4 | HR Accuracy: 0.0%
+
+TOP 15 TRACKED: 15 | HR Accuracy: 13.3%
+HR PICKS TRACKED: 15 | HR Accuracy: 20.0%
+TOP PICKS TRACKED: 15 | HR Accuracy: 13.3%
+
+HRR PICKS TRACKED: 30 | 2+ HRR Accuracy: 50.0% | 3+ HRR Accuracy: 36.7%
+HIT PICKS TRACKED: 30 | Hit Accuracy: 60.0% | HR Accuracy: 6.7%
+CONTACT PICKS TRACKED: 15 | XBH Accuracy: 53.3% | 2+ TB Accuracy: 53.3% | HR Accuracy: 13.3%
+
+TRACKED PICKS THAT HOMERED
+- 🏆#9 🧨 James Wood - HR 42.2
+  BA(S) 0.237 | BA vs RHP 0.277 | ISO 0.290 | 350+ 6/16 | L5 4H/2HR/2XBH
+- 🏆#5 🧨 Munetaka Murakami - HR 44.7
+  BA(S) 0.208 | BA vs RHP 0.209 | ISO 0.334 | 350+ 6/15 | L5 6H/3HR/3XBH
+- 🧨 Elly De La Cruz - HR 29.1
+  BA(S) 0.261 | BA vs LHP 0.280 | ISO 0.250 | 350+ 3/22 | L5 4H/0HR/2XBH
+- 🔥 Nico Hoerner - HR 30.1
+  BA(S) 0.322 | BA vs LHP 0.375 | ISO 0.184 | 350+ 5/31 | L5 8H/2HR/2XBH
+- 🔥 Shea Langeliers - HR 29.6
+  BA(S) 0.303 | BA vs RHP 0.352 | ISO 0.281 | 350+ 4/23 | L5 6H/1HR/2XBH
+- 🏁 Adley Rutschman - HR 9.4
+  BA(S) 0.294 | BA vs LHP 0.111 | ISO 0.177 | 350+ 1/23 | L5 6H/0HR/3XBH
+- 🏁 Bryce Harper - HR 21.1
+  BA(S) 0.275 | BA vs LHP 0.231 | ISO 0.238 | 350+ 4/22 | L5 6H/1HR/2XBH
+- 🏁 Byron Buxton - HR 24.2
+  BA(S) 0.235 | BA vs RHP 0.294 | ISO 0.172 | 350+ 5/26 | L5 7H/2HR/2XBH
+- 💠 Drake Baldwin - HR 24.9
+  BA(S) 0.313 | BA vs LHP 0.360 | ISO 0.197 | 350+ 3/28 | L5 7H/0HR/1XBH
+- 💠 Ildemaro Vargas - HR 20.1
+  BA(S) 0.368 | BA vs RHP 0.385 | ISO 0.228 | 350+ 3/27 | L5 6H/1HR/2XBH
+- ⚾ Kyle Schwarber - HR 26.9
+  BA(S) 0.213 | BA vs LHP 0.148 | ISO 0.312 | 350+ 3/21 | L5 3H/1HR/2XBH
+- ⚾ Spencer Steer - HR 20.0
+  BA(S) 0.211 | BA vs LHP 0.263 | ISO 0.183 | 350+ 3/13 | L5 3H/0HR/1XBH
+
+- ALT Colson Montgomery | CWS | VARIANCE | HR 28.5 | RR 29.5 | spot 4
+   BA(S) .200 | BA vs RHP .128 | 350+ 4/18 | 375+ 4/18 | IdealHR 0.22 | L5 4H/2HR/3XBH
+
+TRACKED PICKS THAT GOT A BASE HIT
+- Munetaka Murakami (CWS) | TOP15#5 | 3 H
+- Oswald Peraza (LAA) | TOP15#15 | 2 H
+- Sal Stewart (CIN) | TOP15#8 | 2 H
+- Yordan Alvarez (HOU) | TOP15#3 | 2 H
+- Aaron Judge (NYY) | TOP15#2 | 1 H
+- James Wood (WSH) | TOP15#9 | 1 H
+- José Ramírez (CLE) | TOP15#4 | 1 H
+- Mickey Moniak (COL) | TOP15#11 | 1 H
+- Mike Trout (LAA) | TOP15#1 | 1 H
+- Elly De La Cruz (CIN) | HR | 3 H
+- Munetaka Murakami (CWS) | HR | 3 H
+- Aaron Judge (NYY) | HR | 1 H
+- Carlos Cortes (ATH) | HR | 1 H
+- Ian Happ (CHC) | HR | 1 H
+- James Wood (WSH) | HR | 1 H
+- Jeremiah Jackson (BAL) | HR | 1 H
+- José Ramírez (CLE) | HR | 1 H
+- Oneil Cruz (PIT) | HR | 1 H
+- Brice Turang (MIL) | TOP | 2 H
+- Nico Hoerner (CHC) | TOP | 2 H
+- Sal Stewart (CIN) | TOP | 2 H
+- Shea Langeliers (ATH) | TOP | 2 H
+- Yordan Alvarez (HOU) | TOP | 2 H
+- Mickey Moniak (COL) | TOP | 1 H
+- Mike Trout (LAA) | TOP | 1 H
+- Ryan O'Hearn (PIT) | TOP | 1 H
+- Adley Rutschman (BAL) | HRR | 2 H
+- Alec Burleson (STL) | HRR | 2 H
+- Carter Jensen (KC) | HRR | 2 H
+- Fernando Tatis Jr. (SD) | HRR | 2 H
+- Junior Caminero (TB) | HRR | 2 H
+- Masyn Winn (STL) | HRR | 2 H
+- Oswald Peraza (LAA) | HRR | 2 H
+- Bryce Harper (PHI) | HRR | 1 H
+- Byron Buxton (MIN) | HRR | 1 H
+- Chase Meidroth (CWS) | HRR | 1 H
+- Cody Bellinger (NYY) | HRR | 1 H
+- Cole Young (SEA) | HRR | 1 H
+- Daniel Schneemann (CLE) | HRR | 1 H
+- Gary Sánchez (MIL) | HRR | 1 H
+- Nick Kurtz (ATH) | HRR | 1 H
+- Riley Greene (DET) | HRR | 1 H
+- Shohei Ohtani (LAD) | HRR | 1 H
+- Trevor Larnach (MIN) | HRR | 1 H
+- Xander Bogaerts (SD) | HRR | 1 H
+- Jacob Wilson (ATH) | HIT | 2 H
+- Kevin McGonigle (DET) | HIT | 2 H
+- William Contreras (MIL) | HIT | 2 H
+- Xavier Edwards (MIA) | HIT | 2 H
+- Bobby Witt Jr. (KC) | HIT | 1 H
+- Brayan Rocchio (CLE) | HIT | 1 H
+- Carson Kelly (CHC) | HIT | 1 H
+- Ceddanne Rafaela (BOS) | HIT | 1 H
+- Drake Baldwin (ATL) | HIT | 1 H
+- Eloy Jiménez (TOR) | HIT | 1 H
+- George Valera (CLE) | HIT | 1 H
+- Ildemaro Vargas (ARI) | HIT | 1 H
+- Josh Jung (TEX) | HIT | 1 H
+- Matt Shaw (CHC) | HIT | 1 H
+- Miguel Andujar (SD) | HIT | 1 H
+- Randy Arozarena (SEA) | HIT | 1 H
+- Vladimir Guerrero Jr. (TOR) | HIT | 1 H
+- Yandy Díaz (TB) | HIT | 1 H
+- Andrew Benintendi (CWS) | CONTACT | 2 H
+- Ernie Clement (TOR) | CONTACT | 2 H
+- Jake Bauers (MIL) | CONTACT | 2 H
+- Tyler Soderstrom (ATH) | CONTACT | 2 H
+- Chase DeLauter (CLE) | CONTACT | 1 H
+- Connor Norby (MIA) | CONTACT | 1 H
+- Corey Seager (TEX) | CONTACT | 1 H
+- Gunnar Henderson (BAL) | CONTACT | 1 H
+- Kyle Schwarber (PHI) | CONTACT | 1 H
+- Spencer Steer (CIN) | CONTACT | 1 H
+- Willson Contreras (BOS) | CONTACT | 1 H
+
+PAIRS / POOLS THAT CLEARED
+- none

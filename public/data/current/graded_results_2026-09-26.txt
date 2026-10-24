@@ -1,0 +1,165 @@
+RESULTS TRACKER - 2026-09-26
+------------------------------------------
+BETTABLE RESULTS
+Top 15 HR: 3/15 (20.0%)
+HR Picks: 2/13 (15.4%)
+Top Picks: 3/13 (23.1%)
+
+FULL SHEET BASE HIT PERFORMANCE
+Base Hit Accuracy: 65.6%
+
+HR CAPTURE (BETTABLE)
+Total Slate HRs: 37
+Caught in Top 15: 3
+Caught in HR Picks: 2
+Top 15 Capture Rate: 8.1%
+HR Pick Capture Rate: 5.4%
+
+MODEL VISION (Top 40)
+Model Caught HRs: 8 / 37
+Vision Rate: 21.6%
+
+UNIQUE PLAYER HR ACCURACY
+Unique Players Tracked: 64
+Players Who Homered: 11
+Unique HR Accuracy: 17.2%
+
+HR CATEGORY BREAKDOWN
+------------------------------------------
+🏆 TOP 15 BOARD → 3 HR
+🔥 TOP PICKS → 3 HR
+🧨 HR PICKS → 2 HR
+🏁 HRR PICKS → 3 HR
+💠 HIT PICKS → 1 HR
+⚾ CONTACT PICKS → 2 HR
+Best HR-producing category: 🏆 TOP 15 BOARD
+
+HR RESULTS BY PLAYER
+------------------------------------------
+- Alec Burleson — 🏆#13 + 🔥
+- Brandon Lowe — 🏆#12 + 🔥 + ⭐
+- Lucas Spence — 🏆#6 + ⭐
+- Hunter Goodman — 🧨
+- Junior Caminero — 🧨 + ⭐
+- Yordan Alvarez — 🔥
+- Brice Turang — 🏁 + ⚾
+- Isaac Paredes — 🏁
+- Mookie Betts — 🏁 + ⚾ + ⭐
+- Eduardo Valencia — 💠
+- Javier Sanoja — 
+
+POOL PERFORMANCE
+------------------------------------------
+4-MAN Pool A — Strongest → 1/4 HR (Isaac Paredes)
+4-MAN Pool B — HRR+Power → 0/4 HR (none)
+4-MAN Pool C — Balanced → 1/4 HR (Junior Caminero)
+4-MAN Pool D — Variance → 1/4 HR (Junior Caminero)
+3-MAN Pool A — Strongest → 1/3 HR (Mookie Betts)
+3-MAN Pool B — HRR+Var → 0/3 HR (none)
+3-MAN Pool C — Balanced → 0/3 HR (none)
+3-MAN Pool D — Variance → 0/3 HR (none)
+
+PAIR PERFORMANCE
+------------------------------------------
+Pair 1 → 1/2 HR (Yordan Alvarez) | Munetaka Murakami + Yordan Alvarez
+Pair 2 → 0/2 HR (none) | CJ Abrams + Matt Olson
+Pair 3 → 1/2 HR (Brandon Lowe) | Juan Soto + Brandon Lowe
+Pair 4 → 0/2 HR (none) | Randal Grichuk + Dominic Canzone
+Pair 5 → 1/2 HR (Hunter Goodman) | Hunter Goodman + Eugenio Suárez
+Pair 6 → 0/2 HR (none) | Elly De La Cruz + Kyle Schwarber
+Pair 7 → 0/2 HR (none) | Zack Gelof + Christian Walker
+Pair 8 → 0/2 HR (none) | Dominic Canzone + Miguel Vargas
+Pair 9 → 0/2 HR (none) | Christian Walker + Kyle Schwarber
+Pair 10 → 0/2 HR (none) | Zack Gelof + Mickey Moniak
+
+PLAYER TYPE PERFORMANCE
+------------------------------------------
+🏆 TOP 15 BOARD (15)
+HR: 20.0% | 1+ Hit: 60.0% | XBH: 40.0% | 2+ TB: 46.7% | 2+ HRR: 60.0% | 3+ HRR: 33.3%
+
+🔥 TOP PICKS (13)
+HR: 23.1% | 1+ Hit: 69.2% | XBH: 38.5% | 2+ TB: 46.2% | 2+ HRR: 69.2% | 3+ HRR: 38.5%
+
+🧨 HR PICKS (13)
+HR: 15.4% | 1+ Hit: 61.5% | XBH: 38.5% | 2+ TB: 38.5% | 2+ HRR: 46.2% | 3+ HRR: 23.1%
+
+🏁 HRR PICKS (13)
+HR: 23.1% | 1+ Hit: 61.5% | XBH: 30.8% | 2+ TB: 30.8% | 2+ HRR: 53.8% | 3+ HRR: 30.8%
+
+💠 HIT PICKS (13)
+HR: 7.7% | 1+ Hit: 84.6% | XBH: 46.2% | 2+ TB: 53.8% | 2+ HRR: 69.2% | 3+ HRR: 46.2%
+
+⚾ CONTACT PICKS (13)
+HR: 15.4% | 1+ Hit: 61.5% | XBH: 38.5% | 2+ TB: 46.2% | 2+ HRR: 61.5% | 3+ HRR: 38.5%
+
+
+DESIGNED OUTCOME (did the pick do its job)
+------------------------------------------
+🏆 TOP 15 BOARD (15) -> 3/15 (20.0%)  ·  needs: HR
+🔥 TOP PICKS (13) -> 5/13 (38.5%)  ·  needs: most productive of our picks in his game (HRR or TB)
+🧨 HR PICKS (13) -> 2/13 (15.4%)  ·  needs: HR
+🏁 HRR PICKS (13) -> 7/13 (53.8%)  ·  needs: 2+ hits+runs+RBI
+💠 HIT PICKS (13) -> 11/13 (84.6%)  ·  needs: 1+ hit
+⚾ CONTACT PICKS (13) -> 6/13 (46.2%)  ·  needs: 2+ TB or XBH
+ALL PICKS -> 34/93 (36.6%)
+
+HIT RESULTS BY CATEGORY
+------------------------------------------
+
+🔥 TOP PICKS (1+ Hit)
+- Carter Jensen — 2H ⭐
+- Juan Soto — 2H ⭐
+- Yordan Alvarez — 2H ⭐
+- Alec Burleson — 1H
+- Brandon Lowe — 1H
+- Dominic Canzone — 1H
+- Kody Clemens — 1H
+- Matt Olson — 1H
+- Shohei Ohtani — 1H
+
+🧨 HR PICKS (1+ Hit)
+- Hunter Goodman — 2H ⭐
+- Jac Caglianone — 2H ⭐
+- Junior Caminero — 2H ⭐
+- Christian Walker — 1H
+- Corbin Carroll — 1H
+- Corey Seager — 1H
+- Jordan Walker — 1H
+- Teoscar Hernández — 1H
+
+🏁 HRR PICKS (1+ Hit)
+- Isaac Paredes — 3H 🔥
+- Bo Bichette — 1H
+- Brice Turang — 1H
+- Brooks Lee — 1H
+- Kevin McGonigle — 1H
+- Mookie Betts — 1H
+- TJ Rumfield — 1H
+- Vinnie Pasquantino — 1H
+
+💠 HIT PICKS (1+ Hit)
+- Michael Harris II — 4H 🔥
+- Carson Benge — 3H 🔥
+- Bobby Witt Jr. — 2H ⭐
+- Bryson Stott — 2H ⭐
+- Luke Keaschall — 2H ⭐
+- Yainer Diaz — 2H ⭐
+- Eduardo Valencia — 1H
+- Gabriel Moreno — 1H
+- Sam Antonacci — 1H
+- Vaughn Grissom — 1H
+- Will Smith — 1H
+
+⚾ CONTACT PICKS (1+ Hit)
+- Michael Harris II — 4H 🔥
+- Luke Keaschall — 2H ⭐
+- Randy Arozarena — 2H ⭐
+- Yainer Diaz — 2H ⭐
+- Brice Turang — 1H
+- Mookie Betts — 1H
+- Nolan Arenado — 1H
+- Vinnie Pasquantino — 1H
+
+MODEL DIAGNOSTIC (LOW PRIORITY)
+Full Sheet HR Coverage: 37 / 37 (100.0%)
+Pregame Pool HR Coverage: 30 / 31 (96.8%) over 11 locked games; 1 HR by late adds

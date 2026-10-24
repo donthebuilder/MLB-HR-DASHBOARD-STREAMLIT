@@ -1,0 +1,144 @@
+RESULTS TRACKER - 2026-04-25
+------------------------------------------
+FULL SHEET TRACKED PICKS: 120 | HR Accuracy: 16.7%
+FULL SHEET BASE HIT PICKS: 120 | Base Hit Accuracy: 67.5%
+
+PAIRS TRACKED: 4 | HR Accuracy: 0.0%
+4-MAN POOLS TRACKED: 4 | HR Accuracy: 0.0%
+6-MAN POOLS TRACKED: 4 | HR Accuracy: 0.0%
+
+TOP 15 TRACKED: 15 | HR Accuracy: 0.0%
+HR PICKS TRACKED: 15 | HR Accuracy: 20.0%
+TOP PICKS TRACKED: 15 | HR Accuracy: 6.7%
+
+HRR PICKS TRACKED: 30 | 2+ HRR Accuracy: 66.7% | 3+ HRR Accuracy: 50.0%
+HIT PICKS TRACKED: 30 | Hit Accuracy: 70.0% | HR Accuracy: 13.3%
+CONTACT PICKS TRACKED: 15 | XBH Accuracy: 60.0% | 2+ TB Accuracy: 60.0% | HR Accuracy: 26.7%
+
+TRACKED PICKS THAT HOMERED
+- 🧨 Heliot Ramos - HR 37.4
+  BA(S) 0.269 | BA vs RHP 0.250 | ISO 0.118 | 350+ 8/20 | L5 5H/0HR/1XBH
+- 🧨 Kazuma Okamoto - HR 31.8
+  BA(S) 0.237 | BA vs LHP 0.294 | ISO 0.182 | 350+ 5/19 | L5 5H/2HR/2XBH
+- 🧨 Max Muncy - HR 41.9
+  BA(S) 0.292 | BA vs RHP 0.281 | ISO 0.304 | 350+ 6/26 | L5 7H/2HR/4XBH
+- 🔥 Kevin McGonigle - HR 37.6
+  BA(S) 0.320 | BA vs RHP 0.329 | ISO 0.175 | 350+ 5/28 | L5 7H/0HR/4XBH
+- 🏁 Christian Walker - HR 19.6
+  BA(S) 0.274 | BA vs LHP 0.182 | ISO 0.231 | 350+ 1/21 | L5 6H/1HR/2XBH
+- 🏁 Elly De La Cruz - HR 29.5
+  BA(S) 0.274 | BA vs RHP 0.250 | ISO 0.273 | 350+ 2/26 | L5 7H/2HR/3XBH
+- 🏁 Iván Herrera - HR 21.6
+  BA(S) 0.237 | BA vs RHP 0.250 | ISO 0.172 | 350+ 4/24 | L5 6H/2HR/2XBH
+- 🏁 Jo Adell - HR 20.9
+  BA(S) 0.266 | BA vs LHP 0.313 | ISO 0.101 | 350+ 1/24 | L5 3H/0HR/0XBH
+- 🏁 Julio Rodríguez - HR 12.9
+  BA(S) 0.250 | BA vs LHP 0.217 | ISO 0.083 | 350+ 1/24 | L5 9H/1HR/1XBH
+- 🏁 Sal Stewart - HR 38.0
+  BA(S) 0.284 | BA vs RHP 0.274 | ISO 0.305 | 350+ 3/26 | L5 5H/1HR/2XBH
+- 🏁 Seiya Suzuki - HR 37.1
+  BA(S) 0.294 | BA vs RHP 0.250 | ISO 0.196 | 350+ 3/21 | L5 7H/3HR/3XBH
+- 🏁 Willson Contreras - HR 20.9
+  BA(S) 0.250 | BA vs LHP 0.182 | ISO 0.185 | 350+ 2/18 | L5 3H/1HR/1XBH
+- 💠 Carlos Correa - HR 11.5
+  BA(S) 0.275 | BA vs LHP 0.280 | ISO 0.099 | 350+ 1/22 | L5 6H/0HR/1XBH
+- 💠 Cole Young - HR 18.2
+  BA(S) 0.255 | BA vs LHP 0.296 | ISO 0.143 | 350+ 2/24 | L5 6H/1HR/2XBH
+- 💠 Josh Jung - HR 22.6
+  BA(S) 0.301 | BA vs LHP 0.118 | ISO 0.217 | 350+ 4/28 | L5 5H/1HR/3XBH
+- 💠 Moisés Ballesteros - HR 31.4
+  BA(S) 0.400 | BA vs RHP 0.404 | ISO 0.255 | 350+ 1/14 | L5 6H/0HR/4XBH
+- ⚾ Alek Thomas - HR 17.5
+  BA(S) 0.194 | BA vs RHP 0.070 | ISO 0.164 | 350+ 3/23 | L5 7H/1HR/5XBH
+- ⚾ Casey Schmitt - HR 32.8
+  BA(S) 0.295 | BA vs RHP 0.224 | ISO 0.218 | 350+ 4/30 | L5 4H/1HR/3XBH
+- ⚾ Nathan Church - HR 9.9
+  BA(S) 0.254 | BA vs RHP 0.224 | ISO 0.206 | 350+ 1/19 | L5 6H/3HR/3XBH
+- ⚾ Nathaniel Lowe - HR 21.9
+  BA(S) 0.257 | BA vs RHP 0.250 | ISO 0.257 | 350+ 3/18 | L5 5H/2HR/3XBH
+
+TRACKED PICKS THAT GOT A BASE HIT
+- Ben Rice (NYY) | TOP15#4 | 3 H
+- Michael Harris II (ATL) | TOP15#7 | 2 H
+- Shea Langeliers (ATH) | TOP15#13 | 2 H
+- Taylor Ward (BAL) | TOP15#11 | 2 H
+- Dalton Rushing (LAD) | TOP15#6 | 1 H
+- Mike Trout (LAA) | TOP15#12 | 1 H
+- Yordan Alvarez (HOU) | TOP15#2 | 1 H
+- Ben Rice (NYY) | HR | 3 H
+- Cal Raleigh (SEA) | HR | 2 H
+- Heliot Ramos (SF) | HR | 2 H
+- Kazuma Okamoto (TOR) | HR | 2 H
+- Matt Olson (ATL) | HR | 2 H
+- Shea Langeliers (ATH) | HR | 2 H
+- Taylor Ward (BAL) | HR | 2 H
+- Max Muncy (LAD) | HR | 1 H
+- Mike Trout (LAA) | HR | 1 H
+- Kevin McGonigle (DET) | TOP | 3 H
+- Michael Harris II (ATL) | TOP | 2 H
+- Xavier Edwards (MIA) | TOP | 2 H
+- Adley Rutschman (BAL) | TOP | 1 H
+- Dalton Rushing (LAD) | TOP | 1 H
+- Ildemaro Vargas (ARI) | TOP | 1 H
+- Junior Caminero (TB) | TOP | 1 H
+- Oswald Peraza (LAA) | TOP | 1 H
+- Randy Arozarena (SEA) | TOP | 1 H
+- Ryan O'Hearn (PIT) | TOP | 1 H
+- Vladimir Guerrero Jr. (TOR) | TOP | 1 H
+- Yordan Alvarez (HOU) | TOP | 1 H
+- Julio Rodríguez (SEA) | HRR | 3 H
+- Sal Stewart (CIN) | HRR | 3 H
+- Seiya Suzuki (CHC) | HRR | 3 H
+- Vaughn Grissom (LAA) | HRR | 3 H
+- Brandon Marsh (PHI) | HRR | 2 H
+- Bryce Harper (PHI) | HRR | 2 H
+- Corey Seager (TEX) | HRR | 2 H
+- Jung Hoo Lee (SF) | HRR | 2 H
+- Myles Straw (TOR) | HRR | 2 H
+- Willson Contreras (BOS) | HRR | 2 H
+- Angel Martínez (CLE) | HRR | 1 H
+- Brandon Lowe (PIT) | HRR | 1 H
+- Brice Turang (MIL) | HRR | 1 H
+- Christian Walker (HOU) | HRR | 1 H
+- Elly De La Cruz (CIN) | HRR | 1 H
+- Freddie Freeman (LAD) | HRR | 1 H
+- Iván Herrera (STL) | HRR | 1 H
+- Jo Adell (LAA) | HRR | 1 H
+- Jonny DeLuca (TB) | HRR | 1 H
+- Ketel Marte (ARI) | HRR | 1 H
+- Miguel Vargas (CWS) | HRR | 1 H
+- Ryan Jeffers (MIN) | HRR | 1 H
+- Tyler O'Neill (BAL) | HRR | 1 H
+- Ceddanne Rafaela (BOS) | HIT | 3 H
+- Cole Young (SEA) | HIT | 3 H
+- Nick Gonzales (PIT) | HIT | 3 H
+- Ozzie Albies (ATL) | HIT | 3 H
+- Bobby Witt Jr. (KC) | HIT | 2 H
+- Carlos Correa (HOU) | HIT | 2 H
+- Ernie Clement (TOR) | HIT | 2 H
+- Hyeseong Kim (LAD) | HIT | 2 H
+- Luis Arraez (SF) | HIT | 2 H
+- Masyn Winn (STL) | HIT | 2 H
+- Riley Greene (DET) | HIT | 2 H
+- Wilyer Abreu (BOS) | HIT | 2 H
+- Brayan Rocchio (CLE) | HIT | 1 H
+- Carter Jensen (KC) | HIT | 1 H
+- Christian Vázquez (HOU) | HIT | 1 H
+- Colt Keith (DET) | HIT | 1 H
+- Drake Baldwin (ATL) | HIT | 1 H
+- Josh Jung (TEX) | HIT | 1 H
+- Moisés Ballesteros (CHC) | HIT | 1 H
+- Otto Lopez (MIA) | HIT | 1 H
+- Yandy Díaz (TB) | HIT | 1 H
+- Byron Buxton (MIN) | CONTACT | 2 H
+- Casey Schmitt (SF) | CONTACT | 2 H
+- Jake Bauers (MIL) | CONTACT | 2 H
+- Michael Massey (KC) | CONTACT | 2 H
+- Nathan Church (STL) | CONTACT | 2 H
+- Alek Thomas (ARI) | CONTACT | 1 H
+- Coby Mayo (BAL) | CONTACT | 1 H
+- Kyle Schwarber (PHI) | CONTACT | 1 H
+- Nathaniel Lowe (CIN) | CONTACT | 1 H
+
+PAIRS / POOLS THAT CLEARED
+- none
