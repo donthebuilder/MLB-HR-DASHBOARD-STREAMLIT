@@ -34,7 +34,7 @@ LOCK_FLOOR_MIN = 20
 
 MLB = "https://statsapi.mlb.com/api/v1/schedule?sportId=1&date={d}&hydrate=lineups,probablePitcher,team"
 ESPN = "https://site.api.espn.com/apis/site/v2/sports/{}/scoreboard?dates={}"
-LEAGUE = {"nhl": "hockey/nhl", "nba": "basketball/nba", "nfl": "football/nfl"}
+LEAGUE = {"nhl": "hockey/nhl", "nba": "basketball/nba", "nfl": "football/nfl", "mlb": "baseball/mlb"}
 
 
 def _get(url: str) -> Dict[str, Any]:
@@ -118,7 +118,36 @@ def lock_decision(game: Dict[str, Any], now: Optional[datetime] = None) -> str:
     return "LOCK_UNCONFIRMED" if mins <= LOCK_FLOOR_MIN else "WAIT"
 
 
+def snapshot(out_dir: str) -> List[str]:
+    """Save today's games with the book's lines, probable goalies and posted lineups, for all four sports.
+    Lines cannot be re-fetched after the game, so the night they are not kept is a night of price history lost."""
+    from pathlib import Path
+    d = Path(out_dir)
+    d.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H%MZ")
+    written = []
+    for sport in LEAGUE:
+        try:
+            games = espn(sport, date.today().isoformat())
+            if sport == "mlb":
+                pk = {g["game_id"]: g for g in mlb(date.today().isoformat())}
+                for g in games:                 # ESPN ids differ from statsapi: attach by team pair + start time
+                    for q in pk.values():
+                        if {s["team"] for s in q["sides"].values()} >= {s["team"] for s in g["sides"].values()}:
+                            g["lineups"] = q["sides"]; g["lineup_posted"] = q["lineup_posted"]
+            path = d / f"games_{sport}_{stamp}.json"
+            path.write_text(json.dumps(games, indent=1))
+            written.append(str(path))
+        except Exception as e:                  # one dead feed must not cost the other three
+            print(f"{sport}: failed ({e})", file=sys.stderr)
+    return written
+
+
 if __name__ == "__main__":
+    if len(sys.argv) > 2 and sys.argv[1] == "snapshot":
+        for w in snapshot(sys.argv[2]):
+            print("wrote", w)
+        sys.exit(0)
     sport = sys.argv[1] if len(sys.argv) > 1 else "mlb"
     day = sys.argv[2] if len(sys.argv) > 2 else date.today().isoformat()
     for g in fetch(sport, day):

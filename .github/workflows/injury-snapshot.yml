@@ -1,5 +1,7 @@
-name: Injury snapshots
+name: Injury, lineup and line snapshots
 
+# Also saves tonight's book lines (spread / total), probable goalies and posted lineups, because lines cannot be
+# re-fetched after the game and the forecast model needs their history.
 # Saves the NBA / NHL / NFL / MLB injury reports twice a day so "chance of
 # playing" can be MEASURED instead of assumed. NFL's numbers already are
 # (bots/injury_status.py); the other three leagues only say "Day-To-Day", and
@@ -32,7 +34,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          sparse-checkout: bots/injury_status.py
+          sparse-checkout: |
+            bots/injury_status.py
+            bots/lineups.py
           sparse-checkout-cone-mode: false
 
       - name: Checkout the bbe-history branch (read/write)
@@ -45,6 +49,9 @@ jobs:
 
       - name: Snapshot all four leagues
         run: python3 bots/injury_status.py all _data/public/data/current/injury_snapshots
+
+      - name: Snapshot tonight's lines, probable goalies and posted lineups
+        run: python3 bots/lineups.py snapshot _data/public/data/current/injury_snapshots
 
       - name: Commit
         working-directory: _data
