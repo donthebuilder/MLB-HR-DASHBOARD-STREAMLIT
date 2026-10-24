@@ -98,6 +98,13 @@ Every posted-lineup hitter, 2024-26 regular season (110,882 hitter-games), trail
 | 1+ HR (11.6%) | 20.5% / 18.0% | 20.8% / 19.0% / 17.4% / 15.7% | 18.8% / 20.9% |
 What moved each lane: lineup spot and plate appearances (+1.5 pts on hits, more on H+R+RBI), the opposing starter (the biggest single step for H+R+RBI and total bases), the park (a further +1-2). The ceiling with these inputs: hits about 70%, H+R+RBI about 57%, total bases about 46%, HR about 21% — below the 75-80% / 60% targets; the plain rate already holds most of a lane.
 
+## Case study: Lucas Raymond, Thu Oct 22, 2026 (DET @ VAN) — `raymond_case.py`
+Market-research notes (KNOWN-ISSUES #80): PropFinder had him #1; LAMP's goal score had no opponent-defence-by-position or power-play leg; he scored twice (2 goals, 5 shots).
+- **Our harness model had him #9 of 435 skaters, TOP tier, 37.8% (raw 38.3%)** — the leaders were Celebrini / Boldy / DeBrincat at 41% (the calibration plateaus the top block; the gap from #1 to #9 is about 3 points). The site's LAMP goal score is a different, thinner model.
+- **Why PropFinder liked him:** VAN's defence is the softest in the league to LEFT WINGS (+0.60 goals a game above the league average for Ls over its last 20 games, #1 of 32) and his own power-play time is 4.30 min a game (#19 of 867). VAN gives opponents few power plays (-3.11 min a game vs the league, #26) — the one leg that cut against him.
+- **Does that leg help in general? No.** Added to the tuned NHL model (fit 2023-24, graded on 42,815 skater-games of 2025-26): log loss 0.39658 with or without it, best pick per game 37.2% either way, weight +0.009. Opponent power-play minutes given: the same. A leg that was right on Raymond's night is, over a season, noise.
+- **Where we are actually thin:** we rank on volume (shots, ice time, power-play time), not on goals — he had 0.11 goals a game — which is right on average and says nothing about a single night; and nothing in the model knew VAN was soft to his position. One night cannot tell us that is a flaw.
+
 ## The gap list, in the order to fill it
 1. ~~Confirmed lineups~~ MLB lineups and NHL probable goalies are live (`lineups.py`; an unposted MLB lineup = 76% to play, measured). Still missing: NBA starting fives and NFL inactives (no reachable pregame feed), minutes limits, and `pick_lock.py` calling `lock_decision()`.
 2. A real game forecast — pregame spread, total, moneyline and their movement — for every sport (blowout *loss* is the star-killer: NBA stars reach 25+ only 11.9% of the time).
