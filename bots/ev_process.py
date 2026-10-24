@@ -78,12 +78,13 @@ def run_checks(price, kalshi, kalshi_depth, kalshi_no_levels, kalshi_yes_levels,
         ok = kalshi_depth is not None and min(kalshi_depth) >= TRUST["kalshi"]
         rows.append({**judge("Kalshi top of book", "kalshi", fy, price, ok, min_ev), "quote": f"{fmt(y)}/{fmt(n)}", "depth": kalshi_depth})
         # step 2: deeper price points, each paired with the other side's top quote
+        top_ok = ok                                  # deeper price points only count when the touch itself is a market
         for p_, sz in kalshi_no_levels:
             f2, _ = devig.fair(y, p_, method)
-            rows.append({**judge(f"Kalshi no-side {fmt(p_)}", "kalshi", f2, price, sz is None or sz >= 500, min_ev), "quote": f"{fmt(y)}/{fmt(p_)}", "depth": sz})
+            rows.append({**judge(f"Kalshi no-side {fmt(p_)}", "kalshi", f2, price, top_ok and (sz is None or sz >= 500), min_ev), "quote": f"{fmt(y)}/{fmt(p_)}", "depth": sz})
         for p_, sz in kalshi_yes_levels:
             f2, _ = devig.fair(p_, n, method)
-            rows.append({**judge(f"Kalshi yes-side {fmt(p_)}", "kalshi", f2, price, sz is None or sz >= 500, min_ev), "quote": f"{fmt(p_)}/{fmt(n)}", "depth": sz})
+            rows.append({**judge(f"Kalshi yes-side {fmt(p_)}", "kalshi", f2, price, top_ok and (sz is None or sz >= 500), min_ev), "quote": f"{fmt(p_)}/{fmt(n)}", "depth": sz})
     for name, (y, n) in books.items():
         fy, _ = devig.fair(y, n, method)
         rows.append({**judge(name, "book", fy, price, True, min_ev), "quote": f"{fmt(y)}/{fmt(n)}", "depth": None})
@@ -187,8 +188,10 @@ def cmd_scan(a):
         if not yes_b or not no_b:
             continue
         dollars = (no_b[0][0] * no_b[0][1], yes_b[0][0] * yes_b[0][1])         # resting $ behind the yes ask / behind the no ask
-        no_lv = [(devig.to_american(1 - pb), pb * c) for pb, c in yes_b[1:3]]   # deeper no-ask price points
-        yes_lv = [(devig.to_american(1 - pb), pb * c) for pb, c in no_b[1:3]]
+        near_y = [(pb, c) for pb, c in yes_b[1:] if yes_b[0][0] - pb <= 0.03][:2]      # price points within 3 cents of the touch
+        near_n = [(pb, c) for pb, c in no_b[1:] if no_b[0][0] - pb <= 0.03][:2]
+        no_lv = [(devig.to_american(1 - pb), pb * c) for pb, c in near_y]              # deeper no-ask price points
+        yes_lv = [(devig.to_american(1 - pb), pb * c) for pb, c in near_n]
         rows, (v, g, r_) = run_checks(best[1], (yes_am, no_am), dollars, no_lv, yes_lv, {}, {}, a.min_ev)
         results.append({"player": p["player"], "game": p["game"], "market": p["market"], "line": p["line"], "book": best[0], "price": best[1], "verdict": v,
                         "green": g, "red": r_, "kalshi_yes_no": f"{fmt(yes_am)}/{fmt(no_am)}", "resting_usd": [round(d) for d in dollars],
