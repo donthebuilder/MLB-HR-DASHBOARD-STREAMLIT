@@ -54,6 +54,15 @@ GAME MODELS (spread / moneyline / blowout) — team-level, not player-level.
 LANES (never in a score): numerology — MLB only, small lean (+0.7 pp HR for 2+ aligned, t 3.1, six seasons); prospective log running.
 AVAILABILITY: `p_play` (NFL measured; others prior until snapshots accrue) · MLB lineup posted/unposted measured (98% / 76%).
 
+## Lanes by sport — what exists, where, and whether the harness has graded it
+| Sport | Markets / lanes that exist | Where they live | Backtested + calibrated in the harness |
+|---|---|---|---|
+| MLB | HR, hit, H+R+RBI, contact, TOP, overall, top-board, HRW, multi-hit, longest, pairs, DUE, numerology | bot `mlb_dashboard.py` (+ v5 `moonshot_v4_scorer.py`) | HR (v4 vs v5), hit/HRR/contact (tiers only), TOP; numerology lane |
+| NFL | TD, rec yds, receptions, rush yds, rush att, pass yds, kick pts, def TD | bot `nfl_scoring.py` (percentile composites) | **TD only** (v2/v3/TUDDY v4) |
+| NHL | goal, points, assists, shots on goal, goalie quality / give-ups, team xG & projection | site JS `lib/nhl/*` (goal = `lamp-goalw-v1`, ridge on goals/shots/TOI/D) + bot `nhl_goal_v2` | **goal only** |
+| NBA | PTS 25+, REB 10+, AST 8+, 3PM 4+, PRA 35+, double-double, triple-double, first basket | site JS `lib/nba/model.js` (`buckets-*-v1`) + bot `nba_pts_v2` | **points only** |
+So four of the five sports have more lanes than the harness has graded. The site's NHL and NBA models are real (not odds-ranking) but live only as JS, backtested by their own scripts, not by this harness. Next: port each remaining lane into the harness with the same fit-on-early / grade-on-late test, one at a time.
+
 ## The gap list, in the order to fill it
 1. ~~Confirmed lineups~~ MLB lineups and NHL probable goalies are live (`lineups.py`; an unposted MLB lineup = 76% to play, measured). Still missing: NBA starting fives and NFL inactives (no reachable pregame feed), minutes limits, and `pick_lock.py` calling `lock_decision()`.
 2. A real game forecast — pregame spread, total, moneyline and their movement — for every sport (blowout *loss* is the star-killer: NBA stars reach 25+ only 11.9% of the time).

@@ -26,7 +26,8 @@ import buckets_scorer as bk   # noqa: E402
 
 ESPN = "https://site.api.espn.com/apis/site/v2/sports/basketball/nba"
 BOX_VERSION = "v3"          # v2 stored home/away; v3 adds quarter scores
-RANGE = {2023: ("2023-10-24", "2024-04-14"), 2024: ("2024-10-22", "2025-04-13")}
+RANGE = {2023: ("2023-10-24", "2024-04-14"), 2024: ("2024-10-22", "2025-04-13"), 2025: ("2025-10-21", "2026-04-13"),
+         2026: ("2026-10-20", (dt.date.today() - dt.timedelta(days=1)).isoformat())}
 MIN_PRIOR = 8
 
 
@@ -104,6 +105,13 @@ def run(season, cache):
     import game_lines as G
     lines_dir = Path(cache).parent / "nba_lines"            # closing lines, when pulled (game_lines.fetch_closing)
     games = sorted(load(season, cache), key=lambda g: (g["date"], g["id"]))
+    return run_games(games, season, lambda gid: G.close_line("nba", gid, lines_dir) if lines_dir.exists() else None)
+
+
+def run_games(games, season, line_for, only_ids=None):
+    """Features and scores for every rotation player-game in `games` (oldest first). nba_live.py passes a stream of
+    finished games plus tonight's as zero-stat rows, so the live board and the backtest share one code path.
+    only_ids: if given, return rows for those game ids only."""
     team_hist = defaultdict(list)                  # team -> [(pace, pts_allowed, pts_for)]
     team_last = {}                                 # team -> date of its last game
     team_games = defaultdict(list)                 # team -> [{pid: (min, pts)}], oldest first
@@ -139,7 +147,7 @@ def run(season, cache):
             out_ppg = sum(tpts[q] / cnt[q] for q in cnt if cnt[q] >= 5 and mins[q] / cnt[q] >= 18 and q not in tonight)
             gap_days = (dt.date.fromisoformat(g["date"]) - dt.date.fromisoformat(team_last[team["abbr"]])).days \
                 if team["abbr"] in team_last else 5
-            ln = G.close_line("nba", g["id"], lines_dir) if lines_dir.exists() else None
+            ln = line_for(g["id"])
             has_ln = bool(ln and ln.get("spread_home") is not None)
             book_fav = (-ln["spread_home"] if team["home"] else ln["spread_home"]) if has_ln else 0.0
             for p in team["players"]:
@@ -160,7 +168,11 @@ def run(season, cache):
                               "form3": sum(x["pts"] for x in hist[-3:]) / len(hist[-3:]) - sum(x["pts"] for x in hist[-10:]) / len(hist[-10:]),
                               "fav_gap": max(0.0, net(team["abbr"]) - net(opp) + (3.0 if team["home"] else -3.0)),
                               "dog_gap": max(0.0, -(net(team["abbr"]) - net(opp) + (3.0 if team["home"] else -3.0)))})
-                    out.append({"night": g["date"], "game": g["id"], "y25": int(p["pts"] >= 25), "y30": int(p["pts"] >= 30),
+                    if only_ids is not None and g["id"] not in only_ids:
+                        pass
+                    else:
+                      out.append({"night": g["date"], "game": g["id"], "y25": int(p["pts"] >= 25), "y30": int(p["pts"] >= 30),
+                                "pid": p["pid"], "team": team["abbr"], "opp": opp, "home": bool(team["home"]),
                                 "bk": s["final_score"], "ppg": sum(x["pts"] for x in hist) / len(hist),
                                 "l10": sum(x["pts"] for x in hist[-10:]) / len(hist[-10:]),
                                 "rand": ((int(p["pid"]) * 2654435761 + int(g["id"])) % 1000) / 1000, "f": f, "season": season})
