@@ -330,3 +330,18 @@ the highest-priority provenance gap before eval numbers should be trusted
 to justify a weight change. Provenance-only: a direct before/after scoring
 comparison on an identical synthetic 60-hitter slate (commit `266d458` vs.
 this change, 1,320 score values across 22 fields) showed zero mismatches.*
+
+---
+
+## NHL residual scan (`bots/nhl_residual_scan.py`, 2026-10-18)
+
+Research only; changes no score, weight or file the site reads. Asks the HR side's `missed_signals.py` question of the goal board:
+among skaters the score rated the same (deciles of the score within a night), what still separates the ones who scored? Per field:
+stratified high-vs-low lift in goal rate (percentage points), Wilson and night-bootstrap intervals, permutation p, Benjamini-Hochberg
+q. A TREND section tests usage rising vs falling (a leg now minus the same leg 4 appearances earlier, earlier rows only); it is
+NOT TESTABLE until enough skaters have 5+ nights. Verdicts: `holds in both seasons` (same sign, q <= 0.1, lift >= 2 points in both;
+the only case worth a shadow) / `only one season` / `one short season: cannot confirm` (the honest default: lamp_goal_log began
+2026-09-25 and there is no second season) / `no signal`. Not in the site export, so not tested: opponent GA/G, back-to-back,
+lineup known, power play, xG, rest days. A second season is passed with `--prior-season <file>` in the same row schema as
+`lamp_goal_log_export.json`. Run: `python3 bots/nhl_residual_scan.py --data public/data/current`. Runs after the harness in
+`model-harness.yml` with `continue-on-error`.

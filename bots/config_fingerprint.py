@@ -150,6 +150,43 @@ def _normalize_for_structure_hash(func_ast: ast.FunctionDef) -> ast.FunctionDef:
     return func_ast
 
 
+def _ast_dump_py311(node: Any) -> str:
+    """`ast.dump(node, annotate_fields=True, include_attributes=False)` exactly
+    as Python 3.11 prints it, on any Python 3.
+
+    ast.dump()'s output is not stable across versions: 3.12 added
+    FunctionDef/ClassDef `type_params`, and 3.13 stopped printing empty
+    lists (`decorator_list=[]`, `keywords=[]`, ...). Hashing the raw dump
+    made the same source hash to two different values (the bot runs 3.11 in
+    Actions; a 3.13 Mac got another hash for identical code), so the hash
+    said "config changed" when only the interpreter had. Every published
+    config_hash so far came from 3.11, so 3.11's text is the canonical form:
+    the live hash does not move.
+
+    The 3.11 rules: every field in `_fields` order, keyword-annotated; a
+    None field is left out only when the node class's own default for it is
+    None (optional `?` fields); lists always print, `[]` included. A
+    `type_params` field (3.12+) is left out while empty -- it could never be
+    non-empty in code 3.11 can parse."""
+    if isinstance(node, ast.AST):
+        cls = type(node)
+        args = []
+        for name in node._fields:
+            try:
+                value = getattr(node, name)
+            except AttributeError:
+                continue
+            if value is None and getattr(cls, name, ...) is None:
+                continue
+            if name == "type_params" and value == []:
+                continue
+            args.append(f"{name}={_ast_dump_py311(value)}")
+        return f"{cls.__name__}({', '.join(args)})"
+    if isinstance(node, list):
+        return "[" + ", ".join(_ast_dump_py311(x) for x in node) + "]"
+    return repr(node)
+
+
 def function_structure_hash(funcs: Iterable[Callable]) -> str:
     """One sha256 over the AST structure of every function in `funcs`, in
     the given order (order is part of what's hashed on purpose -- reads as
@@ -167,8 +204,7 @@ def function_structure_hash(funcs: Iterable[Callable]) -> str:
         if not isinstance(fn_def, (ast.FunctionDef, ast.AsyncFunctionDef)):
             raise ValueError(f"{func!r}: getsource did not parse to a function def")
         fn_def = _normalize_for_structure_hash(fn_def)
-        parts.append(f"{getattr(func, '__name__', '?')}:"
-                      f"{ast.dump(fn_def, annotate_fields=True, include_attributes=False)}")
+        parts.append(f"{getattr(func, '__name__', '?')}:{_ast_dump_py311(fn_def)}")
     return sha256_hex("\n".join(parts))
 
 

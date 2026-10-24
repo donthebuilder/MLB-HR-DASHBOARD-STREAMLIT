@@ -135,17 +135,18 @@ def nfl_fantasy_stats_age(current: Path):
 
 
 def post_discord(lines: list[str]) -> bool:
-    """True when at least one webhook took the post. Sends a User-Agent
-    (Discord 403s urllib's default) and reads the secret like the tracker:
-    commas, whitespace or newlines between URLs (bots/discord_post.py)."""
+    """True when at least one webhook took the post. Ops alert: goes to
+    DISCORD_OPS_WEBHOOK when set, else the shared DISCORD_WEBHOOK room until an
+    ops channel exists. Sends a User-Agent (Discord 403s urllib's default) and
+    reads the secret like the tracker (bots/discord_post.py)."""
     import discord_post
-    hook = os.environ.get("DISCORD_WEBHOOK", "")
     if not lines:
         return True
-    if not discord_post.webhook_urls(hook):
-        print("  ! DISCORD_WEBHOOK unset or holds no URL -- alert NOT delivered", file=sys.stderr)
+    if not discord_post.webhook_urls(discord_post.ops_secret()):
+        print("  ! DISCORD_OPS_WEBHOOK / DISCORD_WEBHOOK unset or holds no URL -- alert NOT delivered",
+              file=sys.stderr)
         return False
-    ok, bad = discord_post.post(hook, {"content": "\n".join(lines)[:1900]})
+    ok, bad, _ops = discord_post.post_ops({"content": "\n".join(lines)[:1900]})
     return ok > 0
 
 
@@ -181,7 +182,7 @@ def main() -> int:
             continue
         g = age_fn(current)
         if g is None:
-            alerts.append(f"⚠️ {name}: no freshness timestamp found at all — the meta file is missing.")
+            alerts.append(f"⚠️ {name}: no freshness timestamp found at all — the status file is missing.")
             report.append(f"  {name}: NO TIMESTAMP")
             continue
         age = (now - g).total_seconds() / 60
@@ -190,8 +191,8 @@ def main() -> int:
         if age > thresh:
             alerts.append(
                 f"⚠️ {name} is **{age:.0f} min old** (should refresh inside {thresh}). "
-                f"A GitHub cron slot was likely skipped — the record for any game that "
-                f"locks now is stale. Last build: {g.isoformat(timespec='minutes')}."
+                f"A scheduled refresh was probably skipped, so any game that starts now "
+                f"would be graded against old picks. Last build: {g.isoformat(timespec='minutes')}."
             )
 
     print(f"staleness_watch @ {now.isoformat(timespec='minutes')}")
@@ -199,7 +200,7 @@ def main() -> int:
     if alerts:
         print("\nALERTS:")
         print("\n".join("  " + a for a in alerts))
-        if args.post and not post_discord(["🚨 **Board staleness**"] + alerts):
+        if args.post and not post_discord(["🚨 **Board out of date**"] + alerts):
             print("ALERT NOT DELIVERED", file=sys.stderr)
             return 1
     else:

@@ -1,0 +1,48 @@
+name: Model harness (private scoreboard)
+
+# Grades every score on the same games (MLB HR, NFL anytime TD, NHL goal) and prints the board to the run summary.
+# PRIVATE FIRST (Donovan, 2026-10-16): it does not publish model_scoreboard.json to the public data branch. Manual run.
+# NHL: the graded goal board comes from the SITE (/api/record/lamp-goal-export), so no secret is needed. SUPABASE_URL / SUPABASE_ANON_KEY
+# remain an optional fallback only.
+# Nightly at 11:23 UTC (7:23 am ET): after the night's games are final and graded. It only reads and prints; nothing is published.
+on:
+  schedule:
+    - cron: "23 11 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  harness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Restore the locked records and graded results from the data branch
+        run: |
+          set -euo pipefail
+          git fetch origin data --depth 1
+          rm -rf /tmp/restore && mkdir -p /tmp/restore public/data/current
+          git archive origin/data public/data | tar -x -C /tmp/restore
+          cp /tmp/restore/public/data/current/{por_rows_*.jsonl,outcome_log_*.jsonl,nfl_por_log_*.jsonl,nfl_results_20*.json,nfl_prediction_log_20*.jsonl} public/data/current/ 2>/dev/null || true
+          echo "restored $(ls public/data/current | wc -l) files"
+      - name: Export the graded NHL goal board
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: python3 bots/export_lamp_goal_log.py --out public/data/current
+      - name: Run the harness
+        run: |
+          set -o pipefail
+          python3 bots/model_harness.py --data public/data/current | tee /tmp/harness.txt
+          { echo '### Model harness'; echo '```'; cat /tmp/harness.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - name: NHL residual scan (research printout; never fails the run)
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          python3 bots/nhl_residual_scan.py --data public/data/current --out /tmp/residual | tee /tmp/residual.txt
+          { echo '### NHL residual scan (one short season: cannot confirm a signal)'; echo '```'; cat /tmp/residual.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"

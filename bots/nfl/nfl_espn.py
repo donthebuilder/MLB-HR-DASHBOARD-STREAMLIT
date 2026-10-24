@@ -493,13 +493,14 @@ def scoring_plays(game_id: str) -> list[dict[str, Any]]:
 # The keys emitted here are nflverse's, not ESPN's, so the same OUTCOME
 # expressions the backtest grades on apply unchanged to a preseason line.
 _WANT = {
-    "passing":   {"YDS": "passing_yards"},
+    "passing":   {"YDS": "passing_yards", "TD": "passing_tds"},
     "rushing":   {"CAR": "carries", "YDS": "rushing_yards", "TD": "rushing_tds"},
     "receiving": {"REC": "receptions", "YDS": "receiving_yards", "TD": "receiving_tds"},
     "kicking":   {"XP": "_xp", "FG": "_fg"},
 }
 _STATS = ("passing_yards", "carries", "rushing_yards", "rushing_tds",
-          "receptions", "receiving_yards", "receiving_tds", "fg_made", "pat_made")
+          "receptions", "receiving_yards", "receiving_tds", "fg_made", "pat_made",
+          "passing_tds")   # 2026-10-20: the results lines' PASS_TD (site milestones)
 
 
 def _num(v: Any) -> float:

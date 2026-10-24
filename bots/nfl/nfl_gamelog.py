@@ -24,15 +24,20 @@ import polars as pl
 # market -> (column expression name, default bar)
 MARKET_VALUE = {
     "TD":       ("g_td",    1),
-    "REC_YDS":  ("g_recyd", 40),
+    "REC_YDS":  ("g_recyd", 100),
     "REC":      ("g_rec",   4),
-    "RUSH_YDS": ("g_ruyd",  50),
+    "RUSH_YDS": ("g_ruyd",  100),
     "RUSH_ATT": ("g_car",   12),
-    "PASS_YDS": ("g_payd",  225),
+    "PASS_YDS": ("g_payd",  300),
     "KICK_PTS": ("g_kick",  6),
 }
 
 WINDOWS = {"l5": 5, "l10": 10, "l20": 20}
+
+# LOG-ONLY FIELDS (2026-10-20, site milestones): carried on every game row, but not a market -- no default
+# bar and no `rates` block, so nothing that walks MARKET_VALUE or `rates` (the site's market tables) changes.
+#   g_patd  passing TDs (the site's "career passing TDs" milestone and its hit rate)
+LOG_ONLY = {"g_patd": "passing_tds"}
 
 _WD = {"Monday": "Mon", "Tuesday": "Tue", "Wednesday": "Wed", "Thursday": "Thu",
        "Friday": "Fri", "Saturday": "Sat", "Sunday": "Sun"}
@@ -99,7 +104,8 @@ def _weekly(season: int) -> pl.DataFrame:
 def _shape(season: int) -> pl.DataFrame:
     d = _weekly(season)
     cols = ["receiving_tds", "rushing_tds", "receiving_yards", "receptions",
-            "rushing_yards", "carries", "passing_yards", "fg_made", "pat_made", "targets"]
+            "rushing_yards", "carries", "passing_yards", "fg_made", "pat_made", "targets",
+            *LOG_ONLY.values()]
     for c in cols:
         if c in d.columns:
             d = d.with_columns(pl.col(c).fill_null(0))
@@ -115,6 +121,7 @@ def _shape(season: int) -> pl.DataFrame:
         pl.col("passing_yards").alias("g_payd"),
         (pl.col("fg_made") * 3 + pl.col("pat_made")).alias("g_kick"),
         pl.col("targets").alias("g_tgt"),
+        *[pl.col(src).alias(dst) for dst, src in LOG_ONLY.items()],
         pl.lit(season).alias("season"),
     ])
 
@@ -147,6 +154,8 @@ def build(seasons: list[int], min_games: int = 3) -> dict:
             **ctx.get(int(r["season"]), {}).get((int(r["week"]), r["team"]), {}),
             **{MARKET_VALUE[m][0]: round(float(r[MARKET_VALUE[m][0]] or 0), 1)
                for m in MARKET_VALUE},
+            # ADDITIVE (2026-10-20): log-only fields (LOG_ONLY), same rounding
+            **{dst: round(float(r[dst] or 0), 1) for dst in LOG_ONLY},
         } for r in rows]
 
         rates: dict = {}

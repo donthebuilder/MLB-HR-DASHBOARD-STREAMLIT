@@ -1,0 +1,33 @@
+name: NFL odds probe
+
+# Manual, read-only. Asks odds-api.io (Fanatics + DraftKings) what it serves
+# for NFL player props and prints every market name, the quotes per market and
+# the raw payload sample. Writes nothing to the data branch. Run it once after
+# the football wiring ships; the log is the answer to "what do they CALL each
+# prop" (FOOTBALL_HINTS in bots/nfl/nfl_odds_fetch.py is built on that).
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Probe NFL odds
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          ODDSAPI_IO_KEY: ${{ secrets.ODDSAPI_IO_KEY }}
+          ODDSPAPI_KEY: ${{ secrets.ODDSPAPI_KEY }}
+        run: |
+          python bots/nfl/nfl_odds_fetch.py --probe --dump /tmp/nfl_odds_raw.json
+      - name: Raw payload (keys stripped)
+        if: always()
+        run: |
+          test -f /tmp/nfl_odds_raw.json && head -c 2500 /tmp/nfl_odds_raw.json || echo "no raw payload"

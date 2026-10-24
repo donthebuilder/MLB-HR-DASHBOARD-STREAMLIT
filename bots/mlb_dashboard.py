@@ -12892,6 +12892,61 @@ def build_top30_pairs(top30: List[HitterRecord]) -> Tuple[str, List[Dict[str, An
     return "\n".join(lines), json_pairs
 
 
+# ── THE OLD 6-MAN POOLS, BACK AS THEIR OWN PRODUCT (2026-10-07, Donovan) ─────
+# Retired 2026-08-09 (commit 6cd816e5) when pools became 3-man. Owner decision:
+# show the old six-man tickets NEXT TO the 3-man pools, not instead of them.
+# Rules kept: the recipes below are the 6cd816e5^ recipes verbatim; they ship
+# under their OWN key (pools_6man_legacy, NOT the empty retired pools_6man) with
+# their own model_version, so no existing pool/pair row or key is rewritten; the
+# key rides pick_lock.POOL_SECTIONS so it freezes at the ticket's first pitch;
+# and it grades through load_pair_builder_sections like the other pools.
+# It is built from a PRIVATE copy of the exposure map and a fresh blocked set,
+# and never feeds pair_pool_used_ids / LAST_HR_SECTION_USED_IDS, so adding it
+# cannot change one name in any existing pool, pair or downstream section.
+LEGACY_6MAN_MODEL_VERSION = "pools_6man_legacy_v1"
+LEGACY_6MAN_RECIPES = (
+    ("Pool A — Strongest", {"core": 1, "hrr": 1, "hybrid": 3, "wtf": 1}, False, False),
+    ("Pool B — Balanced", {"hybrid": 4, "mid": 1, "wtf": 1}, False, False),
+    ("Pool C — Mid / Var", {"mid": 2, "wtf": 4}, True, False),
+    ("Pool D — Contrarian", {"wtf": 4, "mid": 2}, True, True),
+)
+
+
+LEGACY_HALF_MODEL_VERSION = "pools_6man_legacy_v1_half"
+
+
+def split_legacy_6man_halves(legacy6):
+    """Each legacy 6-man pool -> two 3-man halves, by the pool's own order:
+    first three = X1, last three = X2. Returns [(name, parent, [3 records])]."""
+    out = []
+    for name, pool in legacy6:
+        letter = name.split()[1] if len(name.split()) > 1 else name
+        out.append((f"Pool {letter}1", name, list(pool[:3])))
+        out.append((f"Pool {letter}2", name, list(pool[3:6])))
+    return out
+
+
+def build_legacy_6man_pools(candidate_rows, buckets, seed_exposure, pick_tag_map, top5_ids):
+    """Old 6-man recipe (6cd816e5^). Returns [(name, [HitterRecord x6])] A-D.
+
+    seed_exposure is COPIED, never mutated. Same call shape the retired builder
+    used: build_structured_pool -> top_up_pool to 6, blocked set carried A->D,
+    C and D prefer variance, D avoids the top-5 board."""
+    exposure = dict(seed_exposure)
+    blocked: set[int] = set()
+    out = []
+    for name, recipe, variance, avoid_top in LEGACY_6MAN_RECIPES:
+        kw = {"blocked_top_ids": top5_ids} if avoid_top else {}
+        pool = build_structured_pool(candidate_rows, recipe, buckets, exposure, blocked_ids=blocked, **kw)
+        tkw = {"prefer_variance": True} if variance else {}
+        if avoid_top:
+            tkw["avoid_top_ids"] = top5_ids
+        pool = top_up_pool(pool, 6, candidate_rows, blocked, pick_tag_map, **tkw)
+        blocked.update(r.player_id for r in pool)
+        out.append((name, pool))
+    return out
+
+
 def build_pair_sections(rows: List[HitterRecord]) -> Tuple[str, Dict[str, Any]]:
     """
     Pairs and pools. WRAPPED, because a failure here must not cost the slate.
@@ -12917,13 +12972,13 @@ def build_pair_sections(rows: List[HitterRecord]) -> Tuple[str, Dict[str, Any]]:
         print("!! pairs/pools section failed — slate continues without it")
         print(f"!! {type(e).__name__}: {e}")
         traceback.print_exc()
-        return "", {"recommended_pairs": [], "pools_4man": [], "pools_6man": [], "pools_3man": []}
+        return "", {"recommended_pairs": [], "pools_4man": [], "pools_6man": [], "pools_3man": [], "pools_6man_legacy": [], "pools_3man_legacy": []}
 
 
 def _build_pair_sections(rows: List[HitterRecord]) -> Tuple[str, Dict[str, Any]]:
     global LAST_HR_SECTION_USED_IDS
     LAST_HR_SECTION_USED_IDS = set()
-    if len(rows) < 6: return "", {"recommended_pairs": [], "pools_4man": [], "pools_6man": [], "pools_3man": []}
+    if len(rows) < 6: return "", {"recommended_pairs": [], "pools_4man": [], "pools_6man": [], "pools_3man": [], "pools_6man_legacy": [], "pools_3man_legacy": []}
     candidate_rows = top_pool_candidates(rows, 62)
     ranked = sorted(candidate_rows, key=_pool_leg_score, reverse=True)
     pick_tag_map = game_pick_type_map(rows)
@@ -13020,6 +13075,7 @@ def _build_pair_sections(rows: List[HitterRecord]) -> Tuple[str, Dict[str, Any]]
             pool6_exposure[_pid] = 99
     for _pid in pair_pool_used_ids:
         pool6_exposure[_pid] = 99
+    legacy6_seed_exposure = dict(pool6_exposure)  # snapshot BEFORE the 3-man builds mutate it
     pool6_blocked:set[int]=set()
     # REBALANCED (2026-07-25, pass 2): same slot-level backtest as the 4-man
     # pools above -- core ran 10.4% in both 6-Man A and B (consistent
@@ -13067,6 +13123,11 @@ def _build_pair_sections(rows: List[HitterRecord]) -> Tuple[str, Dict[str, Any]]
     # Kept under the old names so downstream consumers that read pool6_* keep
     # working; they now hold three names each rather than six.
     pool6_a, pool6_b, pool6_c, pool6_d = pool3_a, pool3_b, pool3_c, pool3_d
+    # Old 6-man pools, shown beside the 3-man ones. Does not touch
+    # pair_pool_used_ids (see build_legacy_6man_pools).
+    legacy6 = build_legacy_6man_pools(candidate_rows, buckets, legacy6_seed_exposure, pick_tag_map, top5_ids)
+    lines.append(""); lines.append("🏊 6-MAN HR POOLS  (the old recipe, shown beside the 3-man pools)")
+    lines.extend(format_pool_columns(legacy6[0][0], legacy6[0][1], legacy6[1][0], legacy6[1][1], legacy6[2][0], legacy6[2][1], legacy6[3][0], legacy6[3][1], pick_tag_map, width=34))
     LAST_HR_SECTION_USED_IDS = set(pair_pool_used_ids)
 
     # JSON pools added per audit (2026-06-27) -- mirrors System 1's pool
@@ -13130,6 +13191,17 @@ def _build_pair_sections(rows: List[HitterRecord]) -> Tuple[str, Dict[str, Any]]
         _s2_pool_json("Pool C — Balanced", pool6_c, len(pool6_c)),
         _s2_pool_json("Pool D — Variance", pool6_d, len(pool6_d)),
     ]
+    json_pools_6man_legacy = []
+    for _nm, _pl in legacy6:
+        _blob = _s2_pool_json(_nm, _pl, len(_pl))
+        _blob["model_version"] = LEGACY_6MAN_MODEL_VERSION
+        json_pools_6man_legacy.append(_blob)
+    json_pools_3man_legacy = []
+    for _nm, _parent, _pl in split_legacy_6man_halves(legacy6):
+        _blob = _s2_pool_json(_nm, _pl, len(_pl))
+        _blob["model_version"] = LEGACY_HALF_MODEL_VERSION
+        _blob["parent"] = _parent
+        json_pools_3man_legacy.append(_blob)
     json_payload = {
         # available_pool added per audit (2026-06-27) -- the frontend
         # (Pairs.js) uses this as its PRIMARY data source for client-side
@@ -13146,6 +13218,8 @@ def _build_pair_sections(rows: List[HitterRecord]) -> Tuple[str, Dict[str, Any]]
         "pools_4man": json_pools_4man,
         "pools_3man": json_pools_3man,
         "pools_6man": [],
+        "pools_6man_legacy": json_pools_6man_legacy,
+        "pools_3man_legacy": json_pools_3man_legacy,
     }
     return "\n".join(lines), json_payload
 
@@ -13432,6 +13506,27 @@ def passes_global_pa_filter(rec: HitterRecord) -> bool:
 
 def apply_global_pa_filter(rows: List[HitterRecord]) -> List[HitterRecord]:
     return [r for r in rows if passes_global_pa_filter(r)]
+
+
+# NOT SCORED (Donovan 2026-10-18: "everyone else a visible not-scored row" ... "still want
+# their stats"). The hitters the PA filter above drops were only counted in a stderr line;
+# they now ship in their own file, current/not_scored_<today|tomorrow>.json, with their real season
+# line and nothing else -- no score, no rank, no pick. They never enter rows_payload, the
+# prediction log or any pool, so every scored row is exactly what it was.
+NOT_SCORED_FIELDS = ("game_pk", "player_id", "name", "team", "opponent", "bats", "lineup_spot",
+                     "lineup_confirmed", "season_pa", "l20pa_pa", "season_hr", "season_avg",
+                     "season_obp", "season_slg", "season_iso")
+
+
+def not_scored_row(rec: HitterRecord) -> Dict[str, Any]:
+    out = {k: getattr(rec, k, None) for k in NOT_SCORED_FIELDS}
+    if not safe_int(out.get("season_pa"), 0):
+        # no plate appearances: the rate fields are defaults, not measurements
+        for k in ("season_avg", "season_obp", "season_slg", "season_iso", "season_hr"):
+            out[k] = None
+    out["reason"] = (f"under {GLOBAL_MIN_RECENT_PA} recent PA and "
+                     f"{GLOBAL_MIN_SEASON_PA} season PA")
+    return out
 
 def render_game_block(game: Dict[str, Any], hitters: List[HitterRecord]) -> str:
 
@@ -14769,6 +14864,10 @@ def build_prediction_log_lines(run_meta: Dict[str, Any], rows_payload: List[Dict
                 # board but never logged pregame, so neither could be measured
                 # from the locked record (por_rows). Now they can.
                 "power3": row.get("power3_score"),
+                # 2026-10-16: the rank and the flag too, so every flagged hitter (top 10 on the slate)
+                # is identifiable from the locked record, not only re-derivable from the score.
+                "power3_rank": row.get("power3_rank"),
+                "power3_flag": bool(row.get("power3_flag")),
                 "board": row.get("board_score"),
                 "board_rank": row.get("board_rank"),
                 "board_of": row.get("board_of"),   # 2026-10-03: the n the rank is out of
@@ -15110,6 +15209,8 @@ def main() -> int:
 
         all_rows: List[HitterRecord] = [r for _, rows in game_rows for r in rows]
         removed_count = len(raw_rows) - len(all_rows)
+        _kept_ids = {(r.game_pk, r.player_id) for r in all_rows}
+        not_scored_rows = [not_scored_row(r) for r in raw_rows if (r.game_pk, r.player_id) not in _kept_ids]
         if removed_count > 0:
             print(f"Global PA filter removed {removed_count} low-sample players (requires recent PA 20+ when available or season PA 80+).", file=sys.stderr)
         game_blocks = [render_game_block(game, rows) for game, rows in game_rows if rows]
@@ -15231,7 +15332,7 @@ Use ALT LOOKS as quality variance, not primary plays.
             report_text += "\n\n" + the_four_text
         if args.full and game_by_game_text:
             report_text += "\n\n" + game_by_game_text
-        pair_sections_json: Dict[str, Any] = {"recommended_pairs": [], "pools_4man": [], "pools_6man": [], "pools_3man": []}
+        pair_sections_json: Dict[str, Any] = {"recommended_pairs": [], "pools_4man": [], "pools_6man": [], "pools_3man": [], "pools_6man_legacy": [], "pools_3man_legacy": []}
         if not args.no_pairs:
             pair_text, pair_sections_json = build_pair_sections(all_rows)
             if pair_text and hot_power_pairs_text:
@@ -15527,9 +15628,11 @@ Use ALT LOOKS as quality variance, not primary plays.
                     }]}
                     for _dw in _dws:
                         try:
-                            _req = _ur.Request(_dw, data=json.dumps(_payload).encode("utf-8"),
-                                               headers={"Content-Type": "application/json", "User-Agent": "moonshot-bot"})
-                            _ur.urlopen(_req, timeout=10)
+                            try:
+                                import discord_post as _dp
+                            except ImportError:
+                                from bots import discord_post as _dp
+                            _dp.send(_dw, json.dumps(_payload).encode("utf-8"), timeout=10)
                         except Exception as _pexc:
                             print(f"discord slate post failed: {_pexc}", file=sys.stderr)
                     db.set(_sig_key, {"sig": _sig, "map": _pick_map})
@@ -15674,6 +15777,20 @@ Use ALT LOOKS as quality variance, not primary plays.
 
         write_text_and_aliases(txt_path, report_text, txt_alias_paths)
         write_json_and_aliases(json_path, rows_payload, json_alias_paths)
+        # NOT SCORED: its own file (see not_scored_row), never part of rows_payload
+        try:
+            _ns = {"date": slate_date.isoformat(), "slate": slate_label, "rows": not_scored_rows}
+            # one file per slate label (today / tomorrow), like {label}_slim.json: the two runs never overwrite each other
+            _ns_name = f"not_scored_{slate_label}.json"
+            _ns_targets = [OUT_DIR / _ns_name]
+            if _is_dashboard_repo(DASHBOARD_REPO):
+                _ns_targets.append(DASHBOARD_REPO / "public" / "data" / "current" / _ns_name)
+            for _np in _ns_targets:
+                _np.parent.mkdir(parents=True, exist_ok=True)
+                _np.write_text(json.dumps(_ns, indent=1, default=str), encoding="utf-8")
+            print(f"not scored: {len(not_scored_rows)} hitters written", file=sys.stderr)
+        except Exception as _nsexc:
+            print(f"not scored file skipped: {_nsexc}", file=sys.stderr)
 
         # MOONSHOT v5 (batter x matchup, mlb_hr_v5): scored from the same
         # enriched rows and written live to public/data/current/. Best-effort
@@ -15722,6 +15839,8 @@ Use ALT LOOKS as quality variance, not primary plays.
                 "pools_4man": pair_sections_json.get("pools_4man", []),
                 "pools_3man": pair_sections_json.get("pools_3man", []),
                 "pools_6man": pair_sections_json.get("pools_6man", []),
+                "pools_6man_legacy": pair_sections_json.get("pools_6man_legacy", []),
+                "pools_3man_legacy": pair_sections_json.get("pools_3man_legacy", []),
                 # MINI-BOT AUDIT (2026-08-08, B2): available_pool is the
                 # frontend's PRIMARY source for Build-a-Pair — it was built
                 # every night and then dropped right here, which is why the

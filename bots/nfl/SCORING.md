@@ -292,3 +292,14 @@ t15/t30/AUC holdout report as the table below. Until then, treat DEF_TD as
 6. **DEF_TD has no model behind it yet**, just a real trailing rate — see
    the section above. Needs real leading-indicator features and a holdout
    backtest before it belongs in MODELS alongside the other seven.
+
+## Who is scored (2026-10-18)
+
+Last season's 4-game baseline, as before, PLUS the scoring cutoff
+(`nfl_features.scoring_cutoff`): this week's depth chart QB1, RB1-2, WR1-3, TE1-2,
+or 20%+ offensive snaps in any of his team's last 3 games. A cutoff man with no
+baseline is scored on his own games from his first one; under MIN_GP he is
+`thin: true`. They are scored AGAINST the old population (the reference frame is
+unchanged), so nobody already on the board moves: weights and model_version are
+unchanged. Everyone else stays in the payload unscored (`no_data`), and the site
+shows them as "not scored" rows with their numbers.

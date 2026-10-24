@@ -216,6 +216,7 @@ def build(odds_dirs: list[Path], graded_dirs: list[Path], log_keep: int) -> dict
     players: dict[str, dict] = {}
     bets: dict[str, list] = {}
     settled = 0
+    bet_nights: set[str] = set()   # nights with at least one settled bet (a night with a price snapshot and no settled bet is not one)
     for date in dates:
         board = snapshot_rows(load(snaps[date]) or {})
         box = box_by_pid(load(grades[date]) or {})
@@ -254,6 +255,7 @@ def build(odds_dirs: list[Path], graded_dirs: list[Path], log_keep: int) -> dict
                 b["sum_implied"] += float(imp)
                 b["log"].append([date, over, got])
                 settled += 1
+                bet_nights.add(date)
                 bets.setdefault(market, []).append((float(over), got))
 
     # ── finish: the two numbers the page exists to show ──────────────────────
@@ -299,6 +301,7 @@ def build(odds_dirs: list[Path], graded_dirs: list[Path], log_keep: int) -> dict
         "last_day": dates[-1] if dates else None,
         "priced_not_graded": missing[-14:],
         "settled_props": settled,
+        "nights_with_bets": len(bet_nights),
         # 💵 THE REALITY CHECK. Every number above this is a percentage; this
         # is the only one that answers "would it have made money". Flat one
         # unit a bet, split by market and by price band, each with the error

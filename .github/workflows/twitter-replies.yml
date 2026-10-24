@@ -4,9 +4,10 @@ name: X mention replies (@CalledItHR)
 # windows. Its own workflow on purpose: today.yml runs hourly-ish, takes up
 # to 90 min and queues behind itself, so a step there would answer a
 # mention an hour late or not at all.
+# OFF (2026-10-20, Donovan: "no likes is fine"). The account does not reply
+# to or like mentions automatically: every like or reply is a paid X write.
+# The schedule is gone; the workflow stays for a manual run only.
 on:
-  schedule:
-    - cron: "*/10 0-6,15-23 * * *"
   workflow_dispatch: {}
 
 concurrency:

@@ -102,11 +102,17 @@ with tempfile.TemporaryDirectory() as tmp:
     legacy = dict(lines[1]); legacy.pop("slot_snapshot")
     (d / "prediction_log_r1.jsonl").write_text(
         json.dumps(meta) + "\n" + json.dumps(legacy) + "\n", encoding="utf-8")
-    out2, _ = lrt.apply_locked_features([dict(current[0])], "2026-08-23", d)
+    # season_sb is in NEITHER overlay map and not in `components`, so a legacy
+    # log has nothing to overlay it with. (This used to test season_iso, but
+    # season_iso joined _LOCKED_COMPONENT_MAP and a locked row's `components`,
+    # so a legacy log now overlays it too -- the stricter, leak-free answer.)
+    out2, _ = lrt.apply_locked_features([dict(current[0], season_sb=15)], "2026-08-23", d)
     check("legacy log (no snapshot): headline maps still apply",
           out2[0]["hr_score"], 61.0)
+    check("legacy log (no snapshot): component map overlays season_iso",
+          out2[0]["season_iso"], 0.240)
     check("legacy log: un-mapped field keeps its published value",
-          out2[0]["season_iso"], 0.310)
+          out2[0]["season_sb"], 15)
 
 # ── 2. stolen bases v1 ────────────────────────────────────────────────────
 flat = md.flatten_season_hitting({

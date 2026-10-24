@@ -49,7 +49,7 @@ MODELS = {
     # in places. Ranking a 200-man pool by team context floats scrubs on good
     # offenses into the top 15 — context modulates, it must never select.
     "REC_YDS": {
-        "label": "Receiving yards", "pos": ["WR", "TE", "RB"], "bar": 40,
+        "label": "Receiving yards", "pos": ["WR", "TE", "RB"], "bar": 100,   # v2 2026-10-17: was 40
         "w": {
             "f_wopr":                 0.42,   # target share + air yards share
             "f_receiving_yards":      0.36,
@@ -67,11 +67,12 @@ MODELS = {
         },
     },
     "RUSH_YDS": {
-        "label": "Rushing yards", "pos": ["RB", "QB"], "bar": 50,
+        "label": "Rushing yards", "pos": ["RB", "QB"], "bar": 100,   # v2 2026-10-17: was 50, + role-aware matchup
         "w": {
-            "f_carries":        0.65,
-            "f_rushing_yards":  0.20,
-            "f_rz_car":         0.15,   # goal-line role = he stays on the field
+            "f_carries":        0.553,
+            "f_rushing_yards":  0.17,
+            "f_rz_car":         0.127,   # goal-line role = he stays on the field
+            "oppr_rush_soft":   0.15,    # carries allowed to HIS depth role; swept at the 100 bar 2023-25: up in all 3 seasons at .1-.2
         },
     },
     # The one place the NGS layer earned a slot. Separation, cushion, YAC-over-
@@ -99,7 +100,7 @@ MODELS = {
     # QBs are the exception: the pool is 32 starters, all of whom have volume,
     # so context IS selective here rather than diluting.
     "PASS_YDS": {
-        "label": "Passing yards", "pos": ["QB"], "bar": 225,
+        "label": "Passing yards", "pos": ["QB"], "bar": 300,   # v2 2026-10-17: was 225
         "w": {
             "total_line":       0.26,   # shootout environment
             "opp_pass_soft":    0.22,

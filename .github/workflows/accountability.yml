@@ -108,6 +108,7 @@ jobs:
         if: steps.weekly.outputs.go == 'yes'
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          DISCORD_OPS_WEBHOOK: ${{ secrets.DISCORD_OPS_WEBHOOK }}
         run: python bots/validate_context.py
 
       # Answers "which ordering actually put the homers on top" against the

@@ -85,12 +85,15 @@ import argparse
 import datetime as dt
 import json
 import os
+import re
 import sys
 import unicodedata
 import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))   # bots/odds_fetch.py
 
 BASE = "https://api.theoddsapi.com"
 SPORT = "americanfootball_nfl"
@@ -181,6 +184,80 @@ MARKETS = sorted(set(CATEGORY_MARKET.values()))
 
 SUFFIXES = {"jr", "sr", "ii", "iii", "iv", "v"}
 
+# ── PROVIDER 1: odds-api.io (Fanatics + DraftKings) — added 2026-10-16 ───────
+#
+# WHY: theoddsapi.com answers 403 "Player props require a Business plan" for
+# this key (nfl_odds_status.json), so nfl_odds_latest.json has been empty
+# every week. MLB's props come from odds-api.io on the same plan, so this
+# reuses MLB's fetch_oddsapiio (call-shape ladder, parser, harvester) with
+# football slugs and football market words. The output rows carry the same
+# market keys as CATEGORY_MARKET, so everything below (consensus, join, the
+# dated snapshot) is unchanged.
+#
+# UNVERIFIED until a live run: the sandbox cannot reach the host. The first
+# run prints every market name the book served and, if nothing matches
+# below, the raw prop rows -- the fix is one line in FOOTBALL_HINTS.
+#
+# ORDER IS LOAD-BEARING (same rule as MLB's PROP_HINTS): compound and
+# not-ours markets first so "Rushing + Receiving Yards" or "Passing
+# Touchdowns" can't be filed as rush yards / anytime TD. Keys starting "_"
+# are matched only to be thrown away.
+FOOTBALL_HINTS = [
+    ("_other", ("rushing + receiving", "rush + rec", "rushing and receiving",
+                "rush+rec", "rushing/receiving", "passing + rushing", "pass + rush",
+                "passing touchdown", "pass td", "passing td", "passing attempt",
+                "pass attempt", "completion", "interception", "sack", "tackle",
+                "field goal", "extra point", "longest rush", "longest pass",
+                "alt ", "alternate", "team ", "1st half", "2nd half", "1h", "2h",
+                "quarter")),
+    ("player_1st_td", ("first touchdown", "1st touchdown", "first td", "1st td",
+                       "first scorer", "1st scorer")),
+    ("player_anytime_td", ("anytime touchdown", "anytime td", "any time touchdown",
+                           "to score a touchdown", "to score a td", "touchdown scorer",
+                           "anytime scorer", "any time scorer")),
+    ("player_longest_reception", ("longest reception",)),
+    ("player_reception_yds", ("receiving yard", "reception yard", "receiving yds",
+                             "rec yard", "rec yds")),
+    ("player_rush_attempts", ("rushing attempt", "rush attempt", "carries")),
+    ("player_rush_yds", ("rushing yard", "rush yard", "rushing yds", "rush yds")),
+    ("player_pass_yds", ("passing yard", "pass yard", "passing yds", "pass yds")),
+    ("player_kicking_points", ("kicking point", "kicker point")),
+    ("player_receptions", ("receptions", "reception")),
+]
+
+
+def fetch_oaio(key: str, books: str = "fanatics,draftkings") -> list[dict]:
+    """Football props from odds-api.io. [] on any failure (reported, never
+    raised): the caller falls through to the next provider."""
+    try:
+        import odds_fetch as mlb_odds          # bots/odds_fetch.py
+    except Exception as e:
+        print(f"  odds-api.io: could not import bots/odds_fetch.py ({type(e).__name__}: {e})")
+        return []
+    if _SSL is not None:
+        mlb_odds._SSL = _SSL
+    try:
+        rows = mlb_odds.fetch_oddsapiio(
+            key, books, slugs=("american-football", "nfl", "football"),
+            league_words=("nfl", "national football"), days=8,
+            league_slugs=("usa-nfl", "nfl"),
+            hints=FOOTBALL_HINTS)
+    except Exception as e:
+        print(f"  odds-api.io: {type(e).__name__}: {e}")
+        rows = []
+    for r in mlb_odds.FORENSICS:
+        if len(FORENSICS) < 60:
+            FORENSICS.append(r)
+    RAW_DUMP.extend(mlb_odds.RAW_DUMP)
+    # keep only markets we publish; "_other" and anything unmapped is dropped
+    keep = set(MARKETS)
+    dropped = sum(1 for r in rows if r["market"] not in keep)
+    rows = [r for r in rows if r["market"] in keep]
+    if dropped:
+        print(f"  odds-api.io: dropped {dropped} quote(s) in markets we do not publish")
+    return rows
+
+
 
 def norm_name(s: str) -> str:
     """'Ja'Marr Chase Jr.' -> 'ja marr chase'. Must match lib/nfl/oddsMatch.js's
@@ -193,6 +270,80 @@ def norm_name(s: str) -> str:
     while len(parts) > 1 and parts[-1] in SUFFIXES:
         parts.pop()
     return " ".join(parts)
+
+
+# ── JOIN KEY + REVIEWED ALIASES (2026-10-17) ─────────────────────────────────
+# norm_name above is unchanged: it keys the published by_name and the site's
+# three normName copies must stay identical to it. The join to the slate adds
+# two exact layers on top: (1) adjacent single-letter tokens fuse ("a j brown"
+# == "aj brown"), (2) bots/nfl/name_aliases.json -- reviewed one-to-one rows
+# {odds, ours, team}, applied only when the slate player's team agrees. Never a
+# nearest name. The site holds the same rows in lib/nfl/nameAliases.js.
+ALIASES_PATH = Path(__file__).with_name("name_aliases.json")
+
+
+def join_key(norm: str) -> str:
+    out = []
+    for t in (norm or "").split():
+        if len(t) == 1 and out and len(out[-1]) and out[-1][1]:
+            out[-1][0] += t
+        else:
+            out.append([t, len(t) == 1])
+    return " ".join(x[0] for x in out)
+
+
+def load_aliases(path=None) -> list:
+    try:
+        return json.loads(Path(path or ALIASES_PATH).read_text()).get("aliases", [])
+    except Exception:
+        return []
+
+
+def is_team_line(name: str) -> bool:
+    """A club's special-teams line ('BUF Bills ST', 'SF ST', 'Saints ST'): not a player."""
+    return bool(re.search(r"\bST$", str(name or "").strip(), re.I))
+
+
+def match_slate(board: dict, players: list, aliases=None):
+    """({player_id: markets}, [unmatched real names]) -- exact, never fuzzy."""
+    aliases = load_aliases() if aliases is None else aliases
+    by_norm, by_key = {}, {}
+    for p in players or []:
+        n = norm_name(p.get("name") or p.get("player_name"))
+        if n:
+            by_norm.setdefault(n, p)  # exact first, first row wins: as before
+            by_key.setdefault(join_key(n), []).append(p)
+    matched, unmatched, late = {}, [], []
+    for norm, mkts in board.items():
+        p = by_norm.get(norm)
+        exact = p is not None
+        if p is None:  # initials key: only when exactly one slate player owns it
+            c = by_key.get(join_key(norm), [])
+            p = c[0] if len(c) == 1 else None
+        if p is None:  # reviewed alias, same team, exactly one slate player
+            for a in aliases:
+                if join_key(norm_name(a["odds"])) != join_key(norm):
+                    continue
+                hit = [c for c in by_key.get(join_key(norm_name(a["ours"])), [])
+                       if str(c.get("team") or "").upper() == a["team"].upper()]
+                if len(hit) == 1:
+                    p = hit[0]
+                    break
+        if p is None:
+            nm = next(iter(mkts.values()), {}).get("name") or norm
+            if not is_team_line(nm):
+                unmatched.append(nm)
+            continue
+        (matched.__setitem__(str(p.get("player_id")), dict(mkts)) if exact
+         else late.append((str(p.get("player_id")), mkts)))
+    # The book can list one player under two spellings ("Cam Ward" and "Cameron
+    # Ward") with different market sets. Exact-name quotes go in first and are
+    # never replaced; a second spelling only ADDS markets the first lacked.
+    for pid, mkts in late:
+        have = matched.setdefault(pid, {})
+        for mk, q in mkts.items():
+            have.setdefault(mk, q)
+    return matched, unmatched
 
 
 # ── FORENSICS ────────────────────────────────────────────────────────────────
@@ -252,6 +403,29 @@ def api(path: str, key: str, **params) -> object:
     except Exception as e:
         _rec("theoddsapi", path, key, error=f"{type(e).__name__}: {e}")
         raise
+
+
+def freeze_started(snap: Path, fresh: dict, commence: dict, now) -> tuple[dict, dict]:
+    """Merge today's earlier snapshot into this fetch: any player whose game
+    had started by `now` keeps his stored row (a live price must never
+    replace the pregame one). Players new to the file are added."""
+    try:
+        old = json.loads(snap.read_text())
+    except Exception:
+        return fresh, commence
+    old_rows, old_com = old.get("rows") or {}, old.get("commence") or {}
+    rows, com = dict(fresh), dict(commence)
+    for pid, row in old_rows.items():
+        stamp = old_com.get(pid) or com.get(pid)
+        try:
+            started = dt.datetime.fromisoformat(str(stamp).replace("Z", "+00:00")) <= now
+        except Exception:
+            started = False
+        if started or pid not in rows:
+            rows[pid] = row
+            if old_com.get(pid):
+                com[pid] = old_com[pid]
+    return rows, com
 
 
 def american(v) -> int | None:
@@ -525,8 +699,14 @@ def probe(key: str, regions: str) -> int:
     if not key:
         print("no odds key — skipping the probe\n")
         return 0
-    print(f"probing {BASE} sport_key={SPORT} markets={','.join(MARKETS)} …")
-    rows = fetch_odds(key, regions)
+    io_key = os.environ.get("ODDSAPI_IO_KEY", "").strip()
+    rows = []
+    if io_key:
+        print("probing odds-api.io (Fanatics + DraftKings) …")
+        rows = fetch_oaio(io_key)
+    if not rows:
+        print(f"probing {BASE} sport_key={SPORT} markets={','.join(MARKETS)} …")
+        rows = fetch_odds(key, regions)
     if not rows:
         print("no quotes came back — see the forensics above for the real reason")
         return 1
@@ -594,7 +774,9 @@ def main() -> int:
         return 0
 
     if a.probe:
-        return probe(key, a.regions)
+        rc = probe(key, a.regions)
+        _write_dump(a.dump)
+        return rc
 
     # ── the lock: a light rate limit, not MLB's per-slate cap (see module
     # docstring #3 for why the cap itself was left out) ──────────────────────
@@ -626,9 +808,18 @@ def main() -> int:
                          last_attempt_forensics=prev.get("forensics") or [])
             return 0
 
-    print(f"trying theoddsapi ({key_name}) …")
-    rows = fetch_odds(key, a.regions)
-    _rec("theoddsapi", "·result", quotes=len(rows))
+    rows, source = [], ""
+    io_key = os.environ.get("ODDSAPI_IO_KEY", "").strip()
+    if io_key:
+        print("trying odds-api.io (ODDSAPI_IO_KEY, Fanatics + DraftKings) …")
+        rows = fetch_oaio(io_key, os.environ.get("ODDSAPI_IO_BOOKMAKERS", "").strip() or "fanatics,draftkings")
+        _rec("oddsapiio", "·result", quotes=len(rows))
+        source = "oddsapiio" if rows else ""
+    if not rows:
+        print(f"trying theoddsapi ({key_name}) …")
+        rows = fetch_odds(key, a.regions)
+        _rec("theoddsapi", "·result", quotes=len(rows))
+        source = "theoddsapi" if rows else ""
     _write_dump(a.dump)
 
     if not rows:
@@ -636,7 +827,7 @@ def main() -> int:
         verdicts = [f"{r['provider']}: {r['note']}" for r in FORENSICS
                     if r.get("path") in ("·verdict", "·isolate") and r.get("note")]
         reason = (" · ".join(dict.fromkeys(verdicts)) if verdicts else
-                  "The provider returned no quote for any of the seven markets. Usually a "
+                  "No provider returned a quote for any market. Usually a "
                   "spent quota, a wrong key, or no NFL player props posted for this week yet.")
         write_status(out, state="empty", reason=reason,
                      keys_present=[n for n in ("ODDS_API_KEY", "ODDSAPI_IO_KEY", "ODDSPAPI_KEY")
@@ -645,7 +836,7 @@ def main() -> int:
         write_empty_board(out, reason, state="empty", forensics=FORENSICS)
         return 0
 
-    print(f"using theoddsapi · {len(rows)} quote(s)")
+    print(f"using {source} · {len(rows)} quote(s)")
     board = consensus(rows)
 
     # ── join to the slate ────────────────────────────────────────────────────
@@ -659,17 +850,7 @@ def main() -> int:
             players = slate.get("players") if isinstance(slate, dict) else slate
             week, season, mode = (slate.get("week"), slate.get("season"), slate.get("mode")) \
                 if isinstance(slate, dict) else (None, None, None)
-            by_norm = {}
-            for p in players or []:
-                n = norm_name(p.get("name") or p.get("player_name"))
-                if n:
-                    by_norm.setdefault(n, p)
-            for norm, mkts in board.items():
-                p = by_norm.get(norm)
-                if not p:
-                    unmatched.append(next(iter(mkts.values()), {}).get("name") or norm)
-                    continue
-                matched[str(p.get("player_id"))] = mkts
+            matched, unmatched = match_slate(board, players)
             rate = round(100 * len(matched) / max(1, len(board)), 1)
             print(f"joined {len(matched)}/{len(board)} priced players to the slate ({rate}%)")
             if unmatched:
@@ -682,7 +863,7 @@ def main() -> int:
 
     now = dt.datetime.now(dt.timezone.utc)
     payload = {
-        "source": "theoddsapi",
+        "source": source,
         "sport": SPORT,
         "regions": a.regions,
         "fetched_at": now.isoformat(),
@@ -739,14 +920,20 @@ def main() -> int:
                if isinstance(q, dict) and q.get("over") is not None and q.get("line") is not None}
         if row:
             slim[pid] = row
+    commence = {pid: next((q.get("commence") for q in mkts.values() if isinstance(q, dict) and q.get("commence")), None)
+                for pid, mkts in matched.items() if pid in slim}
     date_str = now.date().isoformat()
     snap = out / f"nfl_odds_{date_str}.json"
+    # FREEZE AT KICKOFF (history is the pregame price, never a live one): a
+    # player whose game has started keeps the row already stored today.
+    slim, commence = freeze_started(snap, slim, commence, now)
     snap.write_text(json.dumps({
         "date": date_str,
         "season": season, "week": week,
         "fetched_at": now.isoformat(),
-        "source": "theoddsapi",
+        "source": source,
         "rows": slim,
+        "commence": commence,
         "note": ("Snapshot kept for a future nfl_odds_history.py. Each row is "
                  "{market: [line, over, implied]}. Keyed by NFL player_id only -- "
                  "an unjoined name has no outcome to settle against, so it would "
@@ -756,9 +943,9 @@ def main() -> int:
           f"({snap.stat().st_size / 1024:.0f} KB)")
 
     write_status(out, state="ok",
-                 reason=f"Fetched from theoddsapi; {len(matched)} of {len(board)} priced "
+                 reason=f"Fetched from {source}; {len(matched)} of {len(board)} priced "
                         f"players joined to the slate.",
-                 provider="theoddsapi", players=len(matched), priced=len(board),
+                 provider=source, players=len(matched), priced=len(board),
                  match_rate=payload["match_rate"], snapshot_players=len(slim),
                  forensics=FORENSICS)
     return 0

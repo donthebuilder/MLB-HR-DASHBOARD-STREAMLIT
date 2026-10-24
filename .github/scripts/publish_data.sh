@@ -39,6 +39,10 @@ PUBLISH_FILES=(
   tomorrow.txt
   pair_builder_latest.json
   pair_history_summary.json
+  # pairhist_v2: four seasons of active-player pair history, one file per sport (2026-10-07), ~140 KB each
+  pairhist_v2_mlb.json
+  pairhist_v2_nhl.json
+  pairhist_v2_nfl.json
   hr_companion_latest.json
   results_live.json
   results_live.txt
@@ -103,6 +107,9 @@ PUBLISH_FILES=(
   # the Discord slate-board block, so it only ran when a WEBHOOK was
   # configured and had something new to post. It runs unconditionally now.
   pick_changes.json
+  # NOT SCORED (2026-10-18): the hitters the PA filter drops, with their season line (mlb_dashboard not_scored_row)
+  not_scored_today.json
+  not_scored_tomorrow.json
   # The run board -- every hitter's last 30 raw lines, written by
   # player_splits.py on the same fetch it already makes for the splits files.
   runs_latest.json
@@ -170,6 +177,13 @@ PUBLISH_FILES=(
   # no NFL_ODDS_GLOB/KEEP pair to add to the accumulate-and-cap loop below.
   nfl_odds_latest.json
   nfl_odds_status.json
+  # NHL ODDS (2026-10-16). bots/nhl/nhl_odds_fetch.py; dated history is
+  # NHL_ODDS_GLOB below.
+  nhl_odds_latest.json
+  nhl_odds_status.json
+  # NBA ODDS (2026-10-16). bots/nba/nba_odds_fetch.py; history is NBA_ODDS_GLOB.
+  nba_odds_latest.json
+  nba_odds_status.json
   # FRANCHISE LIVE SCORING (2026-09-14). Per-player box-score lines for the
   # current week, written by bots/nfl/nfl_fantasy_stats.py every 15 min in
   # game windows (nfl-fantasy-stats.yml). ~60 KB. Until this file existed
@@ -267,6 +281,12 @@ POR_LOG_KEEP=150
 # slate; KEEP 400 = more than a full season plus the postseason.
 POR_ROWS_GLOB="por_rows_*.jsonl"
 POR_ROWS_KEEP=400
+
+# repairs_<date>.jsonl (2026-10-16): the record repair's own log, one line per
+# stand-in or added holder, APPENDED by every run (bots/mlb_record_repair.py).
+# Published so a corrected night's change history is public, not just its result.
+REPAIRS_GLOB="repairs_*.jsonl"
+REPAIRS_KEEP=400
 
 # slate_<date>_slim.json: ONE FILE PER SLATE DATE (2026-09-06), a copy of the
 # winning today_slim.json stamped with its slate_date. Exists because the
@@ -390,6 +410,17 @@ NFL_RESULTS_KEEP=60
 # copied over.
 NFL_ODDS_GLOB="nfl_odds_20*.json"
 NFL_ODDS_KEEP=90
+
+# nhl_odds_<game date>.json (2026-10-16): one file per GAME date (US/Eastern),
+# written by bots/nhl/nhl_odds_fetch.py. A pregame price overwritten by the
+# next fetch is not recoverable from the API, so history is carried here.
+# ~82 games x 2 seasons of dates fits in 400 small files.
+NHL_ODDS_GLOB="nhl_odds_20*.json"
+NHL_ODDS_KEEP=400
+
+# nba_odds_<game date>.json (2026-10-16): same shape and reason as NHL above.
+NBA_ODDS_GLOB="nba_odds_20*.json"
+NBA_ODDS_KEEP=400
 
 # nfl_picks_<season>_w03.json (2026-09-06): ONE FILE PER WEEK'S CARD, the
 # companion to NFL_RESULTS_GLOB above.
@@ -642,10 +673,13 @@ stage_local() {
            "$SRC"/data/$OUTCOME_LOG_GLOB "$SRC"/data/current/$OUTCOME_LOG_GLOB \
            "$SRC"/data/$POR_LOG_GLOB "$SRC"/data/current/$POR_LOG_GLOB \
            "$SRC"/data/$POR_ROWS_GLOB "$SRC"/data/current/$POR_ROWS_GLOB \
+           "$SRC"/data/$REPAIRS_GLOB "$SRC"/data/current/$REPAIRS_GLOB \
            "$SRC"/data/$NFL_PRED_LOG_GLOB "$SRC"/data/current/$NFL_PRED_LOG_GLOB \
            "$SRC"/data/$NFL_OUTCOME_LOG_GLOB "$SRC"/data/current/$NFL_OUTCOME_LOG_GLOB \
            "$SRC"/data/$NFL_RESULTS_GLOB "$SRC"/data/current/$NFL_RESULTS_GLOB \
            "$SRC"/data/$NFL_ODDS_GLOB "$SRC"/data/current/$NFL_ODDS_GLOB \
+           "$SRC"/data/$NHL_ODDS_GLOB "$SRC"/data/current/$NHL_ODDS_GLOB \
+           "$SRC"/data/$NBA_ODDS_GLOB "$SRC"/data/current/$NBA_ODDS_GLOB \
            "$SRC"/data/$NFL_PICKS_GLOB "$SRC"/data/current/$NFL_PICKS_GLOB \
            "$SRC"/data/$NFL_POR_LOG_GLOB "$SRC"/data/current/$NFL_POR_LOG_GLOB \
            "$SRC"/data/$NFL_SIGNAL_LOG_GLOB "$SRC"/data/current/$NFL_SIGNAL_LOG_GLOB \
@@ -807,12 +841,12 @@ carry_forward() {
   for spec in "$GRADED_GLOB:$GRADED_KEEP" "$GRADED_JSON_GLOB:$GRADED_KEEP" "$ODDS_GLOB:$ODDS_KEEP" \
               "$ML_PRICES_GLOB:$ML_PRICES_KEEP" \
               "$PRED_LOG_GLOB:$PRED_LOG_KEEP" "$OUTCOME_LOG_GLOB:$OUTCOME_LOG_KEEP" \
-              "$POR_LOG_GLOB:$POR_LOG_KEEP" "$POR_ROWS_GLOB:$POR_ROWS_KEEP" "$SLATE_GLOB:$SLATE_KEEP" \
+              "$POR_LOG_GLOB:$POR_LOG_KEEP" "$POR_ROWS_GLOB:$POR_ROWS_KEEP" "$REPAIRS_GLOB:$REPAIRS_KEEP" "$SLATE_GLOB:$SLATE_KEEP" \
               "$NFL_PRED_LOG_GLOB:$NFL_PRED_LOG_KEEP" "$NFL_OUTCOME_LOG_GLOB:$NFL_OUTCOME_LOG_KEEP" \
               "$NFL_RESULTS_GLOB:$NFL_RESULTS_KEEP" \
               "$NFL_PICKS_GLOB:$NFL_PICKS_KEEP" "$NFL_NEXT_PICKS_GLOB:$NFL_NEXT_PICKS_KEEP" \
               "$NFL_POR_LOG_GLOB:$NFL_POR_LOG_KEEP" \
-              "$NFL_ODDS_GLOB:$NFL_ODDS_KEEP" \
+              "$NFL_ODDS_GLOB:$NFL_ODDS_KEEP" "$NHL_ODDS_GLOB:$NHL_ODDS_KEEP" "$NBA_ODDS_GLOB:$NBA_ODDS_KEEP" \
               "$NFL_NEXT_PRED_LOG_GLOB:$NFL_NEXT_PRED_LOG_KEEP" \
               "$NFL_SIGNAL_LOG_GLOB:$NFL_SIGNAL_LOG_KEEP" \
               "$NFL_MATCHUP_WEEK_GLOB:$NFL_MATCHUP_WEEK_KEEP" \

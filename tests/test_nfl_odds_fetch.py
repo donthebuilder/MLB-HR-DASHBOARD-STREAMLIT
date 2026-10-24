@@ -123,6 +123,68 @@ def test_norm_name_strips_accents():
     assert norm_name("Amon-Ra St. Brown") == "amon ra st brown"
 
 
+# ── JOIN KEY, REVIEWED ALIASES, ST FILTER (TEST data, no network) ───────────
+
+def _q(name):
+    return {"player_anytime_td": {"name": name, "line": 0.5, "over": 100, "books": 1}}
+
+
+def _slate(*rows):  # TEST slate rows: (player_id, name, team)
+    return [{"player_id": i, "name": n, "team": t} for i, n, t in rows]
+
+
+def test_norm_name_itself_is_unchanged_by_the_join_layer():
+    assert odds.norm_name("A.J. Brown") == "a j brown"  # the published by_name key and the site's normName
+
+
+def test_join_key_fuses_adjacent_initials_only():
+    assert odds.join_key("a j brown") == "aj brown"
+    assert odds.join_key("c j williams") == odds.join_key("cj williams")
+    assert odds.join_key("j michael sturdivant") == "j michael sturdivant"
+    assert odds.join_key("amon ra st brown") == "amon ra st brown"
+
+
+def test_initials_meet_without_an_alias():
+    board = {"d j moore": _q("D.J. Moore")}
+    m, u = odds.match_slate(board, _slate(("p1", "DJ Moore", "BUF")), aliases=[])
+    assert list(m) == ["p1"] and u == []
+
+
+def test_alias_needs_the_same_team_and_is_exact():
+    al = [{"odds": "Cameron Ward", "ours": "Cam Ward", "team": "TEN"}]
+    board = {"cameron ward": _q("Cameron Ward")}
+    m, _ = odds.match_slate(board, _slate(("p1", "Cam Ward", "TEN")), aliases=al)
+    assert list(m) == ["p1"]
+    m, u = odds.match_slate(board, _slate(("p1", "Cam Ward", "DAL")), aliases=al)
+    assert m == {} and u == ["Cameron Ward"]
+    m, u = odds.match_slate(board, _slate(("p1", "Cam Wardle", "TEN")), aliases=al)  # no nearest name
+    assert m == {} and u == ["Cameron Ward"]
+
+
+def test_second_spelling_only_adds_markets_never_replaces():
+    al = [{"odds": "Kenneth Gainwell", "ours": "Kenny Gainwell", "team": "TB"}]
+    a = {"player_anytime_td": {"name": "Kenny Gainwell", "over": 100}}
+    b = {"player_anytime_td": {"name": "Kenneth Gainwell", "over": 999},
+         "player_rush_yds": {"name": "Kenneth Gainwell", "over": 110}}
+    m, _ = odds.match_slate({"kenny gainwell": a, "kenneth gainwell": b},
+                            _slate(("p1", "Kenny Gainwell", "TB")), aliases=al)
+    assert m["p1"]["player_anytime_td"]["over"] == 100 and "player_rush_yds" in m["p1"]
+
+
+def test_team_special_teams_lines_are_not_reported_unmatched():
+    board = {"buf bills st": _q("BUF Bills ST"), "sf st": _q("SF ST"), "saints st": _q("Saints ST"),
+             "nobody real": _q("Nobody Real")}
+    m, u = odds.match_slate(board, _slate(("p1", "Someone Else", "BUF")), aliases=[])
+    assert m == {} and u == ["Nobody Real"]
+
+
+def test_shipped_alias_table_is_well_formed():
+    rows = odds.load_aliases()
+    assert rows and all(set(r) == {"odds", "ours", "team"} for r in rows)
+    assert len({odds.norm_name(r["odds"]) for r in rows}) == len(rows)
+    assert all(odds.norm_name(r["odds"]) != odds.norm_name(r["ours"]) for r in rows)
+
+
 # ── AMERICAN ODDS MATH ───────────────────────────────────────────────────────
 
 def test_implied_probability_matches_known_values():
@@ -325,3 +387,92 @@ if __name__ == "__main__":
           f"room's line and the best price correctly, key resolution follows "
           f"ODDS_API_KEY -> ODDSAPI_IO_KEY -> ODDSPAPI_KEY, and the "
           f"empty/status files publish valid, explicit JSON.")
+
+
+# ── odds-api.io football wiring (2026-10-16). TEST DATA, not real quotes. ────
+import datetime as _dt  # noqa: E402
+import odds_fetch as _mlb  # noqa: E402
+
+
+def _kind(label):
+    saved = _mlb.PROP_HINTS
+    _mlb.PROP_HINTS = odds.FOOTBALL_HINTS
+    try:
+        return _mlb._prop_key(label)
+    finally:
+        _mlb.PROP_HINTS = saved
+
+
+def test_football_hints_file_each_market_under_its_own_key():
+    cases = {
+        "Anytime Touchdown Scorer": "player_anytime_td",
+        "First Touchdown Scorer": "player_1st_td",
+        "Receiving Yards": "player_reception_yds",
+        "Receptions": "player_receptions",
+        "Longest Reception": "player_longest_reception",
+        "Rushing Yards": "player_rush_yds",
+        "Rushing Attempts": "player_rush_attempts",
+        "Passing Yards": "player_pass_yds",
+        "Kicking Points": "player_kicking_points",
+    }
+    for label, want in cases.items():
+        assert _kind(label) == want, label
+        assert want in MARKETS
+
+
+def test_football_compounds_are_never_filed_as_a_single_market():
+    for label in ("Rushing + Receiving Yards", "Passing Touchdowns", "Passing + Rushing Yards"):
+        assert _kind(label) == "_other", label
+    assert "_other" not in MARKETS
+
+
+def test_fetch_oaio_swaps_hints_and_restores_them(monkeypatch):
+    before = _mlb.PROP_HINTS
+    seen = {}
+
+    def fake(key, books, **kw):
+        seen.update(kw)
+        seen["hints_live"] = _mlb.PROP_HINTS
+        return [{"name": "TEST Player", "norm": "test player", "market": "player_rush_yds",
+                 "side": "over", "book": "DraftKings", "point": 60.5, "price": -115},
+                {"name": "TEST Player", "norm": "test player", "market": "_other",
+                 "side": "over", "book": "DraftKings", "point": 1.5, "price": 100}]
+    monkeypatch.setattr(_mlb, "fetch_oddsapiio", lambda k, b, **kw: fake(k, b, **kw))
+    rows = odds.fetch_oaio("TESTKEY")
+    assert [r["market"] for r in rows] == ["player_rush_yds"]       # _other dropped
+    assert seen["slugs"][0] == "american-football"
+    assert _mlb.PROP_HINTS is before                                 # MLB hints untouched
+
+
+def test_mlb_defaults_unchanged_by_the_generalisation():
+    import inspect
+    sig = inspect.signature(_mlb.fetch_oddsapiio)
+    assert sig.parameters["slugs"].default == ("mlb", "baseball")
+    assert sig.parameters["days"].default == 2
+
+
+def test_snapshot_freeze_keeps_pregame_row_once_game_started(tmp_path):
+    now = _dt.datetime(2026, 10, 18, 18, 0, tzinfo=_dt.timezone.utc)
+    snap = tmp_path / "nfl_odds_2026-10-18.json"
+    snap.write_text(json.dumps({"rows": {"1": {"player_rush_yds": [60.5, -115, 53.5]},
+                                         "2": {"player_rush_yds": [40.5, -110, 52.4]}},
+                                "commence": {"1": "2026-10-18T17:00:00Z", "2": "2026-10-18T20:25:00Z"}}))
+    fresh = {"1": {"player_rush_yds": [70.5, -300, 75.0]},   # live price, game started
+             "2": {"player_rush_yds": [41.5, -112, 52.8]}}   # not started: takes the new price
+    rows, com = odds.freeze_started(snap, fresh, {"1": "2026-10-18T17:00:00Z", "2": "2026-10-18T20:25:00Z"}, now)
+    assert rows["1"]["player_rush_yds"][0] == 60.5
+    assert rows["2"]["player_rush_yds"][0] == 41.5
+
+
+def test_oaio_reads_a_gzip_body(monkeypatch):
+    """The 2026-10-16 probes got gzip bytes from /events. TEST DATA."""
+    import gzip
+    import io
+
+    class R(io.BytesIO):
+        status = 200
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+    body = gzip.compress(json.dumps({"events": [{"id": 1}]}).encode())
+    monkeypatch.setattr(_mlb.urllib.request, "urlopen", lambda req, **kw: R(body))
+    assert _mlb.oaio("/events", "TESTKEY") == {"events": [{"id": 1}]}
