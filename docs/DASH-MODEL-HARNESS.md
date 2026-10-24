@@ -70,6 +70,16 @@ So four of the five sports have more lanes than the harness has graded. The site
 - **`scripts/nhl/lamp-atg-devig.py` (site repo) reads SGO `firstToScore` = the FIRST goal of the game**, not anytime goal (+800..+1,200 vs ~+150), then joins it to Kalshi's anytime-goal tickers by surname. SGO's anytime-goal market is `points-<P>-game-yn-yes` (SGO calls goals "points"; `goals+assists` is points). The process is in `ev_process.py` (his steps: Kalshi probit devig with depth, deeper order-book levels, sharp book, exchanges, thin quotes ignored); `devig.py` has the maths (probit reproduces his +7% figures); `devig_board.py nhl` compares Kalshi with our calibrated goal chance.
 - Model probabilities are calibrated on the holdout and the live boards map raw → calibrated (`models/*.json: calibration`). NHL above 45% raw was overconfident (48.6% predicted, 38.6% actual); NBA above 50% is mildly overconfident. Edges against a market are only worth reading where the book is deep (TRUSTED: $500+ both sides).
 
+## Do defensive matchups move the models? (team-level, ablation on the holdout — `matchup_ablation.py`)
+| Lane | With the defence term | Without | Verdict |
+|---|---|---|---|
+| NHL goal (opp shots against + goalie save%) | log loss 0.3966, best/game 37.2% | 0.3966, 36.8% | adds nothing |
+| NBA points (opp points allowed) | 0.2123, 54.2% | 0.2127, 53.7% | tiny |
+| NBA rebounds / assists / 3PM / PRA (opp allowed) | -0.0008 / -0.0005 / -0.0003 / -0.0008 log loss | | tiny, same direction in all four |
+| MLB HR v5 (pitcher hand split, FB%, hard-hit, LD%, park), 292 games | batter × matchup 21.6% | batter alone 21.2% | +0.4 pt; the matchup changes the pick in 58 games, 10 vs 9 homers |
+| NFL anytime TD (opp TD softness .10) | top-5 57.4% / top-15 50.9% | 59.6% / 51.7% | **hurts** (why v2 zeroed it) |
+Not tested: position-level defence (DvP), the actual defender/pitch-type/coverage matchup, NHL goalie zones. Team-level defence mostly repeats what a player's own rate already says.
+
 ## The gap list, in the order to fill it
 1. ~~Confirmed lineups~~ MLB lineups and NHL probable goalies are live (`lineups.py`; an unposted MLB lineup = 76% to play, measured). Still missing: NBA starting fives and NFL inactives (no reachable pregame feed), minutes limits, and `pick_lock.py` calling `lock_decision()`.
 2. A real game forecast — pregame spread, total, moneyline and their movement — for every sport (blowout *loss* is the star-killer: NBA stars reach 25+ only 11.9% of the time).
