@@ -122,12 +122,17 @@ def main():
                 if hit and hit["p_play"] < 0.5:
                     skipped.append((name, abbr, hit["status"], hit["p_play"]))
                     continue
-                players.append({"pid": pid, "min": 30.0, "pts": 0, "fga": 0, "fta": 0, "to": 0, "oreb": 0})
+                players.append({"pid": pid, "min": 30.0, "pts": 0, "fga": 0, "fta": 0, "to": 0, "oreb": 0, "reb": 0, "ast": 0, "tpm": 0, "tpa": 0, "stl": 0, "blk": 0})
             teams.append({"abbr": abbr, "home": is_home, "players": players})
         stream.append({"id": gid, "date": day, "teams": teams})
 
     rows = bb.run_games(stream, 2026, lambda gid: lines.get(gid) if gid in lines else None, only_ids=synth_ids)
     model = json.load(open(Path(__file__).resolve().parent / "models" / "nba_pts_v2.json"))
+    lane_models = {}
+    for lane in ("reb", "ast", "3pm", "pra"):
+        fp = Path(__file__).resolve().parent / "models" / f"nba_{lane}_v1.json"
+        if fp.exists():
+            lane_models[lane] = json.load(open(fp))
     out_rows = []
     for r in rows:
         z = model["intercept"] + sum(w * (r["f"][n] - m) / s for n, w, m, s in zip(model["features"], model["weights"], model["mu"], model["sd"]))
@@ -137,7 +142,13 @@ def main():
         info = athlete(r["pid"], a.cache)
         spread_team = (-mt["spread_home"] if r["home"] else mt["spread_home"]) if mt["spread_home"] is not None else None   # + = this club favoured
         watch = G.blowout_watch("nba", mt["spread_home"])
-        out_rows.append({"name": info["name"], "team": r["team"], "opponent": r["opp"], "home": r["home"], "model_version": model["model_version"],
+        lane_p = {}
+        for lane, lm in lane_models.items():
+            lf = (r.get("lanes") or {}).get(lane, {}).get("f")
+            if lf:
+                zl = lm["intercept"] + sum(w * (lf[n] - m) / sd_ for n, w, m, sd_ in zip(lm["features"], lm["weights"], lm["mu"], lm["sd"]))
+                lane_p[lane] = round(_calibrate(lm, 1 / (1 + math.exp(-zl))), 4)
+        out_rows.append({"lanes": lane_p, "name": info["name"], "team": r["team"], "opponent": r["opp"], "home": r["home"], "model_version": model["model_version"],
                          "p_25": round(p, 4), "p_25_raw": round(p_raw, 4), "ppg": round(r["f"]["ppg"], 1), "l10_ppg": round(r["f"]["l10"], 1), "minutes_pts": r["f"]["minutes_pts"],
                          "attempts_pts": r["f"]["attempts_pts"], "teammates_out_ppg": round(r["f"]["teammates_out_ppg"], 1), "games_missed": r["f"]["games_missed"],
                          "back_to_back": bool(r["f"]["b2b"]), "book_spread_for_his_club": spread_team, "book_total": mt["total"],
@@ -158,6 +169,10 @@ def main():
     out.write_text(json.dumps({"date": day, "model_version": model["model_version"], "players": out_rows,
                                "left_out_injured": [{"name": n, "team": t, "status": s, "p_play": p} for n, t, s, p in skipped]}, indent=1))
     print(f"{len(tonight)} games, {len(out_rows)} players scored, {len(skipped)} taken out as injured -> {out}")
+    for lane, label in (("reb", "REB 10+"), ("ast", "AST 8+"), ("3pm", "3PM 4+"), ("pra", "PRA 35+")):
+        top = sorted((r for r in out_rows if lane in r["lanes"]), key=lambda r: r["lanes"][lane] * r["p_play"], reverse=True)[:5]
+        print(f"{label:<8} " + ", ".join(f"{(r['name'] or '?')} {100 * r['lanes'][lane]:.0f}%" for r in top))
+    print()
     print(f"{'player':<22}{'team':<5}{'vs':<5}{'P(25+)':>8}{'plays':>7}{'ppg':>6}{'l10':>6}  spread / flag")
     for r in out_rows[:12]:
         print(f"{(r['name'] or '?')[:21]:<22}{r['team']:<5}{r['opponent']:<5}{100 * r['p_25']:>7.1f}%{100 * r['p_play']:>6.0f}%{r['ppg']:>6.1f}{r['l10_ppg']:>6.1f}  {r['book_spread_for_his_club']}  {r['blowout_risk'] or ''}")

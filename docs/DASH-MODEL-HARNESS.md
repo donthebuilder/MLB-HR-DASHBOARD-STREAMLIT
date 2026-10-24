@@ -21,6 +21,12 @@ Of the players who actually did the thing (homered, scored, got the hit, hit 25+
 5. Version bump + registry entry + a line in `dash_models.REGISTRY`.
 6. Anything the site must read is added to `PUBLISH_FILES` in `.github/scripts/publish_data.sh` (the `data` branch is rebuilt every publish; unlisted files vanish). Anything that accumulates lives on `bbe-history`.
 
+## Relationship to `bots/model_harness.py` (main)
+Two halves of one process, not duplicates.
+- `model_harness.py` is the **prospective scoreboard**: locked live records, production vs shadows vs baseline on the same games, nightly, private. It owns the **promotion rule** (Donovan, 2026-10-16): a new score replaces the one in use only when it beats it by 3.0 points over at least 150 games, same games, paired test agrees. Production is frozen four weeks from that date; new ideas run as shadows.
+- The backtests and tuners here are the **retrospective gate** (gates 1-4): they decide what is worth running as a shadow. Passing them never promotes anything; only the scoreboard's rule does.
+- So `mlb_hr_v5`, the NBA/NHL lane models and every lane in this doc are shadows. Gate 2 above is the entry bar for a shadow, and the 3.0-point / 150-game paired rule is the exit bar to production. Next step to wire them in: add the v5 / lane scores as extra score keys in the adapters in `model_harness.py` once they are logged on locked rows.
+
 ## Where things are
 | Need | File |
 |---|---|
@@ -119,3 +125,8 @@ Market-research notes (KNOWN-ISSUES #80): PropFinder had him #1; LAMP's goal sco
 - One harness. New models register in `dash_models.REGISTRY`; no stand-alone rankers, no ranking by odds.
 - Say what is measured and what is a prior. Say n. Say when a result is inside noise.
 - Plain-stat baselines are the bar, not the previous version of our own score.
+
+## Lanes added (branch dash-lanes-2)
+Fit 2023-25, graded once on 2025-26 (`bots/tune_nba_lanes.py`, `bots/tune_nhl_lanes.py`); each saves `models/<sport>_<lane>_v1.json` with Platt + tail calibration; both live boards print every lane.
+- NBA rebounds 10+, assists 8+, 3PM 4+, PRA 35+: on `nba_live.py`.
+- NHL points 1+ (base 35.2%), assists 1+ (24.4%), shots 3+ (22.1%): on `nhl_live.py`. Best pick per game 68.5% / 52.0% / 63.3% vs 68.1% / 51.0% / 62.1% for his season average. Tuned is a hair above the plain average, not a big edge; calibration by tenth is within ~2 points. Top-10 per night, tuned vs average: 67.2 vs 67.7, 50.2 vs 49.9, 59.8 vs 59.9, i.e. a tie. The value here is calibrated probabilities for pricing, not better picks.

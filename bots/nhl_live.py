@@ -124,6 +124,11 @@ def main():
     feats = [r for r in nb.run_data(data, int(day[:4]), min_prior=5) if r["game"] in synth_ids]
     model = json.load(open(Path(__file__).resolve().parent / "models" / "nhl_goal_v2.json"))
     inj = injury_status.fetch("nhl")
+    lane_models = {}
+    for lane in ("pts", "ast", "sog"):
+        fp = Path(__file__).resolve().parent / "models" / f"nhl_{lane}_v1.json"
+        if fp.exists():
+            lane_models[lane] = json.load(open(fp))
     rows = []
     for r in feats:
         z = model["intercept"] + sum(w * (r["f"][n] - m) / s for n, w, m, s in zip(model["features"], model["weights"], model["mu"], model["sd"]))
@@ -131,7 +136,12 @@ def main():
         p = _calibrate(model, p_raw)
         mt = meta[r["game"]]
         pair = mt["espn"]
-        rows.append({"name": r["name"], "team": r["team"], "opponent": r["opp"], "home": bool(r["f"]["is_home"]), "pos": r["pos"],
+        lane_p = {}
+        for lane, lm in lane_models.items():
+            lf = r["lanes"][lane]["f"]
+            zl = lm["intercept"] + sum(w * (lf[n] - m) / sd_ for n, w, m, sd_ in zip(lm["features"], lm["weights"], lm["mu"], lm["sd"]))
+            lane_p[lane] = round(_calibrate(lm, 1 / (1 + math.exp(-zl))), 4)
+        rows.append({"p_points": lane_p.get("pts"), "p_assist": lane_p.get("ast"), "p_sog3": lane_p.get("sog"),"name": r["name"], "team": r["team"], "opponent": r["opp"], "home": bool(r["f"]["is_home"]), "pos": r["pos"],
                      "model_version": model["model_version"], "p_goal": round(p, 4), "p_goal_raw": round(p_raw, 4), "lamp_v1": r["lamp"],
                      "goals_per_gm": round(r["base_goals"], 3), "shots_per_gm": round(r["base_shots"], 2), "toi_min": round(r["f"]["toi"], 1),
                      "pp_pts": r["f"]["pp_pts"], "back_to_back": bool(r["f"]["b2b"]), "teammates_out_goals": round(r["f"]["teammates_out_goals"], 2),
@@ -153,6 +163,9 @@ def main():
     print(f"{'player':<22}{'team':<5}{'vs':<5}{'pos':<4}{'p(goal)':>8}{'plays':>7}{'adj':>7}{'g/gm':>6}{'sh/gm':>7}{'toi':>6}  tier / goalie")
     for r in rows[:12]:
         print(f"{r['name'][:21]:<22}{r['team']:<5}{r['opponent']:<5}{r['pos']:<4}{100 * r['p_goal']:>7.1f}%{100 * r['p_play']:>6.0f}%{100 * r['p_goal_adj']:>6.1f}%{r['goals_per_gm']:>6.2f}{r['shots_per_gm']:>7.1f}{r['toi_min']:>6.1f}  {r['tier']} / {r['opp_goalie']}")
+    for key, label in (("p_points", "POINTS 1+"), ("p_assist", "ASSISTS 1+"), ("p_sog3", "SHOTS 3+")):
+        top = sorted((r for r in rows if r.get(key) is not None), key=lambda r: r[key] * r["p_play"], reverse=True)[:5]
+        print(f"{label:<11} " + ", ".join(f"{r['name']} {100 * r[key]:.0f}%" for r in top))
     ls = [r for r in rows if r["tier"] == "LONG SHOT"]
     print(f"... {len(ls)} long shots kept on the board, e.g. " + ", ".join(f"{r['name']} {100 * r['p_goal']:.1f}%" for r in ls[:4]))
     return 0
