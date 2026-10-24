@@ -101,6 +101,8 @@ def load(season, cache):
 
 
 def run(season, cache):
+    import game_lines as G
+    lines_dir = Path(cache).parent / "nba_lines"            # closing lines, when pulled (game_lines.fetch_closing)
     games = sorted(load(season, cache), key=lambda g: (g["date"], g["id"]))
     team_hist = defaultdict(list)                  # team -> [(pace, pts_allowed, pts_for)]
     team_last = {}                                 # team -> date of its last game
@@ -137,6 +139,9 @@ def run(season, cache):
             out_ppg = sum(tpts[q] / cnt[q] for q in cnt if cnt[q] >= 5 and mins[q] / cnt[q] >= 18 and q not in tonight)
             gap_days = (dt.date.fromisoformat(g["date"]) - dt.date.fromisoformat(team_last[team["abbr"]])).days \
                 if team["abbr"] in team_last else 5
+            ln = G.close_line("nba", g["id"], lines_dir) if lines_dir.exists() else None
+            has_ln = bool(ln and ln.get("spread_home") is not None)
+            book_fav = (-ln["spread_home"] if team["home"] else ln["spread_home"]) if has_ln else 0.0
             for p in team["players"]:
                 hist = ph[p["pid"]]
                 if len(hist) >= MIN_PRIOR and p["min"] >= 10:
@@ -145,6 +150,8 @@ def run(season, cache):
                     f.update({"opp_allowed": s.get("opp_pts_allowed", 113.0), "pace": (tpace + opace) / 2,
                               "strength_gap": net(team["abbr"]) - net(opp) + (3.0 if team["home"] else -3.0),
                               "is_home": float(team["home"]), "b2b": float(gap_days <= 1),
+                              "book_fav": float(book_fav), "book_blowout_loss": float(max(0.0, -book_fav)),
+                              "book_total": float(ln.get("total") or 0.0) if has_ln else 0.0,
                               "teammates_out_ppg": out_ppg,
                               "games_missed": float(min(10, len(tg) - 1 - last_idx[(team["abbr"], p["pid"])]))
                               if (team["abbr"], p["pid"]) in last_idx else 0.0,
