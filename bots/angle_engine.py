@@ -32,11 +32,14 @@ def _var(xs):
 
 
 def welch(a: List[float], b: List[float]):
-    """difference in means (a - b) and its t-score."""
+    """difference in means (a - b) and its t-score. The standard error uses the POOLED variance of both groups: with a rare
+    outcome and a small tagged group (say 0 hits in 135 tries) the tagged group's own variance is zero, which would make any
+    shortfall look infinitely certain. Pooling lets the big untagged group set the noise level."""
     if len(a) < 2 or len(b) < 2:
         return float("nan"), float("nan")
     d = _mean(a) - _mean(b)
-    se = math.sqrt(_var(a) / len(a) + _var(b) / len(b))
+    pooled = ((len(a) - 1) * _var(a) + (len(b) - 1) * _var(b)) / (len(a) + len(b) - 2)
+    se = math.sqrt(pooled * (1 / len(a) + 1 / len(b)))
     return d, (d / se if se else float("nan"))
 
 

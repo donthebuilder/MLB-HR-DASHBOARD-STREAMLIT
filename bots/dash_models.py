@@ -46,6 +46,7 @@ REGISTRY: List[Dict[str, str]] = [
     {"sport": "NFL", "name": "TUDDY usage x lane",  "version": "nfl_td_v4",     "status": "live",    "where": "bots/tuddy_v2_scorer.py",                                  "out": "public/data/current/tuddy_v2_latest.json"},
     {"sport": "ALL", "name": "Availability (p_play)", "version": "-",             "status": "live",    "where": "bots/injury_status.py (ESPN injury feeds)",                "out": "p_play / expected_score on rows"},
     {"sport": "ALL", "name": "Lineups & lines",     "version": "-",             "status": "live",    "where": "bots/lineups.py (statsapi, ESPN)",                         "out": "lineup_status / p_start; spread, total"},
+    {"sport": "NHL", "name": "LAMP tuned board (every skater)", "version": "nhl_goal_v2", "status": "live", "where": "bots/nhl_live.py + models/nhl_goal_v2.json",       "out": "bots/outputs/nhl_board_latest.json"},
     {"sport": "NHL", "name": "LAMP shooter x goalie", "version": "nhl_goal_v1", "status": "planned", "where": "bots/nhl_scorer.py",                                       "out": "public/data/current/nhl_scorer_latest.json"},
     {"sport": "NBA", "name": "BUCKETS",             "version": "nba_pts_v1",    "status": "planned", "where": "bots/buckets_scorer.py",                                   "out": "public/data/current/buckets_scorer_latest.json"},
 ]

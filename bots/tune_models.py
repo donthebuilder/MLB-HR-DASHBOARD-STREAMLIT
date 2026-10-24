@@ -16,6 +16,8 @@ Reports, on the holdout season only:
     "Obvious" = the plain stat (season shots/gm for NHL, season points/gm for NBA).
 """
 import argparse
+import json
+import math
 import sys
 from collections import defaultdict
 from pathlib import Path
@@ -93,6 +95,20 @@ def main():
     for r, z in zip(test, Xte @ w[1:] + w[0]):
         r["tuned"] = float(z)
 
+    # production fit: the same recipe on ALL seasons, saved for the live board (the holdout numbers above stay the honest ones)
+    allX = np.array([[r["f"][n] for n in names] for r in rows], float)
+    amu, asd = allX.mean(0), allX.std(0) + 1e-9
+    aw = fit_logistic((allX - amu) / asd, np.array([r[primary] for r in rows], float))
+    out = Path(__file__).resolve().parent / "models"
+    out.mkdir(exist_ok=True)
+    version = {"nhl": "nhl_goal_v2", "nba": "nba_pts_v2"}[a.sport]
+    (out / f"{version}.json").write_text(json.dumps({
+        "model_version": version, "target": cfg["target"][primary], "features": names,
+        "mu": amu.tolist(), "sd": asd.tolist(), "intercept": float(aw[0]), "weights": aw[1:].tolist(),
+        "fit_on": f"{len(rows)} player-games, seasons {cfg['train'] + [cfg['test']]}",
+        "holdout_note": f"honest numbers come from the fit on {cfg['train']} graded on {cfg['test']} (tune_models.py output)"}, indent=1))
+    print(f"saved bots/models/{version}.json")
+
     print(f"\nWhat carries weight (standardised coefficients, fitted on '{cfg['target'][primary]}'):")
     for n, c in sorted(zip(names, w[1:]), key=lambda t: -abs(t[1])):
         print(f"   {n:<16}{c:+.3f}")
@@ -103,6 +119,13 @@ def main():
         for label, key in (("shipped v1 score", cfg["shipped"]), (cfg["naive_label"], cfg["naive"]), ("tuned", "tuned")):
             print(f"   {label:<18} top1/game {topk(test, key, tgt, 1, 'game'):5.1f}%   top3/game {topk(test, key, tgt, 3, 'game'):5.1f}%"
                   f"   top10/night {topk(test, key, tgt, 10, 'night'):5.1f}%")
+
+    # calibration: does "40%" mean 40%? (holdout, by tenths of the fitted probability)
+    pr = sorted(((1 / (1 + math.exp(-r["tuned"])), r[primary]) for r in test), key=lambda t: t[0])
+    print(f"\nCALIBRATION on {cfg['test']} ({cfg['target'][primary]}): predicted vs actual, by tenth of the model's probability")
+    for i in range(10):
+        ch = pr[i * len(pr) // 10:(i + 1) * len(pr) // 10]
+        print(f"   tenth {i + 1:>2}: predicted {100 * sum(c[0] for c in ch) / len(ch):5.1f}%   actual {100 * sum(c[1] for c in ch) / len(ch):5.1f}%   (n={len(ch)})")
 
     # model-view picks: tuned vs the obvious pick, game by game and night by night
     tgt = primary

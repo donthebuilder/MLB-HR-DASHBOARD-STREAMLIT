@@ -80,7 +80,12 @@ def auc_free_topk(rows, key, k, group):
 
 
 def run(season, cache, min_prior=5):
-    data = load_season(season, cache)
+    return run_data(load_season(season, cache), season, min_prior)
+
+
+def run_data(data, season, min_prior=5):
+    """Features and scores for every skater-game in `data` ({report: rows}). nhl_live.py calls this with tonight's
+    games appended as zero-stat rows, so the live board and the backtest share one feature code path."""
     pp = {(r["playerId"], r["gameId"]): r for r in data["skater/powerplay"]}
     by_player = defaultdict(list)
     for r in data["skater/summary"]:
@@ -91,7 +96,7 @@ def run(season, cache, min_prior=5):
             "date": r["gameDate"], "game": r["gameId"], "team": r["teamAbbrev"], "opp": r["opponentTeamAbbrev"],
             "shots": r["shots"], "goals": r["goals"], "pp_goals": r["ppGoals"],
             "toi_min": r["timeOnIcePerGame"] / 60.0, "pp_toi_min": (p.get("ppTimeOnIce") or 0) / 60.0,
-            "home": r.get("homeRoad") == "H", "pos": r["positionCode"]})
+            "home": r.get("homeRoad") == "H", "pos": r["positionCode"], "name": r.get("skaterFullName")})
     goalies = defaultdict(list)                      # goalie id -> starts, oldest first
     starter = {}                                     # (gameId, goalie's opponent team) -> goalie id
     for r in sorted(data["goalie/summary"], key=lambda r: (r["gameDate"], r["gameId"])):
@@ -157,7 +162,8 @@ def run(season, cache, min_prior=5):
                 out.append({"night": x["date"], "game": x["game"], "pid": pid, "goal": int(x["goals"] >= 1),
                             "lamp": s["final_score"], "scorer_only": s["scorer_score"],
                             "base_goals": cg / len(hist), "base_shots": cs / len(hist),
-                            "rand": ((pid * 2654435761 + x["game"]) % 1000) / 1000, "f": f, "season": season})
+                            "rand": ((pid * 2654435761 + x["game"]) % 1000) / 1000, "f": f, "season": season,
+                            "name": x.get("name"), "team": x["team"], "opp": x["opp"], "pos": x["pos"]})
             hist.append(x)
             cg += x["goals"]; cs += x["shots"]
     return out

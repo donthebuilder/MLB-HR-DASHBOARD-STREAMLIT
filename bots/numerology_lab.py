@@ -176,27 +176,128 @@ def collect_nfl(cache):
     return rows
 
 
-def report(rows, label, unit):
+def report(rows, label, unit, y="y", d="d"):
     names = list(rows[0]["tags"])
-    print(f"\n{label}: {len(rows)} player-games, base rate {100 * sum(r['y'] for r in rows) / len(rows):.1f}%")
-    res = eng.evaluate(rows, names, "d", min_effect=1.0, min_n=60)
+    print(f"\n{label}: {len(rows)} player-games, base rate {100 * sum(r[y] for r in rows) / len(rows):.1f}%")
+    res = eng.evaluate(rows, names, d, min_effect=1.0, min_n=60)
     eng.print_table(res, unit)
     return res
 
 
+# ───────────────────────────────── MLB ─────────────────────────────────
+def collect_mlb(cache, seasons=(2024, 2025, 2026)):
+    """Every hitter-game of 2024-26 from statsapi game logs. HR and 1+ hit, each minus HIS OWN usual rate."""
+    cache = Path(cache)
+    cache.mkdir(parents=True, exist_ok=True)
+    rows = []
+    for season in seasons:
+        pf = cache / f"players_{season}.json"
+        if not pf.exists():
+            pf.write_text(json.dumps(curl_json(f"https://statsapi.mlb.com/api/v1/sports/1/players?season={season}")["people"]))
+        people = [p for p in json.load(open(pf)) if p.get("primaryPosition", {}).get("abbreviation") not in ("P", None)]
+        info = {p["id"]: p for p in people}
+
+        def glog(pid):
+            f = cache / f"glog_{season}_{pid}.json"
+            if f.exists():
+                return pid, json.load(open(f))
+            try:
+                sp = curl_json(f"https://statsapi.mlb.com/api/v1/people/{pid}/stats?stats=gameLog&group=hitting&season={season}")["stats"][0]["splits"]
+            except Exception:
+                sp = []
+            out = [{"date": x["date"], "hr": x["stat"].get("homeRuns", 0), "h": x["stat"].get("hits", 0), "ab": x["stat"].get("atBats", 0)} for x in sp]
+            f.write_text(json.dumps(out))
+            return pid, out
+        with ThreadPoolExecutor(12) as ex:
+            logs = dict(ex.map(glog, list(info)))
+        for pid, lg in logs.items():
+            lg = sorted((g for g in lg if g["ab"] > 0), key=lambda g: g["date"])
+            p = info[pid]
+            hrs = 0
+            for i, g in enumerate(lg):
+                if i >= 20:
+                    hr_rate = (hrs + 0.04 * 30) / (i + 30)
+                    h_rate = (sum(1 for q in lg[:i] if q["h"] > 0) + 0.65 * 10) / (i + 10)
+                    ax = axes_for(p.get("primaryNumber"), p.get("birthDate"), hrs + 1, p.get("fullName"))
+                    rows.append({"season": season, "rate": hr_rate, "hrate": h_rate, "y": int(g["hr"] >= 1), "yh": int(g["h"] >= 1),
+                                 "d": 100 * (int(g["hr"] >= 1) - hr_rate), "dh": 100 * (int(g["h"] >= 1) - h_rate),
+                                 "tags": tags_for(ax, p.get("birthDate"), g["date"]), "ax": ax})
+                hrs += g["hr"]
+    return rows
+
+
+# ───────────────────────────────── NBA ─────────────────────────────────
+def collect_nba(cache):
+    """Every NBA rotation player-game of 2023-25. Outcome: 25+ points, minus HIS OWN usual 25+ rate."""
+    import buckets_backtest as bb
+    cache = Path(cache)
+    rows = []
+    boxes = {s: sorted(bb.load(s, str(cache)), key=lambda g: (g["date"], g["id"])) for s in (2023, 2024)}
+    pids = sorted({p["pid"] for gs in boxes.values() for g in gs for t in g["teams"] for p in t["players"]})
+    info = {}
+
+    def ath(pid):
+        f = cache / f"ath_{pid}.json"
+        if f.exists():
+            return pid, json.load(open(f))
+        try:
+            a = curl_json(f"https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/{pid}")["athlete"]
+            m = re.match(r"(\d+)/(\d+)/(\d{4})", a.get("displayDOB") or "")
+            v = {"name": a.get("displayName"), "jersey": a.get("jersey"), "birth": f"{m[3]}-{int(m[2]):02d}-{int(m[1]):02d}" if m else None}
+        except Exception:
+            v = {"name": None, "jersey": None, "birth": None}
+        f.write_text(json.dumps(v))
+        return pid, v
+    with ThreadPoolExecutor(12) as ex:
+        info = dict(ex.map(ath, pids))
+    for season, games in boxes.items():
+        hist = defaultdict(list)
+        for g in games:
+            for t in g["teams"]:
+                for p in t["players"]:
+                    if p["min"] <= 0:
+                        continue
+                    h = hist[p["pid"]]
+                    if len(h) >= 8 and sum(m for m, _ in h[-10:]) / len(h[-10:]) >= 15:
+                        n25 = sum(1 for _, q in h if q >= 25)
+                        rate = (n25 + 0.1 * 10) / (len(h) + 10)
+                        inf = info.get(p["pid"], {})
+                        ax = axes_for(inf.get("jersey"), inf.get("birth"), n25 + 1, inf.get("name"))
+                        rows.append({"season": season, "rate": rate, "y": int(p["pts"] >= 25), "d": 100 * (int(p["pts"] >= 25) - rate),
+                                     "tags": tags_for(ax, inf.get("birth"), g["date"]), "ax": ax})
+                    h.append((p["min"], p["pts"]))
+    return rows
+
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("sport", choices=["nhl", "nfl"])
+    ap.add_argument("sport", choices=["nhl", "nfl", "mlb", "nba"])
     ap.add_argument("--cache", default=None)
+    ap.add_argument("--seasons", nargs="+", type=int, default=None, help="mlb only: seasons to pull")
+    ap.add_argument("--confirm", action="store_true", help="mlb only: out-of-sample check of the one pre-registered hypothesis")
     a = ap.parse_args()
     cache = a.cache or str(Path.home() / f".cache/dash_{a.sport}")
-    rows = collect_nhl(cache) if a.sport == "nhl" else collect_nfl(cache)
-    print(f"{a.sport.upper()}: effect = percentage points of scoring probability over his own usual rate (1 point minimum to act)")
-    report(rows, "EVERYONE", "pp")
-    order = sorted(r["rate"] for r in rows)
-    cut = order[len(order) // 3]
-    long = [r for r in rows if r["rate"] <= cut]
-    report(long, "LONG SHOTS (bottom third by his own usual rate)", "pp")
+    if a.sport == "mlb" and a.confirm:
+        # PRE-REGISTERED (written before these seasons were pulled): MLB 2024-26 showed hitters with 3+ of their numbers equal to
+        # the game date's root homering about 3 points more often than their own usual rate (t 3.2, same sign in all 3 seasons).
+        # One hypothesis, tested once, on seasons that played no part in finding it.
+        rows = collect_mlb(cache, tuple(a.seasons or (2021, 2022, 2023)))
+        print(f"OUT-OF-SAMPLE, MLB seasons {a.seasons or (2021, 2022, 2023)}: {len(rows)} player-games")
+        for tag in ("date-hit 3+", "date-hit 2+"):
+            w = [r for r in rows if r["tags"][tag]]; wo = [r for r in rows if not r["tags"][tag]]
+            d, t = eng.welch([r["d"] for r in w], [r["d"] for r in wo])
+            per = ", ".join(f"{sn}: {eng.welch([r['d'] for r in w if r['season'] == sn], [r['d'] for r in wo if r['season'] == sn])[0]:+.2f}" for sn in sorted({r['season'] for r in rows}))
+            print(f"   {tag:<14} n={len(w):6}  effect {d:+.2f} pp  t {t:+.1f}   by season  {per}   (found in-sample: +3.00 / +0.88)")
+        return 0
+    rows = {"nhl": collect_nhl, "nfl": collect_nfl, "mlb": collect_mlb, "nba": collect_nba}[a.sport](cache)
+    print(f"{a.sport.upper()}: effect = percentage points of probability over his own usual rate (1 point minimum to act)")
+    report(rows, "EVERYONE" + (" -- home run" if a.sport == "mlb" else ""), "pp")
+    cut = sorted(r["rate"] for r in rows)[len(rows) // 3]
+    report([r for r in rows if r["rate"] <= cut], "LONG SHOTS (bottom third by his own usual rate)", "pp")
+    if a.sport == "mlb":
+        report(rows, "EVERYONE -- 1+ hit", "pp", y="yh", d="dh")
+        cut = sorted(r["hrate"] for r in rows)[len(rows) // 3]
+        report([r for r in rows if r["hrate"] <= cut], "LONG SHOTS for a hit (bottom third by his own hit rate)", "pp", y="yh", d="dh")
     return 0
 
 
