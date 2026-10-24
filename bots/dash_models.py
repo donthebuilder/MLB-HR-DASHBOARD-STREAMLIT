@@ -172,7 +172,7 @@ def numerology_attach(scored: List[Dict[str, Any]], slate_date: date) -> int:
         p = people.get(int(_f(r.get("player_id"))), {})
         f = numerology_lab.flag(p.get("primaryNumber"), p.get("birthDate"), int(_f(r.get("season_hr"))) + 1, r.get("name"), day)
         k = sum(1 for v in f["axes"].values() if v and v == dr)
-        r["numerology"] = {"aligned": k, "axes": f["axes"], "date_root": dr, "flagged": k >= 2,
+        r["numerology"] = {"aligned": k, "axes": f["axes"], "date_root": dr, "flagged": k >= 2, "date_facts": numerology_lab.date_facts(day),
                            "also": [t for t in f["tags"] if t.startswith(("braid", "birthday"))], "note": NUMEROLOGY_NOTE}
         n += bool(k >= 2)
     return n

@@ -78,6 +78,39 @@ def tags_for(ax, birth, game_date):
     return t
 
 
+def pythagorean_date(day):
+    """True when month^2 + day^2 = (two-digit year)^2: 2026-10-24 -> 10^2 + 24^2 = 26^2 (100 + 576 = 676). Returns the equation text or None."""
+    m = re.match(r"(\d{4})-(\d{2})-(\d{2})$", str(day or ""))
+    if not m:
+        return None
+    y, mo, d = int(m[1]) % 100, int(m[2]), int(m[3])
+    return f"{mo}\u00b2 + {d}\u00b2 = {y}\u00b2" if y and mo * mo + d * d == y * y else None
+
+
+def next_pythagorean_dates(after, n=3):
+    """The next n Pythagorean dates after `after` (YYYY-MM-DD), looking through year 2199."""
+    out = []
+    d = dt.date.fromisoformat(after) + dt.timedelta(days=1)
+    end = dt.date(2199, 12, 31)
+    while d <= end and len(out) < n:
+        if pythagorean_date(d.isoformat()):
+            out.append(d.isoformat())
+        d += dt.timedelta(days=1)
+    return out
+
+
+def date_facts(day):
+    """Calendar facts for a game date. They describe the DATE, not any player; they are for the flavour line, never a score."""
+    facts = []
+    eq = pythagorean_date(day)
+    if eq:
+        facts.append(f"Pythagorean date: {eq}")
+    r = digits_root(day)
+    if r:
+        facts.append(f"date root {r}")
+    return facts
+
+
 def flag(jersey, birth, next_count, name, game_date):
     """One row's numerology read, for a board: {'axes', 'strength', 'flagged', 'tags'}. A flag is a LANE, not a score:
     nothing here multiplies into final_score, and the lab below is where its measured record lives."""
