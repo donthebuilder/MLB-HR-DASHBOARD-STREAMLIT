@@ -119,3 +119,8 @@ Market-research notes (KNOWN-ISSUES #80): PropFinder had him #1; LAMP's goal sco
 - One harness. New models register in `dash_models.REGISTRY`; no stand-alone rankers, no ranking by odds.
 - Say what is measured and what is a prior. Say n. Say when a result is inside noise.
 - Plain-stat baselines are the bar, not the previous version of our own score.
+
+## Lanes added (branch dash-lanes-2)
+Fit 2023-25, graded once on 2025-26 (`bots/tune_nba_lanes.py`, `bots/tune_nhl_lanes.py`); each saves `models/<sport>_<lane>_v1.json` with Platt + tail calibration; both live boards print every lane.
+- NBA rebounds 10+, assists 8+, 3PM 4+, PRA 35+: on `nba_live.py`.
+- NHL points 1+ (base 35.2%), assists 1+ (24.4%), shots 3+ (22.1%): on `nhl_live.py`. Best pick per game 68.5% / 52.0% / 63.3% vs 68.1% / 51.0% / 62.1% for his season average. Tuned is a hair above the plain average, not a big edge; calibration by tenth is within ~2 points. Top-10 per night, tuned vs average: 67.2 vs 67.7, 50.2 vs 49.9, 59.8 vs 59.9, i.e. a tie. The value here is calibrated probabilities for pricing, not better picks.

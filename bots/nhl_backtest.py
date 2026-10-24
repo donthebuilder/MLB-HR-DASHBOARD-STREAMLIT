@@ -94,7 +94,8 @@ def run_data(data, season, min_prior=5):
         p = pp.get((r["playerId"], r["gameId"]), {})
         by_player[r["playerId"]].append({
             "date": r["gameDate"], "game": r["gameId"], "team": r["teamAbbrev"], "opp": r["opponentTeamAbbrev"],
-            "shots": r["shots"], "goals": r["goals"], "pp_goals": r["ppGoals"],
+            "shots": r["shots"], "goals": r["goals"], "pp_goals": r["ppGoals"], "assists": r.get("assists") or 0, "points": r.get("points") or 0,
+            "pp_points": r.get("ppPoints") or 0,
             "toi_min": r["timeOnIcePerGame"] / 60.0, "pp_toi_min": (p.get("ppTimeOnIce") or 0) / 60.0,
             "home": r.get("homeRoad") == "H", "pos": r["positionCode"], "name": r.get("skaterFullName")})
     goalies = defaultdict(list)                      # goalie id -> starts, oldest first
@@ -137,7 +138,7 @@ def run_data(data, season, min_prior=5):
     out = []
     for pid, rows in by_player.items():
         rows.sort(key=lambda x: x["date"])
-        cg = cs = 0
+        cg = cs = ca = cp = 0
         hist = []
         for x in rows:
             if len(hist) >= min_prior:
@@ -159,13 +160,23 @@ def run_data(data, season, min_prior=5):
                           "teammates_out_goals": teammates_out(x["team"], x["game"]),
                           "games_missed": float(min(10, max(0, pos_in[x["team"]][x["game"]] - pos_in[x["team"]][hist[-1]["game"]] - 1)))
                           if hist[-1]["game"] in pos_in[x["team"]] else 0.0})      # 0 right after a trade
-                out.append({"night": x["date"], "game": x["game"], "pid": pid, "goal": int(x["goals"] >= 1),
+                l10 = hist[-10:]
+                lane_base = {"toi": f["toi"], "pp_toi": sum(h["pp_toi_min"] for h in l10) / len(l10), "is_d": f["is_d"], "is_home": f["is_home"], "b2b": f["b2b"],
+                             "opp_sa": f["opp_sa"], "goalie_sv": f["goalie_sv"], "teammates_out_goals": f["teammates_out_goals"], "games_missed": f["games_missed"]}
+                lanes = {}
+                for ln, key, thr in (("pts", "points", 1), ("ast", "assists", 1), ("sog", "shots", 3)):
+                    season_rate = (ca if key == "assists" else cp if key == "points" else cs) / len(hist)
+                    l10_rate = sum(h[key] for h in l10) / len(l10)
+                    l3_rate = sum(h[key] for h in hist[-3:]) / len(hist[-3:])
+                    lanes[ln] = {"y": int(x[key] >= thr), "avg": season_rate,
+                                 "f": dict(lane_base, season=season_rate, l10=l10_rate, l3=l3_rate, season_goals=cg / len(hist), pp_pts=f["pp_pts"], sog_season=cs / len(hist))}
+                out.append({"night": x["date"], "game": x["game"], "pid": pid, "goal": int(x["goals"] >= 1), "lanes": lanes,
                             "lamp": s["final_score"], "scorer_only": s["scorer_score"],
                             "base_goals": cg / len(hist), "base_shots": cs / len(hist),
                             "rand": ((pid * 2654435761 + x["game"]) % 1000) / 1000, "f": f, "season": season,
                             "name": x.get("name"), "team": x["team"], "opp": x["opp"], "pos": x["pos"], "gp": len(hist)})
             hist.append(x)
-            cg += x["goals"]; cs += x["shots"]
+            cg += x["goals"]; cs += x["shots"]; ca += x["assists"]; cp += x["points"]
     return out
 
 
