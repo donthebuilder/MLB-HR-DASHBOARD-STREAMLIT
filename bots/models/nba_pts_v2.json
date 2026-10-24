@@ -157,6 +157,16 @@
    0.68125,
    0.8
   ],
-  "note": "isotonic fit of actual vs predicted on the 2024 holdout; live boards interpolate raw -> calibrated"
+  "note": "isotonic fit of actual vs predicted on the 2024 holdout; kept for reference"
+ },
+ "platt": {
+  "a": -0.023082705464002002,
+  "b": 0.9927666087051424,
+  "note": "p = sigmoid(a + b * raw logit), fitted on the 2024 holdout. Smooth and monotone: it corrects the over-confidence at the top without flattening it, so the order of the top names is the model's own.",
+  "tail": {
+   "t": 0.7402439952299472,
+   "slope": 0.25,
+   "note": "past t, the probability is compressed (t + 0.25 x the excess) instead of extrapolated: strictly increasing, so no ties and no plateau, but not claiming precision the data cannot check"
+  }
  }
 }

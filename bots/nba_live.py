@@ -41,6 +41,12 @@ def parse_spread(details, home, away):
 
 def _calibrate(model, p):
     """raw model chance -> chance as graded on the holdout (isotonic, models/*.json 'calibration')."""
+    pl = model.get("platt")
+    if pl:                                   # smooth, monotone, no plateau (tune_models.py)
+        zraw = math.log(p / (1 - p))
+        q = 1 / (1 + math.exp(-(pl["a"] + pl["b"] * zraw)))
+        tail = pl.get("tail")
+        return tail["t"] + (q - tail["t"]) * tail["slope"] if tail and q > tail["t"] else q
     c = model.get("calibration")
     if not c:
         return p

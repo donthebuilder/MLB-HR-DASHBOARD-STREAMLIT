@@ -135,7 +135,17 @@ def main():
             pav.append([(x[0] * x[2] + y[0] * y[2]) / n_, (x[1] * x[2] + y[1] * y[2]) / n_, n_])
     cal = json.loads((out / f"{version}.json").read_text())
     cal["calibration"] = {"x": [round(b[0], 5) for b in pav], "y": [round(b[1], 5) for b in pav],
-                          "note": f"isotonic fit of actual vs predicted on the {cfg['test']} holdout; live boards interpolate raw -> calibrated"}
+                          "note": f"isotonic fit of actual vs predicted on the {cfg['test']} holdout; kept for reference"}
+    zz = np.array([[r["tuned"]] for r in test], float)
+    ab = fit_logistic(zz, np.array([r[primary] for r in test], float), l2=0.01)
+    cal["platt"] = {"a": float(ab[0]), "b": float(ab[1]),
+                    "note": f"p = sigmoid(a + b * raw logit), fitted on the {cfg['test']} holdout. Smooth and monotone: it corrects the over-confidence at the top without flattening it, "
+                            f"so the order of the top names is the model's own."}
+    pp = sorted(1 / (1 + math.exp(-(ab[0] + ab[1] * z[0]))) for z in zz)
+    t = pp[int(len(pp) * 0.99)]                # above the 99th percentile of what the holdout saw, there are too few games to check a probability
+    cal["platt"]["tail"] = {"t": t, "slope": 0.25,
+                            "note": "past t, the probability is compressed (t + 0.25 x the excess) instead of extrapolated: strictly increasing, so no ties and no plateau, but not claiming precision the data cannot check"}
+    print(f"Platt recalibration on the {cfg['test']} holdout: a {ab[0]:+.3f}, b {ab[1]:.3f}  (b < 1 = the raw model was over-confident); tail compression above {100 * t:.1f}%")
     (out / f"{version}.json").write_text(json.dumps(cal, indent=1))
 
     # calibration: does "40%" mean 40%? (holdout, by tenths of the fitted probability)
