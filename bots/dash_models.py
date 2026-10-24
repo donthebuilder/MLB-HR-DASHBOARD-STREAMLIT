@@ -19,10 +19,12 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 try:
+    from bots import injury_status
     from bots import moonshot_v4_scorer as moonshot
     from bots import tuddy_v2_scorer as tuddy
     from bots import mlb_data_fixes
 except ImportError:  # run from inside bots/
+    import injury_status
     import moonshot_v4_scorer as moonshot
     import tuddy_v2_scorer as tuddy
     import mlb_data_fixes
@@ -40,6 +42,7 @@ REGISTRY: List[Dict[str, str]] = [
     {"sport": "NFL", "name": "TUDDY TD",            "version": "nfl_td_v2",     "status": "live",    "where": "bots/nfl/nfl_scoring.py MODELS['TD']",                    "out": "nfl_bot.py output"},
     {"sport": "NFL", "name": "TUDDY TD shadow",     "version": "nfl_td_v3",     "status": "shadow",  "where": "bots/nfl/nfl_scoring.py SHADOW_MODELS['TD']",             "out": "nfl_bot.py output"},
     {"sport": "NFL", "name": "TUDDY usage x lane",  "version": "nfl_td_v4",     "status": "live",    "where": "bots/tuddy_v2_scorer.py",                                  "out": "public/data/current/tuddy_v2_latest.json"},
+    {"sport": "ALL", "name": "Availability (p_play)", "version": "-",             "status": "live",    "where": "bots/injury_status.py (ESPN injury feeds)",                "out": "p_play / expected_score on rows"},
     {"sport": "NHL", "name": "LAMP shooter x goalie", "version": "nhl_goal_v1", "status": "planned", "where": "bots/nhl_scorer.py",                                       "out": "public/data/current/nhl_scorer_latest.json"},
     {"sport": "NBA", "name": "BUCKETS",             "version": "nba_pts_v1",    "status": "planned", "where": "bots/buckets_scorer.py",                                   "out": "public/data/current/buckets_scorer_latest.json"},
 ]
@@ -169,6 +172,12 @@ def run_moonshot(rows: List[Dict[str, Any]], slate_date: date, out_dir: Path,
             log.warning(f"moonshot v5 skipped {row.get('name')}: {e}")
     if not scored:
         return None
+    try:       # chance of playing: a score is only worth something if he plays
+        inj = injury_status.fetch("mlb")
+        injury_status.snapshot(inj, "mlb", Path(__file__).resolve().parent / "outputs" / "injury_snapshots")
+        log.info(f"moonshot v5 injury report: {injury_status.apply(scored, inj)} of {len(scored)} players on it")
+    except Exception as e:
+        log.warning(f"injury report skipped: {e}")
     out_dir.mkdir(parents=True, exist_ok=True)
     path = moonshot.write_output(scored, str(out_dir / moonshot.LIVE_OUTPUT_FILE), shadow=False)
     log.info(f"moonshot v5 gaps: {gaps.report()}")
