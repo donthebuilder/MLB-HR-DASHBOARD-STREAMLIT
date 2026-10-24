@@ -39,6 +39,22 @@ def parse_spread(details, home, away):
     return val if fav == home else -val if fav == away else None
 
 
+def _calibrate(model, p):
+    """raw model chance -> chance as graded on the holdout (isotonic, models/*.json 'calibration')."""
+    c = model.get("calibration")
+    if not c:
+        return p
+    xs, ys = c["x"], c["y"]
+    if p <= xs[0]:
+        return ys[0] * p / xs[0] if xs[0] else p
+    if p >= xs[-1]:
+        return ys[-1]
+    for i in range(1, len(xs)):
+        if p <= xs[i]:
+            return ys[i - 1] + (ys[i] - ys[i - 1]) * (p - xs[i - 1]) / (xs[i] - xs[i - 1]) if xs[i] > xs[i - 1] else ys[i]
+    return p
+
+
 def athlete(pid, cache):
     f = Path(cache) / f"ath_{pid}.json"
     if f.exists():
@@ -109,13 +125,14 @@ def main():
     out_rows = []
     for r in rows:
         z = model["intercept"] + sum(w * (r["f"][n] - m) / s for n, w, m, s in zip(model["features"], model["weights"], model["mu"], model["sd"]))
-        p = 1 / (1 + math.exp(-z))
+        p_raw = 1 / (1 + math.exp(-z))
+        p = _calibrate(model, p_raw)
         mt = meta[r["game"]]
         info = athlete(r["pid"], a.cache)
         spread_team = (-mt["spread_home"] if r["home"] else mt["spread_home"]) if mt["spread_home"] is not None else None   # + = this club favoured
         watch = G.blowout_watch("nba", mt["spread_home"])
         out_rows.append({"name": info["name"], "team": r["team"], "opponent": r["opp"], "home": r["home"], "model_version": model["model_version"],
-                         "p_25": round(p, 4), "ppg": round(r["f"]["ppg"], 1), "l10_ppg": round(r["f"]["l10"], 1), "minutes_pts": r["f"]["minutes_pts"],
+                         "p_25": round(p, 4), "p_25_raw": round(p_raw, 4), "ppg": round(r["f"]["ppg"], 1), "l10_ppg": round(r["f"]["l10"], 1), "minutes_pts": r["f"]["minutes_pts"],
                          "attempts_pts": r["f"]["attempts_pts"], "teammates_out_ppg": round(r["f"]["teammates_out_ppg"], 1), "games_missed": r["f"]["games_missed"],
                          "back_to_back": bool(r["f"]["b2b"]), "book_spread_for_his_club": spread_team, "book_total": mt["total"],
                          "blowout_watch": bool(watch and watch["watch"]),
@@ -129,7 +146,7 @@ def main():
     lo, hi = order[len(order) // 3], order[2 * len(order) // 3]
     for r in out_rows:
         r["tier"] = "TOP" if r["p_25"] >= hi else "MIDDLE" if r["p_25"] >= lo else "LONG SHOT"
-    out_rows.sort(key=lambda r: r["p_25_adj"], reverse=True)
+    out_rows.sort(key=lambda r: (r["p_25_adj"], r["p_25_raw"]), reverse=True)   # the calibrated top block has ties; raw breaks them
     out = Path(a.out) if a.out else Path(__file__).resolve().parent / "outputs" / "nba_board_latest.json"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps({"date": day, "model_version": model["model_version"], "players": out_rows,

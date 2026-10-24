@@ -63,6 +63,12 @@ AVAILABILITY: `p_play` (NFL measured; others prior until snapshots accrue) · ML
 | NBA | PTS 25+, REB 10+, AST 8+, 3PM 4+, PRA 35+, double-double, triple-double, first basket | site JS `lib/nba/model.js` (`buckets-*-v1`) + bot `nba_pts_v2` | **points only** |
 So four of the five sports have more lanes than the harness has graded. The site's NHL and NBA models are real (not odds-ranking) but live only as JS, backtested by their own scripts, not by this harness. Next: port each remaining lane into the harness with the same fit-on-early / grade-on-late test, one at a time.
 
+## Prices and de-vigging (read before trusting any "+EV")
+- A price = true chance + the book's cut. De-vig = take the cut out (two-way: divide each side by the sum; one-sided: use sharp books or the measured overround). `devig_check.py` measures it on our own settled MLB HR bets: the cut is ~8%, and the market is otherwise about right by price band.
+- MLB, 1,211 priced board hitters over 45 nights: our top third by `hr_score` homered 19.0% against 16.1% fair → +8.5% ROI, standard error 11.8%. Not proven; ~3,500 bets would settle it.
+- **`scripts/nhl/lamp-atg-devig.py` (site repo) reads SGO `firstToScore` = the FIRST goal of the game**, not anytime goal (+800..+1,200 vs ~+150), then joins it to Kalshi's anytime-goal tickers by surname. SGO's NHL feed has no anytime-goal market. Anytime-goal prices live on Kalshi (`KXNHLGOAL`) → `devig_board.py nhl`, which compares them with our calibrated goal chance.
+- Model probabilities are calibrated on the holdout and the live boards map raw → calibrated (`models/*.json: calibration`). NHL above 45% raw was overconfident (48.6% predicted, 38.6% actual); NBA above 50% is mildly overconfident. Edges against a market are only worth reading where the book is deep (TRUSTED: $500+ both sides).
+
 ## The gap list, in the order to fill it
 1. ~~Confirmed lineups~~ MLB lineups and NHL probable goalies are live (`lineups.py`; an unposted MLB lineup = 76% to play, measured). Still missing: NBA starting fives and NFL inactives (no reachable pregame feed), minutes limits, and `pick_lock.py` calling `lock_decision()`.
 2. A real game forecast — pregame spread, total, moneyline and their movement — for every sport (blowout *loss* is the star-killer: NBA stars reach 25+ only 11.9% of the time).

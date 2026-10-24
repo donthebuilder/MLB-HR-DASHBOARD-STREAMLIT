@@ -120,12 +120,44 @@ def main():
             print(f"   {label:<18} top1/game {topk(test, key, tgt, 1, 'game'):5.1f}%   top3/game {topk(test, key, tgt, 3, 'game'):5.1f}%"
                   f"   top10/night {topk(test, key, tgt, 10, 'night'):5.1f}%")
 
+    # isotonic calibration from the HOLDOUT predictions (model fitted on train seasons only), saved beside the model:
+    # live boards map raw -> calibrated so a "50%" means what 50% meant when it was graded.
+    pr0 = sorted(((1 / (1 + math.exp(-r["tuned"])), r[primary]) for r in test), key=lambda t: t[0])
+    step = max(150, len(pr0) // 40)
+    blocks = [[sum(t[0] for t in pr0[i:i + step]) / len(pr0[i:i + step]), sum(t[1] for t in pr0[i:i + step]) / len(pr0[i:i + step]), len(pr0[i:i + step])]
+              for i in range(0, len(pr0), step)]
+    pav = []
+    for b in blocks:
+        pav.append(b)
+        while len(pav) > 1 and pav[-2][1] > pav[-1][1]:
+            y, x = pav.pop(), pav.pop()
+            n_ = x[2] + y[2]
+            pav.append([(x[0] * x[2] + y[0] * y[2]) / n_, (x[1] * x[2] + y[1] * y[2]) / n_, n_])
+    cal = json.loads((out / f"{version}.json").read_text())
+    cal["calibration"] = {"x": [round(b[0], 5) for b in pav], "y": [round(b[1], 5) for b in pav],
+                          "note": f"isotonic fit of actual vs predicted on the {cfg['test']} holdout; live boards interpolate raw -> calibrated"}
+    (out / f"{version}.json").write_text(json.dumps(cal, indent=1))
+
     # calibration: does "40%" mean 40%? (holdout, by tenths of the fitted probability)
     pr = sorted(((1 / (1 + math.exp(-r["tuned"])), r[primary]) for r in test), key=lambda t: t[0])
     print(f"\nCALIBRATION on {cfg['test']} ({cfg['target'][primary]}): predicted vs actual, by tenth of the model's probability")
     for i in range(10):
         ch = pr[i * len(pr) // 10:(i + 1) * len(pr) // 10]
         print(f"   tenth {i + 1:>2}: predicted {100 * sum(c[0] for c in ch) / len(ch):5.1f}%   actual {100 * sum(c[1] for c in ch) / len(ch):5.1f}%   (n={len(ch)})")
+
+    hi = [(1 / (1 + math.exp(-r["tuned"])), r[primary]) for r in test]
+    print("   the very top of the range:")
+    for lo_p, hi_p in ((0.30, 0.35), (0.35, 0.40), (0.40, 0.45), (0.45, 1.0)) if a.sport == "nhl" else ((0.40, 0.50), (0.50, 0.60), (0.60, 1.0)):
+        ch = [t for t in hi if lo_p <= t[0] < hi_p]
+        if len(ch) >= 20:
+            print(f"      predicted {int(lo_p * 100)}-{int(hi_p * 100) if hi_p < 1 else '+'}%: n={len(ch):5}  predicted {100 * sum(c[0] for c in ch) / len(ch):5.1f}%   actual {100 * sum(c[1] for c in ch) / len(ch):5.1f}%")
+    if a.sport == "nhl":
+        print("\nCALIBRATION, EARLY vs LATE SEASON (top two tenths of the model's probability): is the live board's October situation safe?")
+        for label, sel in (("player has 5-11 games this season", lambda r: r["gp"] < 12), ("12-29 games", lambda r: 12 <= r["gp"] < 30), ("30+ games", lambda r: r["gp"] >= 30)):
+            rs = sorted((r for r in test if sel(r)), key=lambda r: r["tuned"])
+            top = rs[int(len(rs) * 0.8):]
+            if top:
+                print(f"   {label:<34} n={len(top):5}  predicted {100 * sum(1 / (1 + math.exp(-r['tuned'])) for r in top) / len(top):5.1f}%   actual {100 * sum(r[primary] for r in top) / len(top):5.1f}%")
 
     # model-view picks: tuned vs the obvious pick, game by game and night by night
     tgt = primary

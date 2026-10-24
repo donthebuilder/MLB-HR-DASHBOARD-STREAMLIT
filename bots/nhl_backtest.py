@@ -163,7 +163,7 @@ def run_data(data, season, min_prior=5):
                             "lamp": s["final_score"], "scorer_only": s["scorer_score"],
                             "base_goals": cg / len(hist), "base_shots": cs / len(hist),
                             "rand": ((pid * 2654435761 + x["game"]) % 1000) / 1000, "f": f, "season": season,
-                            "name": x.get("name"), "team": x["team"], "opp": x["opp"], "pos": x["pos"]})
+                            "name": x.get("name"), "team": x["team"], "opp": x["opp"], "pos": x["pos"], "gp": len(hist)})
             hist.append(x)
             cg += x["goals"]; cs += x["shots"]
     return out

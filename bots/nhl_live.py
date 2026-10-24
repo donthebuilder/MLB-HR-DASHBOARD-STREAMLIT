@@ -31,6 +31,22 @@ ESPN_TO_NHL = {"NJ": "NJD", "LA": "LAK", "SJ": "SJS", "TB": "TBL", "UTAH": "UTA"
 SYNTH = 9_000_000_000
 
 
+def _calibrate(model, p):
+    """raw model chance -> chance as graded on the holdout (isotonic, models/*.json 'calibration')."""
+    c = model.get("calibration")
+    if not c:
+        return p
+    xs, ys = c["x"], c["y"]
+    if p <= xs[0]:
+        return ys[0] * p / xs[0] if xs[0] else p
+    if p >= xs[-1]:
+        return ys[-1]
+    for i in range(1, len(xs)):
+        if p <= xs[i]:
+            return ys[i - 1] + (ys[i] - ys[i - 1]) * (p - xs[i - 1]) / (xs[i] - xs[i - 1]) if xs[i] > xs[i - 1] else ys[i]
+    return p
+
+
 def tonight(day):
     j = nb.json.loads(nb.subprocess.run(["curl", "-s", "-m", "30", f"https://api-web.nhle.com/v1/schedule/{day}"], capture_output=True, text=True).stdout)
     games = []
@@ -105,11 +121,12 @@ def main():
     rows = []
     for r in feats:
         z = model["intercept"] + sum(w * (r["f"][n] - m) / s for n, w, m, s in zip(model["features"], model["weights"], model["mu"], model["sd"]))
-        p = 1.0 / (1.0 + math.exp(-z))
+        p_raw = 1.0 / (1.0 + math.exp(-z))
+        p = _calibrate(model, p_raw)
         mt = meta[r["game"]]
         pair = mt["espn"]
         rows.append({"name": r["name"], "team": r["team"], "opponent": r["opp"], "home": bool(r["f"]["is_home"]), "pos": r["pos"],
-                     "model_version": model["model_version"], "p_goal": round(p, 4), "lamp_v1": r["lamp"],
+                     "model_version": model["model_version"], "p_goal": round(p, 4), "p_goal_raw": round(p_raw, 4), "lamp_v1": r["lamp"],
                      "goals_per_gm": round(r["base_goals"], 3), "shots_per_gm": round(r["base_shots"], 2), "toi_min": round(r["f"]["toi"], 1),
                      "pp_pts": r["f"]["pp_pts"], "back_to_back": bool(r["f"]["b2b"]), "teammates_out_goals": round(r["f"]["teammates_out_goals"], 2),
                      "opp_goalie": ((pair[2] if not r["f"]["is_home"] else pair[1]).get("probable_goalie") if pair else None),
@@ -122,7 +139,7 @@ def main():
     lo, hi = order[len(order) // 3], order[2 * len(order) // 3]
     for r in rows:
         r["tier"] = "TOP" if r["p_goal"] >= hi else "MIDDLE" if r["p_goal"] >= lo else "LONG SHOT"
-    rows.sort(key=lambda r: r["p_goal_adj"], reverse=True)
+    rows.sort(key=lambda r: (r["p_goal_adj"], r["p_goal_raw"]), reverse=True)   # the calibrated top block has ties; raw breaks them
     out = Path(a.out) if a.out else Path(__file__).resolve().parent / "outputs" / "nhl_board_latest.json"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps({"date": day, "model_version": model["model_version"], "players": rows}, indent=1))
