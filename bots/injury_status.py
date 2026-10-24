@@ -15,7 +15,7 @@ CHANCE OF PLAYING
           Doubtful is Out. Questionable is two in three.
   others  PRIORS, not measurements -- NBA/NHL/MLB feeds only say "Day-To-Day" or
           "Out", and no history of their reports exists to measure against. Each
-          nightly snapshot is saved (outputs/injury_snapshots/) so these can be
+          nightly snapshot is saved (bbe-history branch, public/data/current/injury_snapshots/) so these can be
           measured after a few weeks. Until then the comment text sets the number:
           "game-time decision" / "questionable" / "probable" / "doubtful".
 
@@ -29,7 +29,7 @@ import re
 import subprocess
 import sys
 import unicodedata
-from datetime import date
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
 
@@ -95,7 +95,7 @@ def fetch(sport: str) -> List[Dict[str, Any]]:
 
 def snapshot(rows: List[Dict[str, Any]], sport: str, out_dir: Path) -> Path:
     out_dir.mkdir(parents=True, exist_ok=True)
-    path = out_dir / f"{sport}_{date.today().isoformat()}.json"
+    path = out_dir / f"{sport}_{datetime.now(timezone.utc).strftime('%Y-%m-%dT%H%MZ')}.json"
     path.write_text(json.dumps(rows, indent=1))
     return path
 
@@ -132,9 +132,17 @@ def teammates_out_value(team: str, injuries: List[Dict[str, Any]], recent_output
 
 
 if __name__ == "__main__":
-    sport = sys.argv[1] if len(sys.argv) > 1 else "nba"
-    rows = fetch(sport)
-    path = snapshot(rows, sport, Path(__file__).resolve().parent / "outputs" / "injury_snapshots")
-    print(f"{sport}: {len(rows)} on the report, snapshot -> {path}")
-    for r in sorted(rows, key=lambda r: (-r["p_play"], r["team"]))[:15]:
-        print(f"  {r['team']:>4} {r['name']:<24} {r['status']:<16} plays {int(100 * r['p_play']):>3}%  {r['detail'][:60]}")
+    # python bots/injury_status.py nba|nhl|nfl|mlb|all [snapshot_dir]
+    which = sys.argv[1] if len(sys.argv) > 1 else "nba"
+    out_dir = Path(sys.argv[2]) if len(sys.argv) > 2 else Path(__file__).resolve().parent / "outputs" / "injury_snapshots"
+    for sport in (FEEDS if which == "all" else [which]):
+        try:
+            rows = fetch(sport)
+        except Exception as e:                  # one dead feed must not cost the other three
+            print(f"{sport}: feed failed ({e})", file=sys.stderr)
+            continue
+        path = snapshot(rows, sport, out_dir)
+        print(f"{sport}: {len(rows)} on the report, snapshot -> {path}")
+        if which != "all":
+            for r in sorted(rows, key=lambda r: (-r["p_play"], r["team"]))[:15]:
+                print(f"  {r['team']:>4} {r['name']:<24} {r['status']:<16} plays {int(100 * r['p_play']):>3}%  {r['detail'][:60]}")

@@ -1,0 +1,61 @@
+name: Injury snapshots
+
+# Saves the NBA / NHL / NFL / MLB injury reports twice a day so "chance of
+# playing" can be MEASURED instead of assumed. NFL's numbers already are
+# (bots/injury_status.py); the other three leagues only say "Day-To-Day", and
+# there is no history of their reports anywhere. Each file is a snapshot of what
+# the report said at that moment; once a few weeks exist, bots/injury_status.py's
+# priors get replaced by the share of listed players who actually played.
+#
+# Lives on `bbe-history`, not `data`: `data` is rebuilt from an orphan branch on
+# every publish and anything that accumulates there is destroyed (see
+# hr-v3-shadow.yml). It changes nothing a pick or a score reads.
+
+on:
+  schedule:
+    # 17:00 UTC (1pm ET: after morning reports) and 22:30 UTC (6:30pm ET: before the 7pm tips and puck drops)
+    - cron: '0 17 * * *'
+    - cron: '30 22 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: injury-snapshot
+  cancel-in-progress: false
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: bots/injury_status.py
+          sparse-checkout-cone-mode: false
+
+      - name: Checkout the bbe-history branch (read/write)
+        run: |
+          git config --global user.name  "moonshot-bot"
+          git config --global user.email "bot@users.noreply.github.com"
+          git clone --quiet --depth 1 --branch bbe-history \
+            "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" _data
+          mkdir -p _data/public/data/current/injury_snapshots
+
+      - name: Snapshot all four leagues
+        run: python3 bots/injury_status.py all _data/public/data/current/injury_snapshots
+
+      - name: Commit
+        working-directory: _data
+        run: |
+          git add public/data/current/injury_snapshots
+          if git diff --cached --quiet; then
+            echo "nothing changed"
+          else
+            git commit -m "injury snapshots $(date -u +%FT%H%MZ)"
+            for i in 1 2 3 4 5; do
+              git pull --rebase origin bbe-history && git push origin HEAD:bbe-history && break
+              echo "push race, retry $i"; sleep $((i * 5))
+            done
+          fi

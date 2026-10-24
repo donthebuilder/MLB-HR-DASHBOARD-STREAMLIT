@@ -189,6 +189,10 @@ PUBLISH_FILES=(
   # additive-safe equivalent; see the docstring on that sync function.
   today_run_meta.json
   tomorrow_run_meta.json
+  # MOONSHOT v5 (batter x matchup, mlb_hr_v5), rebuilt every slate by
+  # bots/dash_models.run_moonshot (2026-10-24). Without this line the file
+  # is wiped with the rest of the orphan branch and the site never sees it.
+  moonshot_v4_latest.json
 )
 
 # THE FIELD (2026-09-30, BATCH-NFL-FIELD): one nfl_field_{TEAM}.json per
