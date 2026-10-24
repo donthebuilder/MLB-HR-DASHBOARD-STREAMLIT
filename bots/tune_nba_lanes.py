@@ -87,10 +87,16 @@ def main():
         out = Path(__file__).resolve().parent / "models"
         out.mkdir(exist_ok=True)
         k = pav(pr)
+        zs = np.array([[math.log(p / (1 - p))] for p, _ in pr], float)
+        ab = fit_logistic(zs, np.array([y for _, y in pr], float), l2=0.01)
+        qs = sorted(1 / (1 + math.exp(-(ab[0] + ab[1] * z[0]))) for z in zs)
+        t = qs[int(len(qs) * 0.99)]
         (out / f"nba_{lane}_v1.json").write_text(json.dumps({"model_version": f"nba_{lane}_v1", "target": LABEL[lane], "features": names, "mu": amu.tolist(), "sd": asd.tolist(),
                                                               "intercept": float(aw[0]), "weights": aw[1:].tolist(),
                                                               "fit_on": f"{len(allr)} player-games, seasons {TRAIN + [TEST]}",
-                                                              "calibration": {"x": [round(b[0], 5) for b in k], "y": [round(b[1], 5) for b in k]}}, indent=1))
+                                                              "calibration": {"x": [round(b[0], 5) for b in k], "y": [round(b[1], 5) for b in k]},
+                                                              "platt": {"a": float(ab[0]), "b": float(ab[1]), "tail": {"t": t, "slope": 0.25}}}, indent=1))
+        print(f"   Platt: a {ab[0]:+.3f}, b {ab[1]:.3f}; tail compression above {100 * t:.1f}%\n")
     return 0
 
 
