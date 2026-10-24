@@ -15792,6 +15792,23 @@ Use ALT LOOKS as quality variance, not primary plays.
         except Exception as _nsexc:
             print(f"not scored file skipped: {_nsexc}", file=sys.stderr)
 
+        # MOONSHOT v5 (batter x matchup, mlb_hr_v5): scored from the same
+        # enriched rows and written live to public/data/current/. Best-effort
+        # and additive -- hr_score above is untouched, and a failure here
+        # must never cost the slate that was already written.
+        try:
+            try:
+                from bots import dash_models as _dm
+            except ImportError:
+                import dash_models as _dm
+            _ms_path = _dm.run_moonshot(
+                rows_payload, slate_date,
+                DASHBOARD_REPO / "public" / "data" / "current",
+            )
+            print(f"MOONSHOT v5 written: {_ms_path}", file=sys.stderr)
+        except Exception as _ms_exc:
+            print(f"⚠️ MOONSHOT v5 skipped: {_ms_exc}", file=sys.stderr)
+
         # MODEL FOUNDATION (Tasks 2 & 4): this run's metadata + the
         # append-only prediction log, written from the fully-enriched
         # rows_payload (game_pick_role, hr_gate_flagged, etc. are only

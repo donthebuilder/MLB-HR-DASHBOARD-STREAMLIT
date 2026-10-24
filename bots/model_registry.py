@@ -93,6 +93,9 @@ MODEL_VERSIONS: Dict[str, str] = {
     # input"), and this changes numbers. A rule that only fires on weight edits
     # would have let this exact change through unlabeled.
     "hr":        "mlb_hr_v4",
+    # Batter score x matchup multiplier (bots/moonshot_v4_scorer.py). A second,
+    # separate model beside "hr" -- it takes the next free number, not "hr"'s.
+    "hr_matchup": "mlb_hr_v5",
     "hr_shadow": "mlb_hr_v1_recency",
     "hit":       "mlb_hit_v2",
     "hrr":       "mlb_hrr_v2",
