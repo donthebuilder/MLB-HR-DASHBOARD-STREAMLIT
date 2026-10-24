@@ -20,9 +20,11 @@ from typing import Any, Dict, List, Optional, Tuple
 
 try:
     from bots import moonshot_v4_scorer as moonshot
+    from bots import tuddy_v2_scorer as tuddy
     from bots import mlb_data_fixes
 except ImportError:  # run from inside bots/
     import moonshot_v4_scorer as moonshot
+    import tuddy_v2_scorer as tuddy
     import mlb_data_fixes
 
 log = logging.getLogger("dash_models")
@@ -171,6 +173,60 @@ def run_moonshot(rows: List[Dict[str, Any]], slate_date: date, out_dir: Path,
     path = moonshot.write_output(scored, str(out_dir / moonshot.LIVE_OUTPUT_FILE), shadow=False)
     log.info(f"moonshot v5 gaps: {gaps.report()}")
     return path
+
+
+# ---------------------------------------------------------------------------
+# TUDDY adapter -- history in, scorer inputs out. Pure: the live run and
+# nfl/nfl_tuddy_backtest.py both call it, so the backtest grades shipped code.
+# ---------------------------------------------------------------------------
+def tuddy_inputs(prior: List[Dict[str, Any]], opp_prior: List[Dict[str, Any]],
+                 position: str, gaps: Gaps) -> Tuple[Dict, Dict, bool]:
+    """
+    prior      this player's earlier weeks, oldest first, each
+               {rz_opp, gl_opp, td_actual, snap_pct}. NOTHING from the game being scored.
+    opp_prior  the opponent's earlier weeks against this position, oldest first,
+               each {td, rz_opp} (the position group's totals that week).
+    """
+    last5 = prior[-5:]
+    rz = [_f(w.get("rz_opp")) for w in last5]
+    gl = [_f(w.get("gl_opp")) for w in last5]
+    snaps = [_f(w.get("snap_pct")) for w in last5 if w.get("snap_pct") is not None]
+    rz_total = sum(rz)
+    rz_td_pct = min(0.60, sum(_f(w.get("td_actual")) for w in last5) / rz_total) if rz_total else 0.0
+
+    gaps.note("target_shares (unused by the scorer)")
+    gaps.note("lane (needs route/target-location data)")
+    gaps.note("explosive-play rates (not computed; overlay stays 1.0)")
+    gaps.note("rz_td_pct (all TDs / red-zone touches, not RZ-only TDs)")
+    gaps.note("role_weeks_consistent (proxy: recent weeks near his average snap share)")
+
+    mean_snap = sum(snaps) / len(snaps) if snaps else 0.0
+    role_weeks = sum(1 for x in snaps[-3:] if abs(x - mean_snap) <= 0.15) if snaps else 0
+
+    win = opp_prior[-10:]
+    n = len(win)
+    td_allowed = sum(_f(w.get("td")) for w in win)
+    rz_allowed = sum(_f(w.get("rz_opp")) for w in win)
+    scorer_inputs = {
+        "rz_touches_last5": rz, "gl_touches_last5": gl, "rz_td_pct": rz_td_pct,
+        "snap_pcts": snaps, "target_shares": [], "role_weeks_consistent": role_weeks,
+    }
+    matchup_inputs = {
+        "def_td_rate_vs_pos": td_allowed / n if n else 0.0,
+        "def_rz_td_pct_vs_pos": min(1.0, td_allowed / rz_allowed) if rz_allowed else 0.0,
+        "def_lane_td_rate": None,
+    }
+    gl_specialist = position in ("RB", "QB") and bool(gl) and sum(gl) / len(gl) >= 1.0
+    return scorer_inputs, matchup_inputs, gl_specialist
+
+
+def tuddy_score(scorer_inputs: Dict, matchup_inputs: Dict, position: str,
+                game_total: float, gl_specialist: bool) -> float:
+    sc = tuddy.scorer_score_tuddy(**scorer_inputs, position=position)
+    mt = tuddy.position_matchup_multiplier(
+        position=position, lane=None, is_goal_line_specialist=gl_specialist,
+        game_total=game_total, **matchup_inputs)
+    return tuddy.final_score_tuddy(sc, mt)["final_score"]
 
 
 # ---------------------------------------------------------------------------
