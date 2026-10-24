@@ -104,6 +104,9 @@ def load(season, cache):
         return [x for x in ex.map(lambda j: box(j[0], j[1], cache), jobs) if len(x["teams"]) == 2]
 
 
+POS_GROUP = {}          # pid -> "G" | "F" | "C"; filled by position_ablation.py. Empty = no position-level features (the normal path)
+
+
 def run(season, cache):
     import game_lines as G
     lines_dir = Path(cache).parent / "nba_lines"            # closing lines, when pulled (game_lines.fetch_closing)
@@ -120,6 +123,8 @@ def run_games(games, season, line_for, only_ids=None):
     team_games = defaultdict(list)                 # team -> [{pid: (min, pts)}], oldest first
     last_idx = {}                                  # (team, pid) -> index of the team game he last played
     ph = defaultdict(list)                         # player -> games
+    team_pos_hist = defaultdict(list)              # defending team -> [{group: {pts, reb, ast}}]: what each position got AGAINST him
+    lg_pos = defaultdict(lambda: defaultdict(float)); lg_n = [0]
     out = []
     for g in games:
         t = g["teams"]
@@ -172,6 +177,15 @@ def run_games(games, season, line_for, only_ids=None):
                               "form3": sum(x["pts"] for x in hist[-3:]) / len(hist[-3:]) - sum(x["pts"] for x in hist[-10:]) / len(hist[-10:]),
                               "fav_gap": max(0.0, net(team["abbr"]) - net(opp) + (3.0 if team["home"] else -3.0)),
                               "dog_gap": max(0.0, -(net(team["abbr"]) - net(opp) + (3.0 if team["home"] else -3.0)))})
+                    if POS_GROUP:
+                        grp = POS_GROUP.get(p["pid"])
+                        hh = team_pos_hist[opp][-10:]
+                        for stat in ("pts", "reb", "ast"):
+                            f["opp_pos_%s_rel" % stat] = 0.0
+                        if grp and len(hh) >= 5 and lg_n[0]:
+                            for stat in ("pts", "reb", "ast"):
+                                got = sum(x.get(grp, {}).get(stat, 0.0) for x in hh) / len(hh)
+                                f["opp_pos_%s_rel" % stat] = got - lg_pos[grp][stat] / lg_n[0]      # what this position gets on him vs the league's average
                     if only_ids is not None and g["id"] not in only_ids:
                         pass
                     else:
@@ -181,6 +195,18 @@ def run_games(games, season, line_for, only_ids=None):
                                 "l10": sum(x["pts"] for x in hist[-10:]) / len(hist[-10:]),
                                 "rand": ((int(p["pid"]) * 2654435761 + int(g["id"])) % 1000) / 1000, "f": f, "season": season,
                                 "lanes": lane_rows(hist, p, team_hist[opp], f)})
+        if POS_GROUP:
+            for i, team in enumerate(t):
+                rec = defaultdict(lambda: {"pts": 0.0, "reb": 0.0, "ast": 0.0})
+                for q in team["players"]:
+                    gq = POS_GROUP.get(q["pid"])
+                    if gq and q["min"] > 0:
+                        rec[gq]["pts"] += q["pts"]; rec[gq]["reb"] += q.get("reb", 0); rec[gq]["ast"] += q.get("ast", 0)
+                team_pos_hist[t[1 - i]["abbr"]].append(dict(rec))
+                for gq in ("G", "F", "C"):
+                    for stat in ("pts", "reb", "ast"):
+                        lg_pos[gq][stat] += rec.get(gq, {}).get(stat, 0.0)
+                lg_n[0] += 1
         for i, team in enumerate(t):
             team_hist[team["abbr"]].append((poss[i], pts_for[1 - i], pts_for[i], reb_for[1 - i], ast_for[1 - i], tpm_for[1 - i]))   # [3:] = what the OTHER side got against him
             team_last[team["abbr"]] = g["date"]
@@ -224,11 +250,14 @@ def lane_rows(hist, p, opp_hist, f):
             made, att = sum(x["tpm"] for x in hist), sum(x["tpa"] for x in hist)
             feats["tpa10"] = mean([x["tpa"] for x in h10]); feats["tp_pct"] = (made + 0.36 * 50) / (att + 50)
             feats["opp_allowed"] = mean([x[5] for x in o10]) if o10 else 12.5
+        if mk in ("reb", "ast") and ("opp_pos_%s_rel" % mk) in f:
+            feats["opp_pos_rel"] = f["opp_pos_%s_rel" % mk]
         out[mk] = {"y": int(p[stat if mk != "3pm" else "tpm"] >= LANE_BARS[mk]), "f": feats, "avg": sea}
     pra_h = [x["pts"] + x["reb"] + x["ast"] for x in hist]
     out["pra"] = {"y": int(p["pts"] + p["reb"] + p["ast"] >= LANE_BARS["pra"]),
                   "f": {**common, "season_avg": mean(pra_h), "l10_avg": mean(pra_h[-10:]), "ppg": f["ppg"], "opp_allowed": f["opp_allowed"],
-                        "form3": mean(pra_h[-3:]) - mean(pra_h[-10:])}, "avg": mean(pra_h)}
+                        "form3": mean(pra_h[-3:]) - mean(pra_h[-10:]),
+                        **({"opp_pos_rel": f["opp_pos_pts_rel"] + f["opp_pos_reb_rel"] + f["opp_pos_ast_rel"]} if "opp_pos_pts_rel" in f else {})}, "avg": mean(pra_h)}
     return out
 
 
