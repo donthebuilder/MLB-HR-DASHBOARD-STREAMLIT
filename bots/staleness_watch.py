@@ -181,27 +181,10 @@ def nfl_fantasy_stats_age(current: Path):
     return None
 
 
-def post_discord(lines: list[str]) -> bool:
-    """True when at least one webhook took the post. Ops alert: goes to
-    DISCORD_OPS_WEBHOOK when set, else the shared DISCORD_WEBHOOK room until an
-    ops channel exists. Sends a User-Agent (Discord 403s urllib's default) and
-    reads the secret like the tracker (bots/discord_post.py)."""
-    import discord_post
-    if not lines:
-        return True
-    if not discord_post.webhook_urls(discord_post.ops_secret()):
-        print("  ! DISCORD_OPS_WEBHOOK / DISCORD_WEBHOOK unset or holds no URL -- alert NOT delivered",
-              file=sys.stderr)
-        return False
-    ok, bad, _ops = discord_post.post_ops({"content": "\n".join(lines)[:1900]})
-    return ok > 0
-
-
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--dir", default="public/data/current",
                     help="the data-branch current/ directory to read timestamps from")
-    ap.add_argument("--post", action="store_true", help="post to Discord (else print only)")
     args = ap.parse_args()
     current = Path(args.dir)
     now = now_utc()
@@ -250,9 +233,10 @@ def main() -> int:
     if alerts:
         print("\nALERTS:")
         print("\n".join("  " + a for a in alerts))
-        if args.post and not post_discord(["🚨 **Board out of date**"] + alerts):
-            print("ALERT NOT DELIVERED", file=sys.stderr)
-            return 1
+        # 2026-10-24: no Discord webhook. A stale board turns this run RED and
+        # GitHub emails the repo owner -- the false alarms are fixed, so red now
+        # means a slot was really skipped.
+        return 1
     else:
         print("\nall fresh / out of window — no alert")
     return 0
