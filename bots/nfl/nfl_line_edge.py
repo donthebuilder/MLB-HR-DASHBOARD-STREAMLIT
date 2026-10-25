@@ -96,14 +96,38 @@ def main():
                     continue
                 results.append({"market": om, "week": wk, "line": line, "price": price, "under_price": under, "implied": implied / 100.0, "open_fair": of, "close_fair": cf, "devigged": devigged,
                                 "line_moved": oc["close"][0] != oc["open"][0], "model": p_over(ths, probs[i], line), "over": int(y > line)})
-    # anytime TD: fitted td model vs price
-    import td_fit
-    td_rows = []
-    for wk in a.weeks:
-        te = L.prep(T[2026], "REC").filter(pl.col("week") == wk) if False else None
+    # anytime TD (price only) and longest reception (a line), from the new-market models
+    import nfl_more as NM
+    NM.register(); TA = NM.augment(a.cache)
+    for om, mk, ths, outf in (("player_anytime_td", "TD1", [1], lambda r: (r["rushing_tds"] or 0) + (r["receiving_tds"] or 0)),
+                              ("player_longest_reception", "LONG_REC", [8, 12, 16, 20, 25, 30, 40, 50, 60], lambda r: r["longest_rec"])):
+        cols = L.feats(mk)
+        D = {s_: L.prep(TA[s_], mk) for s_ in TA}
+        D = {s_: d.filter(pl.col("f_gp") >= 3) if "f_gp" in d.columns else d for s_, d in D.items()}
+        for wk in a.weeks:
+            te = D[2026].filter(pl.col("week") == wk)
+            if not te.height:
+                continue
+            tr = pl.concat([D[2023], D[2024], D[2025]] + [D[2026].filter(pl.col("week") < wk)], how="diagonal_relaxed")
+            Xtr = L.matrix(tr, cols); mu, sd = Xtr.mean(0), Xtr.std(0) + 1e-9
+            Xte = (L.matrix(te, cols) - mu) / sd
+            ytr = tr.with_columns(L.OUT[mk].alias("_y"))["_y"].to_numpy().astype(float)
+            probs = np.array([1 / (1 + np.exp(-(Xte @ fit_logistic((Xtr - mu) / sd, (ytr >= t).astype(float), l2=20.0)[1:] + fit_logistic((Xtr - mu) / sd, (ytr >= t).astype(float), l2=20.0)[0]))) for t in ths]).T
+            for i, r in enumerate(te.iter_rows(named=True)):
+                oc = lines.get((wk, r["player_id"], om))
+                if not oc:
+                    continue
+                ln = oc["close"]; line, price, implied = ln[0], ln[1], ln[2]
+                y = outf(r)
+                if y is None or y == line:
+                    continue
+                of = LT.fair_over(oc["open"][1], oc["open"][3] if len(oc["open"]) > 3 else None)[0]
+                cf, devigged = LT.fair_over(price, ln[3] if len(ln) > 3 else None)
+                pm = float(probs[i][0]) if om == "player_anytime_td" else p_over(ths, probs[i], line)
+                results.append({"market": om, "week": wk, "line": line, "price": price, "implied": implied / 100.0, "open_fair": of, "close_fair": cf, "model": pm, "over": int(y > line if om != "player_anytime_td" else y >= 1)})
     print()
     print(f"{'market':<24}{'n':>5}{'went over':>11}{'book implied':>14}{'our p':>8}{'logloss book/ours':>20}   over bets at edge >=4pts / >=8pts (n, hit, ROI)")
-    for om in MK:
+    for om in list(MK) + ["player_anytime_td", "player_longest_reception"]:
         rs = [r for r in results if r["market"] == om]
         if len(rs) < 15:
             print(f"{om:<24}{len(rs):>5}  (too few to read)"); continue
@@ -116,7 +140,7 @@ def main():
             bets.append(f"{len(sel)}, {100 * sum(r['over'] for r in sel) / len(sel):.0f}%, {100 * prof / len(sel):+.0f}%" if sel else "0")
         print(f"{om:<24}{len(rs):>5}{100 * y.mean():>10.0f}%{100 * np.mean(pb):>13.1f}%{100 * np.mean(pm):>7.1f}%{ll(pb):>12.3f}/{ll(pm):.3f}   {' | '.join(bets)}")
     print("\nClosing-line value: our over/under picks at >= 4 pts of edge vs the OPENING fair price (needs the over and under prices; lines saved before 2026-10-24 have only the over):")
-    for om in MK:
+    for om in list(MK) + ["player_anytime_td", "player_longest_reception"]:
         c = LT.clv_summary([r for r in results if r["market"] == om])
         print(f"  {om:<24}" + (f"{c['n']} picks, market moved our way {100 * c['moved_our_way']:.0f}% / against {100 * c['moved_against']:.0f}%, average CLV {c['avg_clv_pts']:+.1f} pts" if c else "no picks with an opening and a closing price yet"))
     json.dump(results, open(Path(a.odds) / "line_edge_results.json", "w"))

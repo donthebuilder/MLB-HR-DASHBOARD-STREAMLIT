@@ -26,6 +26,7 @@ from tune_models import fit_logistic    # noqa: E402
 
 TD_W = ["f_rz_opp", "implied_total", "f_touches", "f_xtd", "f_gl_opp", "f_snap_pct"]
 NEW = {
+    "TD1": {"pos": ["RB", "WR", "TE"], "bar": 1, "w": {c: 1 for c in TD_W}, "out": pl.col("rushing_tds") + pl.col("receiving_tds"), "form": "f_td_actual", "extra": ["f_touches"]},
     "TD2": {"pos": ["RB", "WR", "TE"], "bar": 2, "w": {c: 1 for c in TD_W}, "out": pl.col("rushing_tds") + pl.col("receiving_tds"), "form": "f_td_actual", "extra": ["f_touches"]},
     "QB_TD": {"pos": ["QB"], "bar": 1, "w": {"f_rushing_tds": 1, "f_carries": 1, "f_rz_car": 1, "implied_total": 1}, "out": pl.col("rushing_tds"), "form": "f_rushing_tds", "extra": ["f_rushing_yards", "spread"]},
     "PASS_COMP": {"pos": ["QB"], "bar": 23, "w": {"f_completions": 1, "f_attempts": 1, "total_line": 1, "opp_pass_soft": 1}, "out": pl.col("completions"), "form": "f_completions", "extra": ["f_passing_cpoe", "f_sacks"]},
@@ -71,6 +72,8 @@ def save_models(cache):
     import json
     register(); T = augment(cache)
     for m in NEW:
+        if m == "TD1":
+            continue
         cols = L.feats(m)
         D = {s: L.prep(T[s], m) for s in T}
         D = {s: d.filter(pl.col("f_gp") >= 3) if "f_gp" in d.columns else d for s, d in D.items()}
@@ -175,7 +178,7 @@ def main():
     want = a.only or list(NEW) + ["DEF_TD", "WEATHER"]
     register(); T = augment(a.cache)
     for m in NEW:
-        if m in want:
+        if m in want and m != "TD1":
             run_market(m, T)
     if "DEF_TD" in want:
         run_def_td(def_td(a.cache))
