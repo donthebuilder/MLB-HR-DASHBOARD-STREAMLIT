@@ -22,7 +22,7 @@ import nfl_lanes as L                 # noqa: E402
 import nfl_more as NM                 # noqa: E402
 
 CFG = {"PASS_YDS": {"stat": "passing_yards", "trail": "f_passing_yards", "extra": ["f_passing_tds", "f_completions", "f_attempts", "f_passing_cpoe", "f_sacks", "total_line", "wind_mph", "indoors", "spread", "implied_total"]},
-       "KICK_PTS": {"stat": "kp", "trail": "f_kp", "extra": ["f_fg_att", "f_pat_made", "f_fg_made", "f_tm_fg_drive_rate", "f_tm_rz_td_rate", "implied_total", "total_line", "spread", "wind_mph", "indoors"]}}
+       "KICK_PTS": {"stat": "kp", "trail": "f_kp", "extra": ["implied_total", "total_line", "spread", "wind_mph", "indoors"]}}      # kicker: the game environment alone beat adding his own form (pooled log loss 0.6396 vs 0.6414 with form, 0.6546 trailing only)
 Phi = lambda x: 0.5 * (1 + math.erf(x / math.sqrt(2)))
 
 

@@ -23,7 +23,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 HERE = Path(__file__).resolve().parent
 CFG = {"nba": {"espn": "basketball/nba", "grid": list(range(2640, 100, -120)), "period": 720, "n": 4, "total_len": 2880},
        "nfl": {"espn": "football/nfl", "grid": list(range(3600, 100, -180)), "period": 900, "n": 4, "total_len": 3600},
-       "nhl": {"espn": "hockey/nhl", "grid": list(range(3420, 100, -180)), "period": 1200, "n": 3, "total_len": 3600}}
+       "nhl": {"espn": "hockey/nhl", "grid": list(range(3420, 100, -180)), "period": 1200, "n": 3, "total_len": 3600},
+       # baseball: the clock is OUTS LEFT in nine innings (54 at the first pitch, 51 after the first half-inning ... 3 after the top of the ninth)
+       "mlb": {"espn": "baseball/mlb", "grid": list(range(51, 0, -3)), "period": 6, "n": 9, "total_len": 54}}
+DISCRETE = ("nhl", "mlb")          # sports whose margins come in lumps: observed distributions, negative-binomial totals
 Phi = lambda x: 0.5 * (1 + math.erf(x / math.sqrt(2)))
 USE_EMP_TOTAL = False      # the empirical remaining-goals table was tried for NHL totals and made the check WORSE (log loss 1.21 vs 0.66): kept in the file, not used
 
@@ -74,6 +77,32 @@ def novig(h, a):
 def rows_for(sport, cache):
     """[(order, home final margin, pregame home margin feature, {T: home lead}, final total, pregame total, {T: combined score})]"""
     cfg = CFG[sport]; out = []
+    if sport == "mlb":
+        import team_models as tm
+        games = tm.games_mlb(cache, seasons=(2023, 2024, 2025, 2026))
+        rows, _ = tm.build(games, "mlb", 4, 25)                                    # pregame strength: Elo win probability (a fixed K and home edge; the live tables only need the rough size of the edge)
+        by_id = {r["id"]: r for r in rows}
+        rs, rg = {}, {}                                                            # trailing runs scored / allowed per team (20 games) for the pregame run environment
+        for i, g in enumerate(games):
+            inn = g["innings"]
+            if len(inn) < 8 or g["id"] not in by_id:
+                continue
+            r_ = by_id[g["id"]]
+            def env(t):
+                h = rs.get(t, [])[-20:]; a_ = rg.get(t, [])[-20:]
+                return (sum(h) / len(h) if h else 4.4, sum(a_) / len(a_) if a_ else 4.4)
+            (hs_, ha_), (as_, aa_) = env(g["home"]), env(g["away"])
+            L = (hs_ + aa_) / 2 + (as_ + ha_) / 2
+            lead, sc = {}, {}
+            for T in cfg["grid"]:
+                halves = (54 - T) // 3                                             # half-innings finished: top 1 = 1, bottom 1 = 2, ...
+                ar = sum(x[0] for x in inn[: (halves + 1) // 2]); hr_ = sum(x[1] for x in inn[: halves // 2])
+                lead[T], sc[T] = hr_ - ar, hr_ + ar
+            pm = 1 / (1 + 10 ** (-r_["elo_gap"] / 400)) - 0.5
+            out.append((i, g["hs"] - g["as"], pm, lead, g["hs"] + g["as"], float(L), sc))
+            for t, a, b in ((g["home"], g["hs"], g["as"]), (g["away"], g["as"], g["hs"])):
+                rs.setdefault(t, []).append(a); rg.setdefault(t, []).append(b)
+        return out
     if sport == "nba":
         import buckets_backtest as bb, game_lines as G
         ld = Path(cache).parent / "nba_lines"
@@ -100,7 +129,7 @@ def rows_for(sport, cache):
         sts = list(ex.map(lambda m: game_states(sport, m[0], cache), meta))
     for i, ((eid, date, pm, tot), st) in enumerate(zip(meta, sts)):
         pts = st["pts"]
-        if len(pts) < (4 if sport == "nhl" else 50) or pm is None or tot is None:
+        if len(pts) < (4 if sport in DISCRETE else 50) or pm is None or tot is None:
             continue
         lead, sc = {}, {}
         for T in cfg["grid"]:
@@ -141,7 +170,7 @@ def fit_total_table(rows, sport):
     return tab
 
 
-def fit_empirical(rows, sport, lo=-6, hi=6):
+def fit_empirical(rows, sport, lo=-6, hi=6):  # lead and change clipped to +-6
     """Hockey margins are lumpy (a 3-goal lead with six minutes left is almost always a 3-goal win), so a bell curve gets the tails wrong. Instead: for each clock and lead, the observed
     distribution of (final margin - lead), pooling the neighbouring grid times for samples. {T: {lead: [counts for delta lo..hi]}}"""
     cfg = CFG[sport]; grid = cfg["grid"]; emp = {}
@@ -176,6 +205,32 @@ def nearest(tab, T):
 def predict(tab, T, lead, pre_margin):
     a, b, c, sd, al, be = (tab[nearest(tab, T)] + [1.0, 0.0])[:6]
     return lead + a + b * lead + c * pre_margin, max(sd * max(0.3, al + be * abs(lead) / 10.0), 0.5)
+
+
+def fit_total_nb(rows, sport, ttab):
+    """NHL goals still to come: per clock, (1) a linear correction of the model's expected goals-left to what was actually scored after it (late-game empty-net and pulled-goalie goals make the raw
+    projection too small), and (2) an over-dispersion r for a negative binomial (variance = mean + mean^2 / r), because goals come in bunches. {T: [a, b, r]}"""
+    cfg = CFG[sport]; out = {}
+    for T in cfg["grid"]:
+        mus, ys = [], []
+        for r in rows:
+            mu, _ = predict_total(ttab, T, r[5], r[6][T], r[3][T], sport)
+            mus.append(max(mu - r[6][T], 0.0)); ys.append(float(r[4] - r[6][T]))
+        mus, ys = np.array(mus), np.array(ys)
+        A = np.column_stack([np.ones(len(mus)), mus]); w = np.linalg.lstsq(A, ys, rcond=None)[0]
+        fit = np.maximum(A @ w, 0.02); var = float(np.mean((ys - fit) ** 2 - fit)); m2 = float(np.mean(fit ** 2))
+        r_ = m2 / var if var > 1e-6 else 1e6
+        out[T] = [float(w[0]), float(w[1]), float(min(max(r_, 0.5), 1e6))]
+    return out
+
+
+def nb_over(mean, r, k):
+    """P(X > k) for a negative binomial with the given mean and dispersion r (r -> infinity is Poisson)."""
+    mean = max(mean, 1e-4); p = r / (r + mean); c = 0.0
+    lg = math.lgamma
+    for i in range(0, int(max(k, 0)) + 1):
+        c += math.exp(lg(i + r) - lg(r) - lg(i + 1) + r * math.log(p) + i * math.log(1 - p))
+    return max(0.0, 1 - c) if k >= 0 else 1.0
 
 
 def fit_total_emp(rows, sport, ttab):
@@ -228,12 +283,12 @@ def load_models(sport):
     d = json.load(open(HERE / "models" / f"live_spread_{sport}.json"))
     emp = {int(T): {int(k): v for k, v in e.items()} for T, e in (d.get("emp") or {}).items()}
     temp = {int(T): {int(k): v for k, v in e.items()} for T, e in (d.get("total_emp") or {}).items()}
-    return {"tab": {int(k): v for k, v in d["table"].items()}, "ttab": {int(k): v for k, v in (d.get("total_table") or {}).items()}, "emp": emp, "temp": temp, "sport": sport}
+    return {"tab": {int(k): v for k, v in d["table"].items()}, "ttab": {int(k): v for k, v in (d.get("total_table") or {}).items()}, "emp": emp, "temp": temp, "nb": {int(T): v for T, v in (d.get("total_nb") or {}).items()}, "sport": sport}
 
 
 def p_margin_over(m, T, lead, pre, x):
     """P(this side's final margin > x). Hockey: the observed distribution for that clock and lead (bell-curve fallback if the state is rare). Basketball / football: Normal."""
-    if m["sport"] == "nhl" and m["emp"]:
+    if m["sport"] in DISCRETE and m["emp"]:
         p = emp_over(m["emp"], T, lead, x)
         if p is not None:
             return p
@@ -244,13 +299,16 @@ def p_margin_over(m, T, lead, pre, x):
 def p_total_over(m, T, L, S, lead, x):
     """P(final total > x). Hockey: Poisson over the goals still to come (mean from the fitted pace model); others Normal."""
     mu, sd = predict_total(m["ttab"], T, L, S, lead, m["sport"])
-    if m["sport"] == "nhl":
+    if m["sport"] in DISCRETE:
         k = math.floor(x - S)                                                       # over a x.5 line = more than floor(x - S) goals still to come
+        if m.get("nb"):
+            a_, b_, r_ = m["nb"][nearest(m["nb"], T)]
+            return min(0.97, max(0.03, nb_over(max(a_ + b_ * max(mu - S, 0.0), 0.02), r_, k)))      # the extremes were never reliable in the check (2% -> 14%): kept inside 3-97%
         if m.get("temp") and USE_EMP_TOTAL:
             p = emp_total_over(m["temp"], T, max(mu - S, 0.0), k)
             if p is not None:
                 return p
-        return poisson_over(max(mu - S, 0.45 * 6.2 * T / 3600.0 + 0.03), x - S)
+        return poisson_over(max(mu - S, 0.45 * (6.2 * T / 3600.0 if m["sport"] == "nhl" else 8.8 * T / 54.0) + 0.03), x - S)
     return 1 - Phi((x - mu) / sd)
 
 
@@ -259,11 +317,10 @@ def fit(sport, cache):
     cut = int(len(rows) * 0.7)
     tr, te = rows[:cut], rows[cut:]
     tab, ttab = fit_table(tr, sport), fit_total_table(tr, sport)
-    mod = {"tab": tab, "ttab": ttab, "emp": fit_empirical(tr, sport) if sport == "nhl" else {}, "temp": {}, "sport": sport}
+    mod = {"tab": tab, "ttab": ttab, "emp": fit_empirical(tr, sport) if sport == "nhl" else {}, "temp": {}, "nb": fit_total_nb(tr, sport, ttab) if sport in DISCRETE else {}, "sport": sport}
     cfg = CFG[sport]
     print(f"{sport.upper()}: {len(rows)} games with play-by-play and a pregame line; tables fitted on the first {len(tr)}, checked on the last {len(te)}")
-    step = 1 if sport == "nhl" else 8
-    offs = (-1.5, -0.5, 0.5, 1.5) if sport == "nhl" else (-8, -4, 0, 4, 8)
+    offs = (-1.5, -0.5, 0.5, 1.5) if sport in DISCRETE else (-8, -4, 0, 4, 8)
     for label, kind in (("margin: P(final margin beats a line within a few points of the current score)", "m"), ("total: P(final total goes over a line near the projected total)", "t")):
         pr, ac = [], []
         for r in te:
@@ -273,8 +330,8 @@ def fit(sport, cache):
                         x = r[3][T] + off; pr.append(p_margin_over(mod, T, r[3][T], r[2], x)); ac.append(float(r[1] > x))
                 else:
                     mu, sd = predict_total(ttab, T, r[5], r[6][T], r[3][T], sport)
-                    for off in ([-1.0, 0.0, 1.0] if sport == "nhl" else [-0.5 * sd, 0.0, 0.5 * sd]):
-                        x = (math.floor(mu) + 0.5 + off) if sport == "nhl" else mu + off
+                    for off in ([-1.0, 0.0, 1.0] if sport in DISCRETE else [-0.5 * sd, 0.0, 0.5 * sd]):
+                        x = (math.floor(mu) + 0.5 + off) if sport in DISCRETE else mu + off
                         pr.append(p_total_over(mod, T, r[5], r[6][T], r[3][T], x)); ac.append(float(r[4] > x))
         pr, ac = np.array(pr), np.array(ac)
         edges = [0, .05, .1, .2, .3, .4, .5, .6, .7, .8, .9, .95, 1.0001]
@@ -285,11 +342,12 @@ def fit(sport, cache):
                 cal.append(f"{100 * pr[m].mean():.0f}%->{100 * ac[m].mean():.0f}%")
         print(f"  {label}\n    predicted -> actual: " + "  ".join(cal) + f"   (log loss {-np.mean(ac * np.log(np.clip(pr, 1e-6, 1)) + (1 - ac) * np.log(np.clip(1 - pr, 1e-6, 1))):.4f}, n={len(pr)})")
     full, ftab = fit_table(rows, sport), fit_total_table(rows, sport)
-    emp = fit_empirical(rows, sport) if sport == "nhl" else {}
+    emp = fit_empirical(rows, sport) if sport in DISCRETE else {}
     temp = {}
     (HERE / "models" / f"live_spread_{sport}.json").write_text(json.dumps({"sport": sport, "fit_on": f"{len(rows)} games", "table": {str(k): v for k, v in full.items()}, "total_table": {str(k): v for k, v in ftab.items()},
                                                                          "emp": {str(T): {str(k): v for k, v in e.items()} for T, e in emp.items()},
-                                                                         "total_emp": {str(T): {str(k): v for k, v in e.items()} for T, e in temp.items()}}))
+                                                                         "total_emp": {str(T): {str(k): v for k, v in e.items()} for T, e in temp.items()},
+                                                                         "total_nb": {str(T): v for T, v in (fit_total_nb(rows, sport, ftab) if sport in DISCRETE else {}).items()}}))
     print(f"  saved models/live_spread_{sport}.json")
 
 
@@ -328,9 +386,9 @@ def ask(sport, diff, left, pre, offer, price, total_line=None, score_total=None,
 def table(sport):
     tab = load(sport)
     print(f"{sport.upper()} fair live spread (and win probability) for a team that is DOWN d with t left, pregame pick'em")
-    ts = {"nba": [2160, 1440, 1080, 720, 360, 120], "nfl": [2700, 1800, 900, 480, 180], "nhl": [2400, 1800, 1200, 600, 300]}[sport]
-    ds = {"nba": [5, 10, 15, 20], "nfl": [3, 7, 10, 14, 21], "nhl": [1, 2, 3]}[sport]
-    print("  down   " + "  ".join(f"{t // 60:>2d}:{t % 60:02d} left" for t in ts))
+    ts = {"nba": [2160, 1440, 1080, 720, 360, 120], "nfl": [2700, 1800, 900, 480, 180], "nhl": [2400, 1800, 1200, 600, 300], "mlb": [45, 36, 27, 18, 9, 3]}[sport]
+    ds = {"nba": [5, 10, 15, 20], "nfl": [3, 7, 10, 14, 21], "nhl": [1, 2, 3], "mlb": [1, 2, 3, 5]}[sport]
+    print("  down   " + "  ".join((f"{t:>2d} outs left" if sport == "mlb" else f"{t // 60:>2d}:{t % 60:02d} left") for t in ts))
     for d in ds:
         cells = []
         for t in ts:
@@ -345,7 +403,7 @@ if __name__ == "__main__":
     ap.add_argument("--total-line", type=float, default=None); ap.add_argument("--score-total", type=float, default=None); ap.add_argument("--over", type=float, default=None)
     a = ap.parse_args()
     if a.cmd == "fit":
-        fit(a.sport, a.cache or str(Path.home() / {"nba": ".cache/dash_nba", "nfl": ".cache/dash_nfl", "nhl": ".cache/dash_nhl"}[a.sport]))
+        fit(a.sport, a.cache or str(Path.home() / {"nba": ".cache/dash_nba", "nfl": ".cache/dash_nfl", "nhl": ".cache/dash_nhl", "mlb": ".cache/dash_mlb"}[a.sport]))
     elif a.cmd == "ask":
         ask(a.sport, a.diff, a.left, a.pre, a.offer, a.price, a.total_line, a.score_total, a.over)
     else:

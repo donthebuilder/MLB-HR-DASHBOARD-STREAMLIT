@@ -13,7 +13,7 @@ games: win-probability log loss (model vs the book's no-vig moneyline), spread e
 disagree: how often the model's side covers / wins. The closing line is the hardest benchmark there is; a model that is close to it is a good model.
 --save writes models/<sport>_team_v1.json (ratings as of today, sd, regression weights) for the live games.
 """
-import argparse, json, math, sys
+import argparse, json, math, subprocess, sys
 from collections import defaultdict
 from pathlib import Path
 import numpy as np
@@ -24,7 +24,8 @@ from tune_models import fit_logistic    # noqa: E402
 
 CFG = {"nba": {"hfa": (60, 90, 120), "k": (8, 12, 18, 25), "scale": 12.0, "revert": 0.25},
        "nhl": {"hfa": (20, 40, 60), "k": (4, 8, 12), "scale": 2.2, "revert": 0.35},
-       "nfl": {"hfa": (30, 48, 65), "k": (10, 16, 24), "scale": 13.5, "revert": 0.33}}
+       "nfl": {"hfa": (30, 48, 65), "k": (10, 16, 24), "scale": 13.5, "revert": 0.33},
+       "mlb": {"hfa": (15, 25, 35), "k": (2, 4, 6), "scale": 4.4, "revert": 0.35}}
 
 
 # ---------------------------------------------------------------- data: one list of games per sport, oldest first
@@ -72,6 +73,39 @@ def games_nhl(cache):
     return sorted(out, key=lambda x: (x["date"], x["id"]))
 
 
+def games_mlb(cache, seasons=(2023, 2024, 2025, 2026), final_only=True):
+    """MLB regular-season games from the StatsAPI schedule (linescore hydrated, cached by month): [{season, date, id, home, away, hs, as, innings: [(away runs, home runs) per inning], line: None}]."""
+    import datetime as dt
+    out = []
+    for s in seasons:
+        a, b = dt.date(s, 3, 20), min(dt.date(s, 10, 5), dt.date.today() - dt.timedelta(days=1))
+        d = a
+        while d <= b:
+            e = min(d + dt.timedelta(days=13), b)
+            f = Path(cache) / f"mlb_sched_{d}_{e}.json"
+            if f.exists():
+                j = json.load(open(f))
+            else:
+                raw = subprocess.run(["curl", "-s", "-m", "60", f"https://statsapi.mlb.com/api/v1/schedule?sportId=1&startDate={d}&endDate={e}&gameType=R&hydrate=linescore"], capture_output=True, text=True).stdout
+                try:
+                    j = json.loads(raw)
+                except ValueError:
+                    d = e + dt.timedelta(days=1); continue
+                Path(cache).mkdir(parents=True, exist_ok=True)
+                json.dump(j, open(f, "w"))
+            for day in j.get("dates", []):
+                for g in day.get("games", []):
+                    if g["status"].get("abstractGameState") != "Final" or g["status"].get("detailedState") not in ("Final", "Completed Early"):
+                        continue
+                    ls = g.get("linescore", {})
+                    inn = [(i.get("away", {}).get("runs", 0), i.get("home", {}).get("runs", 0)) for i in ls.get("innings", [])]
+                    out.append({"season": s, "date": day["date"], "id": str(g["gamePk"]), "home": g["teams"]["home"]["team"]["abbreviation"] if "abbreviation" in g["teams"]["home"]["team"] else g["teams"]["home"]["team"]["name"],
+                                "away": g["teams"]["away"]["team"]["abbreviation"] if "abbreviation" in g["teams"]["away"]["team"] else g["teams"]["away"]["team"]["name"],
+                                "hs": g["teams"]["home"].get("score", 0), "as": g["teams"]["away"].get("score", 0), "innings": inn, "line": None})
+            d = e + dt.timedelta(days=1)
+    return sorted(out, key=lambda x: (x["date"], x["id"]))
+
+
 def games_nfl(cache):
     import nflreadpy as nfl
     out = []
@@ -107,7 +141,7 @@ def build(games, sport, k, hfa):
                      "margin": g["hs"] - g["as"], "win": int(g["hs"] > g["as"]) if g["hs"] != g["as"] else 0.5})
         m = g["hs"] - g["as"]
         exp = 1 / (1 + 10 ** (-gap / 400)); res = 1.0 if m > 0 else 0.0 if m < 0 else 0.5
-        mult = ((abs(m) + 3) ** 0.8) / (7.5 + 0.006 * abs(gap)) if sport != "nhl" else (abs(m) + 1) ** 0.6
+        mult = ((abs(m) + 3) ** 0.8) / (7.5 + 0.006 * abs(gap)) if sport not in ("nhl", "mlb") else (abs(m) + 1) ** 0.6
         d = k * mult * (res - exp)
         elo[h] += d; elo[a] -= d
         hist[h].append(m); hist[a].append(-m)
@@ -164,8 +198,8 @@ def predictions(sport, games):
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("sport", choices=CFG); ap.add_argument("--cache", default=None); ap.add_argument("--save", action="store_true"); a = ap.parse_args()
     sport = a.sport
-    cache = a.cache or str(Path.home() / {"nba": ".cache/dash_nba", "nhl": ".cache/dash_nhl", "nfl": ".cache/dash_nfl"}[sport])
-    games = {"nba": games_nba, "nhl": games_nhl, "nfl": games_nfl}[sport](cache)
+    cache = a.cache or str(Path.home() / {"nba": ".cache/dash_nba", "nhl": ".cache/dash_nhl", "nfl": ".cache/dash_nfl", "mlb": ".cache/dash_mlb"}[sport])
+    games = {"nba": games_nba, "nhl": games_nhl, "nfl": games_nfl, "mlb": games_mlb}[sport](cache)
     cfg = CFG[sport]
     tr_s = [2023, 2024]
     # Elo parameters: chosen on 2024 given 2023 only (never on the held-out season)

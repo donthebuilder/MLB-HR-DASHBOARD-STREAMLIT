@@ -25,7 +25,8 @@ HERE = Path(__file__).resolve().parent
 KALSHI = "https://api.elections.kalshi.com/trade-api/v2"
 SPORTS = {"nba": {"espn": "basketball/nba", "game": "KXNBAGAME", "spread": "KXNBASPREAD", "total": "KXNBATOTAL", "period": 720, "n": 4},
           "nfl": {"espn": "football/nfl", "game": "KXNFLGAME", "spread": "KXNFLSPREAD", "total": "KXNFLTOTAL", "period": 900, "n": 4},
-          "nhl": {"espn": "hockey/nhl", "game": "KXNHLGAME", "spread": "KXNHLSPREAD", "total": "KXNHLTOTAL", "period": 1200, "n": 3}}
+          "nhl": {"espn": "hockey/nhl", "game": "KXNHLGAME", "spread": "KXNHLSPREAD", "total": "KXNHLTOTAL", "period": 1200, "n": 3},
+          "mlb": {"espn": "baseball/mlb", "game": "KXMLBGAME", "spread": "KXMLBSPREAD", "total": "KXMLBTOTAL", "period": 6, "n": 9}}
 Phi = lambda x: 0.5 * (1 + math.erf(x / math.sqrt(2)))
 FEE = lambda p: 0.07 * p * (1 - p)
 
@@ -38,6 +39,23 @@ def curl(url):
         return {}
 
 
+def mlb_outs_left(text, inning):
+    """Outs left in nine innings, at HALF-INNING resolution from ESPN's text ("Top 7th", "Bot 3rd", "Mid 5th", "End 5th"): the live-spread tables for baseball are built on finished half-innings."""
+    t = (text or "").lower()
+    n = int(inning or 1)
+    if t.startswith("top"):
+        halves = (n - 1) * 2
+    elif t.startswith("bot"):
+        halves = (n - 1) * 2 + 1
+    elif t.startswith("mid"):
+        halves = n * 2 - 1
+    elif t.startswith("end"):
+        halves = n * 2
+    else:
+        halves = (n - 1) * 2
+    return float(max(3, 54 - 3 * halves))
+
+
 def live_games(sport):
     cfg = SPORTS[sport]
     out = []
@@ -47,7 +65,10 @@ def live_games(sport):
             continue
         c = {x["homeAway"]: x for x in e["competitions"][0]["competitors"]}
         per, clock = e["status"]["period"], e["status"].get("clock", 0)
-        left = (cfg["n"] - per) * cfg["period"] + clock if per <= cfg["n"] else clock
+        if sport == "mlb":
+            left = mlb_outs_left(t.get("shortDetail") or t.get("detail") or "", per)
+        else:
+            left = (cfg["n"] - per) * cfg["period"] + clock if per <= cfg["n"] else clock
         odds = (e["competitions"][0].get("odds") or [{}])[0]
         out.append({"sport": sport, "id": e["id"], "home": c["home"]["team"]["abbreviation"], "away": c["away"]["team"]["abbreviation"], "home_name": c["home"]["team"]["displayName"], "away_name": c["away"]["team"]["displayName"],
                     "hs": int(c["home"]["score"]), "as": int(c["away"]["score"]), "left": float(left), "period": per, "spread_detail": odds.get("details"), "total": odds.get("overUnder"), "date": e["date"][:10], "state": t["state"]})
@@ -56,7 +77,7 @@ def live_games(sport):
 
 STATE_MISMATCH = []   # (game id, our home win probability, the market's) for games skipped by the state check
 PRE_T = {}        # espn game id -> pregame total
-DEFAULT_TOTAL = {"nba": 228.0, "nfl": 45.0, "nhl": 6.0}
+DEFAULT_TOTAL = {"nba": 228.0, "nfl": 45.0, "nhl": 6.0, "mlb": 8.6}
 PRE = {}          # espn game id -> pregame HOME margin, filled while games are still pregame and persisted by the loop (ESPN drops the line once a game is live)
 
 
@@ -67,7 +88,9 @@ def parse_pre(g):
     if not m:
         return None
     fav, v = m.group(1), float(m.group(2))
-    if g["sport"] == "nhl":
+    if g["sport"] in ("nhl", "mlb"):
+        if g["sport"] == "mlb" and abs(v) < 100:                                    # a run line, not a moneyline: no win probability to read
+            return None
         p = (-v / (-v + 100.0) if v < 0 else 100.0 / (v + 100.0)) - 0.02                # the favourite's implied probability with a typical vig taken out
         ph = p if fav == g["home"] else 1 - p if fav == g["away"] else 0.5
         return ph - 0.5
@@ -86,7 +109,7 @@ def pre_margin(g):
         import team_live
         for t in team_live.board(g["sport"], g["date"] if g["sport"] != "nba" else g["date"]):
             if t["home"] == g["home"] and t["away"] == g["away"]:
-                PRE[g["id"]] = (t["model_p_home"] - 0.5) if g["sport"] == "nhl" else -t["model_spread_home"]; return PRE[g["id"]]
+                PRE[g["id"]] = (t["model_p_home"] - 0.5) if g["sport"] in ("nhl", "mlb") else -t["model_spread_home"]; return PRE[g["id"]]
     except Exception:
         pass
     return 0.0
@@ -162,14 +185,24 @@ def margin_over(g, side, x):
     m = models(g["sport"])
     if not m:
         return nhl_probs(g, side, x) if g["sport"] == "nhl" else None
+    if g["sport"] == "mlb":
+        hl, hp = g["hs"] - g["as"], pre_margin(g)
+        ph = lambda y: LS.p_margin_over(m, g["left"], hl, hp, y)
+        return ph(x) if side == "home" else 1 - ph(-x)                             # P(away margin > x) = P(home margin < -x); baseball has no tie, lines are half-runs
     lead = (g["hs"] - g["as"]) * (1 if side == "home" else -1)
     pre = pre_margin(g) * (1 if side == "home" else -1)
     return LS.p_margin_over(m, g["left"], lead, pre, x)
 
 
 def team_side(g, text):
+    t = (text or "").lower().strip()
+    if not t:
+        return None
+    for side, nm in (("home", g["home_name"]), ("away", g["away_name"])):          # full text first: "Los Angeles D" is the Dodgers, not the other Los Angeles team
+        if nm.lower().startswith(t):
+            return side
     for side, nm in (("home", g["home_name"]), ("away", g["away_name"])):
-        if text and (nm.split()[-1].lower() in text.lower() or nm.lower().startswith(text.lower()[:8])):
+        if nm.split()[-1].lower() in t or nm.lower().startswith(t[:8]):
             return side
     return None
 
@@ -198,12 +231,14 @@ def evaluate(g, kind, m, min_edge):
         if x is None:
             return None
         mm = models(sport)
-        if not mm or not mm["ttab"] or sport == "nhl":                               # NHL totals: the late-game low-probability tail is still under-predicted in the check (2% -> 11%), so no hockey total alerts yet
+        if not mm or not mm["ttab"]:
             return None
         if g["id"] not in PRE_T:
             return None                                                            # no pregame total was cached (the loop has to see the game before it starts): no total alerts, never a guess
         L = PRE_T[g["id"]]
         fair = LS.p_total_over(mm, g["left"], L, g["hs"] + g["as"], g["hs"] - g["as"], x)      # YES = over
+        if sport in ("nhl", "mlb") and not (0.2 <= fair <= 0.8):                              # hockey totals are only calibrated between about 20% and 80% (see the fit check); outside that no alert
+            return None
         desc = sub
     if sport == "nhl" and kind != "total":
         pass
@@ -221,7 +256,7 @@ def evaluate(g, kind, m, min_edge):
             "edge": round(best[1], 4), "stake": round(stake, 5), "state": {"hs": g["hs"], "as": g["as"], "left": g["left"], "period": g["period"], "pre_home_margin": pre_margin(g)}, "espn_id": g["id"], "date": g["date"]}
 
 
-def once(min_edge, sports=("nba", "nfl", "nhl")):
+def once(min_edge, sports=("nba", "nfl", "nhl", "mlb")):
     found = []
     for sp in sports:
         for g in live_games(sp):
