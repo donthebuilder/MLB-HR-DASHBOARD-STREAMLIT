@@ -142,3 +142,4 @@ Logistic over trailing-only features (red-zone/goal-line opportunities, xTD, tar
 | 2023 | 0.7162 / 0.7308 | 51.5 / 50.4 | 47.8 / 44.9 |
 | 2024 | 0.7194 / 0.7314 | 53.7 / 52.2 | 50.7 / 49.3 |
 Read: the fit ranks the whole board better (AUC up in all three) and is calibrated (log loss 0.44 vs 0.50 base-rate; tenths within ~3 pts), but v2 still picks the best player per game more often in all three (by 1.4 to 3.3 pts). Keep v2 for picks; use the fit's probability as the price check. No change to the live model.
+Teammates-out for NFL (`--out-feats`: regulars with 3+ targets or 5+ carries a game who played the team's last game but not this one, summed trailing targets/carries/red-zone opportunity): AUC +0.0005 to +0.0008, log loss within 0.0002, best pick per game +0.8/-0.4/+0.7 across the three rotations. Nothing. The NHL/NBA version of this input helped; NFL's shares are already carried by snap % and trailing usage.

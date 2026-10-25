@@ -34,6 +34,29 @@ def table(s, cache):
     t = build(s); p.parent.mkdir(parents=True, exist_ok=True); t.write_parquet(p); return t
 
 
+def with_out(d):
+    """Regulars who did NOT play this week (the NHL/NBA 'teammates out' idea). The table drops listed-out players, so absence is read
+    from the table itself: a player with real trailing usage (3+ targets or 5+ carries a game) who has a row in the team's previous game but none now.
+    Sums their trailing targets, carries and red-zone opportunity."""
+    rows = d.select(["team", "week", "player_id", "f_targets", "f_carries", "f_rz_opp", "season"]).to_dicts()
+    by_tw = {}
+    for r in rows:
+        by_tw.setdefault((r["season"], r["team"]), {}).setdefault(r["week"], {})[r["player_id"]] = r
+    out = {}
+    for (se, tm), wk in by_tw.items():
+        ws = sorted(wk)
+        for i, w in enumerate(ws):
+            t = c = z = 0.0
+            if i:
+                for pid, r in wk[ws[i - 1]].items():
+                    if pid not in wk[w] and ((r["f_targets"] or 0) >= 3 or (r["f_carries"] or 0) >= 5):
+                        t += r["f_targets"] or 0; c += r["f_carries"] or 0; z += r["f_rz_opp"] or 0
+            out[(se, tm, w)] = (t, c, z)
+    return d.with_columns([pl.Series("tm_out_tgt", [out.get((r["season"], r["team"], r["week"]), (0, 0, 0))[0] for r in d.select(["season", "team", "week"]).to_dicts()]),
+                           pl.Series("tm_out_car", [out.get((r["season"], r["team"], r["week"]), (0, 0, 0))[1] for r in d.select(["season", "team", "week"]).to_dicts()]),
+                           pl.Series("tm_out_rz", [out.get((r["season"], r["team"], r["week"]), (0, 0, 0))[2] for r in d.select(["season", "team", "week"]).to_dicts()])])
+
+
 def matrix(d):
     cols = [d[c].cast(pl.Float64).fill_null(0.0).to_numpy() if c in d.columns else np.zeros(d.height) for c in FEATS]
     for pz in POSD:
@@ -43,8 +66,12 @@ def matrix(d):
 
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("--cache", default=str(Path.home() / ".cache/dash_nfl"))
-    ap.add_argument("--fit", nargs="+", default=["2023", "2024"]); ap.add_argument("--test", default="2025"); a = ap.parse_args()
+    ap.add_argument("--out-feats", action="store_true"); ap.add_argument("--fit", nargs="+", default=["2023", "2024"]); ap.add_argument("--test", default="2025"); a = ap.parse_args()
+    if a.out_feats:
+        FEATS.extend(["tm_out_tgt", "tm_out_car", "tm_out_rz"])
     D = {s: _prep(table(s, a.cache)).filter(pl.col("f_gp") >= 3) if "f_gp" in table(s, a.cache).columns else _prep(table(s, a.cache)) for s in (2023, 2024, 2025)}
+    if a.out_feats:
+        D = {k: with_out(v) for k, v in D.items()}
     tr_seasons, te_season = [int(x) for x in a.fit], int(a.test)
     tr = pl.concat([D[x] for x in tr_seasons], how="diagonal_relaxed"); te = D[te_season]
     Xtr, Xte = matrix(tr), matrix(te)
