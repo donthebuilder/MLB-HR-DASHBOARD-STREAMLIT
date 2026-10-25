@@ -133,6 +133,34 @@ def Phi(x):
     return 0.5 * (1 + np.vectorize(math.erf)(x / math.sqrt(2)))
 
 
+def predictions(sport, games):
+    """Out-of-sample expected home margin for every game of 2025 (fit 2023-24) and 2026 (fit before 2026): [{**game fields, em, pm, elo_gap}]. Elo K / home edge chosen on 2024 from 2023."""
+    cfg = CFG[sport]; best = None
+    for k in cfg["k"]:
+        for hfa in cfg["hfa"]:
+            rows, _ = build(games, sport, k, hfa)
+            sel = [r for r in rows if r["season"] == 2024 and r["ngames"] >= 5 and r["win"] != 0.5]
+            p = 1 / (1 + 10 ** (-np.array([r["elo_gap"] for r in sel]) / 400)); score = ll(p, np.array([r["win"] for r in sel], float))
+            if best is None or score < best[0]:
+                best = (score, k, hfa)
+    _, k, hfa = best
+    rows, _ = build(games, sport, k, hfa)
+    cols = ["elo_gap", "form_gap", "rest_gap", "b2b_h", "b2b_a"]
+    X = lambda rs: np.array([[r[c] for c in cols] for r in rs], float)
+    out = []
+    for test, trs in ((2025, (2023, 2024)), (2026, (2023, 2024, 2025))):
+        tr = [r for r in rows if r["season"] in trs and r["ngames"] >= 5]; te = [r for r in rows if r["season"] == test and r["ngames"] >= 5]
+        if not te:
+            continue
+        Xtr = X(tr); mu, sd = Xtr.mean(0), Xtr.std(0) + 1e-9
+        A = np.hstack([np.ones((len(tr), 1)), (Xtr - mu) / sd]); y = np.array([r["margin"] for r in tr], float)
+        w = np.linalg.solve(A.T @ A + 5.0 * np.eye(A.shape[1]), A.T @ y); rsd = float(np.std(y - A @ w))
+        em = np.hstack([np.ones((len(te), 1)), (X(te) - mu) / sd]) @ w
+        for r, e in zip(te, em):
+            out.append({**r, "em": float(e), "pm": float(Phi(np.array(e / rsd)))})
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("sport", choices=CFG); ap.add_argument("--cache", default=None); ap.add_argument("--save", action="store_true"); a = ap.parse_args()
     sport = a.sport

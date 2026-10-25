@@ -37,7 +37,7 @@ def slate(sport, day):
         out = []
         for r in nfl.load_schedules([int(day[:4]) if int(day[5:7]) >= 3 else int(day[:4]) - 1]).iter_rows(named=True):
             if r["game_type"] == "REG" and str(r["gameday"]) == day and r["home_score"] is None:
-                out.append({"home": r["home_team"], "away": r["away_team"], "start": f"{r['gameday']} {r['gametime']}", "book_spread_home": -float(r["spread_line"]) if r["spread_line"] is not None else None,
+                out.append({"espn_id": str(r.get("espn") or ""), "home": r["home_team"], "away": r["away_team"], "start": f"{r['gameday']} {r['gametime']}", "book_spread_home": -float(r["spread_line"]) if r["spread_line"] is not None else None,
                             "ml_home": r["home_moneyline"], "ml_away": r["away_moneyline"], "total": r["total_line"], "status": "Scheduled"})
         return out
     out = []
@@ -45,7 +45,7 @@ def slate(sport, day):
         h, a = g["sides"]["home"]["team"], g["sides"]["away"]["team"]
         if sport == "nhl":
             h, a = ESPN_TO_NHL.get(h, h), ESPN_TO_NHL.get(a, a)
-        out.append({"home": h, "away": a, "start": g["start_utc"], "book_spread_home": None if sport == "nhl" else parse_spread(g.get("spread"), g["sides"]["home"]["team"], g["sides"]["away"]["team"]),
+        out.append({"espn_id": str(g["game_id"]), "home": h, "away": a, "start": g["start_utc"], "book_spread_home": None if sport == "nhl" else parse_spread(g.get("spread"), g["sides"]["home"]["team"], g["sides"]["away"]["team"]),
                     "book_moneyline_fav": g.get("spread") if sport == "nhl" else None, "total": g.get("total"),
                     "status": g["status"]})
     return out
@@ -72,7 +72,7 @@ def board(sport, day):
         em = float(w[0] + ((x - mu) / sd) @ w[1:])
         pw = float(tm.Phi(np.array(em / model["resid_sd"])))
         bs = t.get("book_spread_home")
-        out.append({"home": t["home"], "away": t["away"], "start": t["start"], "status": t.get("status"), "model_spread_home": round(-em, 1), "model_p_home": round(pw, 4),
+        out.append({"espn_id": t.get("espn_id"), "home": t["home"], "away": t["away"], "start": t["start"], "status": t.get("status"), "model_spread_home": round(-em, 1), "model_p_home": round(pw, 4),
                     "book_spread_home": bs, "book_total": t.get("total"), "gap_pts": round((-em) - bs, 1) if bs is not None and sport != "nhl" else None,
                     "history_games": int(r["ngames"]), "model_version": model["model_version"]})
     return out
@@ -97,11 +97,16 @@ def grade(sport, day, out_dir):
     d = json.load(open(path))
     cache = cache_dir(sport)
     res = {f"{g['away']}@{g['home']}": g for g in {"nba": tm.games_nba, "nhl": tm.games_nhl, "nfl": tm.games_nfl}[sport](cache) if g["date"] == day}
+    import game_lines as GL
     n = 0
     for k, g in d["games"].items():
         r = res.get(k)
         if r:
             g["home_margin"] = r["hs"] - r["as"]; n += 1
+            if g.get("espn_id") and "close_spread_home" not in g:
+                oc = GL.open_close_line(sport, g["espn_id"], Path(cache).parent / "lineoc")
+                if oc:
+                    g["close_spread_home"] = oc.get("close_spread_home"); g["close_ml_home"] = oc.get("close_ml_home"); g["close_ml_away"] = oc.get("close_ml_away")
     path.write_text(json.dumps(d))
     print(f"{day} team {sport}: graded {n} of {len(d['games'])}")
 
@@ -128,6 +133,10 @@ def report(out_dir):
             if wl:
                 m = np.array([g["home_margin"] for g in wl]); ms = np.array([-g["model_spread_home"] for g in wl]); bs = np.array([-g["book_spread_home"] for g in wl])
                 line += f"; spread error model {np.mean(np.abs(ms - m)):.2f} vs book {np.mean(np.abs(bs - m)):.2f}"
+            cl = [g for g in gs if g.get("book_spread_home") is not None and g.get("close_spread_home") is not None and abs(g["model_spread_home"] - g["book_spread_home"]) >= 1.0]
+            if cl:
+                clv = [(g["book_spread_home"] - g["close_spread_home"]) if g["model_spread_home"] < g["book_spread_home"] else (g["close_spread_home"] - g["book_spread_home"]) for g in cl]
+                line += f"; CLV (our line >= 1 pt from the book's when saved): {len(cl)} games, line moved our way {100 * np.mean(np.array(clv) > 0):.0f}% / against {100 * np.mean(np.array(clv) < 0):.0f}%, average {np.mean(clv):+.2f} pts"
         print(line)
 
 
