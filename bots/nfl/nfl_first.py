@@ -55,10 +55,10 @@ def pbp_facts(season):
     return first, early
 
 
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--cache", default=str(Path.home() / ".cache/dash_nfl"))
-    a = ap.parse_args()
+def build_rows(cache):
+    class a:      # noqa: N801  (keeps the body below unchanged)
+        pass
+    a.cache = cache
     V2 = MODELS["TD"]["w"]
     rows = []
     for season in (2023, 2024, 2025):
@@ -66,7 +66,7 @@ def main():
         first, early = pbp_facts(season)
         d = derive(tbl).filter(pl.col("position").is_in(MODELS["TD"]["pos"]), pl.col("season_type") == "REG")
         d = T._score(d, V2).rename({"score": "v2score"})
-        base = d.select("player_id", "week", "team", "opponent_team", "game_id", "v2score", "f_touches", "is_home", pl.col("f_gp")).to_dicts()
+        base = d.select("player_id", "week", "team", "opponent_team", "game_id", "position", "v2score", "f_touches", "is_home", "implied_total", "spread", pl.col("f_gp")).to_dicts()
         ph = defaultdict(list); th = defaultdict(list)
         by_week = defaultdict(list)
         for r in base:
@@ -88,7 +88,7 @@ def main():
                     rows.append({"season": season, "game": gid, "week": wk, "y": int(first[gid]["pid"] == r["player_id"]), "v2": r["v2score"] or 0.0, "touches": r["f_touches"] or 0.0,
                                  "early_pg": sum(x["early"] for x in h4) / len(h4), "early_share": sum(x["early"] for x in h4) / team_tot,
                                  "first_rate": sum(x["first"] for x in h) / len(h),
-                                 "opp_concedes_first": (sum(x["conceded"] for x in opp_h[-8:]) / len(opp_h[-8:])) if opp_h else 0.5, "is_home": float(r["is_home"] or 0)})
+                                 "opp_concedes_first": (sum(x["conceded"] for x in opp_h[-8:]) / len(opp_h[-8:])) if opp_h else 0.5, "is_home": float(r["is_home"] or 0), "implied_total": float(r.get("implied_total") or 0.0), "spread": float(r.get("spread") or 0.0), "pid": r["player_id"], "team": r["team"], "position": r.get("position")})
             for r in by_week[wk]:
                 gid = r["game_id"]
                 ph[r["player_id"]].append({"early": early[gid].get(r["player_id"], 0), "team_early": team_early[(gid, r["team"])],
@@ -101,6 +101,14 @@ def main():
                 teams = {r["team"] for r in by_week[wk] if r["game_id"] == gid}
                 for t in teams:
                     th[t].append({"conceded": int(gid in first and first[gid]["team"] != t)})
+    return rows
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--cache", default=str(Path.home() / ".cache/dash_nfl"))
+    a = ap.parse_args()
+    rows = build_rows(a.cache)
     tr = [r for r in rows if r["season"] in (2023, 2024)]; te = [r for r in rows if r["season"] == 2025]
     games = defaultdict(list)
     for r in te:
