@@ -133,3 +133,12 @@ Fit 2023-25, graded once on 2025-26 (`bots/tune_nba_lanes.py`, `bots/tune_nhl_la
 
 ## Do interactions help? (`bots/interaction_test.py`, fit 2023-24, graded 2025-26)
 Every pairwise product and square of the lane features vs the plain logistic. NHL points/assists/shots: no gain (log loss 0.5952 vs 0.5959, 0.5216 vs 0.5220, 0.4619 vs 0.4614; best pick per game goes down 0.8-1.0 pt). NBA rebounds/assists/3PM/PRA: log loss improves 1-2% in all four (0.2039 to 0.2004, 0.1524 to 0.1497, 0.2734 to 0.2721, 0.2167 to 0.2151) and best pick per game +0.8 to +0.9 pt in three of four, top 10 per night flat. Read: NHL is limited by the inputs, not the model shape; NBA has a small real gain. Not adopted yet (small; would change the live feature path).
+
+## NFL anytime TD: fitted logistic vs `nfl_td_v2` (`bots/nfl/nfl_tuned_td.py`)
+Logistic over trailing-only features (red-zone/goal-line opportunities, xTD, targets/carries, snap %, TDs, target share, game line, opponent TDs allowed, team red-zone TD rate, position), three rotations (fit two seasons, grade the third):
+| graded | AUC v2 / tuned | top-15 per week v2 / tuned | best pick per game v2 / tuned |
+|---|---|---|---|
+| 2025 | 0.7314 / 0.7356 | 48.9 / 52.2 | 49.6 / 46.3 |
+| 2023 | 0.7162 / 0.7308 | 51.5 / 50.4 | 47.8 / 44.9 |
+| 2024 | 0.7194 / 0.7314 | 53.7 / 52.2 | 50.7 / 49.3 |
+Read: the fit ranks the whole board better (AUC up in all three) and is calibrated (log loss 0.44 vs 0.50 base-rate; tenths within ~3 pts), but v2 still picks the best player per game more often in all three (by 1.4 to 3.3 pts). Keep v2 for picks; use the fit's probability as the price check. No change to the live model.
