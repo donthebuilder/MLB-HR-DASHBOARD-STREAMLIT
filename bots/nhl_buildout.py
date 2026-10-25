@@ -34,6 +34,7 @@ SB = "https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/scoreboard?dates=
 def pull(cache):
     import subprocess
     cache = Path(cache)
+    cache.mkdir(parents=True, exist_ok=True)
     out = cache / "espn_nhl_games.json"
     games = json.load(open(out)) if out.exists() else {}
     days = []
