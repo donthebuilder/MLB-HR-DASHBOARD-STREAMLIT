@@ -193,6 +193,7 @@ PUBLISH_FILES=(
   nhl_sim_latest.json
   nba_sim_latest.json
   nfl_lanes_latest.json
+  mlb_board_latest.json
   nba_odds_status.json
   # FRANCHISE LIVE SCORING (2026-09-14). Per-player box-score lines for the
   # current week, written by bots/nfl/nfl_fantasy_stats.py every 15 min in

@@ -9,7 +9,7 @@ and read by main's scoreboard (`bots/model_harness.py`, promotion rule: +3.0 poi
 |---|---|---|
 | Goal 1+ | `nhl_goal_v2` (fitted, Platt + tail) | best per game 37.2% vs 35.8% plain shots; calibrated |
 | Points 1+ / Assists 1+ / Shots 3+ | `nhl_{pts,ast,sog}_v1` | 68.5 / 52.0 / 63.3% vs plain 68.1 / 51.0 / 62.1% — a tie on picks, good probabilities |
-| Moneyline | `nhl_team_v1` (Elo + form) | win log loss 0.683 vs book 0.677; accuracy 53.9% |
+| Moneyline | `nhl_team_v1` (Elo + form) | win log loss 0.683 vs book 0.677; accuracy 53.9% (the closing line itself is right 56.3%) |
 | Spread | n/a | the book spread is a fixed puck line, so there is no spread model |
 ## NBA (BUCKETS)
 | Market | Model | Result |
@@ -27,8 +27,14 @@ and read by main's scoreboard (`bots/model_harness.py`, promotion rule: +3.0 poi
 | Rec yds 100+, receptions 4+, rush yds 100+, rush att 12+, pass yds 300+, kicking pts 6+, **pass TDs 2+ (new)** | `nfl_<market>_fit_v1` | fitted probabilities, calibrated; AUC matches the hand scores on volume markets, clearly better on pass TDs (0.64 vs 0.55) and kicking (0.59 vs 0.55) |
 | Moneyline / spread | `nfl_team_v1` | win accuracy 61.6%; spread error 10.37 vs closing 9.73; when it disagrees with the book it covers 40% |
 ## MLB (MOONSHOT)
-Live `hr_score` (`mlb_hr_v4`), `mlb_hr_v5` (batter x matchup) as the shadow, the full-slate hit / H+R+RBI / total-bases / HR model, injuries and lineups, numerology as a flagged lane. Measured ceilings: hits ~70%, H+R+RBI ~57%, 2+ total bases ~46%, HR best-of-night ~21-27%. No MLB games until spring, so MLB is not in the nightly shadow logs yet.
-
+The MLB season is not over: the World Series is on (Brewers lead 2-0; game 3 is Oct 26 at Tampa Bay), so these run now.
+| Market | Model | Result |
+|---|---|---|
+| HR (live site board) | `hr_score` (`mlb_hr_v4`), `mlb_hr_v5` shadow | HR #1 of the night 27.0% (126 nights); top-15 board 19.7% and 29% of the night's homers |
+| Hitter lanes: 1+ hit, 2+ H+R+RBI, 2+ total bases, 1+ HR | `mlb_{hit,hrr,tb2,hr}_v1` (`mlb_lanes.py`, fit 2024-25, graded on 2026's 41,044 hitter-games; Platt + tail) | calibrated to within about 2 points in every eighth: hit 50>51 ... 71>70, H+R+RBI 34>34 ... 57>55, TB2 25>25 ... 46>43, HR 6>6 ... 21>19; the earlier measured ceilings (hits ~70%, H+R+RBI ~57%) still hold |
+| Moneyline | `mlb_team_v1` (Elo on runs) | win accuracy 55.9% (2025) / 55.8% (2026), log loss 0.679 / 0.684 vs 0.693; closing lines not pulled for MLB yet |
+| Live margin, moneyline, total | `live_spread_mlb` (9,719 games of 2023-26, half-inning states) | margin calibration within about 5 points; total 16>15, 26>26, 35>35, 44>44, 55>55, 62>61 |
+Live: `live_edge.py` prices Kalshi's MLB game / run-line / total markets from the half-inning state; `shadow-mlb.yml` logs and grades the hitter lanes; `live-prices.yml` also records Kalshi's HR / hit / total-base props.
 ## Honest read
 - A fitted lane beats the plain stat by about 1-3 points on picks at best; its real value is a calibrated probability to price against. The scoreboard decides what is ever promoted.
 - The team models do not beat closing lines (they should not). They are the comparator: they tell you how far the market is from "just form and Elo", and they feed blowout risk.

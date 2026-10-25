@@ -19,6 +19,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 LANES = {
     "nhl": [("p_goal", "goal", "Goal 1+"), ("p_points", "points", "Points 1+"), ("p_assist", "assists", "Assists 1+"), ("p_sog3", "shots3", "Shots 3+")],
+    "mlb": [("p_hit", "hit", "1+ hit"), ("p_hrr", "hrr", "2+ H+R+RBI"), ("p_tb2", "tb2", "2+ total bases"), ("p_hr", "hr", "1+ home run")],
     "nba": [("p_25", "pts25", "Points 25+"), ("reb", "reb10", "Rebounds 10+"), ("ast", "ast8", "Assists 8+"), ("3pm", "tpm4", "3PM 4+"), ("pra", "pra35", "PRA 35+"), ("dd", "dd", "Double-double")],
 }
 
@@ -29,11 +30,15 @@ def curl(url):
 
 def snapshot(sport, day, out_dir):
     path = Path(out_dir) / f"shadow_{sport}_{day}.json"
-    if path.exists():
+    if path.exists() and sport != "mlb":
         print(f"{path.name} already written; not rewritten")
         return
     tmp = tempfile.mktemp(suffix=".json")
-    subprocess.run([sys.executable, str(HERE / f"{sport}_live.py"), day, "--out", tmp], check=True, capture_output=True)
+    if sport == "mlb":
+        import os
+        subprocess.run([sys.executable, str(HERE / "mlb_lanes.py"), "board", os.environ.get("DASH_MLB_CACHE", str(Path.home() / ".cache/dash_mlbhits")), day, "--out", tmp], check=True, capture_output=True)
+    else:
+        subprocess.run([sys.executable, str(HERE / f"{sport}_live.py"), day, "--out", tmp], check=True, capture_output=True)
     if not Path(tmp).exists():
         print(f"{day} {sport}: no games, nothing saved")
         return
@@ -50,12 +55,16 @@ def snapshot(sport, day, out_dir):
                 pr[key] = v
         lb = p.get("lane_base") or {}
         base = {k: v for k, v in {("goal" if sport == "nhl" else "pts25"): p.get("goals_per_gm") if sport == "nhl" else p.get("ppg")}.items() if v is not None}
-        alias = {"p_points": "pts", "p_assist": "ast", "p_sog3": "sog"}
+        alias = {"p_points": "pts", "p_assist": "ast", "p_sog3": "sog", "p_hit": "hit", "p_hrr": "hrr", "p_tb2": "tb2", "p_hr": "hr"}
         for src, key, _ in LANES[sport]:
             if alias.get(src, src) in lb:
                 base[key] = lb[alias.get(src, src)]
-        rows.append({"name": p["name"], "team": p["team"], "opp": p["opponent"], "p_play": p.get("p_play", 1.0), "p": pr, "b": base})
+        rows.append({"name": p["name"], "team": p["team"], "opp": p["opponent"], "p_play": p.get("p_play", 1.0), "p": pr, "b": base, **({"pid": p["pid"], "game_pk": p["game_pk"]} if sport == "mlb" else {})})
     Path(out_dir).mkdir(parents=True, exist_ok=True)
+    if sport == "mlb" and path.exists():                                   # lineups post through the day: keep every game already saved (never rewritten), add the new ones
+        old = json.load(open(path))
+        have = {r["game_pk"] for r in old["rows"]}
+        rows = old["rows"] + [r for r in rows if r["game_pk"] not in have]
     path.write_text(json.dumps({"date": day, "sport": sport, "model_versions": board.get("model_version"), "rows": rows}))
     print(f"{day} {sport}: {len(rows)} players saved -> {path}")
 
@@ -155,9 +164,36 @@ def outcomes_nba(day):
     return out
 
 
+def outcomes_mlb(rows):
+    """{player id: {hit, hrr, tb2, hr}} from the finished games' boxscores (StatsAPI); a hitter who did not bat is not graded."""
+    out = {}
+    for pk in sorted({r["game_pk"] for r in rows}):
+        bx = curl(f"https://statsapi.mlb.com/api/v1/game/{pk}/boxscore")
+        for side in ("away", "home"):
+            for key, pl in ((bx.get("teams") or {}).get(side, {}).get("players") or {}).items():
+                b = (pl.get("stats") or {}).get("batting") or {}
+                if not b.get("plateAppearances") and not b.get("atBats"):
+                    continue
+                h, r_, rbi, hr = b.get("hits", 0), b.get("runs", 0), b.get("rbi", 0), b.get("homeRuns", 0)
+                tb = b.get("totalBases", h + 0)
+                out[(pk, pl["person"]["id"])] = {"hit": int(h >= 1), "hrr": int(h + r_ + rbi >= 2), "tb2": int(tb >= 2), "hr": int(hr >= 1)}
+    return out
+
+
 def grade(sport, day, out_dir):
     path = Path(out_dir) / f"shadow_{sport}_{day}.json"
     d = json.load(open(path))
+    if sport == "mlb":
+        res = outcomes_mlb(d["rows"])
+        n = 0
+        for r in d["rows"]:
+            a = res.get((r["game_pk"], r["pid"]))
+            if a:
+                r["actual"] = a; n += 1
+        d["graded"] = n
+        path.write_text(json.dumps(d))
+        print(f"{day} mlb: graded {n} of {len(d['rows'])}")
+        return
     res = (outcomes_nhl if sport == "nhl" else outcomes_nba)(day)
     n = 0
     for r in d["rows"]:

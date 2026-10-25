@@ -42,7 +42,7 @@ jobs:
           if [ "$H" = "12" ]; then
             python3 bots/live_price_log.py report $D || true
           else
-            SERIES="KXNBAPTS KXNBAREB KXNBAAST KXNBAPRA KXNHLGOAL KXNHLPTS KXNHLAST"
+            SERIES="KXNBAPTS KXNBAREB KXNBAAST KXNBAPRA KXNHLGOAL KXNHLPTS KXNHLAST KXMLBHR KXMLBHIT KXMLBTB"
             if [ "$DOW" = "7" ] || [ "$DOW" = "1" ] || [ "$DOW" = "4" ]; then SERIES="$SERIES KXNFLANYTD"; fi
             for i in $(seq 1 11); do
               python3 bots/live_price_log.py loop $D --minutes 30 --every 60 --series $SERIES || true

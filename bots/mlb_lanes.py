@@ -171,6 +171,7 @@ def board(cache, day):
                     for lane, m in models.items():
                         z = m["intercept"] + sum(w * (f[n] - mu) / sd for n, w, mu, sd in zip(m["features"], m["weights"], m["mu"], m["sd"]))
                         r[f"p_{lane}"] = round(calibrate(m, z), 4)
+                    r["lane_base"] = {"hit": round(f["hit100"], 4), "hrr": round(f["hrr100"], 4), "tb2": round(f["tb2100"], 4), "hr": round(f["hrpa"] * f["pa_pg"], 4)}
                     rows.append(r)
     rows.sort(key=lambda r: -r["p_hr"])
     return rows

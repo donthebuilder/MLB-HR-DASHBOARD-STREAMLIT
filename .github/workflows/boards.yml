@@ -42,6 +42,7 @@ jobs:
             ~/.cache/dash_nhl
             ~/.cache/dash_nhl_live
             ~/.cache/dash_nfl
+            ~/.cache/dash_mlbhits
           key: dash-boards-${{ github.run_id }}
           restore-keys: dash-boards-
       - name: Restore the other published files (publish_data.sh keeps what it does not regenerate)
@@ -58,6 +59,14 @@ jobs:
           python3 bots/team_live.py board nhl "$ET" --out $D/team_board_nhl_latest.json || true
           python3 bots/game_sim.py nhl "$ET" --out $D/nhl_sim_latest.json || true
           python3 bots/game_sim.py nba "$ET" --out $D/nba_sim_latest.json || true
+      - name: MLB hitter lanes (posted lineups)
+        continue-on-error: true
+        run: |
+          D=public/data/current
+          ET=$(python3 -c "from datetime import datetime,timedelta,timezone;print((datetime.now(timezone.utc)-timedelta(hours=5)).date())")
+          [ -e $HOME/.cache/dash_mlbhits/games.json ] || python3 bots/mlb_hits_data.py $HOME/.cache/dash_mlbhits
+          ls bots/models/mlb_hit_v1.json >/dev/null 2>&1 || python3 bots/mlb_lanes.py fit $HOME/.cache/dash_mlbhits
+          python3 bots/mlb_lanes.py board $HOME/.cache/dash_mlbhits "$ET" --out $D/mlb_board_latest.json || true
       - name: NFL lanes and team lines (Thursday, Sunday, Monday runs)
         continue-on-error: true
         run: |

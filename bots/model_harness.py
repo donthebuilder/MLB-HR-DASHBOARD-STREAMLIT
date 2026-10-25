@@ -327,6 +327,7 @@ SHADOW_LANES = {
     "nba_pts25": ("nba", "pts25", "NBA points 25+ (fitted lane)"), "nba_reb10": ("nba", "reb10", "NBA rebounds 10+ (fitted lane)"),
     "nba_ast8": ("nba", "ast8", "NBA assists 8+ (fitted lane)"), "nba_tpm4": ("nba", "tpm4", "NBA 3PM 4+ (fitted lane)"),
     "nba_pra35": ("nba", "pra35", "NBA PRA 35+ (fitted lane)"), "nba_dd": ("nba", "dd", "NBA double-double (fitted lane)"),
+    "mlb_hit": ("mlb", "hit", "MLB 1+ hit (fitted lane)"), "mlb_hrr": ("mlb", "hrr", "MLB 2+ H+R+RBI (fitted lane)"), "mlb_tb2": ("mlb", "tb2", "MLB 2+ total bases (fitted lane)"), "mlb_hr": ("mlb", "hr", "MLB 1+ HR (fitted lane)"),
 }
 
 

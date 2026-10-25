@@ -1,0 +1,67 @@
+name: Shadow log - MLB hitter lanes
+
+# Own schedule, own job. The fitted MLB hitter lanes (1+ hit, 2+ H+R+RBI, 2+ total bases, 1+ HR) for every hitter in a posted lineup, saved before first pitch (re-run each hour from 18:00 UTC until the
+# last start; a game freezes when it starts) and graded the next morning from the boxscores. The regular-season game logs are pulled once (about 7,000 calls) and cached; refresh them at the start of a
+# season by changing the cache key. Postseason games are logged and graded the same way. Lives on `bbe-history`; changes nothing a pick or a score reads.
+on:
+  schedule:
+    - cron: '0 18,20,22 * * *'
+    - cron: '0 0 * * *'
+    - cron: '50 11 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: shadow-mlb
+  cancel-in-progress: false
+
+jobs:
+  log:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install numpy requests
+      - name: Cache the MLB game logs
+        id: logs
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/dash_mlbhits
+          key: dash-mlbhits-2026
+      - name: Pull the game logs once (cache miss)
+        if: steps.logs.outputs.cache-hit != 'true'
+        run: python3 bots/mlb_hits_data.py $HOME/.cache/dash_mlbhits
+      - name: Fit the lanes if the model files are missing
+        run: ls bots/models/mlb_hit_v1.json >/dev/null 2>&1 || python3 bots/mlb_lanes.py fit $HOME/.cache/dash_mlbhits
+      - name: Checkout the bbe-history branch (read/write)
+        run: |
+          git config --global user.name  "moonshot-bot"
+          git config --global user.email "bot@users.noreply.github.com"
+          git clone --quiet --depth 1 --branch bbe-history "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" _data
+          mkdir -p _data/public/data/current/shadow_log
+      - name: Snapshot (afternoon / evening) / grade yesterday (morning)
+        continue-on-error: true
+        run: |
+          D=_data/public/data/current/shadow_log
+          H=$(date -u +%H)
+          ET=$(python3 -c "from datetime import datetime,timedelta,timezone;print((datetime.now(timezone.utc)-timedelta(hours=5)).date())")
+          Y=$(python3 -c "from datetime import datetime,timedelta,timezone;print((datetime.now(timezone.utc)-timedelta(hours=5,days=1)).date())")
+          if [ "$H" = "11" ]; then
+            [ -e $D/shadow_mlb_$Y.json ] && python3 bots/shadow_log.py grade mlb "$Y" $D
+          else
+            DASH_MLB_CACHE=$HOME/.cache/dash_mlbhits python3 bots/shadow_log.py snapshot mlb "$ET" $D
+          fi
+          python3 bots/shadow_log.py report $D
+      - name: Commit
+        working-directory: _data
+        run: |
+          git add public/data/current/shadow_log
+          if git diff --cached --quiet; then echo "nothing changed"; else
+            git commit -qm "shadow log mlb $(date -u +%FT%H%MZ)"
+            for i in 1 2 3 4 5; do git pull -q --rebase origin bbe-history && git push -q origin HEAD:bbe-history && break; sleep $((i * 5)); done
+          fi
