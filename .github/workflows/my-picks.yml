@@ -1,0 +1,40 @@
+name: My picks (graded against the model and the prices)
+
+# Grades my_picks/picks.csv (edited by hand on GitHub) against the shadow logs on `bbe-history` and prints the report in the run summary. Runs each morning after the shadow-log grading,
+# and on demand (Actions -> My picks -> Run workflow). Changes nothing a pick or a score reads.
+on:
+  schedule:
+    - cron: '30 13 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Checkout the bbe-history branch (read/write)
+        run: |
+          git config --global user.name  "moonshot-bot"
+          git config --global user.email "bot@users.noreply.github.com"
+          git clone --quiet --depth 1 --branch bbe-history "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" _data
+          mkdir -p _data/public/data/current/shadow_log
+      - name: Grade and report
+        run: |
+          python3 bots/my_picks.py report my_picks/picks.csv _data/public/data/current/shadow_log | tee /tmp/my_picks_report.txt
+          { echo '### My picks'; echo '```'; cat /tmp/my_picks_report.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          cp /tmp/my_picks_report.txt _data/public/data/current/my_picks_report.txt
+      - name: Commit the report
+        working-directory: _data
+        run: |
+          git add public/data/current/my_picks_report.txt
+          if git diff --cached --quiet; then echo "nothing changed"; else
+            git commit -qm "my picks report $(date -u +%FT%H%MZ)"
+            for j in 1 2 3 4 5; do git pull -q --rebase origin bbe-history && git push -q origin HEAD:bbe-history && break; sleep $((j * 5)); done
+          fi
