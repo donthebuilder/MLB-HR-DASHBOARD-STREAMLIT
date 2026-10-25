@@ -22,7 +22,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import buckets_backtest as bb          # noqa: E402
 from tune_models import fit_logistic, topk   # noqa: E402
 
-LABEL = {"reb": "REB 10+", "ast": "AST 8+", "3pm": "3PM 4+", "pra": "PRA 35+"}
+LABEL = {"reb": "REB 10+", "ast": "AST 8+", "3pm": "3PM 4+", "pra": "PRA 35+", "dd": "DOUBLE-DOUBLE"}
 TRAIN, TEST = [2023, 2024], 2025
 
 

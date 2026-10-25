@@ -129,7 +129,7 @@ def main():
     rows = bb.run_games(stream, 2026, lambda gid: lines.get(gid) if gid in lines else None, only_ids=synth_ids)
     model = json.load(open(Path(__file__).resolve().parent / "models" / "nba_pts_v2.json"))
     lane_models = {}
-    for lane in ("reb", "ast", "3pm", "pra"):
+    for lane in ("reb", "ast", "3pm", "pra", "dd"):
         fp = Path(__file__).resolve().parent / "models" / f"nba_{lane}_v1.json"
         if fp.exists():
             lane_models[lane] = json.load(open(fp))
@@ -169,7 +169,7 @@ def main():
     out.write_text(json.dumps({"date": day, "model_version": model["model_version"], "players": out_rows,
                                "left_out_injured": [{"name": n, "team": t, "status": s, "p_play": p} for n, t, s, p in skipped]}, indent=1))
     print(f"{len(tonight)} games, {len(out_rows)} players scored, {len(skipped)} taken out as injured -> {out}")
-    for lane, label in (("reb", "REB 10+"), ("ast", "AST 8+"), ("3pm", "3PM 4+"), ("pra", "PRA 35+")):
+    for lane, label in (("reb", "REB 10+"), ("ast", "AST 8+"), ("3pm", "3PM 4+"), ("pra", "PRA 35+"), ("dd", "DOUBLE-DOUBLE")):
         top = sorted((r for r in out_rows if lane in r["lanes"]), key=lambda r: r["lanes"][lane] * r["p_play"], reverse=True)[:5]
         print(f"{label:<8} " + ", ".join(f"{(r['name'] or '?')} {100 * r['lanes'][lane]:.0f}%" for r in top))
     print()

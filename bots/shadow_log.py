@@ -19,7 +19,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 LANES = {
     "nhl": [("p_goal", "goal", "Goal 1+"), ("p_points", "points", "Points 1+"), ("p_assist", "assists", "Assists 1+"), ("p_sog3", "shots3", "Shots 3+")],
-    "nba": [("p_25", "pts25", "Points 25+"), ("reb", "reb10", "Rebounds 10+"), ("ast", "ast8", "Assists 8+"), ("3pm", "tpm4", "3PM 4+"), ("pra", "pra35", "PRA 35+")],
+    "nba": [("p_25", "pts25", "Points 25+"), ("reb", "reb10", "Rebounds 10+"), ("ast", "ast8", "Assists 8+"), ("3pm", "tpm4", "3PM 4+"), ("pra", "pra35", "PRA 35+"), ("dd", "dd", "Double-double")],
 }
 
 
@@ -75,7 +75,8 @@ def outcomes_nba(day):
                 g = lambda k: int(s.get(k) or 0)
                 tpm = int((s.get("3PT") or "0-0").split("-")[0])
                 out[a["athlete"]["displayName"]] = {"pts25": int(g("PTS") >= 25), "reb10": int(g("REB") >= 10), "ast8": int(g("AST") >= 8),
-                                                    "tpm4": int(tpm >= 4), "pra35": int(g("PTS") + g("REB") + g("AST") >= 35)}
+                                                    "tpm4": int(tpm >= 4), "pra35": int(g("PTS") + g("REB") + g("AST") >= 35),
+                                                    "dd": int(sum(g(k) >= 10 for k in ("PTS", "REB", "AST")) >= 2)}
     return out
 
 

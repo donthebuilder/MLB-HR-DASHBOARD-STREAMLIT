@@ -258,6 +258,12 @@ def lane_rows(hist, p, opp_hist, f):
                   "f": {**common, "season_avg": mean(pra_h), "l10_avg": mean(pra_h[-10:]), "ppg": f["ppg"], "opp_allowed": f["opp_allowed"],
                         "form3": mean(pra_h[-3:]) - mean(pra_h[-10:]),
                         **({"opp_pos_rel": f["opp_pos_pts_rel"] + f["opp_pos_reb_rel"] + f["opp_pos_ast_rel"]} if "opp_pos_pts_rel" in f else {})}, "avg": mean(pra_h)}
+    dd = lambda x: int(sum(v >= 10 for v in (x["pts"], x["reb"], x["ast"])) >= 2)
+    ddh = [dd(x) for x in hist]
+    out["dd"] = {"y": dd(p), "avg": mean(ddh),
+                 "f": {**common, "season_avg": mean(ddh), "l10_avg": mean(ddh[-10:]), "form3": mean(ddh[-3:]) - mean(ddh[-10:]),
+                       "pts10": mean([x["pts"] for x in h10]), "reb10": mean([x["reb"] for x in h10]), "ast10": mean([x["ast"] for x in h10]),
+                       "second_best10": mean([sorted((x["pts"], x["reb"], x["ast"]))[1] for x in h10])}}
     return out
 
 
