@@ -72,7 +72,7 @@ def save_model(D, te_z, te_y, path):
     w = fit_logistic((X - mu) / sd, allr["hit"].to_numpy().astype(float), l2=20.0)
     ab = fit_logistic(te_z.reshape(-1, 1), te_y, l2=0.01)
     qs = np.sort(1 / (1 + np.exp(-(ab[0] + ab[1] * te_z))))
-    t = float(qs[int(len(qs) * 0.99)])
+    t = float(qs[int(len(qs) * 0.95)])
     Path(path).write_text(json.dumps({"model_version": "nfl_td_fit_v1", "target": "anytime TD", "features": FEATS + POSD, "mu": mu.tolist(), "sd": sd.tolist(),
                                       "intercept": float(w[0]), "weights": w[1:].tolist(), "fit_on": f"{allr.height} player-weeks, 2023-25",
                                       "platt": {"a": float(ab[0]), "b": float(ab[1]), "tail": {"t": t, "slope": 0.25}}}, indent=1))
