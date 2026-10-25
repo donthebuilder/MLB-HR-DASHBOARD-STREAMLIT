@@ -54,15 +54,23 @@ def live_games(sport):
     return out
 
 
+PRE_T = {}        # espn game id -> pregame total
+DEFAULT_TOTAL = {"nba": 228.0, "nfl": 45.0, "nhl": 6.0}
 PRE = {}          # espn game id -> pregame HOME margin, filled while games are still pregame and persisted by the loop (ESPN drops the line once a game is live)
 
 
 def parse_pre(g):
+    """pregame HOME margin in the sport's units: points for NBA / NFL, (book win probability - 0.5) for NHL, from ESPN's line string ("DAL -198" for hockey)."""
     import re
     m = re.match(r"\s*([A-Z]{2,4})\s+([-+]?\d+(?:\.\d+)?)", str(g.get("spread_detail") or ""))
     if not m:
         return None
-    fav, v = m.group(1), abs(float(m.group(2)))
+    fav, v = m.group(1), float(m.group(2))
+    if g["sport"] == "nhl":
+        p = (-v / (-v + 100.0) if v < 0 else 100.0 / (v + 100.0)) - 0.02                # the favourite's implied probability with a typical vig taken out
+        ph = p if fav == g["home"] else 1 - p if fav == g["away"] else 0.5
+        return ph - 0.5
+    v = abs(v)
     return v if fav == g["home"] else -v if fav == g["away"] else 0.0
 
 
@@ -77,7 +85,7 @@ def pre_margin(g):
         import team_live
         for t in team_live.board(g["sport"], g["date"] if g["sport"] != "nba" else g["date"]):
             if t["home"] == g["home"] and t["away"] == g["away"]:
-                PRE[g["id"]] = -t["model_spread_home"]; return PRE[g["id"]]
+                PRE[g["id"]] = (t["model_p_home"] - 0.5) if g["sport"] == "nhl" else -t["model_spread_home"]; return PRE[g["id"]]
     except Exception:
         pass
     return 0.0
@@ -96,10 +104,7 @@ def fair_margin_dist(g, side):
     """(mean, sd) of this side's final margin."""
     lead = (g["hs"] - g["as"]) * (1 if side == "home" else -1)
     pre = pre_margin(g) * (1 if side == "home" else -1)
-    if g["sport"] == "nhl":
-        return None
-    tab = LS.load(g["sport"])
-    return LS.predict(tab, g["left"], lead, pre)
+    return None   # (the probabilities now come from live_spread.p_margin_over, which knows the hockey tables)
 
 
 def nhl_probs(g, side, need):
@@ -139,6 +144,28 @@ def kalshi_for(g, cfg):
     return out
 
 
+_MODELS = {}
+
+
+def models(sport):
+    if sport not in _MODELS:
+        try:
+            _MODELS[sport] = LS.load_models(sport)
+        except FileNotFoundError:
+            _MODELS[sport] = None
+    return _MODELS[sport]
+
+
+def margin_over(g, side, x):
+    """P(this side's final margin > x) from the live-spread tables (hockey: observed distribution); the Poisson model is only the fallback when no table exists."""
+    m = models(g["sport"])
+    if not m:
+        return nhl_probs(g, side, x) if g["sport"] == "nhl" else None
+    lead = (g["hs"] - g["as"]) * (1 if side == "home" else -1)
+    pre = pre_margin(g) * (1 if side == "home" else -1)
+    return LS.p_margin_over(m, g["left"], lead, pre, x)
+
+
 def team_side(g, text):
     for side, nm in (("home", g["home_name"]), ("away", g["away_name"])):
         if text and (nm.split()[-1].lower() in text.lower() or nm.lower().startswith(text.lower()[:8])):
@@ -156,30 +183,33 @@ def evaluate(g, kind, m, min_edge):
         side = team_side(g, sub)
         if not side:
             return None
-        fair = (1 - Phi((0 - fair_margin_dist(g, side)[0]) / fair_margin_dist(g, side)[1])) if sport != "nhl" else nhl_probs(g, side, 0)
+        fair = margin_over(g, side, 0)
         desc = f"{sub} to win"
     elif kind == "spread":
         side = team_side(g, sub)
         x = m.get("floor_strike")
         if not side or x is None:
             return None
-        fair = (1 - Phi((x - fair_margin_dist(g, side)[0]) / fair_margin_dist(g, side)[1])) if sport != "nhl" else nhl_probs(g, side, x)
+        fair = margin_over(g, side, x)
         desc = f"{sub}"
     else:
         x = m.get("floor_strike")
         if x is None:
             return None
-        cur = g["hs"] + g["as"]
-        if sport == "nhl":
+        mm = models(sport)
+        if not mm or not mm["ttab"] or sport == "nhl":                               # NHL totals: the late-game low-probability tail is still under-predicted in the check (2% -> 11%), so no hockey total alerts yet
             return None
-        mu_h = fair_margin_dist(g, "home")[0]; sd = fair_margin_dist(g, "home")[1]
-        return None                                                              # totals: no calibrated live total model yet, listed but not alerted
+        if g["id"] not in PRE_T:
+            return None                                                            # no pregame total was cached (the loop has to see the game before it starts): no total alerts, never a guess
+        L = PRE_T[g["id"]]
+        fair = LS.p_total_over(mm, g["left"], L, g["hs"] + g["as"], g["hs"] - g["as"], x)      # YES = over
+        desc = sub
     if sport == "nhl" and kind != "total":
         pass
     buy_yes = fair - a - FEE(a)
     buy_no = (1 - fair) - (1 - b) - FEE(1 - b)
     best = ("YES", buy_yes, a) if buy_yes >= buy_no else ("NO", buy_no, 1 - b)
-    if best[1] < min_edge:
+    if best[1] < min_edge or best[1] > 0.25:                                       # an "edge" over 25 points is a data error, not a bet
         return None
     return {"game": f"{g['away']}@{g['home']}", "sport": sport, "kind": kind, "market": m["ticker"], "desc": desc, "side": best[0], "price": round(best[2], 3), "fair": round(fair if best[0] == "YES" else 1 - fair, 4),
             "edge": round(best[1], 4), "state": {"hs": g["hs"], "as": g["as"], "left": g["left"], "period": g["period"], "pre_home_margin": pre_margin(g)}, "espn_id": g["id"], "date": g["date"]}
@@ -189,6 +219,8 @@ def once(min_edge, sports=("nba", "nfl", "nhl")):
     found = []
     for sp in sports:
         for g in live_games(sp):
+            if g.get("total"):
+                PRE_T.setdefault(g["id"], float(g["total"]))
             if g["state"] == "pre":
                 if parse_pre(g) is not None:
                     PRE[g["id"]] = parse_pre(g)
@@ -205,10 +237,11 @@ def loop(out_dir, minutes, every, min_edge):
     seen, end, n = {}, time.time() + 60 * minutes, 0
     pf = Path(out_dir) / "_pre_margins.json"
     if pf.exists():
-        PRE.update(json.load(open(pf)))
+        saved = json.load(open(pf))
+        PRE.update(saved.get("margin", {})); PRE_T.update(saved.get("total", {}))
     while time.time() < end:
         now = datetime.now(timezone.utc)
-        pf.write_text(json.dumps(PRE))
+        pf.write_text(json.dumps({"margin": PRE, "total": PRE_T}))
         for r in once(min_edge):
             k = (r["market"], r["side"])
             if k in seen and abs(seen[k] - r["edge"]) < 0.02:
@@ -231,6 +264,10 @@ def settle(alert):
     names = {c["homeAway"]: c["team"]["displayName"] for c in comp.get("competitors", [])}
     hm = sc["home"] - sc["away"]
     sub = alert["desc"]
+    if alert["kind"] == "total":
+        import re as _re
+        mm = _re.search(r"([\d.]+)", sub)
+        return (sc["home"] + sc["away"]) > float(mm.group(1)) if mm else None
     side = "home" if names["home"].split()[-1].lower() in sub.lower() else "away" if names["away"].split()[-1].lower() in sub.lower() else None
     if side is None:
         return None
@@ -268,7 +305,7 @@ def report(out_dir):
         if rs:
             print(f"  edge {100 * lo:.0f}-{100 * min(hi, 1) :.0f} pts: {len(rs)} alerts, our fair price averaged {100 * sum(r['fair'] for r in rs) / len(rs):.1f}%, won {100 * sum(r['won'] for r in rs) / len(rs):.1f}%, "
                   f"return {100 * sum(r['profit'] for r in rs) / sum(r['price'] for r in rs):+.1f}% on the money risked")
-    for k in ("game", "spread"):
+    for k in ("game", "spread", "total"):
         rs = [r for r in rows if r["kind"] == k]
         if rs:
             print(f"  {k}: {len(rs)} alerts, return {100 * sum(r['profit'] for r in rs) / sum(r['price'] for r in rs):+.1f}%")
