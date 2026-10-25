@@ -19,7 +19,7 @@ Writes (public/data/current):
   nhl_odds_latest.json   consensus line / over / under / implied per player
   nhl_odds_status.json   what happened this run, every run, including nothing
   nhl_odds_<date>.json   HISTORY: one file per game date, {name: {market:
-                         [line, over, implied]}}, a player's row frozen once
+                         [line, over, implied, under]}}, a player's row frozen once
                          his game starts so history is the pregame price
 
 UNVERIFIED LIVE (the sandbox cannot reach the host). The first probe prints
@@ -114,7 +114,7 @@ def fetch(key: str, books: str = "fanatics,draftkings") -> list[dict]:
 
 
 def slim_by_date(board: dict) -> dict[str, dict]:
-    """{game_date: {"rows": {name: {market: [line, over, implied]}},
+    """{game_date: {"rows": {name: {market: [line, over, implied, under]}},
     "commence": {name: iso}, "game": {name: "A @ H"}}} from consensus()."""
     out: dict[str, dict] = {}
     for norm, mkts in board.items():
@@ -125,7 +125,7 @@ def slim_by_date(board: dict) -> dict[str, dict]:
             if not day:
                 continue
             d = out.setdefault(day, {"rows": {}, "commence": {}, "game": {}})
-            d["rows"].setdefault(norm, {})[m] = [q["line"], q["over"], q.get("implied")]
+            d["rows"].setdefault(norm, {})[m] = [q["line"], q["over"], q.get("implied"), q.get("under")]
             d["commence"][norm] = q.get("commence")
             d["game"][norm] = q.get("game")
     return out
@@ -223,9 +223,10 @@ def main() -> int:
         except Exception:
             pass
         snap.write_text(json.dumps({
+            "open": base.carry_open(snap, rows_, now),
             "date": day, "fetched_at": now.isoformat(), "source": "oddsapiio",
             "rows": rows_, "commence": com, "game": game,
-            "note": "{name: {market: [line, over, implied]}}; frozen per player at his game's start.",
+            "note": "{name: {market: [line, over, implied, under]}}; frozen per player at his game's start.",
         }, separators=(",", ":")))
         written += 1
     write_status(out, state="ok", reason=f"{len(board)} priced players, {written} game date(s) written.",

@@ -59,15 +59,9 @@ def main():
     ids26 = {g["id"] for g in bb.load(2026, a.cache)}
     cur = [r for r in bb.run_games(gs, 2026, lambda gid: G.close_line("nba", gid, ld) if ld.exists() else None, only_ids=ids26) if r.get("lanes")]
     print(f"{len(hist)} training player-games (2023-25); {len(cur)} 2026 player-games with features")
-    lines = {}
-    for f in sorted(glob.glob(str(Path(a.odds) / "nba_odds_20*.json"))):
-        d = json.load(open(f))
-        for nm, mk in d["rows"].items():
-            ko = (d.get("commence") or {}).get(nm)
-            if ko and d["fetched_at"] >= ko.replace("Z", "+00:00"):
-                continue
-            for m, v in mk.items():
-                lines[(d["date"], injury_status.key(nm), m)] = v
+    import line_tools as LT
+    oc = LT.open_close(a.odds, "nba", lambda d: d.get("date"), injury_status.key)
+    lines = {k: {"open": v["open"][1], "close": v["close"][1], "moved": v["open"][0] != v["close"][0]} for k, v in oc.items()}
     names = {}
     for r in cur:
         if r["pid"] not in names:
@@ -80,16 +74,19 @@ def main():
         mu, sd = X.mean(0), X.std(0) + 1e-9
         W = [fit_logistic((X - mu) / sd, (y >= t).astype(float), l2=20.0) for t in ths]
         for r in cur:
-            ln = lines.get((r["night"], names.get(r["pid"]), om))
+            oc_ = lines.get((r["night"], names.get(r["pid"]), om))
             fv = featvec(r, parts)
-            if not ln or fv is None:
+            if not oc_ or fv is None:
                 continue
+            ln = oc_["close"]
             x = (np.array([fv[k] for k in keys], float) - mu) / sd
             probs = [1 / (1 + math.exp(-(x @ w[1:] + w[0]))) for w in W]
             yv = out(r)
             if yv == ln[0]:
                 continue
-            res.append({"market": om, "line": ln[0], "price": ln[1], "implied": ln[2] / 100.0, "model": p_over(ths, probs, ln[0]), "over": int(yv > ln[0])})
+            of = LT.fair_over(oc_["open"][1], oc_["open"][3] if len(oc_["open"]) > 3 else None)[0]
+            cf = LT.fair_over(ln[1], ln[3] if len(ln) > 3 else None)[0]
+            res.append({"market": om, "line": ln[0], "price": ln[1], "implied": ln[2] / 100.0, "open_fair": of, "close_fair": cf, "model": p_over(ths, probs, ln[0]), "over": int(yv > ln[0])})
     print(f"\n{'market':<18}{'n':>5}{'went over':>11}{'book implied':>14}{'our p':>8}{'logloss book/ours':>20}   over bets at edge >=4 / >=8 pts (n, hit, ROI)")
     for om in MK:
         rs = [r for r in res if r["market"] == om]
@@ -102,6 +99,10 @@ def main():
             sel = [r for r in rs if r["model"] - r["implied"] >= thr]
             bets.append(f"{len(sel)}, {100 * sum(r['over'] for r in sel) / len(sel):.0f}%, {100 * sum((profit(r['price']) if r['over'] else -1.0) for r in sel) / len(sel):+.0f}%" if sel else "0")
         print(f"{om:<18}{len(rs):>5}{100 * y.mean():>10.0f}%{100 * np.mean(pb):>13.1f}%{100 * np.mean(pm):>7.1f}%{ll(pb):>12.3f}/{ll(pm):.3f}   {' | '.join(bets)}")
+    print("\nClosing-line value (picks at >= 4 pts of edge vs the opening price):")
+    for om in MK:
+        c = LT.clv_summary([r for r in res if r["market"] == om])
+        print(f"  {om:<18}" + (f"{c['n']} picks, market moved our way {100 * c['moved_our_way']:.0f}% / against {100 * c['moved_against']:.0f}%, average CLV {c['avg_clv_pts']:+.1f} pts" if c else "no picks with an opening and a closing price yet"))
     json.dump(res, open(Path(a.odds) / "nba_line_edge_results.json", "w"))
 
 

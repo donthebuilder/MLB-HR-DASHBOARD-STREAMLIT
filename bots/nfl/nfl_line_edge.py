@@ -20,6 +20,7 @@ import polars as pl
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE)); sys.path.insert(0, str(HERE.parent))
 import nfl_scoring as S                 # noqa: E402
+import line_tools as LT                 # noqa: E402
 import nfl_lanes as L                   # noqa: E402
 from tune_models import fit_logistic    # noqa: E402
 
@@ -39,19 +40,10 @@ def american_profit(price):
 
 
 def load_lines(odds_dir, weeks):
-    """latest pre-kickoff snapshot per (week, player, market)."""
-    best = {}
-    for f in sorted(glob.glob(str(Path(odds_dir) / "nfl_odds_20*.json"))):
-        d = json.load(open(f))
-        if d.get("week") not in weeks:
-            continue
-        for pid, mk in d["rows"].items():
-            ko = d.get("commence", {}).get(pid)
-            if ko and d["fetched_at"] >= ko.replace("Z", "+00:00"):
-                continue                                # fetched after kickoff: not a pregame line
-            for m, v in mk.items():
-                best[(d["week"], pid, m)] = (d["fetched_at"], v)
-    return {k: v[1] for k, v in best.items()}
+    """{(week, player, market): {"open": [...], "close": [...]}}: first and last pregame snapshot (line_tools.open_close)."""
+    import line_tools as LT
+    oc = LT.open_close(odds_dir, "nfl", lambda d: d.get("week") if d.get("week") in weeks else None, lambda k: k)
+    return {k: {"open": v["open"][1], "close": v["close"][1]} for k, v in oc.items()}
 
 
 def p_over(ths, probs, line):
@@ -91,14 +83,19 @@ def main():
                 probs.append(1 / (1 + np.exp(-(Xte @ w[1:] + w[0]))))
             probs = np.array(probs).T                                  # rows x thresholds
             for i, r in enumerate(te.iter_rows(named=True)):
-                ln = lines.get((wk, r["player_id"], om))
-                if not ln:
+                oc = lines.get((wk, r["player_id"], om))
+                if not oc:
                     continue
-                line, price, implied = ln
+                ln = oc["close"]
+                line, price, implied = ln[0], ln[1], ln[2]
+                under = ln[3] if len(ln) > 3 else None
+                of = LT.fair_over(oc["open"][1], oc["open"][3] if len(oc["open"]) > 3 else None)[0]
+                cf, devigged = LT.fair_over(price, under)
                 y = out(r)
                 if y is None or y == line:
                     continue
-                results.append({"market": om, "week": wk, "line": line, "price": price, "implied": implied / 100.0, "model": p_over(ths, probs[i], line), "over": int(y > line)})
+                results.append({"market": om, "week": wk, "line": line, "price": price, "under_price": under, "implied": implied / 100.0, "open_fair": of, "close_fair": cf, "devigged": devigged,
+                                "line_moved": oc["close"][0] != oc["open"][0], "model": p_over(ths, probs[i], line), "over": int(y > line)})
     # anytime TD: fitted td model vs price
     import td_fit
     td_rows = []
@@ -118,6 +115,10 @@ def main():
             prof = sum((american_profit(r["price"]) if r["over"] else -1.0) for r in sel)
             bets.append(f"{len(sel)}, {100 * sum(r['over'] for r in sel) / len(sel):.0f}%, {100 * prof / len(sel):+.0f}%" if sel else "0")
         print(f"{om:<24}{len(rs):>5}{100 * y.mean():>10.0f}%{100 * np.mean(pb):>13.1f}%{100 * np.mean(pm):>7.1f}%{ll(pb):>12.3f}/{ll(pm):.3f}   {' | '.join(bets)}")
+    print("\nClosing-line value: our over/under picks at >= 4 pts of edge vs the OPENING fair price (needs the over and under prices; lines saved before 2026-10-24 have only the over):")
+    for om in MK:
+        c = LT.clv_summary([r for r in results if r["market"] == om])
+        print(f"  {om:<24}" + (f"{c['n']} picks, market moved our way {100 * c['moved_our_way']:.0f}% / against {100 * c['moved_against']:.0f}%, average CLV {c['avg_clv_pts']:+.1f} pts" if c else "no picks with an opening and a closing price yet"))
     json.dump(results, open(Path(a.odds) / "line_edge_results.json", "w"))
 
 
