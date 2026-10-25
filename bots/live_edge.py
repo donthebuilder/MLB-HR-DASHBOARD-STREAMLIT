@@ -54,6 +54,7 @@ def live_games(sport):
     return out
 
 
+STATE_MISMATCH = []   # (game id, our home win probability, the market's) for games skipped by the state check
 PRE_T = {}        # espn game id -> pregame total
 DEFAULT_TOTAL = {"nba": 228.0, "nfl": 45.0, "nhl": 6.0}
 PRE = {}          # espn game id -> pregame HOME margin, filled while games are still pregame and persisted by the loop (ESPN drops the line once a game is live)
@@ -206,13 +207,18 @@ def evaluate(g, kind, m, min_edge):
         desc = sub
     if sport == "nhl" and kind != "total":
         pass
+    import staking as ST
     buy_yes = fair - a - FEE(a)
     buy_no = (1 - fair) - (1 - b) - FEE(1 - b)
     best = ("YES", buy_yes, a) if buy_yes >= buy_no else ("NO", buy_no, 1 - b)
     if best[1] < min_edge or best[1] > 0.25:                                       # an "edge" over 25 points is a data error, not a bet
         return None
-    return {"game": f"{g['away']}@{g['home']}", "sport": sport, "kind": kind, "market": m["ticker"], "desc": desc, "side": best[0], "price": round(best[2], 3), "fair": round(fair if best[0] == "YES" else 1 - fair, 4),
-            "edge": round(best[1], 4), "state": {"hs": g["hs"], "as": g["as"], "left": g["left"], "period": g["period"], "pre_home_margin": pre_margin(g)}, "espn_id": g["id"], "date": g["date"]}
+    pfair = fair if best[0] == "YES" else 1 - fair
+    # paper stake: half-trusted model (no live track record yet), quarter Kelly, 1% cap, on the price after the fee; the report shows the paper bankroll it would have grown
+    amer = (100 * (1 - best[2]) / best[2]) if best[2] < 0.5 else (-100 * best[2] / (1 - best[2]))
+    stake, _, _ = ST.stake_fraction(pfair, int(round(amer)) if best[2] < 0.5 else int(round(amer)), n=500, fee=FEE(best[2]))
+    return {"game": f"{g['away']}@{g['home']}", "sport": sport, "kind": kind, "market": m["ticker"], "desc": desc, "side": best[0], "price": round(best[2], 3), "fair": round(pfair, 4),
+            "edge": round(best[1], 4), "stake": round(stake, 5), "state": {"hs": g["hs"], "as": g["as"], "left": g["left"], "period": g["period"], "pre_home_margin": pre_margin(g)}, "espn_id": g["id"], "date": g["date"]}
 
 
 def once(min_edge, sports=("nba", "nfl", "nhl")):
@@ -225,7 +231,17 @@ def once(min_edge, sports=("nba", "nfl", "nhl")):
                 if parse_pre(g) is not None:
                     PRE[g["id"]] = parse_pre(g)
                 continue
-            for kind, m in kalshi_for(g, SPORTS[sp]):
+            ms = kalshi_for(g, SPORTS[sp])
+            # STATE CHECK. ESPN's scoreboard can run minutes behind Kalshi's live quotes; a stale score makes every market look mispriced at once. If our win probability and the market's moneyline
+            # disagree by more than 15 points the game's state is not trusted this pass: no alerts for it, and the mismatch is counted.
+            ml = next((m for k, m in ms if k == "game" and team_side(g, m.get("yes_sub_title") or "") == "home"), None)
+            fh = margin_over(g, "home", 0)
+            if ml and fh is not None:
+                mid = (float(ml.get("yes_bid_dollars") or 0) + float(ml.get("yes_ask_dollars") or 0)) / 2
+                if abs(fh - mid) > 0.10:
+                    STATE_MISMATCH.append((g["id"], round(fh, 3), round(mid, 3)))
+                    continue
+            for kind, m in ms:
                 r = evaluate(g, kind, m, min_edge)
                 if r:
                     found.append(r)
@@ -309,6 +325,12 @@ def report(out_dir):
         rs = [r for r in rows if r["kind"] == k]
         if rs:
             print(f"  {k}: {len(rs)} alerts, return {100 * sum(r['profit'] for r in rs) / sum(r['price'] for r in rs):+.1f}%")
+    paper = [r for r in rows if r.get("stake")]
+    if paper:
+        bank = 1.0
+        for r in sorted(paper, key=lambda r: r["t"]):
+            bank *= 1 + r["stake"] * (r["profit"] / r["price"])
+        print(f"  paper bankroll if every alert were staked by staking.py (quarter Kelly, half-trusted model, 1% cap): 1.000 -> {bank:.3f} over {len(paper)} alerts")
 
 
 if __name__ == "__main__":
@@ -316,7 +338,7 @@ if __name__ == "__main__":
     ap.add_argument("--min-edge", type=float, default=0.04); a = ap.parse_args()
     if a.cmd == "once":
         r = once(a.min_edge)
-        print(f"{len(r)} edges >= {100 * a.min_edge:.0f} pts after fees across live games")
+        print(f"{len(r)} edges >= {100 * a.min_edge:.0f} pts after fees across live games" + (f"; {len(STATE_MISMATCH)} game(s) skipped by the state check (our win probability vs the market's moneyline more than 10 points apart): {STATE_MISMATCH}" if STATE_MISMATCH else ""))
         for x in sorted(r, key=lambda x: -x["edge"])[:12]:
             s = x["state"]
             print(f"  {x['game']:<9}{x['kind']:<7}{x['desc'][:38]:<40}BUY {x['side']:<3}@{100 * x['price']:.0f}c fair {100 * x['fair']:.0f}% edge {100 * x['edge']:+.1f}  (score {s['as']}-{s['hs']}, {int(s['left'] // 60)}:{int(s['left'] % 60):02d} left)")

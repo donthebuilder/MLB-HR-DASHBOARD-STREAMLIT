@@ -25,6 +25,7 @@ CFG = {"nba": {"espn": "basketball/nba", "grid": list(range(2640, 100, -120)), "
        "nfl": {"espn": "football/nfl", "grid": list(range(3600, 100, -180)), "period": 900, "n": 4, "total_len": 3600},
        "nhl": {"espn": "hockey/nhl", "grid": list(range(3420, 100, -180)), "period": 1200, "n": 3, "total_len": 3600}}
 Phi = lambda x: 0.5 * (1 + math.erf(x / math.sqrt(2)))
+USE_EMP_TOTAL = False      # the empirical remaining-goals table was tried for NHL totals and made the check WORSE (log loss 1.21 vs 0.66): kept in the file, not used
 
 
 def curl(url):
@@ -177,6 +178,38 @@ def predict(tab, T, lead, pre_margin):
     return lead + a + b * lead + c * pre_margin, max(sd * max(0.3, al + be * abs(lead) / 10.0), 0.5)
 
 
+def fit_total_emp(rows, sport, ttab):
+    """NHL totals: the distribution of goals STILL TO COME, by clock and by the model's expected goals still to come (bucketed by 0.25). The Poisson was too thin in the tails (a line one goal away
+    with minutes left: empty-net and late goals). {T: {bucket: [counts for 0..8 goals]}}"""
+    cfg = CFG[sport]; emp = {}
+    for i, T in enumerate(cfg["grid"]):
+        near = cfg["grid"][max(0, i - 1): i + 2]
+        d = {}
+        for r in rows:
+            for t in near:
+                mu, _ = predict_total(ttab, t, r[5], r[6][t], r[3][t], sport)
+                b = int(max(0, min(24, round(max(mu - r[6][t], 0.0) / 0.25))))
+                k = int(max(0, min(8, r[4] - r[6][t])))
+                d.setdefault(b, [0] * 9)[k] += 1
+        emp[T] = d
+    return emp
+
+
+def emp_total_over(emp, T, mu_rem, k, min_n=40):
+    """P(goals still to come > k) from the empirical table; None if the bucket is too thin."""
+    e = emp.get(nearest(emp, T), {})
+    b = int(max(0, min(24, round(max(mu_rem, 0.0) / 0.25))))
+    c = None
+    for db in (0, 1, -1, 2, -2):                                    # borrow from the neighbouring bucket when this one is thin
+        cc = e.get(b + db)
+        if cc and sum(cc) >= min_n:
+            c = cc; break
+    if not c:
+        return None
+    n = sum(c)
+    return sum(c[j] for j in range(len(c)) if j > k) / n
+
+
 def poisson_over(mu, k):
     """P(X > k) for X ~ Poisson(mu)."""
     mu = max(mu, 1e-6); p, c = math.exp(-mu), 0.0
@@ -194,7 +227,8 @@ def predict_total(ttab, T, L, S, lead, sport):
 def load_models(sport):
     d = json.load(open(HERE / "models" / f"live_spread_{sport}.json"))
     emp = {int(T): {int(k): v for k, v in e.items()} for T, e in (d.get("emp") or {}).items()}
-    return {"tab": {int(k): v for k, v in d["table"].items()}, "ttab": {int(k): v for k, v in (d.get("total_table") or {}).items()}, "emp": emp, "sport": sport}
+    temp = {int(T): {int(k): v for k, v in e.items()} for T, e in (d.get("total_emp") or {}).items()}
+    return {"tab": {int(k): v for k, v in d["table"].items()}, "ttab": {int(k): v for k, v in (d.get("total_table") or {}).items()}, "emp": emp, "temp": temp, "sport": sport}
 
 
 def p_margin_over(m, T, lead, pre, x):
@@ -211,7 +245,12 @@ def p_total_over(m, T, L, S, lead, x):
     """P(final total > x). Hockey: Poisson over the goals still to come (mean from the fitted pace model); others Normal."""
     mu, sd = predict_total(m["ttab"], T, L, S, lead, m["sport"])
     if m["sport"] == "nhl":
-        return poisson_over(max(mu - S, 0.45 * 6.2 * T / 3600.0 + 0.03), x - S)      # never below about half the usual scoring rate for the time left: late goals and empty nets still happen
+        k = math.floor(x - S)                                                       # over a x.5 line = more than floor(x - S) goals still to come
+        if m.get("temp") and USE_EMP_TOTAL:
+            p = emp_total_over(m["temp"], T, max(mu - S, 0.0), k)
+            if p is not None:
+                return p
+        return poisson_over(max(mu - S, 0.45 * 6.2 * T / 3600.0 + 0.03), x - S)
     return 1 - Phi((x - mu) / sd)
 
 
@@ -220,7 +259,7 @@ def fit(sport, cache):
     cut = int(len(rows) * 0.7)
     tr, te = rows[:cut], rows[cut:]
     tab, ttab = fit_table(tr, sport), fit_total_table(tr, sport)
-    mod = {"tab": tab, "ttab": ttab, "emp": fit_empirical(tr, sport) if sport == "nhl" else {}, "sport": sport}
+    mod = {"tab": tab, "ttab": ttab, "emp": fit_empirical(tr, sport) if sport == "nhl" else {}, "temp": {}, "sport": sport}
     cfg = CFG[sport]
     print(f"{sport.upper()}: {len(rows)} games with play-by-play and a pregame line; tables fitted on the first {len(tr)}, checked on the last {len(te)}")
     step = 1 if sport == "nhl" else 8
@@ -247,8 +286,10 @@ def fit(sport, cache):
         print(f"  {label}\n    predicted -> actual: " + "  ".join(cal) + f"   (log loss {-np.mean(ac * np.log(np.clip(pr, 1e-6, 1)) + (1 - ac) * np.log(np.clip(1 - pr, 1e-6, 1))):.4f}, n={len(pr)})")
     full, ftab = fit_table(rows, sport), fit_total_table(rows, sport)
     emp = fit_empirical(rows, sport) if sport == "nhl" else {}
+    temp = {}
     (HERE / "models" / f"live_spread_{sport}.json").write_text(json.dumps({"sport": sport, "fit_on": f"{len(rows)} games", "table": {str(k): v for k, v in full.items()}, "total_table": {str(k): v for k, v in ftab.items()},
-                                                                         "emp": {str(T): {str(k): v for k, v in e.items()} for T, e in emp.items()}}))
+                                                                         "emp": {str(T): {str(k): v for k, v in e.items()} for T, e in emp.items()},
+                                                                         "total_emp": {str(T): {str(k): v for k, v in e.items()} for T, e in temp.items()}}))
     print(f"  saved models/live_spread_{sport}.json")
 
 

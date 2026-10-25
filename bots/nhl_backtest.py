@@ -172,7 +172,7 @@ def run_data(data, season, min_prior=5):
                     l3_rate = sum(h[key] for h in hist[-3:]) / len(hist[-3:])
                     lanes[ln] = {"y": int(x[key] >= thr), "avg": season_rate,
                                  "f": dict(lane_base, season=season_rate, l10=l10_rate, l3=l3_rate, season_goals=cg / len(hist), pp_pts=f["pp_pts"], sog_season=cs / len(hist))}
-                out.append({"night": x["date"], "game": x["game"], "pid": pid, "goal": int(x["goals"] >= 1), "lanes": lanes,
+                out.append({"night": x["date"], "game": x["game"], "pid": pid, "goal": int(x["goals"] >= 1), "raw": {"goals": x["goals"], "assists": x["assists"], "points": x["points"], "shots": x["shots"]}, "lanes": lanes,
                             "lamp": s["final_score"], "scorer_only": s["scorer_score"],
                             "base_goals": cg / len(hist), "base_shots": cs / len(hist),
                             "rand": ((pid * 2654435761 + x["game"]) % 1000) / 1000, "f": f, "season": season,
