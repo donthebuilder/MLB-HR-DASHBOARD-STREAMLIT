@@ -183,6 +183,17 @@ PUBLISH_FILES=(
   nhl_odds_status.json
   # NBA ODDS (2026-10-16). bots/nba/nba_odds_fetch.py; history is NBA_ODDS_GLOB.
   nba_odds_latest.json
+  # MODEL BOARDS (2026-10-24), written by boards.yml: every player's fitted lane probabilities, first basket, team moneyline/spread model, the joint simulation, NFL lanes
+  nhl_board_latest.json
+  nba_board_latest.json
+  nba_first_board_latest.json
+  team_board_nba_latest.json
+  team_board_nhl_latest.json
+  team_board_nfl_latest.json
+  nhl_sim_latest.json
+  nba_sim_latest.json
+  nfl_lanes_latest.json
+  mlb_board_latest.json
   nba_odds_status.json
   # FRANCHISE LIVE SCORING (2026-09-14). Per-player box-score lines for the
   # current week, written by bots/nfl/nfl_fantasy_stats.py every 15 min in

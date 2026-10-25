@@ -30,6 +30,11 @@ jobs:
           git archive origin/data public/data | tar -x -C /tmp/restore
           cp /tmp/restore/public/data/current/{por_rows_*.jsonl,outcome_log_*.jsonl,nfl_por_log_*.jsonl,nfl_results_20*.json,nfl_prediction_log_20*.jsonl} public/data/current/ 2>/dev/null || true
           echo "restored $(ls public/data/current | wc -l) files"
+          # the fitted-lane shadow logs (bots/shadow_log.py, bots/nfl/nfl_shadow.py) accumulate on bbe-history, not data
+          mkdir -p public/data/current/shadow_log /tmp/restore_shadow
+          git fetch origin bbe-history --depth 1 2>/dev/null && git archive origin/bbe-history public/data/current/shadow_log 2>/dev/null | tar -x -C /tmp/restore_shadow 2>/dev/null || true
+          cp /tmp/restore_shadow/public/data/current/shadow_log/*.json public/data/current/shadow_log/ 2>/dev/null || true
+          echo "shadow logs: $(ls public/data/current/shadow_log | wc -l) files"
       - name: Export the graded NHL goal board
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}

@@ -98,8 +98,17 @@ def main():
     for g in stream:
         for t in g["teams"]:
             last10[t["abbr"]].append(t)
+    start26 = bb.RANGE[2026][0]
+    g26 = defaultdict(list)                              # team -> its box rows from THIS season only
+    for g in stream:
+        if g["date"] >= start26:
+            for t in g["teams"]:
+                g26[t["abbr"]].append(t)
     for team, ts in last10.items():
-        for t in ts[-10:]:
+        # once a team has played this season, its roster is who has actually played FOR it this season (last season's list still carries traded / cut players
+        # and misses new ones); before that, last season's last 10 games are all there is
+        use = g26[team][-10:] if len(g26[team]) >= 2 else ts[-10:]
+        for t in use:
             for p in t["players"]:
                 if p["min"] > 0:
                     recent[team][p["pid"]].append(p["min"])
@@ -115,7 +124,7 @@ def main():
         for abbr, is_home in ((away, False), (home, True)):
             players = []
             for pid, mins in recent[abbr].items():
-                if len(mins) < 3 or sum(mins) / len(mins) < 10:
+                if len(mins) < (1 if len(g26[abbr]) >= 2 else 3) or sum(mins) / len(mins) < 10:
                     continue
                 name = athlete(pid, a.cache)["name"]
                 hit = inj_by_key.get(injury_status.key(name or ""))
@@ -129,7 +138,7 @@ def main():
     rows = bb.run_games(stream, 2026, lambda gid: lines.get(gid) if gid in lines else None, only_ids=synth_ids)
     model = json.load(open(Path(__file__).resolve().parent / "models" / "nba_pts_v2.json"))
     lane_models = {}
-    for lane in ("reb", "ast", "3pm", "pra"):
+    for lane in ("reb", "ast", "3pm", "pra", "dd"):
         fp = Path(__file__).resolve().parent / "models" / f"nba_{lane}_v1.json"
         if fp.exists():
             lane_models[lane] = json.load(open(fp))
@@ -142,13 +151,14 @@ def main():
         info = athlete(r["pid"], a.cache)
         spread_team = (-mt["spread_home"] if r["home"] else mt["spread_home"]) if mt["spread_home"] is not None else None   # + = this club favoured
         watch = G.blowout_watch("nba", mt["spread_home"])
-        lane_p = {}
+        lane_p, lane_base = {}, {}
         for lane, lm in lane_models.items():
             lf = (r.get("lanes") or {}).get(lane, {}).get("f")
             if lf:
                 zl = lm["intercept"] + sum(w * (lf[n] - m) / sd_ for n, w, m, sd_ in zip(lm["features"], lm["weights"], lm["mu"], lm["sd"]))
                 lane_p[lane] = round(_calibrate(lm, 1 / (1 + math.exp(-zl))), 4)
-        out_rows.append({"lanes": lane_p, "name": info["name"], "team": r["team"], "opponent": r["opp"], "home": r["home"], "model_version": model["model_version"],
+                lane_base[lane] = round(lf["season_avg"], 4)
+        out_rows.append({"lanes": lane_p, "lane_base": lane_base, "name": info["name"], "team": r["team"], "opponent": r["opp"], "home": r["home"], "model_version": model["model_version"],
                          "p_25": round(p, 4), "p_25_raw": round(p_raw, 4), "ppg": round(r["f"]["ppg"], 1), "l10_ppg": round(r["f"]["l10"], 1), "minutes_pts": r["f"]["minutes_pts"],
                          "attempts_pts": r["f"]["attempts_pts"], "teammates_out_ppg": round(r["f"]["teammates_out_ppg"], 1), "games_missed": r["f"]["games_missed"],
                          "back_to_back": bool(r["f"]["b2b"]), "book_spread_for_his_club": spread_team, "book_total": mt["total"],
@@ -169,7 +179,7 @@ def main():
     out.write_text(json.dumps({"date": day, "model_version": model["model_version"], "players": out_rows,
                                "left_out_injured": [{"name": n, "team": t, "status": s, "p_play": p} for n, t, s, p in skipped]}, indent=1))
     print(f"{len(tonight)} games, {len(out_rows)} players scored, {len(skipped)} taken out as injured -> {out}")
-    for lane, label in (("reb", "REB 10+"), ("ast", "AST 8+"), ("3pm", "3PM 4+"), ("pra", "PRA 35+")):
+    for lane, label in (("reb", "REB 10+"), ("ast", "AST 8+"), ("3pm", "3PM 4+"), ("pra", "PRA 35+"), ("dd", "DOUBLE-DOUBLE")):
         top = sorted((r for r in out_rows if lane in r["lanes"]), key=lambda r: r["lanes"][lane] * r["p_play"], reverse=True)[:5]
         print(f"{label:<8} " + ", ".join(f"{(r['name'] or '?')} {100 * r['lanes'][lane]:.0f}%" for r in top))
     print()

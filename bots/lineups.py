@@ -156,3 +156,26 @@ if __name__ == "__main__":
                                               else f"goalie {v.get('probable_goalie') or '?'}") for v in s.values())
         extra = f"  spread {g.get('spread')}  total {g.get('total')}" if sport != "mlb" else ""
         print(f"{g['status']:<12} {bits}{extra}   -> {lock_decision(g) if g['status'] not in ('Final', 'In Progress') else ''}")
+
+
+NBA_TO_ESPN = {"WAS": "WSH", "SAS": "SA", "NOP": "NO", "GSW": "GS", "NYK": "NY", "UTA": "UTAH"}
+
+
+def nba_starters(day: str) -> Dict[str, Dict[str, Any]]:
+    """NBA's own daily lineups feed: {ESPN team abbrev: {"status": "Confirmed"|"Expected", "players": [names], "game_status": int}}.
+    The five with a listed position are the starters; bench names carry no position. Empty dict if the feed is not up."""
+    raw = subprocess.run(["curl", "-s", "-m", "30", "-A", "Mozilla/5.0", f"https://stats.nba.com/js/data/leaders/00_daily_lineups_{day.replace('-', '')}.json"],
+                         capture_output=True, text=True).stdout
+    try:
+        games = json.loads(raw).get("games", [])
+    except ValueError:
+        return {}
+    out = {}
+    for g in games:
+        for side in ("homeTeam", "awayTeam"):
+            t = g[side]
+            ab = NBA_TO_ESPN.get(t["teamAbbreviation"], t["teamAbbreviation"])
+            ps = [p for p in t.get("players", []) if p.get("position")]
+            if ps:
+                out[ab] = {"status": ps[0].get("lineupStatus"), "players": [p["playerName"] for p in ps][:5], "game_status": g.get("gameStatus")}
+    return out

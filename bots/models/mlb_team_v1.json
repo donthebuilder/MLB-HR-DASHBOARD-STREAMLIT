@@ -1,0 +1,72 @@
+{
+ "model_version": "mlb_team_v1",
+ "elo": {
+  "k": 2,
+  "hfa": 15,
+  "revert": 0.35,
+  "ratings": {
+   "Seattle Mariners": 1481.8,
+   "Cleveland Guardians": 1513.4,
+   "Houston Astros": 1499.0,
+   "Chicago White Sox": 1500.4,
+   "Oakland Athletics": 1473.9,
+   "Los Angeles Angels": 1434.7,
+   "Los Angeles Dodgers": 1574.2,
+   "Arizona Diamondbacks": 1514.5,
+   "St. Louis Cardinals": 1479.2,
+   "Toronto Blue Jays": 1500.6,
+   "Cincinnati Reds": 1465.1,
+   "Pittsburgh Pirates": 1506.7,
+   "Miami Marlins": 1495.6,
+   "New York Mets": 1498.3,
+   "Kansas City Royals": 1461.2,
+   "Minnesota Twins": 1470.3,
+   "Tampa Bay Rays": 1544.0,
+   "Detroit Tigers": 1505.3,
+   "Chicago Cubs": 1549.8,
+   "Milwaukee Brewers": 1591.9,
+   "San Diego Padres": 1543.4,
+   "Colorado Rockies": 1393.5,
+   "Texas Rangers": 1487.3,
+   "Philadelphia Phillies": 1531.6,
+   "Washington Nationals": 1476.6,
+   "Atlanta Braves": 1533.3,
+   "New York Yankees": 1555.8,
+   "San Francisco Giants": 1460.0,
+   "Boston Red Sox": 1539.7,
+   "Baltimore Orioles": 1500.5,
+   "Athletics": 1418.2
+  }
+ },
+ "features": [
+  "elo_gap",
+  "form_gap",
+  "rest_gap",
+  "b2b_h",
+  "b2b_a"
+ ],
+ "mu": [
+  14.847681664836792,
+  -0.028153832359367175,
+  0.009535655058043118,
+  0.8526119402985075,
+  0.8619402985074627
+ ],
+ "sd": [
+  53.355880509385976,
+  2.4030216188040243,
+  0.27452709319787494,
+  0.35449234162097615,
+  0.34496263711633546
+ ],
+ "weights": [
+  0.016678752719362616,
+  0.6931670283141665,
+  0.07312991626514843,
+  0.011215174795459184,
+  -0.03016285818274691,
+  0.04622066561042308
+ ],
+ "resid_sd": 4.457045304256704,
+ "fit_on": "9648 games, 2023-26 to date"
+}

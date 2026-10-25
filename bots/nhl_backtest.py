@@ -31,8 +31,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import nhl_scorer as nhl   # noqa: E402
 
 BASE = "https://api.nhle.com/stats/rest/en/{}?isAggregate=false&isGame=true&limit=-1&cayenneExp={}"
-SEASON_START = {2023: "2023-10-01", 2024: "2024-10-01", 2025: "2025-10-01"}
-SEASON_END = {2023: "2024-04-30", 2024: "2025-04-30", 2025: "2026-04-30"}
+SEASON_START = {2023: "2023-10-01", 2024: "2024-10-01", 2025: "2025-10-01", 2026: "2026-10-01"}
+SEASON_END = {2023: "2024-04-30", 2024: "2025-04-30", 2025: "2026-04-30",
+              2026: (dt.date.today() - dt.timedelta(days=1)).isoformat()}      # the season to date; the last weekly file's name changes daily, so it is never stale
 
 
 def pull(report, a, b, cache):
@@ -125,7 +126,8 @@ def run_data(data, season, min_prior=5):
         k = (team, gid)
         if k not in out_memo:
             i = pos_in[team][gid]
-            recent = [tgames[team][q]["pl"] for q in order[team][max(0, i - 10):i]]
+            cut = (dt.date.fromisoformat(tgames[team][gid]["date"]) - dt.timedelta(days=60)).isoformat()      # not last season's roster (the offseason turns it over)
+            recent = [tgames[team][q]["pl"] for q in order[team][max(0, i - 10):i] if tgames[team][q]["date"] >= cut]
             tonight = tgames[team][gid]["pl"]
             cnt, toi, gl = defaultdict(int), defaultdict(float), defaultdict(float)
             for gm in recent:
@@ -170,7 +172,7 @@ def run_data(data, season, min_prior=5):
                     l3_rate = sum(h[key] for h in hist[-3:]) / len(hist[-3:])
                     lanes[ln] = {"y": int(x[key] >= thr), "avg": season_rate,
                                  "f": dict(lane_base, season=season_rate, l10=l10_rate, l3=l3_rate, season_goals=cg / len(hist), pp_pts=f["pp_pts"], sog_season=cs / len(hist))}
-                out.append({"night": x["date"], "game": x["game"], "pid": pid, "goal": int(x["goals"] >= 1), "lanes": lanes,
+                out.append({"night": x["date"], "game": x["game"], "pid": pid, "goal": int(x["goals"] >= 1), "raw": {"goals": x["goals"], "assists": x["assists"], "points": x["points"], "shots": x["shots"]}, "lanes": lanes,
                             "lamp": s["final_score"], "scorer_only": s["scorer_score"],
                             "base_goals": cg / len(hist), "base_shots": cs / len(hist),
                             "rand": ((pid * 2654435761 + x["game"]) % 1000) / 1000, "f": f, "season": season,

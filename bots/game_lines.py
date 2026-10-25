@@ -62,11 +62,12 @@ def close_line(sport: str, event_id: str, cache: Optional[Path] = None) -> Optio
     f = cache / f"line_{sport}_{event_id}.json" if cache else None
     if f and f.exists():
         return json.loads(f.read_text()) or None
-    out = None
+    out, fetched = None, False
     for _ in range(3):
         raw = subprocess.run(["curl", "-s", "-m", "30", ODDS.format(p=LEAGUE_PATH[sport], e=event_id)],
                              capture_output=True, text=True).stdout
         if raw.startswith("{"):
+            fetched = True
             items = [i for i in json.loads(raw).get("items", []) if "live" not in (i.get("provider", {}).get("name", "")).lower()]
             items.sort(key=lambda i: i.get("provider", {}).get("priority", 99))
             if items:
@@ -80,10 +81,54 @@ def close_line(sport: str, event_id: str, cache: Optional[Path] = None) -> Optio
                        "ml_away": american((a.get("close", {}).get("moneyLine") or {}).get("american")) or american(a.get("moneyLine")),
                        "total": it.get("overUnder"), "provider": it.get("provider", {}).get("name")}
             break
-    if f:
+    if f and fetched:                           # never cache a failed request (a 403 / timeout) as "no line": that poisoned the cache once
         f.parent.mkdir(parents=True, exist_ok=True)
         f.write_text(json.dumps(out))
     return out
+
+
+def open_close_line(sport: str, event_id: str, cache: Optional[Path] = None) -> Optional[Dict]:
+    """OPENING and CLOSING team lines from ESPN's first non-live provider: {open_spread_home, open_ml_home, open_ml_away, open_total, close_spread_home, close_ml_home, close_ml_away, close_total, provider}.
+    Cached once fetched (lineoc_<sport>_<id>.json); a failed request is not cached."""
+    f = cache / f"lineoc_{sport}_{event_id}.json" if cache else None
+    if f and f.exists():
+        return json.loads(f.read_text()) or None
+    out, fetched = None, False
+    for _ in range(3):
+        raw = subprocess.run(["curl", "-s", "-m", "30", "-A", "Mozilla/5.0", ODDS.format(p=LEAGUE_PATH[sport], e=event_id)], capture_output=True, text=True).stdout
+        if raw.startswith("{"):
+            fetched = True
+            items = [i for i in json.loads(raw).get("items", []) if "live" not in (i.get("provider", {}).get("name", "")).lower()]
+            items.sort(key=lambda i: i.get("provider", {}).get("priority", 99))
+            if items:
+                it = items[0]
+                h, a = it.get("homeTeamOdds", {}), it.get("awayTeamOdds", {})
+                def side(which):
+                    sp = american(((h.get(which) or {}).get("pointSpread") or {}).get("american"))
+                    if sp is None:
+                        asp = american(((a.get(which) or {}).get("pointSpread") or {}).get("american"))
+                        sp = -asp if asp is not None else None
+                    tot = ((it.get(which) or {}).get("total") or {}) if isinstance(it.get(which), dict) else {}
+                    return {f"{which}_spread_home": sp, f"{which}_ml_home": american(((h.get(which) or {}).get("moneyLine") or {}).get("american")),
+                            f"{which}_ml_away": american(((a.get(which) or {}).get("moneyLine") or {}).get("american")),
+                            f"{which}_total": american_total(h, a, it, which)}
+                out = {**side("open"), **side("close"), "provider": it.get("provider", {}).get("name")}
+            break
+    if f and fetched:
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_text(json.dumps(out))
+    return out
+
+
+def american_total(h, a, it, which):
+    """the total's opening / closing number: ESPN puts it in event.<open|close>.total.american as a string ("221.5")."""
+    t = ((it.get(which) or {}).get("total") or {}) if isinstance(it.get(which), dict) else {}
+    for k in ("american", "alternateDisplayValue"):
+        try:
+            return float(str(t.get(k)).lstrip("ou"))
+        except (TypeError, ValueError):
+            pass
+    return it.get("overUnder") if which == "close" else None
 
 
 def fetch_closing(sport: str, event_ids: Iterable[str], cache: Path, workers: int = 12) -> Dict[str, Optional[Dict]]:

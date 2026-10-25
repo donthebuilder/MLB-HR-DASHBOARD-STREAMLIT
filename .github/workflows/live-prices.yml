@@ -1,0 +1,60 @@
+name: Live price log (price at the moment they hit)
+
+# Polls Kalshi's live per-player markets every minute through the evening's games and keeps every price CHANGE (bots/live_price_log.py), so a settled market can be
+# read back as: price pregame, at the start, and in the minutes before the player actually hit. NBA points + NHL goals are joined to the play-by-play in the report; rebounds,
+# assists, PRA, NHL points / assists and NFL anytime TD ticks are kept for later grading. Own schedule, own job; writes to `bbe-history` every 30 minutes.
+on:
+  schedule:
+    - cron: '45 22 * * *'
+    - cron: '15 16 * * 0'
+    - cron: '15 22 * * 0'
+    - cron: '45 23 * * 1'
+    - cron: '45 23 * * 4'
+    - cron: '20 12 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: live-prices
+  cancel-in-progress: false
+
+jobs:
+  poll:
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Checkout the bbe-history branch (read/write)
+        run: |
+          git config --global user.name  "moonshot-bot"
+          git config --global user.email "bot@users.noreply.github.com"
+          git clone --quiet --depth 1 --branch bbe-history "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" _data
+          mkdir -p _data/public/data/current/live_prices
+      - name: Poll through the games, push every 30 minutes (evening runs) / report (morning run)
+        run: |
+          D=_data/public/data/current/live_prices
+          H=$(date -u +%H); DOW=$(date -u +%u)
+          if [ "$H" = "12" ]; then
+            python3 bots/live_price_log.py report $D || true
+          else
+            SERIES="KXNBAPTS KXNBAREB KXNBAAST KXNBAPRA KXNHLGOAL KXNHLPTS KXNHLAST KXMLBHR KXMLBHIT KXMLBTB"
+            if [ "$DOW" = "7" ] || [ "$DOW" = "1" ] || [ "$DOW" = "4" ]; then SERIES="$SERIES KXNFLANYTD"; fi
+            for i in $(seq 1 11); do
+              python3 bots/live_price_log.py loop $D --minutes 30 --every 60 --series $SERIES || true
+              (cd _data && git add public/data/current/live_prices && { git diff --cached --quiet || { git commit -qm "live prices $(date -u +%FT%H%MZ)"; for j in 1 2 3 4 5; do git pull -q --rebase origin bbe-history && git push -q origin HEAD:bbe-history && break; sleep $((j * 5)); done; }; })
+            done
+          fi
+      - name: Commit the report
+        if: always()
+        working-directory: _data
+        run: |
+          git add public/data/current/live_prices
+          if git diff --cached --quiet; then echo "nothing changed"; else
+            git commit -qm "live prices report $(date -u +%FT%H%MZ)"
+            for j in 1 2 3 4 5; do git pull -q --rebase origin bbe-history && git push -q origin HEAD:bbe-history && break; sleep $((j * 5)); done
+          fi

@@ -1,0 +1,66 @@
+name: Shadow log - NFL TD lanes
+
+# Own schedule, own job. Anytime-TD (fitted) and first-TD probabilities for the coming week, refreshed through the week until each team's kickoff
+# (a team's rows freeze at its kickoff), graded after the last game of the week. Thursday night, Sunday, Monday night, and a Tuesday grade.
+# Lives on bbe-history. Changes nothing a pick or a score reads.
+on:
+  schedule:
+    - cron: '0 14 * * 4'
+    - cron: '0 22 * * 4'
+    - cron: '0 14,16,19 * * 0'
+    - cron: '0 21,23 * * 1'
+    - cron: '0 12 * * 2'
+    - cron: '0 12 * * 3'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: shadow-nfl
+  cancel-in-progress: false
+
+jobs:
+  log:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install numpy requests nflreadpy polars
+      - name: Cache nflverse tables
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/dash_nfl
+          key: dash-nfl-${{ github.run_id }}
+          restore-keys: dash-nfl-
+      - name: Checkout the bbe-history branch (read/write)
+        run: |
+          git config --global user.name  "moonshot-bot"
+          git config --global user.email "bot@users.noreply.github.com"
+          git clone --quiet --depth 1 --branch bbe-history \
+            "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" _data
+          mkdir -p _data/public/data/current/shadow_log
+      - name: Snapshot the coming week (refresh until kickoff) and grade finished weeks
+        continue-on-error: true
+        working-directory: bots/nfl
+        run: |
+          D=../../_data/public/data/current/shadow_log
+          python3 nfl_shadow.py auto-snapshot $D
+          python3 nfl_shadow.py auto-grade $D
+          python3 nfl_shadow.py report $D
+          cd ../..
+          ET=$(python3 -c "from datetime import datetime,timedelta,timezone;print((datetime.now(timezone.utc)-timedelta(hours=5)).date())")
+          python3 bots/team_live.py snapshot nfl "$ET" _data/public/data/current/shadow_log
+          python3 bots/team_live.py grade-all _data/public/data/current/shadow_log
+          python3 bots/team_live.py report _data/public/data/current/shadow_log
+      - name: Commit
+        working-directory: _data
+        run: |
+          git add public/data/current/shadow_log
+          if git diff --cached --quiet; then echo "nothing changed"; else
+            git commit -m "shadow log nfl $(date -u +%FT%H%MZ)"
+            for i in 1 2 3 4 5; do git pull --rebase origin bbe-history && git push origin HEAD:bbe-history && break; echo "push race, retry $i"; sleep $((i * 5)); done
+          fi

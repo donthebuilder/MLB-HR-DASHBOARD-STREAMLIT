@@ -1,0 +1,59 @@
+name: Live edge log (live moneylines, spreads - paper trading)
+
+# Through every game, compares Kalshi's LIVE moneyline / spread markets with our fair number from the live game state (bots/live_edge.py: NBA and NFL from the live-spread table, NHL by Poisson)
+# and logs every price that is at least 4 points off after fees. Nothing is bet. The morning report settles each alert against the final score and shows whether taking them would have paid.
+# Starts before the first tip / puck drop / kickoff so the pregame line of every game is cached before ESPN drops it. Own schedule; writes to `bbe-history` every 30 minutes.
+on:
+  schedule:
+    - cron: '30 22 * * *'
+    - cron: '0 16 * * 0'
+    - cron: '0 22 * * 0'
+    - cron: '30 23 * * 1'
+    - cron: '30 23 * * 4'
+    - cron: '40 12 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: live-edge
+  cancel-in-progress: false
+
+jobs:
+  edge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install numpy requests nflreadpy polars
+      - name: Checkout the bbe-history branch (read/write)
+        run: |
+          git config --global user.name  "moonshot-bot"
+          git config --global user.email "bot@users.noreply.github.com"
+          git clone --quiet --depth 1 --branch bbe-history "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" _data
+          mkdir -p _data/public/data/current/live_edges
+      - name: Poll through the games (evening) / settle and report (morning)
+        run: |
+          D=_data/public/data/current/live_edges
+          H=$(date -u +%H)
+          if [ "$H" = "12" ]; then
+            python3 bots/live_edge.py report $D || true
+          else
+            for i in $(seq 1 11); do
+              python3 bots/live_edge.py loop $D --minutes 30 --every 45 || true
+              (cd _data && git add public/data/current/live_edges && { git diff --cached --quiet || { git commit -qm "live edges $(date -u +%FT%H%MZ)"; for j in 1 2 3 4 5; do git pull -q --rebase origin bbe-history && git push -q origin HEAD:bbe-history && break; sleep $((j * 5)); done; }; })
+            done
+          fi
+      - name: Commit
+        if: always()
+        working-directory: _data
+        run: |
+          git add public/data/current/live_edges
+          if git diff --cached --quiet; then echo "nothing changed"; else
+            git commit -qm "live edges report $(date -u +%FT%H%MZ)"
+            for j in 1 2 3 4 5; do git pull -q --rebase origin bbe-history && git push -q origin HEAD:bbe-history && break; sleep $((j * 5)); done
+          fi

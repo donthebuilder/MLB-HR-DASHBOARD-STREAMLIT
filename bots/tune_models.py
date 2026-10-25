@@ -73,6 +73,26 @@ def rows_for(sport, cache, seasons):
     return out
 
 
+def current_rows(sport, cache):
+    """The current season to date, history carried over from last season (the in-season minimum would leave the first month empty). [] if unavailable."""
+    try:
+        if sport == "nhl":
+            import nhl_backtest as m
+            d25, d26 = m.load_season(2025, cache), m.load_season(2026, cache)
+            comb = defaultdict(list)
+            for k in set(d25) | set(d26):
+                comb[k] = list(d25.get(k, [])) + list(d26.get(k, []))
+            return [r for r in m.run_data(comb, 2026) if r["night"] >= "2026-10-01"]
+        import buckets_backtest as m, game_lines as G
+        ld = Path(cache).parent / "nba_lines"
+        gs = sorted(m.load(2025, cache) + m.load(2026, cache), key=lambda g: (g["date"], g["id"]))
+        ids = {g["id"] for g in m.load(2026, cache)}
+        return m.run_games(gs, 2026, lambda gid: G.close_line("nba", gid, ld) if ld.exists() else None, only_ids=ids)
+    except Exception as exc:    # noqa: BLE001
+        print(f"current season not available ({type(exc).__name__}); production fit uses the finished seasons only")
+        return []
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("sport", choices=SPORTS)
@@ -96,6 +116,10 @@ def main():
         r["tuned"] = float(z)
 
     # production fit: the same recipe on ALL seasons, saved for the live board (the holdout numbers above stay the honest ones)
+    cur = current_rows(a.sport, cache)
+    if cur:
+        print(f"production fit also uses {len(cur)} player-games of the current season to date")
+    rows = rows + [r for r in cur if primary in r]
     allX = np.array([[r["f"][n] for n in names] for r in rows], float)
     amu, asd = allX.mean(0), allX.std(0) + 1e-9
     aw = fit_logistic((allX - amu) / asd, np.array([r[primary] for r in rows], float))
@@ -105,7 +129,7 @@ def main():
     (out / f"{version}.json").write_text(json.dumps({
         "model_version": version, "target": cfg["target"][primary], "features": names,
         "mu": amu.tolist(), "sd": asd.tolist(), "intercept": float(aw[0]), "weights": aw[1:].tolist(),
-        "fit_on": f"{len(rows)} player-games, seasons {cfg['train'] + [cfg['test']]}",
+        "fit_on": f"{len(rows)} player-games, seasons {cfg['train'] + [cfg['test']]} + current season to date",
         "holdout_note": f"honest numbers come from the fit on {cfg['train']} graded on {cfg['test']} (tune_models.py output)"}, indent=1))
     print(f"saved bots/models/{version}.json")
 

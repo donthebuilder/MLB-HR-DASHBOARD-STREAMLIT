@@ -788,6 +788,15 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
     # merged into the player rows below. main() pops it before any file is
     # written; only the prediction log sees it.
     shadow = score_shadow(tbl, context_ok, ref)
+    # The fitted, calibrated TD probability (nfl_td_fit_v1) rides in the same shadow dict: a price check, never a rank.
+    try:
+        import td_fit
+        for pid, pf in td_fit.score(tbl).items():
+            per = ((shadow.get("TD") or {}).get("scores") or {}).get(pid)
+            if per is not None:
+                per["p_td_fit"] = pf
+    except Exception as exc:  # noqa: BLE001
+        print(f"  td_fit skipped ({type(exc).__name__}: {exc})")
 
     # merge every market's score onto one player row
     players: dict[str, dict] = {}

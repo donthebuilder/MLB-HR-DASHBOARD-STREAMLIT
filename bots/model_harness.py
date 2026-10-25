@@ -235,7 +235,7 @@ NFL_TD = {
     # td = the score in use; td_v3 = the shadow beside it; the rest are the board's own components, each a one-number
     # rule the harness grades like any score. f_touches (workload) is the plain baseline. implied_total is a TEAM number
     # (the same for every player in a game), so it cannot pick a player and is not graded here.
-    "scores": ["td", "td_v3", "f_xtd", "f_touches", "f_snap_pct", "f_rz_opp", "f_gl_opp"],
+    "scores": ["td", "td_v3", "td_fit", "f_xtd", "f_touches", "f_snap_pct", "f_rz_opp", "f_gl_opp"],
 }
 
 
@@ -245,6 +245,11 @@ def _nfl_score(row: dict, key: str):
         return row.get("score")
     if key == "td_v3":
         return ((row.get("shadow") or {}).get("nfl_td_v3") or {}).get("score")
+    if key == "td_fit":              # the fitted, calibrated probability (nfl_td_fit_v1), attached to the shadow entry by nfl_bot.py
+        for v in (row.get("shadow") or {}).values():
+            if isinstance(v, dict) and v.get("p_td_fit") is not None:
+                return v["p_td_fit"]
+        return None
     return comp.get(key)
 
 
@@ -312,8 +317,55 @@ def nhl_goal_rows(data_dir: Path, market: dict = NHL_GOAL) -> list[dict]:
     return rows
 
 
-ADAPTERS: dict[str, Callable[[Path], list[dict]]] = {"mlb_hr": mlb_hr_rows, "nfl_td": nfl_td_rows, "nhl_goal": nhl_goal_rows}
-MARKETS = {"mlb_hr": MLB_HR, "nfl_td": NFL_TD, "nhl_goal": NHL_GOAL}
+# ── SHADOW-LOG adapters (bots/shadow_log.py, bots/nfl/nfl_shadow.py): the fitted lane probabilities, saved before the game and graded after ─────────────
+# Files live under <data>/shadow_log/ (the bbe-history branch). There is no "production" score for these lanes, so the plain stat (his season rate) is both the
+# production slot and the baseline: the fitted probability is a candidate that must beat the plain stat by PROMOTE_POINTS over MIN_GAMES, same games, to be
+# called better. Players who did not play are not graded (a missing result is not a miss).
+SHADOW_LANES = {
+    "nhl_goal_fit": ("nhl", "goal", "NHL goal (fitted lane)"), "nhl_points": ("nhl", "points", "NHL points 1+ (fitted lane)"),
+    "nhl_assists": ("nhl", "assists", "NHL assists 1+ (fitted lane)"), "nhl_shots3": ("nhl", "shots3", "NHL shots 3+ (fitted lane)"),
+    "nba_pts25": ("nba", "pts25", "NBA points 25+ (fitted lane)"), "nba_reb10": ("nba", "reb10", "NBA rebounds 10+ (fitted lane)"),
+    "nba_ast8": ("nba", "ast8", "NBA assists 8+ (fitted lane)"), "nba_tpm4": ("nba", "tpm4", "NBA 3PM 4+ (fitted lane)"),
+    "nba_pra35": ("nba", "pra35", "NBA PRA 35+ (fitted lane)"), "nba_dd": ("nba", "dd", "NBA double-double (fitted lane)"),
+    "mlb_hit": ("mlb", "hit", "MLB 1+ hit (fitted lane)"), "mlb_hrr": ("mlb", "hrr", "MLB 2+ H+R+RBI (fitted lane)"), "mlb_tb2": ("mlb", "tb2", "MLB 2+ total bases (fitted lane)"), "mlb_hr": ("mlb", "hr", "MLB 1+ HR (fitted lane)"),
+}
+
+
+def shadow_lane_rows(data_dir: Path, sport: str, key: str) -> list[dict]:
+    rows: list[dict] = []
+    for f in sorted((data_dir / "shadow_log").glob(f"shadow_{sport}_*.json")):
+        try:
+            d = json.loads(f.read_text(encoding="utf-8"))
+        except ValueError:
+            continue
+        for r in d.get("rows", []):
+            a = r.get("actual")
+            if not a or key not in a or key not in (r.get("p") or {}):
+                continue
+            rows.append({"night": d["date"], "game": f"{d['date']}|" + "|".join(sorted([str(r["team"]), str(r["opp"])])), "id": str(r["name"]), "y": int(a[key]),
+                         "version": "fitted_lane_v1", "s": {"fit": r["p"][key], "plain": (r.get("b") or {}).get(key)}})
+    return rows
+
+
+def nba_first_rows(data_dir: Path) -> list[dict]:
+    rows: list[dict] = []
+    for f in sorted((data_dir / "shadow_log").glob("shadow_nbafirst_*.json")):
+        d = json.loads(f.read_text(encoding="utf-8"))
+        for gid, g in d.get("games", {}).items():
+            if not g.get("graded"):
+                continue
+            for r in g["rows"]:
+                if "y" in r:
+                    rows.append({"night": d["date"], "game": str(gid), "id": str(r["name"]), "y": int(r["y"]), "version": "nba_first_v1", "s": {"fit": r["p_first_basket"], "plain": r.get("ppg")}})
+    return rows
+
+
+ADAPTERS: dict[str, Callable[[Path], list[dict]]] = {"mlb_hr": mlb_hr_rows, "nfl_td": nfl_td_rows, "nhl_goal": nhl_goal_rows, "nba_first": nba_first_rows}
+MARKETS = {"mlb_hr": MLB_HR, "nfl_td": NFL_TD, "nhl_goal": NHL_GOAL,
+           "nba_first": {"market": "nba_first", "label": "NBA first basket (fitted lane, starters)", "production": "plain", "baseline": "plain", "scores": ["fit", "plain"]}}
+for _k, (_sp, _key, _label) in SHADOW_LANES.items():
+    ADAPTERS[_k] = (lambda d, _sp=_sp, _key=_key: shadow_lane_rows(d, _sp, _key))
+    MARKETS[_k] = {"market": _k, "label": _label, "production": "plain", "baseline": "plain", "scores": ["fit", "plain"]}
 
 
 def build(data_dir: Path) -> dict:

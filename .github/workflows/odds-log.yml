@@ -1,0 +1,44 @@
+name: Odds log (keep every prop-line snapshot)
+
+# The NFL and NBA bots snapshot the book's player-prop lines every day (nfl_odds_<date>.json, nba_odds_<date>.json: {player_id: {market: [line, over, implied]}}) and
+# publish them to the `data` branch, which is rebuilt on every publish. This copies them to `bbe-history` once a day so the history is never lost: it is the only
+# source of real prop lines for edge-vs-line backtests (bots/nfl/nfl_line_edge.py). Changes nothing a pick or a score reads.
+on:
+  schedule:
+    - cron: '15 12 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: odds-log
+  cancel-in-progress: false
+
+jobs:
+  copy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout the bbe-history branch (read/write)
+        run: |
+          git config --global user.name  "moonshot-bot"
+          git config --global user.email "bot@users.noreply.github.com"
+          git clone --quiet --branch bbe-history "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" _data
+          mkdir -p _data/public/data/current/odds_log
+      - name: Copy the daily odds snapshots from the data branch
+        working-directory: _data
+        run: |
+          git fetch --quiet origin data --depth 1
+          for f in $(git ls-tree --name-only origin/data public/data/current/ | grep -E '/(nfl|nba|nhl)_odds_20[0-9-]+\.json$'); do
+            git show "origin/data:$f" > "public/data/current/odds_log/$(basename $f)"
+          done
+          echo "odds_log now holds $(ls public/data/current/odds_log | wc -l) files"
+      - name: Commit
+        working-directory: _data
+        run: |
+          git add public/data/current/odds_log
+          if git diff --cached --quiet; then echo "nothing changed"; else
+            git commit -m "odds log $(date -u +%FT%H%MZ)"
+            for i in 1 2 3 4 5; do git pull --rebase origin bbe-history && git push origin HEAD:bbe-history && break; echo "push race, retry $i"; sleep $((i * 5)); done
+          fi

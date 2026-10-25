@@ -405,6 +405,20 @@ def api(path: str, key: str, **params) -> object:
         raise
 
 
+def carry_open(snap: Path, rows: dict, now) -> dict:
+    """OPENING price per player/market: the first line this file ever saw ([line, over, under, seen_at]), kept across every later overwrite of the day's file.
+    With the last pregame row in `rows` this gives opening vs closing without keeping every snapshot (line_tools.open_close reads it)."""
+    try:
+        out = {n: dict(m) for n, m in (json.loads(snap.read_text()).get("open") or {}).items()}
+    except Exception:
+        out = {}
+    for n, mk in rows.items():
+        for m, v in mk.items():
+            if m not in out.get(n, {}):
+                out.setdefault(n, {})[m] = [v[0], v[1], v[3] if len(v) > 3 else None, now.isoformat()]
+    return out
+
+
 def freeze_started(snap: Path, fresh: dict, commence: dict, now) -> tuple[dict, dict]:
     """Merge today's earlier snapshot into this fetch: any player whose game
     had started by `now` keeps his stored row (a live price must never
@@ -915,7 +929,7 @@ def main() -> int:
     # snapshots exist to test it against.
     slim: dict[str, dict] = {}
     for pid, mkts in matched.items():
-        row = {m: [q.get("line"), q.get("over"), q.get("implied")]
+        row = {m: [q.get("line"), q.get("over"), q.get("implied"), q.get("under")]
                for m, q in mkts.items()
                if isinstance(q, dict) and q.get("over") is not None and q.get("line") is not None}
         if row:
@@ -927,7 +941,9 @@ def main() -> int:
     # FREEZE AT KICKOFF (history is the pregame price, never a live one): a
     # player whose game has started keeps the row already stored today.
     slim, commence = freeze_started(snap, slim, commence, now)
+    opened = carry_open(snap, slim, now)
     snap.write_text(json.dumps({
+        "open": opened,
         "date": date_str,
         "season": season, "week": week,
         "fetched_at": now.isoformat(),
@@ -935,7 +951,7 @@ def main() -> int:
         "rows": slim,
         "commence": commence,
         "note": ("Snapshot kept for a future nfl_odds_history.py. Each row is "
-                 "{market: [line, over, implied]}. Keyed by NFL player_id only -- "
+                 "{market: [line, over, implied, under]}. Keyed by NFL player_id only -- "
                  "an unjoined name has no outcome to settle against, so it would "
                  "never be usable here."),
     }, separators=(",", ":")))

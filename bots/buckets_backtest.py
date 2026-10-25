@@ -136,6 +136,12 @@ def run_games(games, season, line_for, only_ids=None):
             reb_for.append(sum(p.get("reb", 0) for p in P)); ast_for.append(sum(p.get("ast", 0) for p in P)); tpm_for.append(sum(p.get("tpm", 0) for p in P))
         for i, team in enumerate(t):
             opp = t[1 - i]["abbr"]
+            if team["abbr"] in team_last and (dt.date.fromisoformat(g["date"]) - dt.date.fromisoformat(team_last[team["abbr"]])).days > 60:
+                # first game after the offseason: last season's roster says nothing about who is "out" now (rosters turn over), so "teammates out" and
+                # "games missed" start clean. In-season games are unaffected, so every earlier backtest number stands.
+                team_games[team["abbr"]].clear()
+                for k_ in [k_ for k_ in last_idx if k_[0] == team["abbr"]]:
+                    del last_idx[k_]
             tp = [x[0] for x in team_hist[team["abbr"]]]
             op = [x[0] for x in team_hist[opp]]
             tpace = sum(tp[-10:]) / len(tp[-10:]) if tp else bk.LG_PACE
@@ -194,6 +200,7 @@ def run_games(games, season, line_for, only_ids=None):
                                 "bk": s["final_score"], "ppg": sum(x["pts"] for x in hist) / len(hist),
                                 "l10": sum(x["pts"] for x in hist[-10:]) / len(hist[-10:]),
                                 "rand": ((int(p["pid"]) * 2654435761 + int(g["id"])) % 1000) / 1000, "f": f, "season": season,
+                                "raw": {"pts": p["pts"], "reb": p.get("reb", 0), "ast": p.get("ast", 0), "tpm": p.get("tpm", 0)},
                                 "lanes": lane_rows(hist, p, team_hist[opp], f)})
         if POS_GROUP:
             for i, team in enumerate(t):
@@ -258,6 +265,12 @@ def lane_rows(hist, p, opp_hist, f):
                   "f": {**common, "season_avg": mean(pra_h), "l10_avg": mean(pra_h[-10:]), "ppg": f["ppg"], "opp_allowed": f["opp_allowed"],
                         "form3": mean(pra_h[-3:]) - mean(pra_h[-10:]),
                         **({"opp_pos_rel": f["opp_pos_pts_rel"] + f["opp_pos_reb_rel"] + f["opp_pos_ast_rel"]} if "opp_pos_pts_rel" in f else {})}, "avg": mean(pra_h)}
+    dd = lambda x: int(sum(v >= 10 for v in (x["pts"], x["reb"], x["ast"])) >= 2)
+    ddh = [dd(x) for x in hist]
+    out["dd"] = {"y": dd(p), "avg": mean(ddh),
+                 "f": {**common, "season_avg": mean(ddh), "l10_avg": mean(ddh[-10:]), "form3": mean(ddh[-3:]) - mean(ddh[-10:]),
+                       "pts10": mean([x["pts"] for x in h10]), "reb10": mean([x["reb"] for x in h10]), "ast10": mean([x["ast"] for x in h10]),
+                       "second_best10": mean([sorted((x["pts"], x["reb"], x["ast"]))[1] for x in h10])}}
     return out
 
 

@@ -1,0 +1,70 @@
+name: Shadow log - NBA lanes and first basket
+
+# Own schedule, own job. Lane probabilities (points, rebounds, assists, 3PM, PRA, double-double) are saved at 22:45 UTC and graded at 11:30 UTC.
+# FIRST BASKET is refreshed every 30 minutes from 22:00 to 02:30 UTC so the real starters (NBA's daily lineups: Expected, then Confirmed near tip) replace the
+# projection; a game is frozen the moment it starts. Graded the next morning. Lives on bbe-history.
+on:
+  schedule:
+    - cron: '0,30 22,23 * * *'
+    - cron: '0,30 0,1 * * *'
+    - cron: '0 2 * * *'
+    - cron: '45 11 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: shadow-nba
+  cancel-in-progress: false
+
+jobs:
+  log:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install numpy requests
+      - name: Cache the NBA box scores and play-by-play
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/dash_nba
+          key: dash-nba-${{ github.run_id }}
+          restore-keys: dash-nba-
+      - name: Checkout the bbe-history branch (read/write)
+        run: |
+          git config --global user.name  "moonshot-bot"
+          git config --global user.email "bot@users.noreply.github.com"
+          git clone --quiet --depth 1 --branch bbe-history \
+            "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" _data
+          mkdir -p _data/public/data/current/shadow_log
+      - name: Snapshot / grade
+        continue-on-error: true
+        run: |
+          D=_data/public/data/current/shadow_log
+          H=$(date -u +%H)
+          ET=$(python3 -c "from datetime import datetime,timedelta,timezone;print((datetime.now(timezone.utc)-timedelta(hours=5)).date())")
+          Y=$(python3 -c "from datetime import datetime,timedelta,timezone;print((datetime.now(timezone.utc)-timedelta(hours=5,days=1)).date())")
+          if [ "$H" = "11" ]; then
+            [ -e $D/shadow_nba_$Y.json ] && python3 bots/shadow_log.py grade nba "$Y" $D
+            [ -e $D/shadow_nbafirst_$Y.json ] && python3 bots/shadow_log.py grade nbafirst "$Y" $D
+            python3 bots/team_live.py grade-all $D
+          else
+            python3 bots/shadow_log.py snapshot nbafirst "$ET" $D
+            python3 bots/team_live.py snapshot nba "$ET" $D
+            python3 bots/game_sim.py snapshot nba "$ET" $D
+            # the lane probabilities are written once (first run of the evening wins; games already started are skipped)
+            if [ "$H" = "22" ]; then python3 bots/shadow_log.py snapshot nba "$ET" $D; fi
+          fi
+          python3 bots/shadow_log.py report $D; python3 bots/team_live.py report $D; python3 bots/game_sim.py report $D
+      - name: Commit
+        working-directory: _data
+        run: |
+          git add public/data/current/shadow_log
+          if git diff --cached --quiet; then echo "nothing changed"; else
+            git commit -m "shadow log nba $(date -u +%FT%H%MZ)"
+            for i in 1 2 3 4 5; do git pull --rebase origin bbe-history && git push origin HEAD:bbe-history && break; echo "push race, retry $i"; sleep $((i * 5)); done
+          fi
