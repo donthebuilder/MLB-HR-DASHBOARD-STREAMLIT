@@ -90,15 +90,23 @@ def fit_table(rows, sport):
     for T in cfg["grid"]:
         X = np.array([[1.0, r[3][T], r[2]] for r in rows]); y = np.array([r[1] - r[3][T] for r in rows], float)
         w = np.linalg.solve(X.T @ X + 1e-6 * np.eye(3), X.T @ y)
-        tab[T] = [float(w[0]), float(w[1]), float(w[2]), float(np.std(y - X @ w))]
+        res = y - X @ w; s0 = float(np.std(res)); Ls = np.abs(X[:, 1]) / 10.0
+        best = (1e18, 1.0, 0.0)                                   # the spread is not the same in a blowout and in a close game: sd = s0 * (alpha + beta*|lead|/10), by maximum likelihood
+        for al in np.arange(0.5, 1.5, 0.05):
+            for be in np.arange(-0.4, 0.8, 0.05):
+                sd_i = s0 * np.maximum(0.3, al + be * Ls)
+                nll = float(np.sum(np.log(sd_i) + res ** 2 / (2 * sd_i ** 2)))
+                if nll < best[0]:
+                    best = (nll, float(al), float(be))
+        tab[T] = [float(w[0]), float(w[1]), float(w[2]), s0, best[1], best[2]]
     return tab
 
 
 def predict(tab, T, lead, pre_margin):
     Ts = sorted(tab)
     Tn = min(Ts, key=lambda t: abs(t - T)) if min(Ts) <= T <= max(Ts) else (min(Ts) if T < min(Ts) else max(Ts))
-    a, b, c, sd = tab[Tn]
-    return lead + a + b * lead + c * pre_margin, max(sd, 1.0)
+    a, b, c, sd, al, be = (tab[Tn] + [1.0, 0.0])[:6]
+    return lead + a + b * lead + c * pre_margin, max(sd * max(0.3, al + be * abs(lead) / 10.0), 1.0)
 
 
 def fit(sport, cache):
