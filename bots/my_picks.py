@@ -6,7 +6,7 @@ my_picks.py -- YOUR picks, logged and graded, so your style gets measured agains
     python bots/my_picks.py template                                print an example picks file
 
 PICKS_CSV (my_picks/picks.csv in the repo; edit it on GitHub, no computer needed). One line per pick, header row required:
-    date,sport,player,market,price,note
+    date,sport,player,market,line,price,note
     2026-10-25,nfl,Michael Wilson,td,+245,numerology
     2026-10-25,nfl,Mark Andrews,td,+260,tight end day
     2026-10-24,nhl,Kirill Kaprizov,goal,-110,
@@ -60,6 +60,14 @@ def grade_nfl(p, idx):
         return None
     r = sorted(cands, key=lambda c: c[0])[0][1]
     m = p["market"]
+    if p.get("line") and m != "first_td":                       # a line was taken (e.g. rec_yds 63.5): graded on the raw stat, a push is no result
+        stat = (r.get("stats") or {}).get(m)
+        if stat is None:
+            return None
+        ln = float(p["line"])
+        if stat == ln:
+            return None
+        return {"prob": None, "won": stat > ln, "pos": r.get("pos")}
     if m in NFL_MARKET:
         prob_key, res_key = NFL_MARKET[m]
         prob, y = r.get(prob_key), r.get(res_key)
@@ -128,6 +136,6 @@ def report(csv_path, shadow_dir):
 
 if __name__ == "__main__":
     if sys.argv[1] == "template":
-        print("date,sport,player,market,price,note\n2026-10-25,nfl,Michael Wilson,td,+245,wide receiver\n2026-10-25,nfl,Mark Andrews,td,+260,tight end day\n2026-10-24,nhl,Kirill Kaprizov,goal,-110,")
+        print("date,sport,player,market,line,price,note\n2026-10-25,nfl,Michael Wilson,td,,+245,wide receiver\n2026-10-25,nfl,Garrett Wilson,rec,5.5,-115,pinned\n2026-10-24,nhl,Kirill Kaprizov,goal,,-110,")
     else:
         report(sys.argv[2], sys.argv[3])

@@ -107,6 +107,9 @@ def grade(season, week, out_dir):
             if r["pid"] in td:
                 r["td"] = td[r["pid"]]; n += 1
                 r["lane_y"] = {m: int(lane_fit.OUTCOMES[m](stat_rows[r["pid"]])) for m in r.get("p_lane", {})}
+                sr = stat_rows[r["pid"]]
+                r["stats"] = {"rec_yds": sr.get("receiving_yards"), "rec": sr.get("receptions"), "rush_yds": sr.get("rushing_yards"), "rush_att": sr.get("carries"), "pass_yds": sr.get("passing_yards"),
+                              "pass_td": sr.get("passing_tds"), "long_rec": sr.get("longest_rec"), "td": (sr.get("rushing_tds") or 0) + (sr.get("receiving_tds") or 0)}
             fp = first_by_pair.get(frozenset([tm, r["opp"]]))
             if fp is not None:
                 r["first_td"] = int(fp == r["pid"])

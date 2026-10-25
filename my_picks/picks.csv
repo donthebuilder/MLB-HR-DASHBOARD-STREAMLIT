@@ -1,1 +1,28 @@
-date,sport,player,market,price,note
+date,sport,player,market,line,price,note
+2026-10-25,nfl,Amon-Ra St. Brown,td,,-141,TUDDY pin: called
+2026-10-26,nfl,CeeDee Lamb,rec_yds,81.5,-114,TUDDY pin: called
+2026-10-25,nfl,Derrick Henry,rush_yds,80.5,-135,TUDDY pin: called
+2026-10-25,nfl,Woody Marks,td,,-120,TUDDY pin: called
+2026-10-25,nfl,Tucker Kraft,td,,+160,TUDDY pin: on the board
+2026-10-25,nfl,Rico Dowdle,rush_yds,29.5,-109,TUDDY pin: on the board
+2026-10-25,nfl,Drake London,rec_yds,83.5,-112,TUDDY pin: called
+2026-10-26,nfl,Saquon Barkley,td,,+105,TUDDY pin: on the board
+2026-10-25,nfl,Keenan Allen,rec,4.5,-154,TUDDY pin: on the board
+2026-10-25,nfl,Greg Dulcich,rec,2.5,+128,TUDDY pin: on the board
+2026-10-25,nfl,Germie Bernard,rec,4.5,-152,TUDDY pin: on the board
+2026-10-25,nfl,Garrett Wilson,rec,5.5,-115,TUDDY pin: on the board
+2026-10-25,nfl,T.J. Hockenson,rec,4.5,+110,TUDDY pin: on the board
+2026-10-25,nfl,Bam Knight,rush_yds,40.5,-105,TUDDY pin: on the board
+2026-10-25,nfl,Sean Tucker,td,,+575,TUDDY pin: on the board
+2026-10-25,nfl,Jaylin Noel,rec_yds,27.5,-112,TUDDY pin: not on the board
+2026-10-25,nfl,Carnell Tate,rec_yds,52.5,-110,TUDDY pin: not on the board
+2026-10-25,nfl,C.J. Stroud,pass_yds,255.5,-111,TUDDY pin: not on the board
+2026-10-25,nfl,Evan Engram,rec_yds,22.5,-114,TUDDY pin: not on the board
+2026-10-25,nfl,KC Concepcion,rec,4.5,+100,TUDDY pin: not on the board
+2026-10-25,nfl,Austin Hooper,rec_yds,2.5,-114,TUDDY pin: not on the board
+2026-10-25,nfl,Sione Vaki,rush_yds,5.5,-179,TUDDY pin: not on the board
+2026-10-25,nfl,Troy Franklin,rec_yds,14.5,-118,TUDDY pin: not on the board
+2026-10-25,nfl,Cade Otton,rec,3.5,-161,TUDDY pin: not on the board
+2026-10-25,nfl,Jalen Nailor,rec_yds,9.5,-222,TUDDY pin: not on the board
+2026-10-25,nfl,Chris Bell,rec_yds,19.5,-110,TUDDY pin: not on the board
+2026-10-25,nfl,Tutu Atwell,rec_yds,8.5,-110,TUDDY pin: not on the board
