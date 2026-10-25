@@ -51,12 +51,14 @@ jobs:
           if [ "$H" = "11" ]; then
             [ -e $D/shadow_nba_$Y.json ] && python3 bots/shadow_log.py grade nba "$Y" $D
             [ -e $D/shadow_nbafirst_$Y.json ] && python3 bots/shadow_log.py grade nbafirst "$Y" $D
+            python3 bots/team_live.py grade-all $D
           else
             python3 bots/shadow_log.py snapshot nbafirst "$ET" $D
+            python3 bots/team_live.py snapshot nba "$ET" $D
             # the lane probabilities are written once (first run of the evening wins; games already started are skipped)
             if [ "$H" = "22" ]; then python3 bots/shadow_log.py snapshot nba "$ET" $D; fi
           fi
-          python3 bots/shadow_log.py report $D
+          python3 bots/shadow_log.py report $D; python3 bots/team_live.py report $D
       - name: Commit
         working-directory: _data
         run: |

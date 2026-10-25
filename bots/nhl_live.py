@@ -136,12 +136,13 @@ def main():
         p = _calibrate(model, p_raw)
         mt = meta[r["game"]]
         pair = mt["espn"]
-        lane_p = {}
+        lane_p, lane_base = {}, {}
         for lane, lm in lane_models.items():
             lf = r["lanes"][lane]["f"]
             zl = lm["intercept"] + sum(w * (lf[n] - m) / sd_ for n, w, m, sd_ in zip(lm["features"], lm["weights"], lm["mu"], lm["sd"]))
             lane_p[lane] = round(_calibrate(lm, 1 / (1 + math.exp(-zl))), 4)
-        rows.append({"p_points": lane_p.get("pts"), "p_assist": lane_p.get("ast"), "p_sog3": lane_p.get("sog"),"name": r["name"], "team": r["team"], "opponent": r["opp"], "home": bool(r["f"]["is_home"]), "pos": r["pos"],
+            lane_base[lane] = round(lf["season"], 4)
+        rows.append({"lane_base": lane_base, "p_points": lane_p.get("pts"), "p_assist": lane_p.get("ast"), "p_sog3": lane_p.get("sog"),"name": r["name"], "team": r["team"], "opponent": r["opp"], "home": bool(r["f"]["is_home"]), "pos": r["pos"],
                      "model_version": model["model_version"], "p_goal": round(p, 4), "p_goal_raw": round(p_raw, 4), "lamp_v1": r["lamp"],
                      "goals_per_gm": round(r["base_goals"], 3), "shots_per_gm": round(r["base_shots"], 2), "toi_min": round(r["f"]["toi"], 1),
                      "pp_pts": r["f"]["pp_pts"], "back_to_back": bool(r["f"]["b2b"]), "teammates_out_goals": round(r["f"]["teammates_out_goals"], 2),

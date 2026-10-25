@@ -41,14 +41,20 @@ def snapshot(sport, day, out_dir):
     rows = []
     now = __import__("datetime").datetime.now(__import__("datetime").timezone.utc).isoformat()
     for p in board["players"]:
-        if p.get("start_utc") and str(p["start_utc"]).replace("Z", "+00:00") <= now.replace("+00:00", "+00:00") and str(p["start_utc"])[:16] <= now[:16]:
+        if not __import__("os").environ.get("SHADOW_TEST_BACKFILL") and p.get("start_utc") and str(p["start_utc"]).replace("Z", "+00:00") <= now.replace("+00:00", "+00:00") and str(p["start_utc"])[:16] <= now[:16]:
             continue                                      # the game has started: not a pregame record
         pr = {}
         for src, key, _ in LANES[sport]:
             v = p.get(src) if src in p else (p.get("lanes") or {}).get(src)
             if v is not None:
                 pr[key] = v
-        rows.append({"name": p["name"], "team": p["team"], "opp": p["opponent"], "p_play": p.get("p_play", 1.0), "p": pr})
+        lb = p.get("lane_base") or {}
+        base = {k: v for k, v in {("goal" if sport == "nhl" else "pts25"): p.get("goals_per_gm") if sport == "nhl" else p.get("ppg")}.items() if v is not None}
+        alias = {"p_points": "pts", "p_assist": "ast", "p_sog3": "sog"}
+        for src, key, _ in LANES[sport]:
+            if alias.get(src, src) in lb:
+                base[key] = lb[alias.get(src, src)]
+        rows.append({"name": p["name"], "team": p["team"], "opp": p["opponent"], "p_play": p.get("p_play", 1.0), "p": pr, "b": base})
     Path(out_dir).mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps({"date": day, "sport": sport, "model_versions": board.get("model_version"), "rows": rows}))
     print(f"{day} {sport}: {len(rows)} players saved -> {path}")
@@ -77,7 +83,7 @@ def snapshot_first(day, out_dir):
                 entry["locked"] = True; kept += 1
             continue
         have["games"][gid] = {"locked": False, "status": rs[0]["game_status"], "starters_source": rs[0]["starters_source"], "saved_utc": __import__("datetime").datetime.now(__import__("datetime").timezone.utc).isoformat(),
-                              "rows": [{"name": r["name"], "team": r["team"], "opp": r["opponent"], "p_first_basket": r["p_first_basket"], "top3": r["top3_in_game"], "no_history": r["no_history"]} for r in rs]}
+                              "rows": [{"name": r["name"], "team": r["team"], "opp": r["opponent"], "p_first_basket": r["p_first_basket"], "top3": r["top3_in_game"], "no_history": r["no_history"], "ppg": r.get("ppg")} for r in rs]}
         new += 1
     path.write_text(json.dumps(have))
     print(f"{day} nbafirst: {new} game(s) written/refreshed, {kept} locked at tip, {len(have['games'])} in file")

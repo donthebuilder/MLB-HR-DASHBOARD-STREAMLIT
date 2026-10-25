@@ -26,7 +26,7 @@ def kickoffs(season, week):
 
 
 def snapshot(season, week, out_dir, cache):
-    import nfl_features as F, nfl_first as NF, td_fit
+    import nfl_features as F, nfl_first as NF, td_fit, lane_fit
     from nfl_td_v3_backtest import VARIANTS
     Path(out_dir).mkdir(parents=True, exist_ok=True)
     path = Path(out_dir) / f"shadow_nfl_{season}_w{int(week):02d}.json"
@@ -35,6 +35,7 @@ def snapshot(season, week, out_dir, cache):
     ko = kickoffs(season, week)
     slate, league, bye = F.upcoming_rows(season, week)
     fit = td_fit.score(slate)
+    lanes = lane_fit.score_all(slate)
     rows = NF.build_rows(cache, (season,), live={"season": season, "week": week, "slate": slate})
     live = [r for r in rows if r.get("live")]
     fm = json.load(open(HERE.parent / "models" / "nfl_first_td_v1.json"))
@@ -67,7 +68,8 @@ def snapshot(season, week, out_dir, cache):
             continue
         have["teams"][tm] = {"locked": False, "kickoff": k.isoformat() if k else None, "saved_utc": now.isoformat(),
                              "rows": [{"pid": r["player_id"], "name": names.get(r["player_id"]), "pos": r.get("position"), "opp": r.get("opponent_team"),
-                                       "p_td_fit": fit.get(str(r["player_id"])), "p_first_td": round(fr[r["player_id"]], 4) if r["player_id"] in fr else None} for r in rs]}
+                                       "p_td_fit": fit.get(str(r["player_id"])), "p_first_td": round(fr[r["player_id"]], 4) if r["player_id"] in fr else None,
+                                       "p_lane": {m: v[str(r["player_id"])] for m, v in lanes.items() if str(r["player_id"]) in v}} for r in rs]}
         written += 1
     path.write_text(json.dumps(have))
     print(f"{season} w{week}: {written} team(s) written/refreshed, {frozen} frozen at kickoff, {len(have['teams'])} in file")
@@ -79,6 +81,8 @@ def grade(season, week, out_dir):
     d = json.load(open(path))
     st = nfl.load_player_stats(seasons=[season], summary_level="week").filter(pl.col("week") == week)
     td = {r["player_id"]: int(((r["rushing_tds"] or 0) + (r["receiving_tds"] or 0)) >= 1) for r in st.iter_rows(named=True)}
+    import lane_fit
+    stat_rows = {r["player_id"]: r for r in st.iter_rows(named=True)}
     first, _ = NF.pbp_facts(season)
     first_by_pair = {}
     for gid, v in first.items():
@@ -90,11 +94,26 @@ def grade(season, week, out_dir):
         for r in g["rows"]:
             if r["pid"] in td:
                 r["td"] = td[r["pid"]]; n += 1
+                r["lane_y"] = {m: int(lane_fit.OUTCOMES[m](stat_rows[r["pid"]])) for m in r.get("p_lane", {})}
             fp = first_by_pair.get(frozenset([tm, r["opp"]]))
             if fp is not None:
                 r["first_td"] = int(fp == r["pid"])
     path.write_text(json.dumps(d))
     print(f"{season} w{week}: anytime TD graded for {n} players")
+
+
+def report_lanes(out_dir):
+    import lane_fit
+    rows = []
+    for f in sorted(Path(out_dir).glob("shadow_nfl_*.json")):
+        d = json.load(open(f))
+        rows += [r for g in d["teams"].values() for r in g["rows"] if r.get("lane_y")]
+    for m in lane_fit.MARKETS:
+        rs = [(r["p_lane"][m], r["lane_y"][m]) for r in rows if m in r.get("lane_y", {})]
+        if len(rs) < 50:
+            print(f"  {m:<9} n={len(rs)} (too few to read)"); continue
+        rs.sort(); q = len(rs) // 4
+        print(f"  {m:<9} n={len(rs)}  " + "  ".join(f"{100 * sum(x for x, _ in b) / len(b):.0f}%->{100 * sum(y for _, y in b) / len(b):.0f}%" for b in [rs[i * q:(i + 1) * q if i < 3 else len(rs)] for i in range(4)]))
 
 
 def report(out_dir):
@@ -145,7 +164,7 @@ if __name__ == "__main__":
     elif c == "auto-grade":
         auto_grade(sys.argv[2])
     elif c == "report":
-        report(sys.argv[2])
+        report(sys.argv[2]); report_lanes(sys.argv[2])
     elif c == "snapshot":
         import os
         snapshot(int(sys.argv[2]), int(sys.argv[3]), sys.argv[4], os.environ.get("DASH_NFL_CACHE", str(Path.home() / ".cache/dash_nfl")))

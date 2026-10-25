@@ -164,3 +164,13 @@ Every lane is logged BEFORE the game and graded after it, and each sport runs as
 - All saved lane models and `nhl_goal_v2` / `nba_pts_v2` now include the 2026 season to date in the production fit; the fit made on 2023-25 is graded on 2026 first (out of sample): NHL points predicted 34.3% vs actual 34.9%, assists 23.7 vs 24.4, shots 21.3 vs 21.6 (5,517 player-games).
 - NFL 2026 weeks 1-7 are a true holdout for the fitted anytime-TD model (fit 2023-25): AUC 0.7191 vs v2 0.7185, best pick per game 56.4% vs 48.9% (94 games), top-5 per week 62.9% vs 82.9% (35 picks), calibration by tenth within ~3 pts. Mixed, same pattern as before: better board, similar top.
 - **Bug found by using 2026:** the NBA "teammates out" and "games missed" features carried last season's roster across the offseason (44 ppg "out" vs 17 normally in the first month), pushing early-season probabilities too high. History now resets after a 60+ day gap (`buckets_backtest.run_games`, `nhl_backtest.teammates_out`); in-season rows are unchanged, so earlier backtest numbers stand. After the fix, 2026 NBA rebounds read 9.1% predicted vs 8.1% actual (479 player-games).
+
+## Team models (moneyline / spread), `bots/team_models.py`, `bots/team_live.py`
+Elo (margin of victory, home edge, offseason pull toward the mean; K and home edge tuned on 2024 from 2023 only) + a ridge regression on form, rest and back-to-backs; win probability from Normal(expected margin, residual sd). Graded on 2025-26 (NFL 2025 and 2026) against the CLOSING line on the same games:
+| | games | win accuracy | win log loss model / book | spread error model / book | when model differs from book |
+|---|---|---|---|---|---|
+| NBA | 1,231 | 69.2% | 0.596 / 0.570 | 11.34 / 10.90 | its side covered 48.4% (>=2.3 pts, 616 games) |
+| NFL 2025 | 271 | 61.6% | 0.645 / 0.609 | 10.37 / 9.73 | its side covered 40.4% (>=2.2 pts, 136 games): the book was right |
+| NHL | 1,193 | 53.9% | 0.683 / 0.677 | not comparable (fixed +/-1.5 puck line) | n/a |
+The market is the better model in all three, as expected; the model is close in NHL and NBA. A 50/50 blend of model and book beats the book on spread error in NBA 2026 (12.65 vs 12.75, 28 games) and NFL 2026 (9.52 vs 9.30 is worse; no consistent gain). `team_live.py` writes tonight's model spread / win probability beside the book's and logs it pregame, graded next morning.
+NFL fitted markets: `bots/nfl/nfl_lanes.py` (receiving yards, receptions, rushing yards/attempts, passing yards, kicking points, passing TDs) and `lane_fit.py` (live scoring, attached to the weekly shadow log).

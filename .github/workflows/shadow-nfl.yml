@@ -51,6 +51,11 @@ jobs:
           python3 nfl_shadow.py auto-snapshot $D
           python3 nfl_shadow.py auto-grade $D
           python3 nfl_shadow.py report $D
+          cd ../..
+          ET=$(python3 -c "from datetime import datetime,timedelta,timezone;print((datetime.now(timezone.utc)-timedelta(hours=5)).date())")
+          python3 bots/team_live.py snapshot nfl "$ET" _data/public/data/current/shadow_log
+          python3 bots/team_live.py grade-all _data/public/data/current/shadow_log
+          python3 bots/team_live.py report _data/public/data/current/shadow_log
       - name: Commit
         working-directory: _data
         run: |

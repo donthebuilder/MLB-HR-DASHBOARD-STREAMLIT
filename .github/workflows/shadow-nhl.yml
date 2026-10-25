@@ -25,6 +25,12 @@ jobs:
         with:
           python-version: "3.11"
       - run: pip install numpy requests
+      - name: Cache the NHL game logs
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/dash_nhl
+          key: dash-nhl-${{ github.run_id }}
+          restore-keys: dash-nhl-
       - name: Checkout the bbe-history branch (read/write)
         run: |
           git config --global user.name  "moonshot-bot"
@@ -39,9 +45,14 @@ jobs:
           H=$(date -u +%H)
           ET=$(python3 -c "from datetime import datetime,timedelta,timezone;print((datetime.now(timezone.utc)-timedelta(hours=5)).date())")
           Y=$(python3 -c "from datetime import datetime,timedelta,timezone;print((datetime.now(timezone.utc)-timedelta(hours=5,days=1)).date())")
-          if [ "$H" -ge 20 ]; then python3 bots/shadow_log.py snapshot nhl "$ET" $D
-          else [ -e $D/shadow_nhl_$Y.json ] && python3 bots/shadow_log.py grade nhl "$Y" $D; fi
-          python3 bots/shadow_log.py report $D
+          if [ "$H" -ge 20 ]; then
+            python3 bots/shadow_log.py snapshot nhl "$ET" $D
+            python3 bots/team_live.py snapshot nhl "$ET" $D
+          else
+            [ -e $D/shadow_nhl_$Y.json ] && python3 bots/shadow_log.py grade nhl "$Y" $D
+            python3 bots/team_live.py grade-all $D
+          fi
+          python3 bots/shadow_log.py report $D; python3 bots/team_live.py report $D
       - name: Commit
         working-directory: _data
         run: |
