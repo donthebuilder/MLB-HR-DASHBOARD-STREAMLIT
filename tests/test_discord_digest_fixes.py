@@ -230,20 +230,19 @@ class Poster(unittest.TestCase):
         os.environ["DISCORD_OPS_WEBHOOK"] = OPS
         import make_slim
         import validate_context
-        import staleness_watch
         import pick_lock
         make_slim._alert_bad_slate("TEST slate", "TEST reason")
         self.assertTrue(validate_context.post_discord({"nights": 1, "through": "2099-01-01", "stats": []}))
-        self.assertTrue(staleness_watch.post_discord(["TEST alert"]))
         pick_lock.post_discord(["TEST alert"])
         t._post_discord("TEST fan message")
         t._post_discord_payload({"content": "TEST"})
         t._post_discord_file(b"PNG", "x.png", "TEST")
-        self.assertEqual(len(seen), 7)
+        # staleness_watch no longer posts (2026-10-24: a stale board turns its run red instead)
+        self.assertEqual(len(seen), 6)
         for url, ua in seen:
             self.assertEqual(ua, discord_post.USER_AGENT, url)
-        self.assertTrue(all(u == OPS for u, _ in seen[:4]), seen[:4])
-        self.assertTrue(all(u == FAN for u, _ in seen[4:]), seen[4:])
+        self.assertTrue(all(u == OPS for u, _ in seen[:3]), seen[:3])
+        self.assertTrue(all(u == FAN for u, _ in seen[3:]), seen[3:])
 
     def test_ops_is_off_when_unset_and_never_the_fan_room(self):
         os.environ["DISCORD_WEBHOOK"] = FAN

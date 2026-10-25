@@ -73,6 +73,53 @@ def in_window(now: dt.datetime, start_h: int, end_h: int) -> bool:
     return h >= start_h or h < end_h   # e.g. 12 -> 8 next day
 
 
+def in_week_windows(now: dt.datetime, windows: dict) -> bool:
+    """windows: {UTC weekday (Mon=0): [(start_h, end_h), ...]}. True when `now`
+    (UTC) falls inside one of that weekday's [start_h, end_h) hour ranges."""
+    return any(a <= now.hour < b for a, b in windows.get(now.weekday(), ()))
+
+
+# 2026-10-24. The hours the WORKFLOW itself runs on a 15-minute cadence, copied
+# from nfl.yml's PREGAME CADENCE and nfl-fantasy-stats.yml. Outside them nothing
+# is supposed to refresh, so a "stale" board there is not a skipped slot. The old
+# whole-day sets alarmed every Friday afternoon (TNF is Fri 00-01Z) and on game
+# nights after the last pregame build (the board is frozen at kickoff). UTC
+# weekday, Mon=0. Sunday 0-6Z is Saturday night ET: nothing in the regular season.
+NFL_BOARD_WINDOWS = {
+    3: [(14, 24)],             # Thu: Thanksgiving + TNF run-up
+    4: [(0, 1)],               # Thu night ET (TNF kickoff in EST)
+    6: [(11, 24)],             # Sun: London, 1pm, 4pm, SNF run-up
+    0: [(0, 1), (21, 24)],     # Sun night ET (SNF kickoff) + MNF run-up
+    1: [(0, 1)],               # Mon night ET (MNF kickoff)
+}
+NFL_FANTASY_WINDOWS = {
+    4: [(0, 6)],               # Thu night
+    6: [(13, 24)],             # Sun (no Saturday games before December)
+    0: [(0, 6)],               # Sun night
+    1: [(0, 6)],               # Mon night
+}
+
+
+def mlb_has_games(now: dt.datetime) -> bool:
+    """Does MLB play on the ET dates the watch window covers? FAILS OPEN: if the
+    schedule cannot be read, say True so the board is checked as before. On a
+    no-game day (World Series off days, 2026-10-20..22) the bot publishes nothing,
+    and the board looks 'stale' without anything having been skipped."""
+    import urllib.request
+    from zoneinfo import ZoneInfo
+    et = ZoneInfo("America/New_York")
+    days = {now.astimezone(et).date(), (now - dt.timedelta(hours=8)).astimezone(et).date()}
+    total = 0
+    try:
+        for d in days:
+            url = ("https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=%s&gameType=R,F,D,L,W" % d)
+            with urllib.request.urlopen(url, timeout=10) as r:
+                total += int(json.load(r).get("totalGames") or 0)
+    except Exception:
+        return True
+    return total > 0
+
+
 def read_json(p: Path):
     try:
         return json.loads(p.read_text(encoding="utf-8"))
@@ -134,51 +181,37 @@ def nfl_fantasy_stats_age(current: Path):
     return None
 
 
-def post_discord(lines: list[str]) -> bool:
-    """True when at least one webhook took the post. Ops alert: goes to
-    DISCORD_OPS_WEBHOOK when set, else the shared DISCORD_WEBHOOK room until an
-    ops channel exists. Sends a User-Agent (Discord 403s urllib's default) and
-    reads the secret like the tracker (bots/discord_post.py)."""
-    import discord_post
-    if not lines:
-        return True
-    if not discord_post.webhook_urls(discord_post.ops_secret()):
-        print("  ! DISCORD_OPS_WEBHOOK / DISCORD_WEBHOOK unset or holds no URL -- alert NOT delivered",
-              file=sys.stderr)
-        return False
-    ok, bad, _ops = discord_post.post_ops({"content": "\n".join(lines)[:1900]})
-    return ok > 0
-
-
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--dir", default="public/data/current",
                     help="the data-branch current/ directory to read timestamps from")
-    ap.add_argument("--post", action="store_true", help="post to Discord (else print only)")
     args = ap.parse_args()
     current = Path(args.dir)
     now = now_utc()
 
-    # (name, age_fn, window_start_h, window_end_h, threshold_min, game_days_only)
+    # (name, age_fn, window_start_h, window_end_h, threshold_min, week_windows)
+    # week_windows None = the plain daily window; else the per-weekday table above.
     checks = [
         ("MLB board (today.yml)", mlb_age,
          env_int("MLB_WINDOW_START", 12), env_int("MLB_WINDOW_END", 8),
          env_int("MLB_STALE_MIN", 120), None),
-        ("NFL board (nfl.yml)", nfl_age,
-         env_int("NFL_WINDOW_START", 13), env_int("NFL_WINDOW_END", 6),
-         env_int("NFL_STALE_MIN", 240), {3, 4, 6, 0, 1}),  # Thu+Fri, Sun+Mon, Mon+Tue (Mon=0)
-        ("NFL fantasy stats (FRANCHISE live scoring)", nfl_fantasy_stats_age,
-         env_int("NFLFS_WINDOW_START", 17), env_int("NFLFS_WINDOW_END", 6),
-         env_int("NFLFS_STALE_MIN", 45), {3, 4, 6, 0, 1}),
+        ("NFL board (nfl.yml)", nfl_age, 0, 24,
+         env_int("NFL_STALE_MIN", 240), NFL_BOARD_WINDOWS),
+        ("NFL fantasy stats (FRANCHISE live scoring)", nfl_fantasy_stats_age, 0, 24,
+         env_int("NFLFS_STALE_MIN", 45), NFL_FANTASY_WINDOWS),
     ]
 
     alerts, report = [], []
-    for name, age_fn, ws, we, thresh, game_days in checks:
-        if game_days is not None and now.weekday() not in game_days:
-            report.append(f"  {name}: off day, not checked")
-            continue
-        if not in_window(now, ws, we):
+    for name, age_fn, ws, we, thresh, wk in checks:
+        if wk is not None:
+            if not in_week_windows(now, wk):
+                report.append(f"  {name}: not in its refresh hours, not checked")
+                continue
+        elif not in_window(now, ws, we):
             report.append(f"  {name}: out of window ({ws:02d}-{we:02d} UTC), not checked")
+            continue
+        elif name.startswith("MLB") and not mlb_has_games(now):
+            report.append(f"  {name}: no MLB games today, not checked")
             continue
         g = age_fn(current)
         if g is None:
@@ -200,9 +233,10 @@ def main() -> int:
     if alerts:
         print("\nALERTS:")
         print("\n".join("  " + a for a in alerts))
-        if args.post and not post_discord(["🚨 **Board out of date**"] + alerts):
-            print("ALERT NOT DELIVERED", file=sys.stderr)
-            return 1
+        # 2026-10-24: no Discord webhook. A stale board turns this run RED and
+        # GitHub emails the repo owner -- the false alarms are fixed, so red now
+        # means a slot was really skipped.
+        return 1
     else:
         print("\nall fresh / out of window — no alert")
     return 0
