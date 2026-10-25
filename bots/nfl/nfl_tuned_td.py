@@ -64,9 +64,24 @@ def matrix(d):
     return np.column_stack(cols)
 
 
+def save_model(D, te_z, te_y, path):
+    """Production fit on every season, Platt (+tail) calibration from the holdout run above. Read by td_fit.py."""
+    import json
+    allr = pl.concat([D[2023], D[2024], D[2025]], how="diagonal_relaxed")
+    X = matrix(allr); mu, sd = X.mean(0), X.std(0) + 1e-9
+    w = fit_logistic((X - mu) / sd, allr["hit"].to_numpy().astype(float), l2=20.0)
+    ab = fit_logistic(te_z.reshape(-1, 1), te_y, l2=0.01)
+    qs = np.sort(1 / (1 + np.exp(-(ab[0] + ab[1] * te_z))))
+    t = float(qs[int(len(qs) * 0.99)])
+    Path(path).write_text(json.dumps({"model_version": "nfl_td_fit_v1", "target": "anytime TD", "features": FEATS + POSD, "mu": mu.tolist(), "sd": sd.tolist(),
+                                      "intercept": float(w[0]), "weights": w[1:].tolist(), "fit_on": f"{allr.height} player-weeks, 2023-25",
+                                      "platt": {"a": float(ab[0]), "b": float(ab[1]), "tail": {"t": t, "slope": 0.25}}}, indent=1))
+    print(f"  saved {path}  (Platt a {ab[0]:+.3f} b {ab[1]:.3f}, tail above {100 * t:.1f}%)")
+
+
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("--cache", default=str(Path.home() / ".cache/dash_nfl"))
-    ap.add_argument("--out-feats", action="store_true"); ap.add_argument("--fit", nargs="+", default=["2023", "2024"]); ap.add_argument("--test", default="2025"); a = ap.parse_args()
+    ap.add_argument("--save", default=None); ap.add_argument("--out-feats", action="store_true"); ap.add_argument("--fit", nargs="+", default=["2023", "2024"]); ap.add_argument("--test", default="2025"); a = ap.parse_args()
     if a.out_feats:
         FEATS.extend(["tm_out_tgt", "tm_out_car", "tm_out_rz"])
     D = {s: _prep(table(s, a.cache)).filter(pl.col("f_gp") >= 3) if "f_gp" in table(s, a.cache).columns else _prep(table(s, a.cache)) for s in (2023, 2024, 2025)}
@@ -96,6 +111,8 @@ def main():
     print(f"  tuned log loss {-np.mean(y * np.log(pc) + (1 - y) * np.log(1 - pc)):.4f} vs base-rate {-np.mean(y * math.log(y.mean()) + (1 - y) * math.log(1 - y.mean())):.4f}")
     o = np.argsort(p); k = len(o) // 10
     print("  calibration by tenth (pred>actual %): " + " ".join(f"{100 * p[o[i * k:(i + 1) * k if i < 9 else None]].mean():.0f}>{100 * y[o[i * k:(i + 1) * k if i < 9 else None]].mean():.0f}" for i in range(10)))
+    if a.save:
+        save_model(D, z, y, a.save)
     print("  weights: " + ", ".join(f"{n} {c:+.2f}" for n, c in sorted(zip(FEATS + POSD, w[1:]), key=lambda t: -abs(t[1]))[:8]))
 
 

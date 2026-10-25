@@ -146,3 +146,5 @@ Teammates-out for NFL (`--out-feats`: regulars with 3+ targets or 5+ carries a g
 
 ## NBA double-double lane (`nba_dd_v1`)
 Two of points/rebounds/assists at 10+. Base 8.5% (2025-26). Fit 2023-25, graded once: best pick per game tuned 44.7% vs 46.3% for his own season double-double rate; top 10 per night 43.1% vs 43.3%. The fit does not beat the plain rate on picks, so this lane is a calibrated probability (tenths within ~3 pts, top tenth 44 predicted vs 40 actual), not a better pick. On the board and in the shadow log.
+
+`nfl_td_fit_v1` (made by `nfl_tuned_td.py --save`: all-season fit, Platt + tail from the 2025 holdout run) is read by `bots/nfl/td_fit.py` and attached as `p_td_fit` in each player's shadow entry in the NFL prediction log (`nfl_bot.py`, best-effort). Price check only; v2 still ranks.
