@@ -35,7 +35,7 @@ def snapshot(season, week, out_dir, cache):
     ko = kickoffs(season, week)
     slate, league, bye = F.upcoming_rows(season, week)
     fit = td_fit.score(slate)
-    lanes = lane_fit.score_all(slate)
+    lanes = lane_fit.score_all(slate, cache)
     rows = NF.build_rows(cache, (season,), live={"season": season, "week": week, "slate": slate})
     live = [r for r in rows if r.get("live")]
     fm = json.load(open(HERE.parent / "models" / "nfl_first_td_v1.json"))
@@ -72,6 +72,10 @@ def snapshot(season, week, out_dir, cache):
                                        "p_lane": {m: v[str(r["player_id"])] for m, v in lanes.items() if str(r["player_id"]) in v}} for r in rs]}
         written += 1
     path.write_text(json.dumps(have))
+    board_out = __import__("os").environ.get("SHADOW_BOARD_OUT")             # the site-facing copy: every team, current week, rewritten each run (the shadow file above is the frozen record)
+    if board_out:
+        Path(board_out).write_text(json.dumps({"season": season, "week": week, "generated_at": now.isoformat(), "models": {"anytime_td": "nfl_td_fit_v1", "first_td": "nfl_first_td_v1", "lanes": "nfl_<market>_fit_v1"},
+                                                "teams": {tm: {"kickoff": g.get("kickoff"), "rows": g["rows"]} for tm, g in have["teams"].items()}}, separators=(",", ":")))
     print(f"{season} w{week}: {written} team(s) written/refreshed, {frozen} frozen at kickoff, {len(have['teams'])} in file")
 
 
@@ -82,7 +86,15 @@ def grade(season, week, out_dir):
     st = nfl.load_player_stats(seasons=[season], summary_level="week").filter(pl.col("week") == week)
     td = {r["player_id"]: int(((r["rushing_tds"] or 0) + (r["receiving_tds"] or 0)) >= 1) for r in st.iter_rows(named=True)}
     import lane_fit
-    stat_rows = {r["player_id"]: r for r in st.iter_rows(named=True)}
+    stat_rows = {r["player_id"]: dict(r) for r in st.iter_rows(named=True)}
+    try:                                         # longest reception per player from play-by-play (the weekly stats do not carry it)
+        import nfl_features as F
+        p = F._pbp(season).filter((pl.col("season_type") == "REG") & (pl.col("week") == week) & (pl.col("complete_pass") == 1) & pl.col("receiver_player_id").is_not_null())
+        for r in p.group_by("receiver_player_id").agg(pl.col("yards_gained").max().alias("m")).iter_rows(named=True):
+            if r["receiver_player_id"] in stat_rows:
+                stat_rows[r["receiver_player_id"]]["longest_rec"] = r["m"]
+    except Exception as exc:    # noqa: BLE001
+        print(f"longest reception not graded ({type(exc).__name__})")
     first, _ = NF.pbp_facts(season)
     first_by_pair = {}
     for gid, v in first.items():

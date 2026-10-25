@@ -53,6 +53,42 @@ def augment(cache):
     return {s: allt.filter(pl.col("_season") == s) for s in (2023, 2024, 2025, 2026)}
 
 
+def live_extras(cache):
+    """{player_id: {f_int, f_sacks, f_longest}} as of now (mean of each player's last 8 games), for scoring the coming week."""
+    parts = []
+    T = augment(cache)
+    allt = pl.concat([T[s] for s in T], how="diagonal_relaxed").sort(["player_id", "_season", "week"])
+    out = {}
+    for pid, g in allt.group_by("player_id"):
+        pid = pid[0] if isinstance(pid, tuple) else pid
+        last = g.tail(8)
+        out[pid] = {"f_int": float(last["passing_interceptions"].fill_null(0).mean()), "f_sacks": float(last["sacks_suffered"].fill_null(0).mean()), "f_longest": float(last["longest_rec"].fill_null(0).mean())}
+    return out
+
+
+def save_models(cache):
+    """Production fits for the new markets (all seasons incl. 2026), Platt + tail from the 2025 holdout, models/nfl_<market>_fit_v1.json (read by lane_fit.py)."""
+    import json
+    register(); T = augment(cache)
+    for m in NEW:
+        cols = L.feats(m)
+        D = {s: L.prep(T[s], m) for s in T}
+        D = {s: d.filter(pl.col("f_gp") >= 3) if "f_gp" in d.columns else d for s, d in D.items()}
+        tr = pl.concat([D[2023], D[2024]], how="diagonal_relaxed")
+        Xtr = L.matrix(tr, cols); mu, sd = Xtr.mean(0), Xtr.std(0) + 1e-9
+        w = fit_logistic((Xtr - mu) / sd, tr["hit"].to_numpy().astype(float), l2=20.0)
+        z25 = ((L.matrix(D[2025], cols) - mu) / sd) @ w[1:] + w[0]; y25 = D[2025]["hit"].to_numpy().astype(float)
+        allr = pl.concat([D[s] for s in (2023, 2024, 2025, 2026) if D[s].height], how="diagonal_relaxed")
+        X = L.matrix(allr, cols); amu, asd = X.mean(0), X.std(0) + 1e-9
+        aw = fit_logistic((X - amu) / asd, allr["hit"].to_numpy().astype(float), l2=20.0)
+        ab = fit_logistic(z25.reshape(-1, 1), y25, l2=0.01)
+        qs = np.sort(1 / (1 + np.exp(-(ab[0] + ab[1] * z25)))); t = float(qs[int(len(qs) * 0.99)])
+        (HERE.parent / "models" / f"nfl_{m.lower()}_fit_v1.json").write_text(json.dumps({
+            "model_version": f"nfl_{m.lower()}_fit_v1", "target": f"{m} >= {NEW[m]['bar']}", "positions": NEW[m]["pos"], "features": cols + L.POS, "mu": amu.tolist(), "sd": asd.tolist(),
+            "intercept": float(aw[0]), "weights": aw[1:].tolist(), "fit_on": f"{allr.height} player-weeks, 2023-26", "platt": {"a": float(ab[0]), "b": float(ab[1]), "tail": {"t": t, "slope": 0.25}}}, indent=1))
+        print(f"saved models/nfl_{m.lower()}_fit_v1.json")
+
+
 def register():
     for m, c in NEW.items():
         L.MARKETS[m] = {"pos": c["pos"], "bar": c["bar"], "w": c["w"]}
@@ -133,7 +169,9 @@ def weather(T):
 
 
 def main():
-    ap = argparse.ArgumentParser(); ap.add_argument("--cache", default=str(Path.home() / ".cache/dash_nfl")); ap.add_argument("--only", nargs="*", default=None); a = ap.parse_args()
+    ap = argparse.ArgumentParser(); ap.add_argument("--cache", default=str(Path.home() / ".cache/dash_nfl")); ap.add_argument("--only", nargs="*", default=None); ap.add_argument("--save", action="store_true"); a = ap.parse_args()
+    if a.save:
+        return save_models(a.cache)
     want = a.only or list(NEW) + ["DEF_TD", "WEATHER"]
     register(); T = augment(a.cache)
     for m in NEW:

@@ -30,7 +30,7 @@ jobs:
         working-directory: _data
         run: |
           git fetch --quiet origin data --depth 1
-          for f in $(git ls-tree --name-only origin/data public/data/current/ | grep -E '/(nfl|nba)_odds_20[0-9-]+\.json$'); do
+          for f in $(git ls-tree --name-only origin/data public/data/current/ | grep -E '/(nfl|nba|nhl)_odds_20[0-9-]+\.json$'); do
             git show "origin/data:$f" > "public/data/current/odds_log/$(basename $f)"
           done
           echo "odds_log now holds $(ls public/data/current/odds_log | wc -l) files"

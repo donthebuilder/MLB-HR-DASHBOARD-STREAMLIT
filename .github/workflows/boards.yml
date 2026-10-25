@@ -1,0 +1,73 @@
+name: Model boards (NHL, NBA, NFL lanes, team lines, simulations)
+
+# Writes the fitted-model boards to the `data` branch for the site: every NHL skater and NBA rotation player with calibrated lane probabilities, the NBA first-basket board
+# (real starters from NBA's daily lineups once posted), the moneyline / spread model beside the book, the joint game simulations, and the NFL lane probabilities.
+# Own schedule, own concurrency group. NHL/NBA: 16:05 UTC (morning lines), 21:05 and 22:35 UTC (starters confirmed before the 7 pm ET drops). NFL: Thursday night,
+# Sunday morning and Monday night. Nothing here changes a pick or a score the site already shows; these are new files.
+on:
+  schedule:
+    - cron: '5 16 * * *'
+    - cron: '5 21 * * *'
+    - cron: '35 22 * * *'
+    - cron: '30 12 * * 0'
+    - cron: '30 22 * * 4'
+    - cron: '30 22 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: boards
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  boards:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install numpy requests nflreadpy polars
+      - name: Cache game logs
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/dash_nba
+            ~/.cache/dash_nhl
+            ~/.cache/dash_nhl_live
+            ~/.cache/dash_nfl
+          key: dash-boards-${{ github.run_id }}
+          restore-keys: dash-boards-
+      - name: Restore the other published files (publish_data.sh keeps what it does not regenerate)
+        run: mkdir -p public/data/current
+      - name: NHL, NBA boards and team lines
+        continue-on-error: true
+        run: |
+          D=public/data/current
+          ET=$(python3 -c "from datetime import datetime,timedelta,timezone;print((datetime.now(timezone.utc)-timedelta(hours=5)).date())")
+          python3 bots/nhl_live.py "$ET" && cp bots/outputs/nhl_board_latest.json $D/ || true
+          python3 bots/nba_live.py "$ET" && cp bots/outputs/nba_board_latest.json $D/ || true
+          python3 bots/nba_first_live.py "$ET" --out $D/nba_first_board_latest.json || true
+          python3 bots/team_live.py board nba "$ET" --out $D/team_board_nba_latest.json || true
+          python3 bots/team_live.py board nhl "$ET" --out $D/team_board_nhl_latest.json || true
+          python3 bots/game_sim.py nhl "$ET" --out $D/nhl_sim_latest.json || true
+          python3 bots/game_sim.py nba "$ET" --out $D/nba_sim_latest.json || true
+      - name: NFL lanes and team lines (Thursday, Sunday, Monday runs)
+        continue-on-error: true
+        run: |
+          D=$PWD/public/data/current
+          DOW=$(date -u +%u)
+          if [ "$DOW" = "7" ] || [ "$DOW" = "4" ] || [ "$DOW" = "1" ]; then
+            ET=$(python3 -c "from datetime import datetime,timedelta,timezone;print((datetime.now(timezone.utc)-timedelta(hours=5)).date())")
+            mkdir -p /tmp/nfl-shadow
+            (cd bots/nfl && SHADOW_BOARD_OUT=$D/nfl_lanes_latest.json python3 nfl_shadow.py auto-snapshot /tmp/nfl-shadow)
+            python3 bots/team_live.py board nfl "$ET" --out $D/team_board_nfl_latest.json || true
+          fi
+      - name: Publish to data branch
+        run: bash .github/scripts/publish_data.sh "Model boards"
