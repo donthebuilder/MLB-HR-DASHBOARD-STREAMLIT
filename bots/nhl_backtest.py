@@ -31,8 +31,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import nhl_scorer as nhl   # noqa: E402
 
 BASE = "https://api.nhle.com/stats/rest/en/{}?isAggregate=false&isGame=true&limit=-1&cayenneExp={}"
-SEASON_START = {2023: "2023-10-01", 2024: "2024-10-01", 2025: "2025-10-01"}
-SEASON_END = {2023: "2024-04-30", 2024: "2025-04-30", 2025: "2026-04-30"}
+SEASON_START = {2023: "2023-10-01", 2024: "2024-10-01", 2025: "2025-10-01", 2026: "2026-10-01"}
+SEASON_END = {2023: "2024-04-30", 2024: "2025-04-30", 2025: "2026-04-30",
+              2026: (dt.date.today() - dt.timedelta(days=1)).isoformat()}      # the season to date; the last weekly file's name changes daily, so it is never stale
 
 
 def pull(report, a, b, cache):
@@ -125,7 +126,8 @@ def run_data(data, season, min_prior=5):
         k = (team, gid)
         if k not in out_memo:
             i = pos_in[team][gid]
-            recent = [tgames[team][q]["pl"] for q in order[team][max(0, i - 10):i]]
+            cut = (dt.date.fromisoformat(tgames[team][gid]["date"]) - dt.timedelta(days=60)).isoformat()      # not last season's roster (the offseason turns it over)
+            recent = [tgames[team][q]["pl"] for q in order[team][max(0, i - 10):i] if tgames[team][q]["date"] >= cut]
             tonight = tgames[team][gid]["pl"]
             cnt, toi, gl = defaultdict(int), defaultdict(float), defaultdict(float)
             for gm in recent:

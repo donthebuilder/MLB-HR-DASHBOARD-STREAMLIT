@@ -31,9 +31,9 @@ def rescale(rows, z, share):
 
 
 def main():
-    ap = argparse.ArgumentParser(); ap.add_argument("--cache", default=str(Path.home() / ".cache/dash_nfl")); ap.add_argument("--save", default=None); a = ap.parse_args()
-    rows = NF.build_rows(a.cache)
-    tr = [r for r in rows if r["season"] in (2023, 2024)]; te = [r for r in rows if r["season"] == 2025]
+    ap = argparse.ArgumentParser(); ap.add_argument("--cache", default=str(Path.home() / ".cache/dash_nfl")); ap.add_argument("--save", default=None); ap.add_argument("--test", type=int, default=2025); a = ap.parse_args()
+    rows = NF.build_rows(a.cache, (2023, 2024, 2025, 2026))
+    tr = [r for r in rows if r["season"] < a.test]; te = [r for r in rows if r["season"] == a.test]
     ngames_tr = len({r["game"] for r in tr})
     share = sum(r["y"] for r in tr) / ngames_tr
     X = lambda rs: np.array([[r[c] for c in COLS] for r in rs], float)
@@ -44,11 +44,13 @@ def main():
     ab = fit_logistic(z.reshape(-1, 1), y, l2=0.01)                 # Platt on the holdout: the raw top end over-predicted
     zc = ab[0] + ab[1] * z
     p = rescale(te, zc, share)
+    tail_t = float(np.quantile(p, 0.95))                                   # the top 2% over-predicted: compress above the 95th percentile
+    p = np.where(p > tail_t, tail_t + (p - tail_t) * 0.25, p)
     games = defaultdict(list)
     for i, r in enumerate(te):
         games[r["game"]].append(i)
     games = {k: v for k, v in games.items() if len(v) >= 15}
-    print(f"{len(te)} candidate-games, {len(games)} games graded (2025); fit {len(tr)} (2023-24); first TD went to a listed RB/WR/TE in {100 * share:.0f}% of games")
+    print(f"{len(te)} candidate-games, {len(games)} games graded ({a.test}); fit {len(tr)} (earlier seasons); first TD went to a listed RB/WR/TE in {100 * share:.0f}% of games")
     def pick(score):
         t = [0, 0, 0]
         for ix in games.values():
@@ -63,14 +65,16 @@ def main():
     print("  calibration by eighth (pred>actual %): " + " ".join(f"{100 * p[o[i * k:(i + 1) * k if i < 7 else None]].mean():.1f}>{100 * y[o[i * k:(i + 1) * k if i < 7 else None]].mean():.1f}" for i in range(8)))
     top = np.argsort(-p)[: len(p) // 50]
     print(f"  top 2% of candidates: predicted {100 * p[top].mean():.1f}% vs actual {100 * y[top].mean():.1f}%")
+    print(f"  tail compression above {100 * tail_t:.1f}%")
     print(f"  Platt a {ab[0]:+.3f} b {ab[1]:.3f} (fitted on this holdout, so the calibration rows above are in-sample for it)")
     print("  weights: " + ", ".join(f"{c} {v:+.2f}" for c, v in sorted(zip(COLS, w[1:]), key=lambda t: -abs(t[1]))[:6]))
     if a.save:
+        tail_t = float(tail_t)
         Xa = X(rows); amu, asd = Xa.mean(0), Xa.std(0) + 1e-9
         aw = fit_logistic((Xa - amu) / asd, np.array([r["y"] for r in rows], float), l2=20.0)
         ash = sum(r["y"] for r in rows) / len({r["game"] for r in rows})
         Path(a.save).write_text(json.dumps({"model_version": "nfl_first_td_v1", "target": "first TD of the game (RB/WR/TE)", "features": COLS, "mu": amu.tolist(), "sd": asd.tolist(),
-                                            "platt": {"a": float(ab[0]), "b": float(ab[1]), "note": "fitted on the 2025 holdout raw logit; applied before the per-game rescale"}, "intercept": float(aw[0]), "weights": aw[1:].tolist(), "listed_share": ash, "fit_on": f"{len(rows)} candidate-games, 2023-25"}, indent=1))
+                                            "platt": {"a": float(ab[0]), "b": float(ab[1]), "note": "fitted on the 2025 holdout raw logit; applied before the per-game rescale"}, "tail": {"t": tail_t, "slope": 0.25, "note": "applied after the rescale to the top 2%; no renormalisation"}, "intercept": float(aw[0]), "weights": aw[1:].tolist(), "listed_share": ash, "fit_on": f"{len(rows)} candidate-games, 2023-26"}, indent=1))
         print(f"  saved {a.save}")
 
 

@@ -55,13 +55,14 @@ def pbp_facts(season):
     return first, early
 
 
-def build_rows(cache):
+def build_rows(cache, seasons=(2023, 2024, 2025), live=None):
+    """live = {"season": 2026, "week": 7, "slate": nfl_features.upcoming_rows(...)[0]}: also returns y=None rows for that coming week (flag live=True)."""
     class a:      # noqa: N801  (keeps the body below unchanged)
         pass
     a.cache = cache
     V2 = MODELS["TD"]["w"]
     rows = []
-    for season in (2023, 2024, 2025):
+    for season in seasons:
         tbl = NT.season_table(season, a.cache)
         first, early = pbp_facts(season)
         d = derive(tbl).filter(pl.col("position").is_in(MODELS["TD"]["pos"]), pl.col("season_type") == "REG")
@@ -71,6 +72,12 @@ def build_rows(cache):
         by_week = defaultdict(list)
         for r in base:
             by_week[r["week"]].append(r)
+        if live and live["season"] == season:
+            ld = derive(live["slate"]).filter(pl.col("position").is_in(MODELS["TD"]["pos"]))
+            ld = T._score(ld, V2).rename({"score": "v2score"})
+            for r in ld.select("player_id", "week", "team", "opponent_team", "position", "v2score", "f_touches", "is_home", "implied_total", "spread", pl.col("f_gp")).to_dicts():
+                r["game_id"] = f"{season}_{int(live['week']):02d}_" + "_".join(sorted([r["team"], r["opponent_team"]])); r["live"] = True
+                by_week[int(live["week"])].append(r)
         for wk in sorted(by_week):
             games_this_week = {r["game_id"] for r in by_week[wk]}
             team_early = defaultdict(float)
@@ -81,11 +88,11 @@ def build_rows(cache):
             for r in by_week[wk]:
                 h = ph[r["player_id"]]
                 gid = r["game_id"]
-                if len(h) >= 3 and gid in first:
+                if len(h) >= 3 and (gid in first or r.get("live")):
                     h4 = h[-4:]
                     team_tot = sum(x["team_early"] for x in h4) or 1
                     opp_h = th[r["opponent_team"]]
-                    rows.append({"season": season, "game": gid, "week": wk, "y": int(first[gid]["pid"] == r["player_id"]), "v2": r["v2score"] or 0.0, "touches": r["f_touches"] or 0.0,
+                    rows.append({"season": season, "game": gid, "week": wk, "y": int(gid in first and first[gid]["pid"] == r["player_id"]), "live": bool(r.get("live")), "v2": r["v2score"] or 0.0, "touches": r["f_touches"] or 0.0,
                                  "early_pg": sum(x["early"] for x in h4) / len(h4), "early_share": sum(x["early"] for x in h4) / team_tot,
                                  "first_rate": sum(x["first"] for x in h) / len(h),
                                  "opp_concedes_first": (sum(x["conceded"] for x in opp_h[-8:]) / len(opp_h[-8:])) if opp_h else 0.5, "is_home": float(r["is_home"] or 0), "implied_total": float(r.get("implied_total") or 0.0), "spread": float(r.get("spread") or 0.0), "pid": r["player_id"], "team": r["team"], "position": r.get("position")})

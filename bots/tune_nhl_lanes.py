@@ -49,6 +49,15 @@ def main():
     for s in TRAIN + [TEST]:
         rows += bb.run(s, a.cache)
     rows = [r for r in rows if r.get("lanes")]
+    try:                                                    # the current season to date: graded out-of-sample, then included in the saved fit
+        from collections import defaultdict as _dd
+        d25, d26 = bb.load_season(2025, a.cache), bb.load_season(2026, a.cache)
+        comb = _dd(list)
+        for k in set(d25) | set(d26):
+            comb[k] = list(d25.get(k, [])) + list(d26.get(k, []))
+        cur = [r for r in bb.run_data(comb, 2026) if r["night"] >= "2026-10-01" and r.get("lanes")]       # history carries over from last season
+    except Exception as exc:                                # noqa: BLE001
+        print(f"2026 not available ({type(exc).__name__}); saved models use 2023-25 only"); cur = []
     print(f"{len(rows)} player-games with the lane data; fit on {TRAIN}, graded on {TEST}\n")
     for lane in ([a.lane] if a.lane else list(LABEL)):
         tr = [r for r in rows if r["season"] in TRAIN]
@@ -84,6 +93,16 @@ def main():
         allr = tr + te
         Xa = X(allr); amu, asd = Xa.mean(0), Xa.std(0) + 1e-9
         aw = fit_logistic((Xa - amu) / asd, np.array([r["lanes"][lane]["y"] for r in allr], float))
+        if cur:
+            zc = ((X(cur) - amu) / asd) @ aw[1:] + aw[0]
+            yc = np.array([r["lanes"][lane]["y"] for r in cur], float); pc = np.clip(1 / (1 + np.exp(-zc)), 1e-6, 1 - 1e-6)
+            for r, z_ in zip(cur, zc):
+                r["_z"] = float(z_); r["_y"] = r["lanes"][lane]["y"]; r["_b"] = r["lanes"][lane]["avg"]
+            print(f"   2026 to date ({len(cur)} player-games, fit on 2023-25 never saw them): predicted {100 * pc.mean():.1f}% vs actual {100 * yc.mean():.1f}%; "
+                  f"top1/game tuned {topk(cur, '_z', '_y', 1, 'game'):.1f}% vs his average {topk(cur, '_b', '_y', 1, 'game'):.1f}%")
+            allr = allr + cur
+            Xa = X(allr); amu, asd = Xa.mean(0), Xa.std(0) + 1e-9
+            aw = fit_logistic((Xa - amu) / asd, np.array([r["lanes"][lane]["y"] for r in allr], float))
         out = Path(__file__).resolve().parent / "models"
         out.mkdir(exist_ok=True)
         k = pav(pr)
@@ -93,7 +112,7 @@ def main():
         t = qs[int(len(qs) * 0.99)]
         (out / f"nhl_{lane}_v1.json").write_text(json.dumps({"model_version": f"nhl_{lane}_v1", "target": LABEL[lane], "features": names, "mu": amu.tolist(), "sd": asd.tolist(),
                                                               "intercept": float(aw[0]), "weights": aw[1:].tolist(),
-                                                              "fit_on": f"{len(allr)} player-games, seasons {TRAIN + [TEST]}",
+                                                              "fit_on": f"{len(allr)} player-games, seasons {TRAIN + [TEST]} + 2026 to date",
                                                               "calibration": {"x": [round(b[0], 5) for b in k], "y": [round(b[1], 5) for b in k]},
                                                               "platt": {"a": float(ab[0]), "b": float(ab[1]), "tail": {"t": t, "slope": 0.25}}}, indent=1))
         print(f"   Platt: a {ab[0]:+.3f}, b {ab[1]:.3f}; tail compression above {100 * t:.1f}%\n")

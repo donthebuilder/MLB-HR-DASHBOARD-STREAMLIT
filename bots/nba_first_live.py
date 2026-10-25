@@ -19,6 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import buckets_backtest as bb       # noqa: E402
 import game_lines as G              # noqa: E402
 import lineups                      # noqa: E402
+import injury_status                # noqa: E402
 import nba_first as nf              # noqa: E402
 from nba_live import athlete, parse_spread   # noqa: E402
 
@@ -60,6 +61,8 @@ def main():
                                         "scored_first": int(first_pid == p["pid"]), "scored_team_first": int(tf == p["pid"])})
                     if g["date"] >= start26:
                         season_games[p["pid"]] += 1
+    real = lineups.nba_starters(day)                       # NBA's daily lineups: Confirmed near tip, Expected before
+    names = {}
     out_rows = []
     for g in tonight:
         away, home = g["sides"]["away"]["team"], g["sides"]["home"]["team"]
@@ -73,10 +76,23 @@ def main():
                 for pid in st:
                     cnt[pid] += 1
             starters = [pid for pid, _ in sorted(cnt.items(), key=lambda kv: -kv[1])[:5]]
+            src = "projected (last 5 games)"
+            cands = [(pid, None) for pid in starters]
+            if ab in real:
+                byname = {}
+                for pid in P:
+                    byname.setdefault(injury_status.key(athlete(pid, a.cache)["name"] or ""), pid)
+                got = [(byname.get(injury_status.key(n)), n) for n in real[ab]["players"]]
+                if len(got) >= 4:
+                    cands, src = got, f"{real[ab]['status'].lower()} (NBA daily lineups)"
             to = T[opp]
-            for pid in starters:
-                h = P[pid]
-                if len(h) < 8:
+            for pid, nm in cands:
+                h = P[pid] if pid is not None else []
+                if len(h) < 8:                               # no history: an average starter (the model's own means), flagged
+                    f = dict(zip(model["features"], model["mu"])); f.update({"is_home": float(is_home), "book_fav": 0.0 if sp is None else (-sp if is_home else sp), "book_total": total})
+                    z = model["intercept"] + sum(w * (f[n] - m) / s_ for n, w, m, s_ in zip(model["features"], model["weights"], model["mu"], model["sd"]))
+                    gr.append({"pid": pid, "name": nm or athlete(pid, a.cache)["name"], "team": ab, "opponent": opp, "z": z, "carried_from_last_season": False, "no_history": True,
+                               "starters_source": src, "game_id": g["game_id"], "game_status": g["status"], "ppg": None, "early_per_game": None, "start_utc": g.get("start_utc")})
                     continue
                 h10 = h[-10:]; tf_ = sum(x["tfga"] for x in h) or 1; te_ = sum(x["tearly"] for x in h) or 1
                 fav = 0.0 if sp is None else (-sp if is_home else sp)
@@ -86,7 +102,7 @@ def main():
                      "opp_allows_first": (sum(x["allowed_first"] for x in to[-20:]) / len(to[-20:])) if to else 0.5, "is_home": float(is_home),
                      "book_fav": fav, "book_total": total}
                 z = model["intercept"] + sum(w * (f[n] - m) / s for n, w, m, s in zip(model["features"], model["weights"], model["mu"], model["sd"]))
-                gr.append({"pid": pid, "name": athlete(pid, a.cache)["name"], "team": ab, "opponent": opp, "z": z, "carried_from_last_season": season_games[pid] < 8, "ppg": round(f["ppg"], 1),
+                gr.append({"pid": pid, "name": athlete(pid, a.cache)["name"], "team": ab, "opponent": opp, "z": z, "no_history": False, "carried_from_last_season": season_games[pid] < 8, "starters_source": src, "game_id": g["game_id"], "game_status": g["status"], "ppg": round(f["ppg"], 1),
                            "early_per_game": round(f["early_per_game"], 2), "start_utc": g.get("start_utc")})
         if gr:
             e = np.exp([r["z"] for r in gr]); pr = e / (1 + e)
@@ -99,7 +115,7 @@ def main():
     out_rows.sort(key=lambda r: -r["p_first_basket"])
     out = Path(a.out) if a.out else Path(__file__).resolve().parent / "outputs" / "nba_first_board_latest.json"
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps({"date": day, "model_version": model["model_version"], "starters": "projected: most starts in the team's last 5 games", "players": out_rows}, indent=1))
+    out.write_text(json.dumps({"date": day, "model_version": model["model_version"], "starters": "NBA daily lineups (Confirmed/Expected); projected from the last 5 games where the feed has no lineup", "players": out_rows}, indent=1))
     print(f"{len(tonight)} games, {len(out_rows)} projected starters -> {out}")
     for r in out_rows[:10]:
         print(f"{(r['name'] or '?')[:22]:<23}{r['team']:<5}vs {r['opponent']:<5}{100 * r['p_first_basket']:5.1f}%  {'top3' if r['top3_in_game'] else ''}{'  (carried from last season)' if r['carried_from_last_season'] else ''}")

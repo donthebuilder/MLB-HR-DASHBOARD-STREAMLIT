@@ -136,6 +136,12 @@ def run_games(games, season, line_for, only_ids=None):
             reb_for.append(sum(p.get("reb", 0) for p in P)); ast_for.append(sum(p.get("ast", 0) for p in P)); tpm_for.append(sum(p.get("tpm", 0) for p in P))
         for i, team in enumerate(t):
             opp = t[1 - i]["abbr"]
+            if team["abbr"] in team_last and (dt.date.fromisoformat(g["date"]) - dt.date.fromisoformat(team_last[team["abbr"]])).days > 60:
+                # first game after the offseason: last season's roster says nothing about who is "out" now (rosters turn over), so "teammates out" and
+                # "games missed" start clean. In-season games are unaffected, so every earlier backtest number stands.
+                team_games[team["abbr"]].clear()
+                for k_ in [k_ for k_ in last_idx if k_[0] == team["abbr"]]:
+                    del last_idx[k_]
             tp = [x[0] for x in team_hist[team["abbr"]]]
             op = [x[0] for x in team_hist[opp]]
             tpace = sum(tp[-10:]) / len(tp[-10:]) if tp else bk.LG_PACE

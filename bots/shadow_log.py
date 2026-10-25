@@ -39,7 +39,10 @@ def snapshot(sport, day, out_dir):
         return
     board = json.load(open(tmp))
     rows = []
+    now = __import__("datetime").datetime.now(__import__("datetime").timezone.utc).isoformat()
     for p in board["players"]:
+        if p.get("start_utc") and str(p["start_utc"]).replace("Z", "+00:00") <= now.replace("+00:00", "+00:00") and str(p["start_utc"])[:16] <= now[:16]:
+            continue                                      # the game has started: not a pregame record
         pr = {}
         for src, key, _ in LANES[sport]:
             v = p.get(src) if src in p else (p.get("lanes") or {}).get(src)
@@ -49,6 +52,72 @@ def snapshot(sport, day, out_dir):
     Path(out_dir).mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps({"date": day, "sport": sport, "model_versions": board.get("model_version"), "rows": rows}))
     print(f"{day} {sport}: {len(rows)} players saved -> {path}")
+
+
+def snapshot_first(day, out_dir):
+    """NBA first basket: re-written every run for games that have NOT started (the starters firm up toward tip), never touched once a game starts."""
+    Path(out_dir).mkdir(parents=True, exist_ok=True)
+    path = Path(out_dir) / f"shadow_nbafirst_{day}.json"
+    have = json.load(open(path)) if path.exists() else {"date": day, "sport": "nbafirst", "games": {}}
+    tmp = tempfile.mktemp(suffix=".json")
+    subprocess.run([sys.executable, str(HERE / "nba_first_live.py"), day, "--out", tmp], check=True, capture_output=True)
+    if not Path(tmp).exists():
+        print(f"{day} nbafirst: no games"); return
+    board = json.load(open(tmp))
+    by_game = defaultdict(list)
+    for r in board["players"]:
+        by_game[r["game_id"]].append(r)
+    new = kept = 0
+    for gid, rs in by_game.items():
+        entry = have["games"].get(gid)
+        if entry and entry.get("locked"):
+            continue
+        if rs[0]["game_status"] != "Scheduled":              # started: no longer pregame
+            if entry:
+                entry["locked"] = True; kept += 1
+            continue
+        have["games"][gid] = {"locked": False, "status": rs[0]["game_status"], "starters_source": rs[0]["starters_source"], "saved_utc": __import__("datetime").datetime.now(__import__("datetime").timezone.utc).isoformat(),
+                              "rows": [{"name": r["name"], "team": r["team"], "opp": r["opponent"], "p_first_basket": r["p_first_basket"], "top3": r["top3_in_game"], "no_history": r["no_history"]} for r in rs]}
+        new += 1
+    path.write_text(json.dumps(have))
+    print(f"{day} nbafirst: {new} game(s) written/refreshed, {kept} locked at tip, {len(have['games'])} in file")
+
+
+def grade_first(day, out_dir, cache):
+    sys.path.insert(0, str(HERE))
+    import nba_first as nf
+    import injury_status
+    from nba_live import athlete
+    path = Path(out_dir) / f"shadow_nbafirst_{day}.json"
+    d = json.load(open(path))
+    n = 0
+    for gid, g in d["games"].items():
+        fd = nf.one_game(gid, cache)
+        first = (fd or {}).get("first")
+        if not first:
+            continue
+        who = athlete(first["pid"], cache)["name"]
+        g["first_scorer"] = who
+        for r in g["rows"]:
+            r["y"] = int(injury_status.key(r["name"] or "") == injury_status.key(who or ""))
+        g["first_by_listed_starter"] = any(r["y"] for r in g["rows"]); g["graded"] = True; n += 1
+    path.write_text(json.dumps(d))
+    print(f"{day} nbafirst: graded {n} of {len(d['games'])} games")
+
+
+def report_first(out_dir):
+    games = []
+    for f in sorted(Path(out_dir).glob("shadow_nbafirst_*.json")):
+        games += [g for g in json.load(open(f))["games"].values() if g.get("graded")]
+    print(f"\nNBA FIRST BASKET: {len(games)} graded games")
+    if not games:
+        return
+    t1 = sum(max(g["rows"], key=lambda r: r["p_first_basket"])["y"] for g in games)
+    t3 = sum(sum(r["y"] for r in sorted(g["rows"], key=lambda r: -r["p_first_basket"])[:3]) for g in games)
+    rows = [r for g in games for r in g["rows"]]
+    listed = sum(g["first_by_listed_starter"] for g in games)
+    print(f"  top pick {100 * t1 / len(games):.1f}% (backtest 14.8%)   top 3 {100 * t3 / len(games):.1f}% (backtest 40.0%)   first basket by a listed starter {100 * listed / len(games):.0f}% of games")
+    print(f"  mean predicted {100 * sum(r['p_first_basket'] for r in rows) / len(rows):.1f}% vs actual {100 * sum(r['y'] for r in rows) / len(rows):.1f}% per starter")
 
 
 def outcomes_nhl(day):
@@ -112,6 +181,10 @@ def report(out_dir):
 if __name__ == "__main__":
     c = sys.argv[1]
     if c == "report":
-        report(sys.argv[2])
+        report(sys.argv[2]); report_first(sys.argv[2])
+    elif sys.argv[2] == "nbafirst":
+        import os
+        cache = os.environ.get("DASH_NBA_CACHE", str(Path.home() / ".cache/dash_nba"))
+        snapshot_first(sys.argv[3], sys.argv[4]) if c == "snapshot" else grade_first(sys.argv[3], sys.argv[4], cache)
     else:
         {"snapshot": snapshot, "grade": grade}[c](sys.argv[2], sys.argv[3], sys.argv[4])
