@@ -139,7 +139,7 @@ Monotonic in both seasons, top decile 5–9× the bottom. This is the strongest 
 
 ---
 
-## 2. Receiving yards — bar: 40 · WR/TE/RB
+## 2. Receiving yards — bar: 100 (was 40 until v2, 2026-10-17; the weights below are the v1 table) · WR/TE/RB
 
 | Component | Weight | What it is |
 |---|---|---|
@@ -167,7 +167,7 @@ Note this model is the *opposite* of receiving yards on depth: short targets get
 
 ---
 
-## 4. Rushing yards — bar: 50 · RB/QB
+## 4. Rushing yards — bar: 100 (was 50 until v2, 2026-10-17) · RB/QB
 
 | Component | Weight | What it is |
 |---|---|---|
@@ -192,7 +192,7 @@ The most nearly-tautological model here: predicting carries from carries. Game s
 
 ---
 
-## 6. Passing yards — bar: 225 · QB
+## 6. Passing yards — bar: 300 (was 225 until v2, 2026-10-17) · QB
 
 | Component | Weight | What it is |
 |---|---|---|

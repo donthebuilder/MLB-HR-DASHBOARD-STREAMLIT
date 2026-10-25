@@ -200,6 +200,7 @@ def run_games(games, season, line_for, only_ids=None):
                                 "bk": s["final_score"], "ppg": sum(x["pts"] for x in hist) / len(hist),
                                 "l10": sum(x["pts"] for x in hist[-10:]) / len(hist[-10:]),
                                 "rand": ((int(p["pid"]) * 2654435761 + int(g["id"])) % 1000) / 1000, "f": f, "season": season,
+                                "raw": {"pts": p["pts"], "reb": p.get("reb", 0), "ast": p.get("ast", 0), "tpm": p.get("tpm", 0)},
                                 "lanes": lane_rows(hist, p, team_hist[opp], f)})
         if POS_GROUP:
             for i, team in enumerate(t):

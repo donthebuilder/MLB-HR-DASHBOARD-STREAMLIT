@@ -98,8 +98,17 @@ def main():
     for g in stream:
         for t in g["teams"]:
             last10[t["abbr"]].append(t)
+    start26 = bb.RANGE[2026][0]
+    g26 = defaultdict(list)                              # team -> its box rows from THIS season only
+    for g in stream:
+        if g["date"] >= start26:
+            for t in g["teams"]:
+                g26[t["abbr"]].append(t)
     for team, ts in last10.items():
-        for t in ts[-10:]:
+        # once a team has played this season, its roster is who has actually played FOR it this season (last season's list still carries traded / cut players
+        # and misses new ones); before that, last season's last 10 games are all there is
+        use = g26[team][-10:] if len(g26[team]) >= 2 else ts[-10:]
+        for t in use:
             for p in t["players"]:
                 if p["min"] > 0:
                     recent[team][p["pid"]].append(p["min"])
@@ -115,7 +124,7 @@ def main():
         for abbr, is_home in ((away, False), (home, True)):
             players = []
             for pid, mins in recent[abbr].items():
-                if len(mins) < 3 or sum(mins) / len(mins) < 10:
+                if len(mins) < (1 if len(g26[abbr]) >= 2 else 3) or sum(mins) / len(mins) < 10:
                     continue
                 name = athlete(pid, a.cache)["name"]
                 hit = inj_by_key.get(injury_status.key(name or ""))

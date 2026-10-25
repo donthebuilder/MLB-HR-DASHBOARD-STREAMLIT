@@ -31,6 +31,9 @@ CFG = {"nba": {"hfa": (60, 90, 120), "k": (8, 12, 18, 25), "scale": 12.0, "rever
 def games_nba(cache):
     import buckets_backtest as bb
     ld = Path(cache).parent / "nba_lines"
+    ld.mkdir(parents=True, exist_ok=True)
+    allg = [g for s in (2023, 2024, 2025, 2026) for g in bb.load(s, cache)]
+    G.fetch_closing("nba", [g["id"] for g in allg], ld)                 # parallel; each line is cached on disk once fetched
     out = []
     for s in (2023, 2024, 2025, 2026):
         for g in bb.load(s, cache):
@@ -44,8 +47,13 @@ def games_nba(cache):
 
 def games_nhl(cache):
     import nhl_backtest as nb
-    ids = json.load(open(Path(cache) / "espn_nhl_games.json")) if (Path(cache) / "espn_nhl_games.json").exists() else {}      # ESPN ids only matter for closing lines
+    if not (Path(cache) / "espn_nhl_games.json").exists():
+        import nhl_buildout
+        nhl_buildout.pull(Path(cache))                                   # date|away|home -> ESPN event id (for the closing lines)
+    ids = json.load(open(Path(cache) / "espn_nhl_games.json")) if (Path(cache) / "espn_nhl_games.json").exists() else {}
     out = []
+    (Path(cache) / "nhl_lines").mkdir(parents=True, exist_ok=True)
+    lines = G.fetch_closing("nhl", list(ids.values()), Path(cache) / "nhl_lines") if ids else {}
     for s in (2023, 2024, 2025, 2026):
         d = nb.load_season(s, cache)
         by = defaultdict(lambda: {"goals": defaultdict(float), "home": None, "date": None})
@@ -59,7 +67,7 @@ def games_nhl(cache):
                 continue
             away = [t for t in x["goals"] if t != x["home"]][0]
             eid = ids.get(f"{x['date']}|{away}|{x['home']}")
-            ln = G.close_line("nhl", eid, Path(cache) / "nhl_lines") if eid and (Path(cache) / "nhl_lines").exists() else None
+            ln = lines.get(eid) if eid else None
             out.append({"season": s, "date": x["date"], "id": gid, "home": x["home"], "away": away, "hs": x["goals"][x["home"]], "as": x["goals"][away], "line": ln})
     return sorted(out, key=lambda x: (x["date"], x["id"]))
 
