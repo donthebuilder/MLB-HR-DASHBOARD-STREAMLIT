@@ -1,0 +1,135 @@
+[
+ {
+  "sport": "nba",
+  "game_id": "401909861",
+  "start_utc": "2026-10-25T21:00Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "UTAH",
+    "probable_goalie": null
+   },
+   "away": {
+    "team": "LAL",
+    "probable_goalie": null
+   }
+  },
+  "lineup_posted": false,
+  "spread": "LAL -6.5",
+  "total": 236.5
+ },
+ {
+  "sport": "nba",
+  "game_id": "401909862",
+  "start_utc": "2026-10-25T22:00Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "BKN",
+    "probable_goalie": null
+   },
+   "away": {
+    "team": "IND",
+    "probable_goalie": null
+   }
+  },
+  "lineup_posted": false,
+  "spread": "IND -6.5",
+  "total": 231.5
+ },
+ {
+  "sport": "nba",
+  "game_id": "401909863",
+  "start_utc": "2026-10-25T23:00Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "NY",
+    "probable_goalie": null
+   },
+   "away": {
+    "team": "ORL",
+    "probable_goalie": null
+   }
+  },
+  "lineup_posted": false,
+  "spread": "NY -7.5",
+  "total": 224.5
+ },
+ {
+  "sport": "nba",
+  "game_id": "401909864",
+  "start_utc": "2026-10-25T23:00Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "MIN",
+    "probable_goalie": null
+   },
+   "away": {
+    "team": "TOR",
+    "probable_goalie": null
+   }
+  },
+  "lineup_posted": false,
+  "spread": "MIN -1.5",
+  "total": 228.5
+ },
+ {
+  "sport": "nba",
+  "game_id": "401909865",
+  "start_utc": "2026-10-25T23:00Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "OKC",
+    "probable_goalie": null
+   },
+   "away": {
+    "team": "LAC",
+    "probable_goalie": null
+   }
+  },
+  "lineup_posted": false,
+  "spread": "OKC -16.5",
+  "total": 224.5
+ },
+ {
+  "sport": "nba",
+  "game_id": "401909866",
+  "start_utc": "2026-10-25T23:30Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "PHI",
+    "probable_goalie": null
+   },
+   "away": {
+    "team": "DET",
+    "probable_goalie": null
+   }
+  },
+  "lineup_posted": false,
+  "spread": "DET -1.5",
+  "total": 227.5
+ },
+ {
+  "sport": "nba",
+  "game_id": "401909867",
+  "start_utc": "2026-10-26T01:00Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "SAC",
+    "probable_goalie": null
+   },
+   "away": {
+    "team": "MEM",
+    "probable_goalie": null
+   }
+  },
+  "lineup_posted": false,
+  "spread": "MEM -3.5",
+  "total": 234.5
+ }
+]

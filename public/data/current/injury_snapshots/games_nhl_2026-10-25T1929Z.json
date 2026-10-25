@@ -1,0 +1,97 @@
+[
+ {
+  "sport": "nhl",
+  "game_id": "401892578",
+  "start_utc": "2026-10-25T19:00Z",
+  "status": "In Progress",
+  "sides": {
+   "home": {
+    "team": "CHI",
+    "probable_goalie": "Spencer Knight"
+   },
+   "away": {
+    "team": "FLA",
+    "probable_goalie": "Akira Schmid"
+   }
+  },
+  "lineup_posted": false,
+  "spread": null,
+  "total": null
+ },
+ {
+  "sport": "nhl",
+  "game_id": "401892579",
+  "start_utc": "2026-10-25T22:00Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "DAL",
+    "probable_goalie": "Jake Oettinger"
+   },
+   "away": {
+    "team": "NYI",
+    "probable_goalie": "Ilya Sorokin"
+   }
+  },
+  "lineup_posted": false,
+  "spread": "DAL -198",
+  "total": 5.5
+ },
+ {
+  "sport": "nhl",
+  "game_id": "401891807",
+  "start_utc": "2026-10-25T23:00Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "WPG",
+    "probable_goalie": "Stuart Skinner"
+   },
+   "away": {
+    "team": "MTL",
+    "probable_goalie": "Jakub Dobes"
+   }
+  },
+  "lineup_posted": false,
+  "spread": "MTL -118",
+  "total": 5.5
+ },
+ {
+  "sport": "nhl",
+  "game_id": "401892580",
+  "start_utc": "2026-10-26T00:00Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "NSH",
+    "probable_goalie": "Justus Annunen"
+   },
+   "away": {
+    "team": "COL",
+    "probable_goalie": "Scott Wedgewood"
+   }
+  },
+  "lineup_posted": false,
+  "spread": "COL -238",
+  "total": 6.5
+ },
+ {
+  "sport": "nhl",
+  "game_id": "401892581",
+  "start_utc": "2026-10-26T02:00Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "VAN",
+    "probable_goalie": "Leevi Merilainen"
+   },
+   "away": {
+    "team": "MIN",
+    "probable_goalie": "Calvin Pickard"
+   }
+  },
+  "lineup_posted": false,
+  "spread": "MIN -192",
+  "total": 6.5
+ }
+]
