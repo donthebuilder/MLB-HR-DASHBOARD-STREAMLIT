@@ -124,15 +124,9 @@ jobs:
       - name: Install deps
         run: pip install -r bots/requirements.txt
 
-      # Same corrected cache path as the picks workflow -- bots/cache.db
-      # never existed, so this cache was doing nothing.
-      - name: Restore SQLite cache
-        uses: actions/cache@v4
-        with:
-          path: bots/mlb_hr_cache.sqlite
-          key: sqlite-cache-${{ github.run_id }}
-          restore-keys: |
-            sqlite-cache-
+      # 2026-10-26 (known-issues #93): the SQLite cache restore and save steps were removed. Nothing this job runs opens
+      # bots/mlb_hr_cache.sqlite (only mlb_dashboard.py does, and today.yml keeps its own copy), so the restore found nothing to use and the
+      # save wrote a new cache entry on every run (about 62 a day) that only pushed useful caches out of the repository's cache space.
 
       # The grader reads its picks from bots/outputs/, which is empty in a
       # fresh CI checkout. This pulls the published slate off the data branch
@@ -338,12 +332,6 @@ jobs:
           echo "Final-grading slate $D"
           python bots/live_results_tracker.py --date "$D" --final-only
         continue-on-error: true
-
-      - name: Save SQLite cache
-        uses: actions/cache/save@v4
-        with:
-          path: bots/mlb_hr_cache.sqlite
-          key: sqlite-cache-${{ github.run_id }}
 
       # backtest_report.py aggregates across graded_results_*.txt files, but the
       # runner is ephemeral -- without this it would see exactly one day and the
