@@ -1,0 +1,61 @@
+# When does a lineup, a goalie or a starting five FIRST show up? (2026-10-25, Donovan: lock about 2 hours before the game)
+# Logs the first time each fact is seen, and every change, to the `bbe-history` branch (not `data`: `data` is rebuilt on every publish, anything
+# that accumulates there is destroyed). It changes nothing a pick, a score or a board reads: a failure here costs only this log.
+# Hourly through the playing day (UTC 12:00-05:59), seconds of compute, and a commit only when something NEW appeared.
+# NFL inactives are not here: no feed we can reach (bots/lineups.py says so). bots/lineup_first_seen.py has the details.
+# Undo: delete this file; the log already written stays on bbe-history.
+name: First-seen log (lineups, goalies, starters)
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: "20 12-23 * * *"
+    - cron: "20 0-5 * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: first-seen
+  cancel-in-progress: false
+
+jobs:
+  log:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            bots/lineups.py
+            bots/lineup_first_seen.py
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Checkout the bbe-history branch (read/write)
+        run: |
+          git config --global user.name  "moonshot-bot"
+          git config --global user.email "bot@users.noreply.github.com"
+          git clone --quiet --depth 1 --branch bbe-history \
+            "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" _data
+          mkdir -p _data/public/data/current/first_seen
+
+      - name: Log what is new
+        run: python3 bots/lineup_first_seen.py observe _data/public/data/current/first_seen
+
+      - name: Commit
+        working-directory: _data
+        run: |
+          git add public/data/current/first_seen
+          if git diff --cached --quiet; then
+            echo "nothing new"
+          else
+            git commit -m "first-seen $(date -u +%FT%H%MZ)"
+            for i in 1 2 3 4 5; do
+              git pull --rebase origin bbe-history && git push origin HEAD:bbe-history && break
+              echo "push race, retry $i"; sleep $((i * 5))
+            done
+          fi
