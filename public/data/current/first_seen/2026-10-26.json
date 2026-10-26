@@ -1,0 +1,65 @@
+{
+ "day": "2026-10-26",
+ "events": [
+  {
+   "sport": "nhl",
+   "game_id": "401892582",
+   "start_utc": "2026-10-26T23:00Z",
+   "team": "NYR",
+   "what": "goalie",
+   "value": "Dylan Garand",
+   "first_seen_utc": "2026-10-26T05:19:15Z",
+   "mins_before_start": 1061
+  },
+  {
+   "sport": "nhl",
+   "game_id": "401892582",
+   "start_utc": "2026-10-26T23:00Z",
+   "team": "LA",
+   "what": "goalie",
+   "value": "Darcy Kuemper",
+   "first_seen_utc": "2026-10-26T05:19:15Z",
+   "mins_before_start": 1061
+  },
+  {
+   "sport": "nhl",
+   "game_id": "401892583",
+   "start_utc": "2026-10-27T00:30Z",
+   "team": "CGY",
+   "what": "goalie",
+   "value": "Dustin Wolf",
+   "first_seen_utc": "2026-10-26T05:19:15Z",
+   "mins_before_start": 1151
+  },
+  {
+   "sport": "nhl",
+   "game_id": "401892583",
+   "start_utc": "2026-10-27T00:30Z",
+   "team": "TOR",
+   "what": "goalie",
+   "value": "Sergei Bobrovsky",
+   "first_seen_utc": "2026-10-26T05:19:15Z",
+   "mins_before_start": 1151
+  },
+  {
+   "sport": "nhl",
+   "game_id": "401892584",
+   "start_utc": "2026-10-27T01:30Z",
+   "team": "EDM",
+   "what": "goalie",
+   "value": "Tristan Jarry",
+   "first_seen_utc": "2026-10-26T05:19:15Z",
+   "mins_before_start": 1211
+  },
+  {
+   "sport": "nhl",
+   "game_id": "401892584",
+   "start_utc": "2026-10-27T01:30Z",
+   "team": "DET",
+   "what": "goalie",
+   "value": "John Gibson",
+   "first_seen_utc": "2026-10-26T05:19:15Z",
+   "mins_before_start": 1211
+  }
+ ]
+}
