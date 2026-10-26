@@ -5,6 +5,7 @@ name: Shadow log - NBA lanes and first basket
 # projection; a game is frozen the moment it starts. Graded the next morning. Lives on bbe-history.
 on:
   schedule:
+    - cron: '0 17,19,21 * * *'
     - cron: '0,30 22,23 * * *'
     - cron: '0,30 0,1 * * *'
     - cron: '0 2 * * *'
@@ -57,7 +58,8 @@ jobs:
             python3 bots/team_live.py snapshot nba "$ET" $D
             python3 bots/game_sim.py snapshot nba "$ET" $D
             # the lane probabilities are written once (first run of the evening wins; games already started are skipped)
-            if [ "$H" = "22" ]; then python3 bots/shadow_log.py snapshot nba "$ET" $D; fi
+            # GitHub's scheduler runs late (a 22:00 job started at 23:43 UTC): any run from 17:00 to 23:59 may take it, the first one wins, started games are skipped
+            if [ "$H" -ge 17 ] && [ "$H" -le 23 ]; then python3 bots/shadow_log.py snapshot nba "$ET" $D; fi
           fi
           python3 bots/shadow_log.py report $D; python3 bots/team_live.py report $D; python3 bots/game_sim.py report $D
       - name: Commit

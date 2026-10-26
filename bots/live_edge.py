@@ -304,10 +304,16 @@ def loop(out_dir, minutes, every, min_edge):
     print(f"{n} alerts logged")
 
 
+_SUMMARY = {}
+
+
 def settle(alert):
-    """did YES win? from the final score. None if the game is not final yet."""
+    """did YES win? from the final score. None if the game is not final yet. (One summary fetch per game, not per alert: a night logs thousands of alerts.)"""
     cfg = SPORTS[alert["sport"]]
-    d = curl(f"https://site.api.espn.com/apis/site/v2/sports/{cfg['espn']}/summary?event={alert['espn_id']}")
+    k = (alert["sport"], alert["espn_id"])
+    if k not in _SUMMARY:
+        _SUMMARY[k] = curl(f"https://site.api.espn.com/apis/site/v2/sports/{cfg['espn']}/summary?event={alert['espn_id']}")
+    d = _SUMMARY[k]
     comp = ((d.get("header") or {}).get("competitions") or [{}])[0]
     if not comp.get("status", {}).get("type", {}).get("completed"):
         return None
