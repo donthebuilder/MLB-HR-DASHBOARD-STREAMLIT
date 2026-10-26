@@ -6,13 +6,27 @@ The step's script is cut out of the real workflow file and run in a throw-away c
 Run: PYTHONPATH=. python3 tests/test_today_verify_fetch.py"""
 import os, shutil, subprocess, tempfile
 from pathlib import Path
-import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
-wf = yaml.safe_load((ROOT / ".github/workflows/today.yml").read_text())
-steps = [s for j in wf["jobs"].values() for s in j.get("steps", []) if str(s.get("name", "")).startswith("Verify today's own por_log")]
-assert len(steps) == 1, "expected exactly one verify step"
-script = steps[0]["run"]
+
+
+def step_script(workflow_text, name_start):
+    """The `run: |` block of the one step whose name starts with name_start. Plain text on purpose: the CI test job has no PyYAML."""
+    lines = workflow_text.splitlines()
+    at = [i for i, l in enumerate(lines) if l.strip().startswith("- name: " + name_start)]
+    assert len(at) == 1, f"expected exactly one step named {name_start!r}, found {len(at)}"
+    i = next(k for k in range(at[0] + 1, len(lines)) if lines[k].strip() == "run: |")
+    base = len(lines[i]) - len(lines[i].lstrip())
+    body = []
+    for l in lines[i + 1:]:
+        if l.strip() and (len(l) - len(l.lstrip())) <= base:
+            break
+        body.append(l[base + 2:] if l.strip() else "")
+    return "\n".join(body).rstrip() + "\n"
+
+
+script = step_script((ROOT / ".github/workflows/today.yml").read_text(), "Verify today's own por_log")
+assert "fetch_data_branch.sh" in script and script.count("exit 1") == 2, "the cut-out script is not the verify step"
 env = {**os.environ, "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t", "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@t"}
 
 
