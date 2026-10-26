@@ -1,0 +1,59 @@
+[
+ {
+  "sport": "nhl",
+  "game_id": "401892582",
+  "start_utc": "2026-10-26T23:00Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "NYR",
+    "probable_goalie": "James Reimer"
+   },
+   "away": {
+    "team": "LA",
+    "probable_goalie": "Darcy Kuemper"
+   }
+  },
+  "lineup_posted": false,
+  "spread": "NYR -135",
+  "total": 5.5
+ },
+ {
+  "sport": "nhl",
+  "game_id": "401892583",
+  "start_utc": "2026-10-27T00:30Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "CGY",
+    "probable_goalie": "Devin Cooley"
+   },
+   "away": {
+    "team": "TOR",
+    "probable_goalie": "Sergei Bobrovsky"
+   }
+  },
+  "lineup_posted": false,
+  "spread": "TOR -135",
+  "total": 6.5
+ },
+ {
+  "sport": "nhl",
+  "game_id": "401892584",
+  "start_utc": "2026-10-27T01:30Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "EDM",
+    "probable_goalie": "Tristan Jarry"
+   },
+   "away": {
+    "team": "DET",
+    "probable_goalie": "Michal Postava"
+   }
+  },
+  "lineup_posted": false,
+  "spread": "EDM -180",
+  "total": 6.5
+ }
+]

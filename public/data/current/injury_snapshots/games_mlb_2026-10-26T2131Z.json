@@ -1,0 +1,55 @@
+[
+ {
+  "sport": "mlb",
+  "game_id": "401908044",
+  "start_utc": "2026-10-27T00:00Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "TB",
+    "probable_goalie": null
+   },
+   "away": {
+    "team": "MIL",
+    "probable_goalie": null
+   }
+  },
+  "lineup_posted": true,
+  "spread": "TB -119",
+  "total": 7.0,
+  "lineups": {
+   "away": {
+    "team": "MIL",
+    "posted": true,
+    "order": {
+     "694192": 1,
+     "641343": 2,
+     "592885": 3,
+     "661388": 4,
+     "668930": 5,
+     "669003": 6,
+     "806198": 7,
+     "686217": 8,
+     "666152": 9
+    },
+    "probable": "Robert Gasser"
+   },
+   "home": {
+    "team": "TB",
+    "posted": true,
+    "order": {
+     "650490": 1,
+     "668723": 2,
+     "802415": 3,
+     "691406": 4,
+     "810938": 5,
+     "676356": 6,
+     "683748": 7,
+     "663743": 8,
+     "670764": 9
+    },
+    "probable": "Freddy Peralta"
+   }
+  }
+ }
+]
