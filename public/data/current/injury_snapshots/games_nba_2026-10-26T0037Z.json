@@ -1,0 +1,173 @@
+[
+ {
+  "sport": "nba",
+  "game_id": "401909868",
+  "start_utc": "2026-10-26T23:00Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "CHA",
+    "probable_goalie": null
+   },
+   "away": {
+    "team": "WSH",
+    "probable_goalie": null
+   }
+  },
+  "lineup_posted": false,
+  "spread": "CHA -2.5",
+  "total": 228.5
+ },
+ {
+  "sport": "nba",
+  "game_id": "401909869",
+  "start_utc": "2026-10-26T23:00Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "CLE",
+    "probable_goalie": null
+   },
+   "away": {
+    "team": "MIN",
+    "probable_goalie": null
+   }
+  },
+  "lineup_posted": false,
+  "spread": null,
+  "total": null
+ },
+ {
+  "sport": "nba",
+  "game_id": "401909870",
+  "start_utc": "2026-10-26T23:30Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "BOS",
+    "probable_goalie": null
+   },
+   "away": {
+    "team": "CHI",
+    "probable_goalie": null
+   }
+  },
+  "lineup_posted": false,
+  "spread": "BOS -13.5",
+  "total": 233.5
+ },
+ {
+  "sport": "nba",
+  "game_id": "401909871",
+  "start_utc": "2026-10-26T23:30Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "MIA",
+    "probable_goalie": null
+   },
+   "away": {
+    "team": "DAL",
+    "probable_goalie": null
+   }
+  },
+  "lineup_posted": false,
+  "spread": "MIA -7.5",
+  "total": 235.5
+ },
+ {
+  "sport": "nba",
+  "game_id": "401909872",
+  "start_utc": "2026-10-27T00:00Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "MIL",
+    "probable_goalie": null
+   },
+   "away": {
+    "team": "IND",
+    "probable_goalie": null
+   }
+  },
+  "lineup_posted": false,
+  "spread": null,
+  "total": null
+ },
+ {
+  "sport": "nba",
+  "game_id": "401909873",
+  "start_utc": "2026-10-27T00:00Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "OKC",
+    "probable_goalie": null
+   },
+   "away": {
+    "team": "PHX",
+    "probable_goalie": null
+   }
+  },
+  "lineup_posted": false,
+  "spread": null,
+  "total": null
+ },
+ {
+  "sport": "nba",
+  "game_id": "401909874",
+  "start_utc": "2026-10-27T00:30Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "HOU",
+    "probable_goalie": null
+   },
+   "away": {
+    "team": "ATL",
+    "probable_goalie": null
+   }
+  },
+  "lineup_posted": false,
+  "spread": "HOU -5.5",
+  "total": 229.5
+ },
+ {
+  "sport": "nba",
+  "game_id": "401909875",
+  "start_utc": "2026-10-27T01:00Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "UTAH",
+    "probable_goalie": null
+   },
+   "away": {
+    "team": "MEM",
+    "probable_goalie": null
+   }
+  },
+  "lineup_posted": false,
+  "spread": null,
+  "total": null
+ },
+ {
+  "sport": "nba",
+  "game_id": "401909876",
+  "start_utc": "2026-10-27T02:00Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "DEN",
+    "probable_goalie": null
+   },
+   "away": {
+    "team": "GS",
+    "probable_goalie": null
+   }
+  },
+  "lineup_posted": false,
+  "spread": "DEN -7.5",
+  "total": 235.5
+ }
+]
