@@ -508,8 +508,23 @@ NFL_GAME_CALLS_TOTALS_KEEP=5
 # comparison below can never see the branch move because both sides read the
 # same frozen ref. An explicit '+' refspec makes the update forced, so
 # origin/data is always the real current tip.
+#
+# A FAILED fetch is not "no data branch" (known-issues #90, 2026-10-26). This used to end in `|| true`, so one GitHub
+# hiccup left origin/data missing: remote_before and remote_now were both "", the push fell to the plain `--force` branch
+# ("the branch does not exist yet, nothing to lose") and this run's files replaced the whole published branch. The
+# helper tells the two apart (fetch_data_branch.sh: 0 fetched, 3 the branch really is absent, 1 the fetch failed after
+# 3 tries). On a failed read we stop: the run is red, nothing is published, and the next scheduled run publishes.
+DATA_FETCH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/fetch_data_branch.sh"
 fetch_data() {
-  git fetch --depth 1 --force origin '+refs/heads/data:refs/remotes/origin/data' 2>/dev/null || true
+  local rc=0
+  bash "$DATA_FETCH" || rc=$?
+  case "$rc" in
+    0|3) return 0 ;;
+    *)
+      echo "::error::Could not read the data branch (fetch failed after 3 tries). Publishing now could replace it with this run's files alone, so nothing was published. The next run publishes." >&2
+      exit 1
+      ;;
+  esac
 }
 
 # meta_time -- the generated_at out of a *_run_meta.json, or '' if there isn't
