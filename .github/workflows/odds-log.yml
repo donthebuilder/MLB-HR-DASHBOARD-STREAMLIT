@@ -24,12 +24,14 @@ jobs:
         run: |
           git config --global user.name  "moonshot-bot"
           git config --global user.email "bot@users.noreply.github.com"
-          git clone --quiet --branch bbe-history "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" _data
+          git clone --quiet --depth 1 --filter=blob:none --sparse --branch bbe-history "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" _data
+          # only the folder this job writes is downloaded (known-issues #107): the branch is ~1.5 GB and most of it is bbe_history/
+          git -C _data sparse-checkout set public/data/current/odds_log
           mkdir -p _data/public/data/current/odds_log
       - name: Copy the daily odds snapshots from the data branch
         working-directory: _data
         run: |
-          git fetch --quiet origin data --depth 1
+          git fetch --quiet --depth 1 origin '+refs/heads/data:refs/remotes/origin/data'   # explicit refspec: a depth-1 clone tracks only bbe-history, so a bare `fetch origin data` would not create origin/data
           for f in $(git ls-tree --name-only origin/data public/data/current/ | grep -E '/(nfl|nba|nhl)_odds_20[0-9-]+\.json$'); do
             git show "origin/data:$f" > "public/data/current/odds_log/$(basename $f)"
           done
