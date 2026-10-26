@@ -369,13 +369,7 @@ def report(out_dir):
             print(f"  {k}: {len(rs)} alerts, return {100 * sum(r['profit'] for r in rs) / sum(r['price'] for r in rs):+.1f}%")
     games = {r["game"] + r["date"] for r in rows}
     print(f"  these {len(rows)} alerts come from only {len(games)} games, and one game can log hundreds of them (every rung of a ladder, again each time the edge moves): the effective sample is the games, not the alerts")
-    first = {}
-    for r in sorted(rows, key=lambda r: r["t"]):
-        first.setdefault((r["market"], r["side"]), r)
-    paper = [r for r in first.values() if r.get("stake")]
-    if paper:
-        units = sum(r["stake"] * (r["profit"] / r["price"]) for r in paper)
-        print(f"  first alert per market and side only ({len(paper)} bets): paper units won by staking.py (quarter Kelly, half-trusted model, 1% cap, NOT compounded) = {100 * units:+.1f}% of a bankroll")
+    print("  (no paper bankroll is printed: a game's ladder of alerts all win or lose together, so stakes on them cannot be added up as if they were separate bets)")
 
 
 if __name__ == "__main__":
