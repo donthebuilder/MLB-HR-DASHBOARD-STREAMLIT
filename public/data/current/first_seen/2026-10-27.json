@@ -350,6 +350,46 @@
    "value": "Clay Stevenson",
    "first_seen_utc": "2026-10-27T18:02:50Z",
    "mins_before_start": 357
+  },
+  {
+   "sport": "mlb",
+   "game_id": "849803",
+   "start_utc": "2026-10-28T00:00:00Z",
+   "team": "MIL",
+   "what": "lineup",
+   "value": "7832593ec7",
+   "first_seen_utc": "2026-10-27T22:15:56Z",
+   "mins_before_start": 104
+  },
+  {
+   "sport": "mlb",
+   "game_id": "849803",
+   "start_utc": "2026-10-28T00:00:00Z",
+   "team": "TB",
+   "what": "lineup",
+   "value": "30a00a3082",
+   "first_seen_utc": "2026-10-27T22:15:56Z",
+   "mins_before_start": 104
+  },
+  {
+   "sport": "nhl",
+   "game_id": "401892593",
+   "start_utc": "2026-10-28T02:00Z",
+   "team": "VGK",
+   "what": "goalie",
+   "value": "Adin Hill",
+   "first_seen_utc": "2026-10-27T22:15:56Z",
+   "mins_before_start": 224
+  },
+  {
+   "sport": "nhl",
+   "game_id": "401892593",
+   "start_utc": "2026-10-28T02:00Z",
+   "team": "OTT",
+   "what": "goalie",
+   "value": "Jonas Johansson",
+   "first_seen_utc": "2026-10-27T22:15:56Z",
+   "mins_before_start": 224
   }
  ]
 }
