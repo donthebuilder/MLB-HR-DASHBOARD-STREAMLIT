@@ -300,6 +300,56 @@
    "value": "Expected:Ja Morant|Toumani Camara|Damian Lillard|Deni Avdija|Donovan Clingan",
    "first_seen_utc": "2026-10-27T10:40:32Z",
    "mins_before_start": 979
+  },
+  {
+   "sport": "nhl",
+   "game_id": "401892585",
+   "start_utc": "2026-10-27T23:00Z",
+   "team": "CBJ",
+   "what": "goalie",
+   "value": "Cam Talbot",
+   "first_seen_utc": "2026-10-27T18:02:50Z",
+   "mins_before_start": 297
+  },
+  {
+   "sport": "nhl",
+   "game_id": "401892588",
+   "start_utc": "2026-10-28T00:00Z",
+   "team": "STL",
+   "what": "goalie",
+   "value": "Jordan Binnington",
+   "first_seen_utc": "2026-10-27T18:02:50Z",
+   "mins_before_start": 357
+  },
+  {
+   "sport": "nhl",
+   "game_id": "401892590",
+   "start_utc": "2026-10-28T00:00Z",
+   "team": "DAL",
+   "what": "goalie",
+   "value": "Casey DeSmith",
+   "first_seen_utc": "2026-10-27T18:02:50Z",
+   "mins_before_start": 357
+  },
+  {
+   "sport": "nhl",
+   "game_id": "401892590",
+   "start_utc": "2026-10-28T00:00Z",
+   "team": "NJ",
+   "what": "goalie",
+   "value": "Connor Hellebuyck",
+   "first_seen_utc": "2026-10-27T18:02:50Z",
+   "mins_before_start": 357
+  },
+  {
+   "sport": "nhl",
+   "game_id": "401892591",
+   "start_utc": "2026-10-28T00:00Z",
+   "team": "WPG",
+   "what": "goalie",
+   "value": "Clay Stevenson",
+   "first_seen_utc": "2026-10-27T18:02:50Z",
+   "mins_before_start": 357
   }
  ]
 }
