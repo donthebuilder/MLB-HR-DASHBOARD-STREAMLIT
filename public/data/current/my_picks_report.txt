@@ -1,1 +1,22 @@
-27 picks in the file; 0 graded, 27 not graded yet (game not final, player not in the shadow log, or no result)
+27 picks in the file; 2 graded, 25 not graded yet (game not final, player not in the shadow log, or no result)
+
+Overall
+  all                          2 picks, hit  50.0%   our model gave them  17.2%   price implied  51.0%   return +3% on 2 priced
+
+By market
+  nfl rec_yds                  1 picks, hit   0.0%   model n/a   return -100% on 1 priced
+  nfl td                       1 picks, hit 100.0%   our model gave them  17.2%   price implied  48.8%   return +105% on 1 priced
+
+By position
+  WR                           1 picks, hit   0.0%   model n/a   return -100% on 1 priced
+  RB                           1 picks, hit 100.0%   our model gave them  17.2%   price implied  48.8%   return +105% on 1 priced
+
+By note
+  TUDDY pin: called            1 picks, hit   0.0%   model n/a   return -100% on 1 priced
+  TUDDY pin: on the board      1 picks, hit 100.0%   our model gave them  17.2%   price implied  48.8%   return +105% on 1 priced
+
+By price band
+  favourite (-110 or shorter)   1 picks, hit   0.0%   model n/a   return -100% on 1 priced
+  even to +250                 1 picks, hit 100.0%   our model gave them  17.2%   price implied  48.8%   return +105% on 1 priced
+
+Did the model's own ranking of your picks hold? Picks the model liked more: hit 100.0% (n=1); liked less: 0.0% (n=0)
