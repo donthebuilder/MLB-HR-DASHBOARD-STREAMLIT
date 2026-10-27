@@ -108,6 +108,25 @@ def test_pair_counting_joint_days_events_rate_and_expected():
     assert abs(p["lift"] - round(6 / (60 * (20 / 60) * (16 / 60)), 2)) < 0.01
     assert p["seasons"] == {"2026": [60, 6]}
     assert p["last_joint_date"] == season_days(2026, 60)[5]
+    # the last joint day is the 6th of 60, so 54 joint days came after it
+    assert p["joint_days_since_last"] == 54
+
+
+def test_games_since_is_zero_when_the_last_joint_day_is_the_newest():
+    r = two_stars(joint_event_days=45, total_days=45)   # both score every day, so the newest joint day is a joint event
+    p = ph.build_pairs(r, {"A": "season", "B": "season"}, "mlb", min_joint_days=40)["pairs"][0]
+    assert p["joint_days_since_last"] == 0
+
+
+def test_games_since_counts_a_doubleheader_once_and_skips_days_one_man_missed():
+    r = two_stars(joint_event_days=3, total_days=45)
+    days = season_days(2026, 45)
+    r.append(rec(2026, days[10], "A", 0, team="AAA", game="AAA-dh2"))   # a second game the same day: still one joint day
+    r = [x for x in r if not (x["pid"] == "B" and x["day"] in days[20:25])]   # B sat out five days: not joint days
+    p = ph.build_pairs(r, {"A": "season", "B": "season"}, "mlb", min_joint_days=30)["pairs"][0]
+    assert p["joint_days"] == 40
+    assert p["last_joint_date"] == days[2]
+    assert p["joint_days_since_last"] == 37   # 40 joint days, 3 of them up to and including the last joint event
 
 
 def test_same_game_subset_needs_the_same_game_id():

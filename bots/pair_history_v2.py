@@ -22,6 +22,7 @@ subset where both did it in one game. v2 adds what v1 never had, the denominator
     expected_joint    what the two players' own rates would give if the two were
                       unrelated: joint_days * rate_a * rate_b (window-wide rates)
     lift              joint_event_days / expected_joint
+    joint_days_since_last  slate days both played AFTER the last day both did it (0 = it was the newest joint day)
 
 ACTIVE (the thresholds are the named constants below; tests pin them):
   1. he is on a current roster (the sport's own roster feed), AND
@@ -203,6 +204,9 @@ def build_pairs(records: List[Dict[str, Any]], active: Dict[Any, str], sport: st
             if sj:
                 by_season[str(s)] = [sj, se]
         last = sorted((day_date[d] for d in event_days), reverse=True)
+        # joint games since the last joint event (2026-10-27, pair gap): slate days BOTH played that came after it.
+        # Counted in the file's own unit (a date for MLB/NHL, a week for the NFL), so a doubleheader is one day.
+        since = sum(1 for d in shared if day_date[d] > last[0])
         rows.append({
             "pair_key": f"{a}|{b}",
             "players": [
@@ -217,6 +221,7 @@ def build_pairs(records: List[Dict[str, Any]], active: Dict[Any, str], sport: st
             "lift": round(je / expected, 2) if expected > 0 else None,
             "seasons": by_season,
             "last_joint_date": last[0],
+            "joint_days_since_last": since,
             "last_dates": last[:LAST_DATES_KEPT],
         })
     rows.sort(key=lambda p: (-p["joint_event_days"], -p["same_game_event_days"], -p["rate"], p["pair_key"]))
