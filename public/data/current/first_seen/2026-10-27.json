@@ -220,6 +220,86 @@
    "value": "Colten Ellis",
    "first_seen_utc": "2026-10-27T05:14:32Z",
    "mins_before_start": 1275
+  },
+  {
+   "sport": "nba",
+   "game_id": "401909877",
+   "start_utc": "2026-10-27T23:30Z",
+   "team": "BOS",
+   "what": "starters",
+   "value": "Expected:Paul George|Jayson Tatum|Derrick White|Jordan Walsh|Mitchell Robinson",
+   "first_seen_utc": "2026-10-27T10:40:32Z",
+   "mins_before_start": 769
+  },
+  {
+   "sport": "nba",
+   "game_id": "401909877",
+   "start_utc": "2026-10-27T23:30Z",
+   "team": "BKN",
+   "what": "starters",
+   "value": "Expected:Keon Ellis|Michael Porter Jr.|Egor D\u00ebmin|Julius Randle|Day'Ron Sharpe",
+   "first_seen_utc": "2026-10-27T10:40:32Z",
+   "mins_before_start": 769
+  },
+  {
+   "sport": "nba",
+   "game_id": "401909878",
+   "start_utc": "2026-10-28T00:00Z",
+   "team": "NY",
+   "what": "starters",
+   "value": "Expected:Mikal Bridges|Josh Hart|Jalen Brunson|OG Anunoby|Karl-Anthony Towns",
+   "first_seen_utc": "2026-10-27T10:40:32Z",
+   "mins_before_start": 799
+  },
+  {
+   "sport": "nba",
+   "game_id": "401909878",
+   "start_utc": "2026-10-28T00:00Z",
+   "team": "DET",
+   "what": "starters",
+   "value": "Expected:Duncan Robinson|Ausar Thompson|Cade Cunningham|John Collins|Paul Reed",
+   "first_seen_utc": "2026-10-27T10:40:32Z",
+   "mins_before_start": 799
+  },
+  {
+   "sport": "nba",
+   "game_id": "401909879",
+   "start_utc": "2026-10-28T00:00Z",
+   "team": "SA",
+   "what": "starters",
+   "value": "Expected:Stephon Castle|Dylan Harper|De'Aaron Fox|Devin Vassell|Victor Wembanyama",
+   "first_seen_utc": "2026-10-27T10:40:32Z",
+   "mins_before_start": 799
+  },
+  {
+   "sport": "nba",
+   "game_id": "401909879",
+   "start_utc": "2026-10-28T00:00Z",
+   "team": "SAC",
+   "what": "starters",
+   "value": "Expected:Zach LaVine|De'Andre Hunter|Darius Acuff Jr.|Precious Achiuwa|Domantas Sabonis",
+   "first_seen_utc": "2026-10-27T10:40:32Z",
+   "mins_before_start": 799
+  },
+  {
+   "sport": "nba",
+   "game_id": "401909880",
+   "start_utc": "2026-10-28T03:00Z",
+   "team": "LAL",
+   "what": "starters",
+   "value": "Expected:Austin Reaves|Ziaire Williams|Luka Don\u010di\u0107|Matisse Thybulle|Walker Kessler",
+   "first_seen_utc": "2026-10-27T10:40:32Z",
+   "mins_before_start": 979
+  },
+  {
+   "sport": "nba",
+   "game_id": "401909880",
+   "start_utc": "2026-10-28T03:00Z",
+   "team": "POR",
+   "what": "starters",
+   "value": "Expected:Ja Morant|Toumani Camara|Damian Lillard|Deni Avdija|Donovan Clingan",
+   "first_seen_utc": "2026-10-27T10:40:32Z",
+   "mins_before_start": 979
   }
  ]
 }
