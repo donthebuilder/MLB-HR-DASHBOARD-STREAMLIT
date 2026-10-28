@@ -1,0 +1,85 @@
+{
+ "day": "2026-10-28",
+ "events": [
+  {
+   "sport": "nhl",
+   "game_id": "401892596",
+   "start_utc": "2026-10-28T23:30Z",
+   "team": "WSH",
+   "what": "goalie",
+   "value": "Logan Thompson",
+   "first_seen_utc": "2026-10-28T05:52:47Z",
+   "mins_before_start": 1057
+  },
+  {
+   "sport": "nhl",
+   "game_id": "401892596",
+   "start_utc": "2026-10-28T23:30Z",
+   "team": "PHI",
+   "what": "goalie",
+   "value": "Joseph Woll",
+   "first_seen_utc": "2026-10-28T05:52:47Z",
+   "mins_before_start": 1057
+  },
+  {
+   "sport": "nhl",
+   "game_id": "401892597",
+   "start_utc": "2026-10-29T00:30Z",
+   "team": "EDM",
+   "what": "goalie",
+   "value": "Tristan Jarry",
+   "first_seen_utc": "2026-10-28T05:52:47Z",
+   "mins_before_start": 1117
+  },
+  {
+   "sport": "nhl",
+   "game_id": "401892597",
+   "start_utc": "2026-10-29T00:30Z",
+   "team": "CGY",
+   "what": "goalie",
+   "value": "Devin Cooley",
+   "first_seen_utc": "2026-10-28T05:52:47Z",
+   "mins_before_start": 1117
+  },
+  {
+   "sport": "nhl",
+   "game_id": "401892598",
+   "start_utc": "2026-10-29T01:00Z",
+   "team": "COL",
+   "what": "goalie",
+   "value": "Mackenzie Blackwood",
+   "first_seen_utc": "2026-10-28T05:52:47Z",
+   "mins_before_start": 1147
+  },
+  {
+   "sport": "nhl",
+   "game_id": "401892598",
+   "start_utc": "2026-10-29T01:00Z",
+   "team": "NJ",
+   "what": "goalie",
+   "value": "Jake Allen",
+   "first_seen_utc": "2026-10-28T05:52:47Z",
+   "mins_before_start": 1147
+  },
+  {
+   "sport": "nhl",
+   "game_id": "401892599",
+   "start_utc": "2026-10-29T02:00Z",
+   "team": "SEA",
+   "what": "goalie",
+   "value": "Philipp Grubauer",
+   "first_seen_utc": "2026-10-28T05:52:47Z",
+   "mins_before_start": 1207
+  },
+  {
+   "sport": "nhl",
+   "game_id": "401892599",
+   "start_utc": "2026-10-29T02:00Z",
+   "team": "TOR",
+   "what": "goalie",
+   "value": "Sergei Bobrovsky",
+   "first_seen_utc": "2026-10-28T05:52:47Z",
+   "mins_before_start": 1207
+  }
+ ]
+}
