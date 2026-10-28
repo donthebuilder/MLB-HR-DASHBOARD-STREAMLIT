@@ -1,0 +1,35 @@
+[
+ {
+  "sport": "mlb",
+  "game_id": "401908046",
+  "start_utc": "2026-10-29T00:00Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "TB",
+    "probable_goalie": null
+   },
+   "away": {
+    "team": "MIL",
+    "probable_goalie": null
+   }
+  },
+  "lineup_posted": false,
+  "spread": null,
+  "total": null,
+  "lineups": {
+   "away": {
+    "team": "MIL",
+    "posted": false,
+    "order": {},
+    "probable": null
+   },
+   "home": {
+    "team": "TB",
+    "posted": false,
+    "order": {},
+    "probable": null
+   }
+  }
+ }
+]

@@ -1,0 +1,78 @@
+[
+ {
+  "sport": "nhl",
+  "game_id": "401892596",
+  "start_utc": "2026-10-28T23:30Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "WSH",
+    "probable_goalie": "Logan Thompson"
+   },
+   "away": {
+    "team": "PHI",
+    "probable_goalie": "Joseph Woll"
+   }
+  },
+  "lineup_posted": false,
+  "spread": "WSH -230",
+  "total": 6.5
+ },
+ {
+  "sport": "nhl",
+  "game_id": "401892597",
+  "start_utc": "2026-10-29T00:30Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "EDM",
+    "probable_goalie": "Tristan Jarry"
+   },
+   "away": {
+    "team": "CGY",
+    "probable_goalie": "Devin Cooley"
+   }
+  },
+  "lineup_posted": false,
+  "spread": "EDM -218",
+  "total": 6.5
+ },
+ {
+  "sport": "nhl",
+  "game_id": "401892598",
+  "start_utc": "2026-10-29T01:00Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "COL",
+    "probable_goalie": "Mackenzie Blackwood"
+   },
+   "away": {
+    "team": "NJ",
+    "probable_goalie": "Jake Allen"
+   }
+  },
+  "lineup_posted": false,
+  "spread": "COL -185",
+  "total": 6.5
+ },
+ {
+  "sport": "nhl",
+  "game_id": "401892599",
+  "start_utc": "2026-10-29T02:00Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "SEA",
+    "probable_goalie": "Philipp Grubauer"
+   },
+   "away": {
+    "team": "TOR",
+    "probable_goalie": "Sergei Bobrovsky"
+   }
+  },
+  "lineup_posted": false,
+  "spread": "TOR -120",
+  "total": 6.5
+ }
+]
