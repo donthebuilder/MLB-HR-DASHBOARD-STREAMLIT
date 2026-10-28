@@ -1,0 +1,230 @@
+[
+ {
+  "sport": "nba",
+  "game_id": "401909881",
+  "start_utc": "2026-10-28T23:00Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "ATL",
+    "probable_goalie": null
+   },
+   "away": {
+    "team": "MIA",
+    "probable_goalie": null
+   }
+  },
+  "lineup_posted": false,
+  "spread": "ATL -2.5",
+  "total": 242.5
+ },
+ {
+  "sport": "nba",
+  "game_id": "401909882",
+  "start_utc": "2026-10-28T23:00Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "CLE",
+    "probable_goalie": null
+   },
+   "away": {
+    "team": "WSH",
+    "probable_goalie": null
+   }
+  },
+  "lineup_posted": false,
+  "spread": "CLE -9.5",
+  "total": 240.5
+ },
+ {
+  "sport": "nba",
+  "game_id": "401909883",
+  "start_utc": "2026-10-28T23:00Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "DET",
+    "probable_goalie": null
+   },
+   "away": {
+    "team": "CHA",
+    "probable_goalie": null
+   }
+  },
+  "lineup_posted": false,
+  "spread": "DET -7.5",
+  "total": 212.5
+ },
+ {
+  "sport": "nba",
+  "game_id": "401909884",
+  "start_utc": "2026-10-28T23:00Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "IND",
+    "probable_goalie": null
+   },
+   "away": {
+    "team": "PHI",
+    "probable_goalie": null
+   }
+  },
+  "lineup_posted": false,
+  "spread": "PHI -7.5",
+  "total": 234.5
+ },
+ {
+  "sport": "nba",
+  "game_id": "401909885",
+  "start_utc": "2026-10-28T23:30Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "TOR",
+    "probable_goalie": null
+   },
+   "away": {
+    "team": "ORL",
+    "probable_goalie": null
+   }
+  },
+  "lineup_posted": false,
+  "spread": "TOR -4.5",
+  "total": 223.5
+ },
+ {
+  "sport": "nba",
+  "game_id": "401909886",
+  "start_utc": "2026-10-29T00:00Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "CHI",
+    "probable_goalie": null
+   },
+   "away": {
+    "team": "NY",
+    "probable_goalie": null
+   }
+  },
+  "lineup_posted": false,
+  "spread": "NY -7.5",
+  "total": 232.5
+ },
+ {
+  "sport": "nba",
+  "game_id": "401909887",
+  "start_utc": "2026-10-29T00:00Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "MIL",
+    "probable_goalie": null
+   },
+   "away": {
+    "team": "HOU",
+    "probable_goalie": null
+   }
+  },
+  "lineup_posted": false,
+  "spread": "HOU -8.5",
+  "total": 226.5
+ },
+ {
+  "sport": "nba",
+  "game_id": "401909888",
+  "start_utc": "2026-10-29T00:00Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "MIN",
+    "probable_goalie": null
+   },
+   "away": {
+    "team": "GS",
+    "probable_goalie": null
+   }
+  },
+  "lineup_posted": false,
+  "spread": "MIN -3.5",
+  "total": 227.5
+ },
+ {
+  "sport": "nba",
+  "game_id": "401909889",
+  "start_utc": "2026-10-29T00:00Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "NO",
+    "probable_goalie": null
+   },
+   "away": {
+    "team": "DEN",
+    "probable_goalie": null
+   }
+  },
+  "lineup_posted": false,
+  "spread": "DEN -4.5",
+  "total": 240.5
+ },
+ {
+  "sport": "nba",
+  "game_id": "401909890",
+  "start_utc": "2026-10-29T01:00Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "UTAH",
+    "probable_goalie": null
+   },
+   "away": {
+    "team": "SA",
+    "probable_goalie": null
+   }
+  },
+  "lineup_posted": false,
+  "spread": "SA -13.5",
+  "total": 233.5
+ },
+ {
+  "sport": "nba",
+  "game_id": "401909891",
+  "start_utc": "2026-10-29T01:30Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "DAL",
+    "probable_goalie": null
+   },
+   "away": {
+    "team": "OKC",
+    "probable_goalie": null
+   }
+  },
+  "lineup_posted": false,
+  "spread": "OKC -5.5",
+  "total": 227.5
+ },
+ {
+  "sport": "nba",
+  "game_id": "401909892",
+  "start_utc": "2026-10-29T02:30Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "LAC",
+    "probable_goalie": null
+   },
+   "away": {
+    "team": "LAL",
+    "probable_goalie": null
+   }
+  },
+  "lineup_posted": false,
+  "spread": "LAC -1.5",
+  "total": 224.5
+ }
+]

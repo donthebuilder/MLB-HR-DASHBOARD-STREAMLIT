@@ -1,0 +1,55 @@
+[
+ {
+  "sport": "mlb",
+  "game_id": "401908046",
+  "start_utc": "2026-10-29T00:00Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "TB",
+    "probable_goalie": null
+   },
+   "away": {
+    "team": "MIL",
+    "probable_goalie": null
+   }
+  },
+  "lineup_posted": true,
+  "spread": "MIL -149",
+  "total": 6.5,
+  "lineups": {
+   "away": {
+    "team": "MIL",
+    "posted": true,
+    "order": {
+     "694192": 1,
+     "641343": 2,
+     "592885": 3,
+     "661388": 4,
+     "668930": 5,
+     "686217": 6,
+     "806198": 7,
+     "669003": 8,
+     "666152": 9
+    },
+    "probable": "Jacob Misiorowski"
+   },
+   "home": {
+    "team": "TB",
+    "posted": true,
+    "order": {
+     "650490": 1,
+     "666018": 2,
+     "691406": 3,
+     "689414": 4,
+     "676356": 5,
+     "802415": 6,
+     "810938": 7,
+     "668723": 8,
+     "670764": 9
+    },
+    "probable": "Drew Rasmussen"
+   }
+  }
+ }
+]
