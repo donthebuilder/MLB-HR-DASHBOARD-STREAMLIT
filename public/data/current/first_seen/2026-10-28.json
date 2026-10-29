@@ -460,6 +460,26 @@
    "value": "Expected:Quentin Grimes|Matisse Thybulle|Austin Reaves|Sandro Mamukelashvili|Walker Kessler",
    "first_seen_utc": "2026-10-28T23:15:04Z",
    "mins_before_start": 195
+  },
+  {
+   "sport": "nba",
+   "game_id": "401909892",
+   "start_utc": "2026-10-29T02:30Z",
+   "team": "LAC",
+   "what": "starters",
+   "value": "Confirmed:Kris Dunn|Kobe Sanders|Darius Garland|Derrick Jones Jr.|Isaiah Jackson",
+   "first_seen_utc": "2026-10-29T02:28:42Z",
+   "mins_before_start": 1
+  },
+  {
+   "sport": "nba",
+   "game_id": "401909892",
+   "start_utc": "2026-10-29T02:30Z",
+   "team": "LAL",
+   "what": "starters",
+   "value": "Confirmed:Quentin Grimes|Matisse Thybulle|Austin Reaves|Jake LaRavia|Walker Kessler",
+   "first_seen_utc": "2026-10-29T02:28:42Z",
+   "mins_before_start": 1
   }
  ]
 }
