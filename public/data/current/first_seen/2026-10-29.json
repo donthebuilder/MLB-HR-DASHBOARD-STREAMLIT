@@ -220,6 +220,76 @@
    "value": "Leevi Merilainen",
    "first_seen_utc": "2026-10-29T05:57:11Z",
    "mins_before_start": 1203
+  },
+  {
+   "sport": "nhl",
+   "game_id": "401892609",
+   "start_utc": "2026-10-30T02:00Z",
+   "team": "OTT",
+   "what": "goalie",
+   "value": "Jonas Johansson",
+   "first_seen_utc": "2026-10-29T18:30:05Z",
+   "mins_before_start": 450
+  },
+  {
+   "sport": "nba",
+   "game_id": "401909893",
+   "start_utc": "2026-10-30T00:00Z",
+   "team": "ATL",
+   "what": "starters",
+   "value": "Expected:Nickeil Alexander-Walker|Dyson Daniels|CJ McCollum|Jalen Johnson|Onyeka Okongwu",
+   "first_seen_utc": "2026-10-29T18:30:05Z",
+   "mins_before_start": 330
+  },
+  {
+   "sport": "nba",
+   "game_id": "401909893",
+   "start_utc": "2026-10-30T00:00Z",
+   "team": "CLE",
+   "what": "starters",
+   "value": "Expected:Donovan Mitchell|Peyton Watson|James Harden|Evan Mobley|Jarrett Allen",
+   "first_seen_utc": "2026-10-29T18:30:05Z",
+   "mins_before_start": 330
+  },
+  {
+   "sport": "nba",
+   "game_id": "401909894",
+   "start_utc": "2026-10-30T00:00Z",
+   "team": "NO",
+   "what": "starters",
+   "value": "Expected:Jeremiah Fears|Trey Murphy III|Dejounte Murray|Zion Williamson|DeAndre Jordan",
+   "first_seen_utc": "2026-10-29T18:30:05Z",
+   "mins_before_start": 330
+  },
+  {
+   "sport": "nba",
+   "game_id": "401909894",
+   "start_utc": "2026-10-30T00:00Z",
+   "team": "SAC",
+   "what": "starters",
+   "value": "Expected:Zach LaVine|De'Andre Hunter|Darius Acuff Jr.|Precious Achiuwa|Domantas Sabonis",
+   "first_seen_utc": "2026-10-29T18:30:05Z",
+   "mins_before_start": 330
+  },
+  {
+   "sport": "nba",
+   "game_id": "401909895",
+   "start_utc": "2026-10-30T02:00Z",
+   "team": "POR",
+   "what": "starters",
+   "value": "Expected:Ja Morant|Toumani Camara|Damian Lillard|Deni Avdija|Donovan Clingan",
+   "first_seen_utc": "2026-10-29T18:30:05Z",
+   "mins_before_start": 450
+  },
+  {
+   "sport": "nba",
+   "game_id": "401909895",
+   "start_utc": "2026-10-30T02:00Z",
+   "team": "MEM",
+   "what": "starters",
+   "value": "Expected:Cedric Coward|Jaylen Wells|Ty Jerome|Cameron Boozer|Zach Edey",
+   "first_seen_utc": "2026-10-29T18:30:05Z",
+   "mins_before_start": 450
   }
  ]
 }
