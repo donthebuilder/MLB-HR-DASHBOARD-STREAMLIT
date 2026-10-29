@@ -1,0 +1,1 @@
+{"date": "2026-10-29", "sport": "nfl", "games": {"CAR@GB": {"espn_id": "401873023", "home": "GB", "away": "CAR", "start": "2026-10-29 20:15", "status": "Scheduled", "model_spread_home": -5.9, "model_p_home": 0.6776, "book_spread_home": -3.5, "book_total": 46.5, "gap_pts": -2.4, "history_games": 57, "model_version": "nfl_team_v1"}}}
