@@ -290,6 +290,36 @@
    "value": "Expected:Cedric Coward|Jaylen Wells|Ty Jerome|Cameron Boozer|Zach Edey",
    "first_seen_utc": "2026-10-29T18:30:05Z",
    "mins_before_start": 450
+  },
+  {
+   "sport": "nhl",
+   "game_id": "401892602",
+   "start_utc": "2026-10-29T23:00Z",
+   "team": "UTA",
+   "what": "goalie",
+   "value": "Sebastian Cossa",
+   "first_seen_utc": "2026-10-29T23:19:29Z",
+   "mins_before_start": -19
+  },
+  {
+   "sport": "nhl",
+   "game_id": "401892608",
+   "start_utc": "2026-10-30T02:00Z",
+   "team": "BUF",
+   "what": "goalie",
+   "value": "Colten Ellis",
+   "first_seen_utc": "2026-10-29T23:19:29Z",
+   "mins_before_start": 161
+  },
+  {
+   "sport": "nba",
+   "game_id": "401909894",
+   "start_utc": "2026-10-30T00:00Z",
+   "team": "NO",
+   "what": "starters",
+   "value": "Expected:Trey Murphy III|Herbert Jones|Jeremiah Fears|Zion Williamson|DeAndre Jordan",
+   "first_seen_utc": "2026-10-29T23:19:29Z",
+   "mins_before_start": 41
   }
  ]
 }
