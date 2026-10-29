@@ -1,0 +1,21 @@
+[
+ {
+  "sport": "nfl",
+  "game_id": "401873023",
+  "start_utc": "2026-10-30T00:15Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "GB",
+    "probable_goalie": null
+   },
+   "away": {
+    "team": "CAR",
+    "probable_goalie": null
+   }
+  },
+  "lineup_posted": false,
+  "spread": "GB -3.5",
+  "total": 46.5
+ }
+]

@@ -1,0 +1,59 @@
+[
+ {
+  "sport": "nba",
+  "game_id": "401909893",
+  "start_utc": "2026-10-30T00:00Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "ATL",
+    "probable_goalie": null
+   },
+   "away": {
+    "team": "CLE",
+    "probable_goalie": null
+   }
+  },
+  "lineup_posted": false,
+  "spread": "ATL -1.5",
+  "total": 237.5
+ },
+ {
+  "sport": "nba",
+  "game_id": "401909894",
+  "start_utc": "2026-10-30T00:00Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "NO",
+    "probable_goalie": null
+   },
+   "away": {
+    "team": "SAC",
+    "probable_goalie": null
+   }
+  },
+  "lineup_posted": false,
+  "spread": "NO -6.5",
+  "total": 235.5
+ },
+ {
+  "sport": "nba",
+  "game_id": "401909895",
+  "start_utc": "2026-10-30T02:00Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "POR",
+    "probable_goalie": null
+   },
+   "away": {
+    "team": "MEM",
+    "probable_goalie": null
+   }
+  },
+  "lineup_posted": false,
+  "spread": "POR -7.5",
+  "total": 233.5
+ }
+]

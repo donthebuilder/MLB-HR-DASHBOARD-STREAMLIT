@@ -1,0 +1,211 @@
+[
+ {
+  "sport": "nhl",
+  "game_id": "401892601",
+  "start_utc": "2026-10-29T23:00Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "TB",
+    "probable_goalie": "Andrei Vasilevskiy"
+   },
+   "away": {
+    "team": "WPG",
+    "probable_goalie": "Stuart Skinner"
+   }
+  },
+  "lineup_posted": false,
+  "spread": "TB -218",
+  "total": 6.5
+ },
+ {
+  "sport": "nhl",
+  "game_id": "401892602",
+  "start_utc": "2026-10-29T23:00Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "PIT",
+    "probable_goalie": "Arturs Silovs"
+   },
+   "away": {
+    "team": "UTA",
+    "probable_goalie": "Karel Vejmelka"
+   }
+  },
+  "lineup_posted": false,
+  "spread": "UTAH -135",
+  "total": 6.5
+ },
+ {
+  "sport": "nhl",
+  "game_id": "401892603",
+  "start_utc": "2026-10-29T23:00Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "CAR",
+    "probable_goalie": "Pyotr Kochetkov"
+   },
+   "away": {
+    "team": "CBJ",
+    "probable_goalie": "Jet Greaves"
+   }
+  },
+  "lineup_posted": false,
+  "spread": "CAR -258",
+  "total": 5.5
+ },
+ {
+  "sport": "nhl",
+  "game_id": "401892600",
+  "start_utc": "2026-10-29T23:30Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "DET",
+    "probable_goalie": "John Gibson"
+   },
+   "away": {
+    "team": "CHI",
+    "probable_goalie": "Spencer Knight"
+   }
+  },
+  "lineup_posted": false,
+  "spread": "DET -162",
+  "total": 5.5
+ },
+ {
+  "sport": "nhl",
+  "game_id": "401892604",
+  "start_utc": "2026-10-30T00:00Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "STL",
+    "probable_goalie": "Joel Hofer"
+   },
+   "away": {
+    "team": "BOS",
+    "probable_goalie": "Jeremy Swayman"
+   }
+  },
+  "lineup_posted": false,
+  "spread": "STL -115",
+  "total": 5.5
+ },
+ {
+  "sport": "nhl",
+  "game_id": "401892605",
+  "start_utc": "2026-10-30T00:00Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "NSH",
+    "probable_goalie": "Juuse Saros"
+   },
+   "away": {
+    "team": "WSH",
+    "probable_goalie": "Charlie Lindgren"
+   }
+  },
+  "lineup_posted": false,
+  "spread": "NSH -108",
+  "total": 6.5
+ },
+ {
+  "sport": "nhl",
+  "game_id": "401892606",
+  "start_utc": "2026-10-30T00:00Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "DAL",
+    "probable_goalie": "Jake Oettinger"
+   },
+   "away": {
+    "team": "MTL",
+    "probable_goalie": "Jakub Dobes"
+   }
+  },
+  "lineup_posted": false,
+  "spread": "DAL -175",
+  "total": 5.5
+ },
+ {
+  "sport": "nhl",
+  "game_id": "401892607",
+  "start_utc": "2026-10-30T00:00Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "MIN",
+    "probable_goalie": "Jesper Wallstedt"
+   },
+   "away": {
+    "team": "NYI",
+    "probable_goalie": "Ilya Sorokin"
+   }
+  },
+  "lineup_posted": false,
+  "spread": "MIN -192",
+  "total": 5.5
+ },
+ {
+  "sport": "nhl",
+  "game_id": "401892608",
+  "start_utc": "2026-10-30T02:00Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "ANA",
+    "probable_goalie": "Lukas Dostal"
+   },
+   "away": {
+    "team": "BUF",
+    "probable_goalie": "Colten Ellis"
+   }
+  },
+  "lineup_posted": false,
+  "spread": "BUF -142",
+  "total": 6.5
+ },
+ {
+  "sport": "nhl",
+  "game_id": "401892609",
+  "start_utc": "2026-10-30T02:00Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "LA",
+    "probable_goalie": "Darcy Kuemper"
+   },
+   "away": {
+    "team": "OTT",
+    "probable_goalie": "Jonas Johansson"
+   }
+  },
+  "lineup_posted": false,
+  "spread": "OTT -122",
+  "total": 5.5
+ },
+ {
+  "sport": "nhl",
+  "game_id": "401892610",
+  "start_utc": "2026-10-30T02:00Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "SJ",
+    "probable_goalie": "Yaroslav Askarov"
+   },
+   "away": {
+    "team": "VAN",
+    "probable_goalie": "Leevi Merilainen"
+   }
+  },
+  "lineup_posted": false,
+  "spread": "SJ -175",
+  "total": 6.5
+ }
+]
