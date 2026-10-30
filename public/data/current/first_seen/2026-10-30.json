@@ -260,6 +260,36 @@
    "value": "Expected:Christian Braun|Cameron Johnson|Jamal Murray|Aaron Gordon|Nikola Joki\u0107",
    "first_seen_utc": "2026-10-30T18:02:26Z",
    "mins_before_start": 478
+  },
+  {
+   "sport": "nhl",
+   "game_id": "401892611",
+   "start_utc": "2026-10-30T22:00Z",
+   "team": "VGK",
+   "what": "goalie",
+   "value": "Adin Hill",
+   "first_seen_utc": "2026-10-30T22:23:08Z",
+   "mins_before_start": -23
+  },
+  {
+   "sport": "nba",
+   "game_id": "401909280",
+   "start_utc": "2026-10-30T23:30Z",
+   "team": "PHI",
+   "what": "starters",
+   "value": "Expected:VJ Edgecombe|Dean Wade|Tyrese Maxey|LeBron James|Joel Embiid",
+   "first_seen_utc": "2026-10-30T22:23:08Z",
+   "mins_before_start": 67
+  },
+  {
+   "sport": "nba",
+   "game_id": "401909285",
+   "start_utc": "2026-10-31T02:00Z",
+   "team": "LAL",
+   "what": "starters",
+   "value": "Expected:Austin Reaves|Quentin Grimes|Luka Don\u010di\u0107|Matisse Thybulle|Walker Kessler",
+   "first_seen_utc": "2026-10-30T22:23:08Z",
+   "mins_before_start": 217
   }
  ]
 }
