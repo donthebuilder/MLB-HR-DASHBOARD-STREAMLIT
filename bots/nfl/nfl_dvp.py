@@ -34,11 +34,11 @@ RUSH_ROLES = [("RB", 2)]                # RB1-2
 WINDOWS = {"season": None, "l3": 3, "l5": 5, "l10": 10}
 
 # The columns the reference view shows, in order.
-DVP_STATS = ["td", "rectd", "rshtd", "recyd_g", "rshyd_g", "rz_tgts", "rz_car"]
+DVP_STATS = ["td", "rectd", "rshtd", "rec_g", "recyd_g", "rsha_g", "rshyd_g", "rz_tgts", "rz_car"]
 
 # Which stats actually mean something for a given role.
-_RECEIVING = {"td", "rectd", "recyd_g", "rz_tgts"}
-_RUSHING = {"td", "rshtd", "rshyd_g", "rz_car"}
+_RECEIVING = {"td", "rectd", "rec_g", "recyd_g", "rz_tgts"}
+_RUSHING = {"td", "rshtd", "rsha_g", "rshyd_g", "rz_car"}
 
 
 def STATS_FOR_ROLE(role: str) -> set[str]:
@@ -127,8 +127,9 @@ def build(season: int) -> dict:
     """{window: {defense_team: {role: {stat: value, stat_rank: n}}}}"""
     wk = _weekly(season).select(
         ["player_id", "position", "team", "opponent_team", "week",
-         "receiving_tds", "rushing_tds", "receiving_yards", "rushing_yards"])
-    for c in ("receiving_tds", "rushing_tds", "receiving_yards", "rushing_yards"):
+         "receiving_tds", "rushing_tds", "receiving_yards", "rushing_yards",
+         "receptions", "carries"])
+    for c in ("receiving_tds", "rushing_tds", "receiving_yards", "rushing_yards", "receptions", "carries"):
         wk = wk.with_columns(pl.col(c).fill_null(0))
 
     wk = (wk.join(depth_roles(season), on=["player_id", "team", "week"], how="inner")
@@ -154,11 +155,15 @@ def build(season: int) -> dict:
                     pl.col("rushing_tds").sum().alias("rshtd"),
                     pl.col("receiving_yards").sum().alias("recyd"),
                     pl.col("rushing_yards").sum().alias("rshyd"),
+                    pl.col("receptions").sum().alias("rec"),
+                    pl.col("carries").sum().alias("rsha"),
                     pl.col("rz_tgts").sum().alias("rz_tgts"),
                     pl.col("rz_car").sum().alias("rz_car"))
                  .rename({"opponent_team": "def_team"})
                  .join(games, on="def_team", how="left")
                  .with_columns(
+                     (pl.col("rec") / pl.col("g").clip(1)).round(1).alias("rec_g"),
+                     (pl.col("rsha") / pl.col("g").clip(1)).round(1).alias("rsha_g"),
                      (pl.col("recyd") / pl.col("g").clip(1)).round(1).alias("recyd_g"),
                      (pl.col("rshyd") / pl.col("g").clip(1)).round(1).alias("rshyd_g")))
 
@@ -187,6 +192,58 @@ def build(season: int) -> dict:
             blob.setdefault(r["def_team"], {})[r["role"]] = cell
         out[wname] = blob
 
+    return out
+
+
+TOTAL_STATS = ["rec_g", "recyd_g", "rsha_g", "rshyd_g", "yds_g"]
+
+
+def build_total(season: int) -> dict:
+    """{window: {defense_team: {stat: value, stat_rank: n, g: games}}} -- the
+    WHOLE defense, every player who caught or carried against it (no depth
+    role, no role join), per game, with the league rank. 1 = allows the most.
+
+    yds_g is receiving + rushing yards: sack yards and QB scrambles lost are
+    not netted, so it is the yards the pass catchers and rushers gained, not
+    the NFL's official team total. Published under its own key (dvp_total),
+    never as a pseudo-role inside dvp: several readers walk every role in a
+    team's dvp blob and a team-wide row is not a role.
+    """
+    wk = _weekly(season).select(
+        ["opponent_team", "week", "receiving_yards", "rushing_yards", "receptions", "carries"])
+    for c in ("receiving_yards", "rushing_yards", "receptions", "carries"):
+        wk = wk.with_columns(pl.col(c).fill_null(0))
+    wk = wk.filter(pl.col("opponent_team").is_not_null())
+    if wk.height == 0:
+        return {}
+    max_week = int(wk["week"].max())
+    out: dict = {}
+    for wname, wlen in WINDOWS.items():
+        sub = wk if wlen is None else wk.filter(pl.col("week") > max_week - wlen)
+        if sub.height == 0:
+            continue
+        agg = (sub.group_by("opponent_team").agg(
+                    pl.col("week").n_unique().alias("g"),
+                    pl.col("receptions").sum().alias("rec"),
+                    pl.col("receiving_yards").sum().alias("recyd"),
+                    pl.col("carries").sum().alias("rsha"),
+                    pl.col("rushing_yards").sum().alias("rshyd"))
+                 .with_columns(
+                     (pl.col("rec") / pl.col("g").clip(1)).round(1).alias("rec_g"),
+                     (pl.col("recyd") / pl.col("g").clip(1)).round(1).alias("recyd_g"),
+                     (pl.col("rsha") / pl.col("g").clip(1)).round(1).alias("rsha_g"),
+                     (pl.col("rshyd") / pl.col("g").clip(1)).round(1).alias("rshyd_g"))
+                 .with_columns((pl.col("recyd_g") + pl.col("rshyd_g")).round(1).alias("yds_g")))
+        for s in TOTAL_STATS:
+            agg = agg.with_columns(pl.col(s).rank("min", descending=True).cast(pl.Int32).alias(f"{s}_rank"))
+        blob: dict = {}
+        for r in agg.iter_rows(named=True):
+            cell = {"g": int(r["g"] or 0)}
+            for s in TOTAL_STATS:
+                cell[s] = round(float(r[s]), 1)
+                cell[f"{s}_rank"] = int(r[f"{s}_rank"])
+            blob[r["opponent_team"]] = cell
+        out[wname] = blob
     return out
 
 
@@ -292,12 +349,14 @@ def current_roles(season: int) -> dict:
             for row in r.filter(pl.col("week") == last).iter_rows(named=True)}
 
 
+TOTAL_LABELS = {"rec_g": "REC/G", "recyd_g": "RECYD/G", "rsha_g": "ATT/G", "rshyd_g": "RSHYDS/G", "yds_g": "TOT YDS/G"}
+
 ROLE_ORDER = ["WR1", "WR2", "WR3", "Other WR", "TE1", "TE2", "Other TE",
               "RB1", "RB2", "Other RB", "QB"]
 
 STAT_LABELS = {
     "td": "TD", "rectd": "RECTD", "rshtd": "RSHTD",
-    "recyd_g": "RECYD/G", "rshyd_g": "RSHYDS/G",
+    "rec_g": "REC/G", "recyd_g": "RECYD/G", "rsha_g": "ATT/G", "rshyd_g": "RSHYDS/G",
     "rz_tgts": "RZ TGTS", "rz_car": "RZ CAR",
 }
 
