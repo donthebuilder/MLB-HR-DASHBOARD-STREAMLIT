@@ -1,0 +1,65 @@
+{
+ "day": "2026-10-30",
+ "events": [
+  {
+   "sport": "nhl",
+   "game_id": "401892611",
+   "start_utc": "2026-10-30T22:00Z",
+   "team": "VGK",
+   "what": "goalie",
+   "value": "Carter Hart",
+   "first_seen_utc": "2026-10-30T05:58:16Z",
+   "mins_before_start": 962
+  },
+  {
+   "sport": "nhl",
+   "game_id": "401892611",
+   "start_utc": "2026-10-30T22:00Z",
+   "team": "NJ",
+   "what": "goalie",
+   "value": "Connor Hellebuyck",
+   "first_seen_utc": "2026-10-30T05:58:16Z",
+   "mins_before_start": 962
+  },
+  {
+   "sport": "nhl",
+   "game_id": "401892612",
+   "start_utc": "2026-10-30T23:00Z",
+   "team": "FLA",
+   "what": "goalie",
+   "value": "Akira Schmid",
+   "first_seen_utc": "2026-10-30T05:58:16Z",
+   "mins_before_start": 1022
+  },
+  {
+   "sport": "nhl",
+   "game_id": "401892612",
+   "start_utc": "2026-10-30T23:00Z",
+   "team": "WPG",
+   "what": "goalie",
+   "value": "Nico Daws",
+   "first_seen_utc": "2026-10-30T05:58:16Z",
+   "mins_before_start": 1022
+  },
+  {
+   "sport": "nhl",
+   "game_id": "401892613",
+   "start_utc": "2026-10-31T00:00Z",
+   "team": "CGY",
+   "what": "goalie",
+   "value": "Dustin Wolf",
+   "first_seen_utc": "2026-10-30T05:58:16Z",
+   "mins_before_start": 1082
+  },
+  {
+   "sport": "nhl",
+   "game_id": "401892613",
+   "start_utc": "2026-10-31T00:00Z",
+   "team": "SEA",
+   "what": "goalie",
+   "value": "Philipp Grubauer",
+   "first_seen_utc": "2026-10-30T05:58:16Z",
+   "mins_before_start": 1082
+  }
+ ]
+}
