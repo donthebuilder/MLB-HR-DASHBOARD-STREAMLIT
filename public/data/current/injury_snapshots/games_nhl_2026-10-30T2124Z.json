@@ -1,0 +1,59 @@
+[
+ {
+  "sport": "nhl",
+  "game_id": "401892611",
+  "start_utc": "2026-10-30T22:00Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "VGK",
+    "probable_goalie": "Carter Hart"
+   },
+   "away": {
+    "team": "NJ",
+    "probable_goalie": "Connor Hellebuyck"
+   }
+  },
+  "lineup_posted": false,
+  "spread": "VGK -115",
+  "total": 6.5
+ },
+ {
+  "sport": "nhl",
+  "game_id": "401892612",
+  "start_utc": "2026-10-30T23:00Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "FLA",
+    "probable_goalie": "Akira Schmid"
+   },
+   "away": {
+    "team": "WPG",
+    "probable_goalie": "Nico Daws"
+   }
+  },
+  "lineup_posted": false,
+  "spread": "FLA -225",
+  "total": 6.5
+ },
+ {
+  "sport": "nhl",
+  "game_id": "401892613",
+  "start_utc": "2026-10-31T00:00Z",
+  "status": "Scheduled",
+  "sides": {
+   "home": {
+    "team": "CGY",
+    "probable_goalie": "Dustin Wolf"
+   },
+   "away": {
+    "team": "SEA",
+    "probable_goalie": "Philipp Grubauer"
+   }
+  },
+  "lineup_posted": false,
+  "spread": "SEA -115",
+  "total": 6.5
+ }
+]
