@@ -1,0 +1,103 @@
+{
+ "date": "2026-10-31",
+ "games": [
+  {
+   "espn_id": "401909896",
+   "home": "UTAH",
+   "away": "POR",
+   "start": "2026-10-31T19:00Z",
+   "status": "In Progress",
+   "model_spread_home": 10.3,
+   "model_p_home": 0.2343,
+   "book_spread_home": null,
+   "book_total": null,
+   "gap_pts": null,
+   "history_games": 248,
+   "model_version": "nba_team_v1"
+  },
+  {
+   "espn_id": "401909897",
+   "home": "CHA",
+   "away": "PHI",
+   "start": "2026-10-31T22:00Z",
+   "status": "Scheduled",
+   "model_spread_home": -3.1,
+   "model_p_home": 0.5857,
+   "book_spread_home": 1.5,
+   "book_total": 211.5,
+   "gap_pts": -4.6,
+   "history_games": 249,
+   "model_version": "nba_team_v1"
+  },
+  {
+   "espn_id": "401909898",
+   "home": "NO",
+   "away": "ATL",
+   "start": "2026-10-31T23:00Z",
+   "status": "Scheduled",
+   "model_spread_home": 8.3,
+   "model_p_home": 0.2799,
+   "book_spread_home": 4.5,
+   "book_total": 240.5,
+   "gap_pts": 3.8,
+   "history_games": 249,
+   "model_version": "nba_team_v1"
+  },
+  {
+   "espn_id": "401909899",
+   "home": "MEM",
+   "away": "SAC",
+   "start": "2026-11-01T00:00Z",
+   "status": "Scheduled",
+   "model_spread_home": -0.6,
+   "model_p_home": 0.5179,
+   "book_spread_home": -8.5,
+   "book_total": 230.5,
+   "gap_pts": 7.9,
+   "history_games": 248,
+   "model_version": "nba_team_v1"
+  },
+  {
+   "espn_id": "401909900",
+   "home": "MIL",
+   "away": "CLE",
+   "start": "2026-11-01T00:00Z",
+   "status": "Scheduled",
+   "model_spread_home": 7.7,
+   "model_p_home": 0.2934,
+   "book_spread_home": 9.5,
+   "book_total": 235.5,
+   "gap_pts": -1.8,
+   "history_games": 248,
+   "model_version": "nba_team_v1"
+  },
+  {
+   "espn_id": "401909901",
+   "home": "SA",
+   "away": "MIN",
+   "start": "2026-11-01T00:00Z",
+   "status": "Scheduled",
+   "model_spread_home": -4.2,
+   "model_p_home": 0.6147,
+   "book_spread_home": -12.5,
+   "book_total": 228.5,
+   "gap_pts": 8.3,
+   "history_games": 248,
+   "model_version": "nba_team_v1"
+  },
+  {
+   "espn_id": "401909902",
+   "home": "HOU",
+   "away": "OKC",
+   "start": "2026-11-01T00:30Z",
+   "status": "Scheduled",
+   "model_spread_home": 1.1,
+   "model_p_home": 0.4684,
+   "book_spread_home": -2.5,
+   "book_total": 219.5,
+   "gap_pts": 3.6,
+   "history_games": 249,
+   "model_version": "nba_team_v1"
+  }
+ ]
+}

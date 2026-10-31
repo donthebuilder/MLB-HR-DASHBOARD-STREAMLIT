@@ -1,0 +1,172 @@
+RESULTS TRACKER - 2026-06-19
+------------------------------------------
+BETTABLE RESULTS
+Top 15 HR: 4/15 (26.7%)
+HR Picks: 2/14 (14.3%)
+Top Picks: 2/14 (14.3%)
+
+FULL SHEET BASE HIT PERFORMANCE
+Base Hit Accuracy: 64.6%
+
+HR CAPTURE (BETTABLE)
+Total Slate HRs: 42
+Caught in Top 15: 4
+Caught in HR Picks: 2
+Top 15 Capture Rate: 9.5%
+HR Pick Capture Rate: 4.8%
+
+MODEL VISION (Top 40)
+Model Caught HRs: 8 / 42
+Vision Rate: 19.0%
+
+UNIQUE PLAYER HR ACCURACY
+Unique Players Tracked: 100
+Players Who Homered: 19
+Unique HR Accuracy: 19.0%
+
+HR CATEGORY BREAKDOWN
+------------------------------------------
+🏆 TOP 15 BOARD → 4 HR
+🔥 TOP PICKS → 2 HR
+🧨 HR PICKS → 2 HR
+🏁 HRR PICKS → 5 HR
+💠 HIT PICKS → 6 HR
+⚾ CONTACT PICKS → 3 HR
+Best HR-producing category: 💠 HIT PICKS
+
+HR RESULTS BY PLAYER
+------------------------------------------
+- Ben Rice — 🏆#12 + 🔥
+- Rafael Devers — 🏆#6
+- Royce Lewis — 🏆#4 + 🧨
+- Zach Neto — 🏆#1 + 🔥 + ⭐
+- Luis García Jr. — 🧨 + ⭐
+- Gunnar Henderson — 🏁
+- Jazz Chisholm Jr. — 🏁
+- Jonny DeLuca — 🏁 + ⭐
+- Lawrence Butler — 🏁
+- TJ Rumfield — 🏁 + ⭐
+- CJ Abrams — 💠 + ⭐
+- Jeremy Peña — 💠 + ⭐
+- Jonathan Aranda — 💠
+- Ketel Marte — 💠
+- Pete Alonso — 💠 + ⭐
+- Wyatt Langford — 💠 + ⭐
+- George Springer — ⚾
+- Logan O'Hoppe — ⚾
+- Randal Grichuk — ⚾
+
+MISSED HRs (NOT IN MODEL SHEET)
+------------------------------------------
+- Jonah Heim (ATH) — not in model sheet / lineup pool
+- Max Muncy (ATH) — not in model sheet / lineup pool
+- Junior Perez (CWS) — not in model sheet / lineup pool
+- Denzer Guzman (LAA) — not in model sheet / lineup pool
+- Jose Siri (LAA) — not in model sheet / lineup pool
+- Mookie Betts (LAD) — not in model sheet / lineup pool
+
+POOL PERFORMANCE
+------------------------------------------
+4-MAN HR POOL A → 0/4 HR (none)
+4-MAN HR POOL B → 1/4 HR (Ben Rice)
+4-MAN HR POOL C → 0/4 HR (none)
+4-MAN HR POOL D → 0/4 HR (none)
+6-MAN HR POOL A → 1/6 HR (Pete Alonso)
+6-MAN HR POOL B → 1/6 HR (Luis García Jr.)
+6-MAN HR POOL C → 1/6 HR (Jazz Chisholm Jr.)
+6-MAN HR POOL D → 2/6 HR (Randal Grichuk, TJ Rumfield)
+
+PAIR PERFORMANCE
+------------------------------------------
+Pair 1 → 1/2 HR (Zach Neto) | Zach Neto + Joc Pederson
+Pair 2 → 0/2 HR (none) | Jackson Holliday + Bryan Reynolds
+Pair 3 → 1/2 HR (Royce Lewis) | Royce Lewis + Willy Adames
+Pair 4 → 1/2 HR (Rafael Devers) | Rafael Devers + Lane Thomas
+
+PLAYER TYPE PERFORMANCE
+------------------------------------------
+🏁 HRR PICKS (28)
+2+ HRR: 60.7% | 3+ HRR: 53.6%
+
+💠 HIT PICKS (28)
+1+ Hit: 60.7% | HR: 21.4%
+
+⚾ CONTACT PICKS (14)
+XBH: 35.7% | 2+ TB: 35.7% | HR: 21.4%
+
+HIT RESULTS BY CATEGORY
+------------------------------------------
+
+🔥 TOP PICKS (1+ Hit)
+- Pete Crow-Armstrong — 3H 🔥
+- Ben Rice — 2H ⭐
+- Byron Buxton — 2H ⭐
+- Bryan Reynolds — 1H
+- Carter Jensen — 1H
+- Willson Contreras — 1H
+- Yordan Alvarez — 1H
+- Zach Neto — 1H
+
+🧨 HR PICKS (1+ Hit)
+- Luis García Jr. — 2H ⭐
+- Davis Schneider — 1H
+- Jackson Holliday — 1H
+- Lane Thomas — 1H
+- Royce Lewis — 1H
+- Ryan McMahon — 1H
+- Shea Langeliers — 1H
+- Willy Adames — 1H
+
+🏁 HRR PICKS (1+ Hit)
+- Dillon Dingler — 3H 🔥
+- Tyler Soderstrom — 3H 🔥
+- Brandon Nimmo — 2H ⭐
+- Brice Turang — 2H ⭐
+- Ian Happ — 2H ⭐
+- Lawrence Butler — 2H ⭐
+- TJ Rumfield — 2H ⭐
+- Travis Bazzana — 2H ⭐
+- Gunnar Henderson — 1H
+- Iván Herrera — 1H
+- Jake Burger — 1H
+- Jazz Chisholm Jr. — 1H
+- Jonny DeLuca — 1H
+- Masyn Winn — 1H
+- Max Muncy — 1H
+- Michael Busch — 1H
+- Ozzie Albies — 1H
+- Trevor Larnach — 1H
+- Wilyer Abreu — 1H
+
+💠 HIT PICKS (1+ Hit)
+- Jeremy Peña — 3H 🔥
+- Seiya Suzuki — 3H 🔥
+- Wyatt Langford — 3H 🔥
+- Alec Burleson — 1H
+- Alex Bregman — 1H
+- CJ Abrams — 1H
+- Ceddanne Rafaela — 1H
+- Gabriel Moreno — 1H
+- Jackson Chourio — 1H
+- Jonathan Aranda — 1H
+- Ketel Marte — 1H
+- Kevin McGonigle — 1H
+- Kyle Tucker — 1H
+- Liam Hicks — 1H
+- Pete Alonso — 1H
+- Willi Castro — 1H
+- Zack Gelof — 1H
+
+⚾ CONTACT PICKS (1+ Hit)
+- Logan O'Hoppe — 3H 🔥
+- George Springer — 2H ⭐
+- Junior Caminero — 2H ⭐
+- Randal Grichuk — 2H ⭐
+- Brandon Lowe — 1H
+- Cam Smith — 1H
+- Dalton Rushing — 1H
+- Jarren Duran — 1H
+- Kody Clemens — 1H
+
+MODEL DIAGNOSTIC (LOW PRIORITY)
+Full Sheet HR Coverage: 36 / 42 (85.7%)

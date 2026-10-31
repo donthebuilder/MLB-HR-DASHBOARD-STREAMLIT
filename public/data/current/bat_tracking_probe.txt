@@ -1,0 +1,129 @@
+bat tracking probe — 2026-08-28T17:30:24Z
+run: https://github.com/donthebuilder/MLB-HR-DASHBOARD-STREAMLIT/actions/runs/33194954421
+
+==============================================================================
+BAT TRACKING PROBE — reading, not assuming
+==============================================================================
+
+── season leaderboard, csv
+   https://baseballsavant.mlb.com/leaderboard/bat-tracking?type=batter&minSwings=q&csv=true
+   status: 200   bytes: 49524
+   CSV with 18 columns, 201 data rows
+   HEADER, VERBATIM:
+      ﻿"id, name, swings_competitive, percent_swings_competitive, contact, avg_bat_speed
+      hard_swing_rate, squared_up_per_bat_contact, squared_up_per_swing, blast_per_bat_contact, blast_per_swing, swing_length
+      swords, batter_run_value, whiffs, whiff_per_swing, batted_ball_events, batted_ball_event_per_swing
+   what the highlights are asking for:
+      ✓ bat speed      ['avg_bat_speed']
+      ✓ swing length   ['swing_length']
+      ✓ blast          ['blast_per_bat_contact', 'blast_per_swing']
+      ✓ squared        ['squared_up_per_bat_contact', 'squared_up_per_swing']
+      ✓ competitive    ['swings_competitive', 'percent_swings_competitive']
+      ✗ fast swing     (no column matches)
+      ✓ swings         ['swings_competitive', 'percent_swings_competitive']
+      ✓ contact        ['contact', 'squared_up_per_bat_contact', 'blast_per_bat_contact']
+   sample: ﻿"id=691406, name="Caminero, swings_competitive= Junior", percent_swings_competitive=860, contact=0.911983032873807, avg_bat_speed=665, hard_swing_rate="79.685898721", squared_up_per_bat_contact=0.8627906976744187
+   sample: ﻿"id=691023, name="Walker, swings_competitive= Jordan", percent_swings_competitive=919, contact=0.9054187192118227, avg_bat_speed=666, hard_swing_rate="79.254556725", squared_up_per_bat_contact=0.8531011969532099
+
+── season leaderboard, explicit season
+   https://baseballsavant.mlb.com/leaderboard/bat-tracking?type=batter&year=2026&minSwings=q&csv=true
+   status: 200   bytes: 49524
+   CSV with 18 columns, 201 data rows
+   HEADER, VERBATIM:
+      ﻿"id, name, swings_competitive, percent_swings_competitive, contact, avg_bat_speed
+      hard_swing_rate, squared_up_per_bat_contact, squared_up_per_swing, blast_per_bat_contact, blast_per_swing, swing_length
+      swords, batter_run_value, whiffs, whiff_per_swing, batted_ball_events, batted_ball_event_per_swing
+   what the highlights are asking for:
+      ✓ bat speed      ['avg_bat_speed']
+      ✓ swing length   ['swing_length']
+      ✓ blast          ['blast_per_bat_contact', 'blast_per_swing']
+      ✓ squared        ['squared_up_per_bat_contact', 'squared_up_per_swing']
+      ✓ competitive    ['swings_competitive', 'percent_swings_competitive']
+      ✗ fast swing     (no column matches)
+      ✓ swings         ['swings_competitive', 'percent_swings_competitive']
+      ✓ contact        ['contact', 'squared_up_per_bat_contact', 'blast_per_bat_contact']
+   sample: ﻿"id=691406, name="Caminero, swings_competitive= Junior", percent_swings_competitive=860, contact=0.911983032873807, avg_bat_speed=665, hard_swing_rate="79.685898721", squared_up_per_bat_contact=0.8627906976744187
+   sample: ﻿"id=691023, name="Walker, swings_competitive= Jordan", percent_swings_competitive=919, contact=0.9054187192118227, avg_bat_speed=666, hard_swing_rate="79.254556725", squared_up_per_bat_contact=0.8531011969532099
+
+── season leaderboard, minSwings=1 — the CONTROL for the date-range test
+   https://baseballsavant.mlb.com/leaderboard/bat-tracking?type=batter&minSwings=1&csv=true
+   status: 200   bytes: 149808
+   CSV with 18 columns, 638 data rows
+   HEADER, VERBATIM:
+      ﻿"id, name, swings_competitive, percent_swings_competitive, contact, avg_bat_speed
+      hard_swing_rate, squared_up_per_bat_contact, squared_up_per_swing, blast_per_bat_contact, blast_per_swing, swing_length
+      swords, batter_run_value, whiffs, whiff_per_swing, batted_ball_events, batted_ball_event_per_swing
+   what the highlights are asking for:
+      ✓ bat speed      ['avg_bat_speed']
+      ✓ swing length   ['swing_length']
+      ✓ blast          ['blast_per_bat_contact', 'blast_per_swing']
+      ✓ squared        ['squared_up_per_bat_contact', 'squared_up_per_swing']
+      ✓ competitive    ['swings_competitive', 'percent_swings_competitive']
+      ✗ fast swing     (no column matches)
+      ✓ swings         ['swings_competitive', 'percent_swings_competitive']
+      ✓ contact        ['contact', 'squared_up_per_bat_contact', 'blast_per_bat_contact']
+   sample: ﻿"id=691406, name="Caminero, swings_competitive= Junior", percent_swings_competitive=860, contact=0.911983032873807, avg_bat_speed=665, hard_swing_rate="79.685898721", squared_up_per_bat_contact=0.8627906976744187
+   sample: ﻿"id=519317, name="Stanton, swings_competitive= Giancarlo", percent_swings_competitive=155, contact=0.9011627906976745, avg_bat_speed=99, hard_swing_rate="79.335077806", squared_up_per_bat_contact=0.9290322580645161
+
+── DATE RANGE — the question that matters
+   https://baseballsavant.mlb.com/leaderboard/bat-tracking?type=batter&minSwings=1&startDate=2026-05-01&endDate=2026-05-31&csv=true
+   status: 200   bytes: 149808
+   CSV with 18 columns, 638 data rows
+   HEADER, VERBATIM:
+      ﻿"id, name, swings_competitive, percent_swings_competitive, contact, avg_bat_speed
+      hard_swing_rate, squared_up_per_bat_contact, squared_up_per_swing, blast_per_bat_contact, blast_per_swing, swing_length
+      swords, batter_run_value, whiffs, whiff_per_swing, batted_ball_events, batted_ball_event_per_swing
+   what the highlights are asking for:
+      ✓ bat speed      ['avg_bat_speed']
+      ✓ swing length   ['swing_length']
+      ✓ blast          ['blast_per_bat_contact', 'blast_per_swing']
+      ✓ squared        ['squared_up_per_bat_contact', 'squared_up_per_swing']
+      ✓ competitive    ['swings_competitive', 'percent_swings_competitive']
+      ✗ fast swing     (no column matches)
+      ✓ swings         ['swings_competitive', 'percent_swings_competitive']
+      ✓ contact        ['contact', 'squared_up_per_bat_contact', 'blast_per_bat_contact']
+   sample: ﻿"id=691406, name="Caminero, swings_competitive= Junior", percent_swings_competitive=860, contact=0.911983032873807, avg_bat_speed=665, hard_swing_rate="79.685898721", squared_up_per_bat_contact=0.8627906976744187
+   sample: ﻿"id=519317, name="Stanton, swings_competitive= Giancarlo", percent_swings_competitive=155, contact=0.9011627906976745, avg_bat_speed=99, hard_swing_rate="79.335077806", squared_up_per_bat_contact=0.9290322580645161
+
+── date range, alternate parameter spelling
+   https://baseballsavant.mlb.com/leaderboard/bat-tracking?type=batter&minSwings=1&start_date=2026-05-01&end_date=2026-05-31&csv=true
+   status: 200   bytes: 149808
+   CSV with 18 columns, 638 data rows
+   HEADER, VERBATIM:
+      ﻿"id, name, swings_competitive, percent_swings_competitive, contact, avg_bat_speed
+      hard_swing_rate, squared_up_per_bat_contact, squared_up_per_swing, blast_per_bat_contact, blast_per_swing, swing_length
+      swords, batter_run_value, whiffs, whiff_per_swing, batted_ball_events, batted_ball_event_per_swing
+   what the highlights are asking for:
+      ✓ bat speed      ['avg_bat_speed']
+      ✓ swing length   ['swing_length']
+      ✓ blast          ['blast_per_bat_contact', 'blast_per_swing']
+      ✓ squared        ['squared_up_per_bat_contact', 'squared_up_per_swing']
+      ✓ competitive    ['swings_competitive', 'percent_swings_competitive']
+      ✗ fast swing     (no column matches)
+      ✓ swings         ['swings_competitive', 'percent_swings_competitive']
+      ✓ contact        ['contact', 'squared_up_per_bat_contact', 'blast_per_bat_contact']
+   sample: ﻿"id=691406, name="Caminero, swings_competitive= Junior", percent_swings_competitive=860, contact=0.911983032873807, avg_bat_speed=665, hard_swing_rate="79.685898721", squared_up_per_bat_contact=0.8627906976744187
+   sample: ﻿"id=519317, name="Stanton, swings_competitive= Giancarlo", percent_swings_competitive=155, contact=0.9011627906976745, avg_bat_speed=99, hard_swing_rate="79.335077806", squared_up_per_bat_contact=0.9290322580645161
+
+── swing-take leaderboard, in case bat tracking moved
+   https://baseballsavant.mlb.com/leaderboard/bat-tracking-swing-path?type=batter&csv=true
+   status: 404   bytes: 400
+   NOT CSV — first 200 chars: '<!DOCTYPE html>\n<html lang="en_US">\n\n<head>\n    <title>Error | baseballsavant.com</title>\n    <title>Error | baseballsavant.com</title>\n\n    <!-- meta meta tag -->\n    <meta charset="utf-8" />\n    <me'
+
+==============================================================================
+THE VERDICT — computed, not eyeballed
+==============================================================================
+   CONTROL (minSwings=1, no date):     638 players
+   DATE RANGE (minSwings=1, May 2026):  638 players
+   only in CONTROL:    0
+   only in DATE RANGE: 0
+
+   IDENTICAL PLAYER SETS with minSwings matched between both calls.
+   The date parameter did NOTHING -- bat tracking is season-to-date only.
+   It CANNOT be backfilled. The four terms can only be captured one night
+   at a time from here forward: a nightly snapshot into the slate and the
+   archive, with the highlight rules unproven until ~30 nights accumulate.
+
+Either way: copy the header row above into the fetcher's docstring before
+writing it, the way bots/savant_feeds.py does.
+

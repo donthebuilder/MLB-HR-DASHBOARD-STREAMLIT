@@ -1,0 +1,113 @@
+RESULTS TRACKER - 2026-04-20
+------------------------------------------
+FULL SHEET TRACKED PICKS: 85 | HR Accuracy: 20.0%
+FULL SHEET BASE HIT PICKS: 85 | Base Hit Accuracy: 74.1%
+
+PAIRS TRACKED: 10 | HR Accuracy: 10.0%
+4-MAN POOLS TRACKED: 4 | HR Accuracy: 0.0%
+6-MAN POOLS TRACKED: 4 | HR Accuracy: 0.0%
+
+TOP 15 TRACKED: 15 | HR Accuracy: 26.7%
+HR PICKS TRACKED: 10 | HR Accuracy: 30.0%
+TOP PICKS TRACKED: 10 | HR Accuracy: 30.0%
+
+HRR PICKS TRACKED: 20 | 2+ HRR Accuracy: 65.0% | 3+ HRR Accuracy: 40.0%
+HIT PICKS TRACKED: 20 | Hit Accuracy: 80.0% | HR Accuracy: 15.0%
+CONTACT PICKS TRACKED: 10 | XBH Accuracy: 10.0% | HR Accuracy: 0.0%
+
+TRACKED PICKS THAT HOMERED
+- 🏆#3 🔥 Dalton Rushing - HR 44.0
+  BA(S) 0.455 | BA vs LHP 0.571 | ISO 0.772 | 350+ 5/16 | L5 8H/4HR/6XBH
+- 🏆#4 🧨 Matt Olson - HR 41.5
+  BA(S) 0.281 | BA vs RHP 0.300 | ISO 0.315 | 350+ 7/24 | L5 4H/2HR/3XBH
+- 🏆#10 🧨 Max Muncy - HR 34.9
+  BA(S) 0.264 | BA vs LHP 0.313 | ISO 0.264 | 350+ 4/19 | L5 7H/2HR/3XBH
+- 🏆#8 🔥 Sal Stewart - HR 35.4
+  BA(S) 0.289 | BA vs RHP 0.298 | ISO 0.350 | 350+ 5/23 | L5 4H/1HR/2XBH
+- 🧨 Shea Langeliers - HR 24.4
+  BA(S) 0.310 | BA vs RHP 0.352 | ISO 0.261 | 350+ 3/21 | L5 7H/1HR/3XBH
+- 🔥 Leody Taveras - HR 13.4
+  BA(S) 0.350 | BA vs RHP 0.385 | ISO 0.150 | 350+ 2/16 | L5 3H/1HR/1XBH
+- 🏁 Christian Walker - HR 23.3
+  BA(S) 0.277 | BA vs RHP 0.333 | ISO 0.265 | 350+ 1/18 | L5 3H/1HR/2XBH
+- 🏁 Dansby Swanson - HR 20.8
+  BA(S) 0.200 | BA vs RHP 0.175 | ISO 0.229 | 350+ 4/23 | L5 5H/2HR/2XBH
+- 🏁 Dominic Canzone - HR 17.0
+  BA(S) 0.255 | BA vs RHP 0.216 | ISO 0.234 | 350+ 4/17 | L5 5H/0HR/2XBH
+- 🏁 Nick Kurtz - HR 18.6
+  BA(S) 0.225 | BA vs RHP 0.175 | ISO 0.127 | 350+ 3/15 | L5 5H/1HR/2XBH
+- 💠 Jac Caglianone - HR 14.7
+  BA(S) 0.281 | BA vs RHP 0.303 | ISO 0.141 | 350+ 2/18 | L5 7H/1HR/2XBH
+- 💠 Miguel Rojas - HR 12.6
+  BA(S) 0.323 | BA vs LHP 0.462 | ISO 0.064 | 350+ 1/17 | L5 5H/0HR/1XBH
+- 💠 ⭐ Vladimir Guerrero Jr. - HR 11.7
+  BA(S) 0.333 | BA vs LHP 0.200 | ISO 0.103 | 350+ 1/26 | L5 7H/0HR/1XBH
+
+TRACKED PICKS THAT GOT A BASE HIT
+- Max Muncy (LAD) | TOP15#10 | 4 H
+- Dalton Rushing (LAD) | TOP15#3 | 2 H
+- Sal Stewart (CIN) | TOP15#8 | 2 H
+- Dominic Smith (ATL) | TOP15#14 | 1 H
+- Jordan Walker (STL) | TOP15#11 | 1 H
+- Jorge Soler (LAA) | TOP15#15 | 1 H
+- José Ramírez (CLE) | TOP15#12 | 1 H
+- Matt Olson (ATL) | TOP15#4 | 1 H
+- Mike Trout (LAA) | TOP15#6 | 1 H
+- Yordan Alvarez (HOU) | TOP15#2 | 1 H
+- Max Muncy (LAD) | HR | 4 H
+- Kevin McGonigle (DET) | HR | 2 H
+- Carter Jensen (KC) | HR | 1 H
+- Elly De La Cruz (CIN) | HR | 1 H
+- Jordan Walker (STL) | HR | 1 H
+- Jorge Soler (LAA) | HR | 1 H
+- José Ramírez (CLE) | HR | 1 H
+- Matt Olson (ATL) | HR | 1 H
+- Shea Langeliers (ATH) | HR | 1 H
+- Dalton Rushing (LAD) | TOP | 2 H
+- Sal Stewart (CIN) | TOP | 2 H
+- Dominic Smith (ATL) | TOP | 1 H
+- Leody Taveras (BAL) | TOP | 1 H
+- Mike Trout (LAA) | TOP | 1 H
+- Moisés Ballesteros (CHC) | TOP | 1 H
+- Otto Lopez (MIA) | TOP | 1 H
+- Yordan Alvarez (HOU) | TOP | 1 H
+- Christian Walker (HOU) | HRR | 3 H
+- Bobby Witt Jr. (KC) | HRR | 2 H
+- Dominic Canzone (SEA) | HRR | 2 H
+- Masyn Winn (STL) | HRR | 2 H
+- Andy Pages (LAD) | HRR | 1 H
+- Dansby Swanson (CHC) | HRR | 1 H
+- Eugenio Suárez (CIN) | HRR | 1 H
+- Gleyber Torres (DET) | HRR | 1 H
+- Ian Happ (CHC) | HRR | 1 H
+- Jeremiah Jackson (BAL) | HRR | 1 H
+- Junior Caminero (TB) | HRR | 1 H
+- Nick Kurtz (ATH) | HRR | 1 H
+- Shohei Ohtani (LAD) | HRR | 1 H
+- Willson Contreras (BOS) | HRR | 1 H
+- Zach Neto (LAA) | HRR | 1 H
+- Brayan Rocchio (CLE) | HIT | 3 H
+- Miguel Rojas (LAD) | HIT | 3 H
+- Vladimir Guerrero Jr. (TOR) | HIT | 3 H
+- Chandler Simpson (TB) | HIT | 2 H
+- Drake Baldwin (ATL) | HIT | 2 H
+- Jacob Wilson (ATH) | HIT | 2 H
+- Liam Hicks (MIA) | HIT | 2 H
+- Masataka Yoshida (BOS) | HIT | 2 H
+- Riley Greene (DET) | HIT | 2 H
+- Alex Call (LAD) | HIT | 1 H
+- Ernie Clement (TOR) | HIT | 1 H
+- George Valera (CLE) | HIT | 1 H
+- Jac Caglianone (KC) | HIT | 1 H
+- Nico Hoerner (CHC) | HIT | 1 H
+- Taylor Ward (BAL) | HIT | 1 H
+- Xavier Edwards (MIA) | HIT | 1 H
+- Carlos Correa (HOU) | CONTACT | 3 H
+- Bryce Harper (PHI) | CONTACT | 1 H
+- Kyle Stowers (MIA) | CONTACT | 1 H
+- Myles Straw (TOR) | CONTACT | 1 H
+- Troy Johnston (COL) | CONTACT | 1 H
+
+PAIRS / POOLS THAT CLEARED
+- Best HR Pair [CLEARED]
+  Dalton Rushing + Matt Olson

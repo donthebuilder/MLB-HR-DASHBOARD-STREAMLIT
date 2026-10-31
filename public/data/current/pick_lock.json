@@ -1,0 +1,1329 @@
+{
+ "date": "2026-10-28",
+ "updated": "2026-10-29T02:12:27+00:00",
+ "runs": 9,
+ "games": {
+  "849799": {
+   "first_pitch": "2026-10-29T00:00:00+00:00",
+   "cats": {
+    "CONTACT": {
+     "pid": 668930,
+     "name": "Brice Turang",
+     "at": "2026-10-28T07:56:55+00:00",
+     "locked": true,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 668930,
+       "name": "Brice Turang",
+       "at": "2026-10-28T07:56:55+00:00"
+      }
+     ],
+     "locked_at": "2026-10-29T01:11:21+00:00"
+    },
+    "HRR": {
+     "pid": 668930,
+     "name": "Brice Turang",
+     "at": "2026-10-28T21:17:28+00:00",
+     "locked": true,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 694192,
+       "name": "Jackson Chourio",
+       "at": "2026-10-28T07:56:55+00:00"
+      },
+      {
+       "pid": 668930,
+       "name": "Brice Turang",
+       "at": "2026-10-28T21:17:28+00:00"
+      }
+     ],
+     "locked_at": "2026-10-29T01:11:21+00:00"
+    },
+    "HR": {
+     "pid": 641343,
+     "name": "Jake Bauers",
+     "at": "2026-10-28T07:56:55+00:00",
+     "locked": true,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 641343,
+       "name": "Jake Bauers",
+       "at": "2026-10-28T07:56:55+00:00"
+      }
+     ],
+     "locked_at": "2026-10-29T01:11:21+00:00"
+    },
+    "TOP": {
+     "pid": 691406,
+     "name": "Junior Caminero",
+     "at": "2026-10-28T07:56:55+00:00",
+     "locked": true,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 691406,
+       "name": "Junior Caminero",
+       "at": "2026-10-28T07:56:55+00:00"
+      }
+     ],
+     "locked_at": "2026-10-29T01:11:21+00:00"
+    },
+    "HIT": {
+     "pid": 650490,
+     "name": "Yandy D\u00edaz",
+     "at": "2026-10-28T07:56:55+00:00",
+     "locked": true,
+     "locked_late": false,
+     "history": [
+      {
+       "pid": 650490,
+       "name": "Yandy D\u00edaz",
+       "at": "2026-10-28T07:56:55+00:00"
+      }
+     ],
+     "locked_at": "2026-10-29T01:11:21+00:00"
+    }
+   }
+  }
+ },
+ "rejected": [],
+ "gone_from_slate": [],
+ "tickets": {
+  "recommended_pairs|A|0": {
+   "section": "recommended_pairs",
+   "first_pitch": "2026-10-29T00:00:00+00:00",
+   "pids": [
+    694192,
+    668930
+   ],
+   "meta": {
+    "type": "CORE HR PAIRS",
+    "lane_key": "A",
+    "pair_key": "668930|694192",
+    "pair_score": 13.56,
+    "risk": "High",
+    "tags": [
+     "HRW",
+     "Recent HR"
+    ],
+    "reason": "L5 8H+8H hot | L7 1HR+2HR"
+   },
+   "stubs": {
+    "694192": {
+     "player_id": 694192,
+     "name": "Jackson Chourio",
+     "team": "MIL",
+     "opponent": "TB",
+     "game_pk": 849799,
+     "lineup_spot": 3
+    },
+    "668930": {
+     "player_id": 668930,
+     "name": "Brice Turang",
+     "team": "MIL",
+     "opponent": "TB",
+     "game_pk": 849799,
+     "lineup_spot": 1
+    }
+   },
+   "at": "2026-10-28T07:56:55+00:00",
+   "locked": true,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      694192,
+      668930
+     ],
+     "at": "2026-10-28T07:56:55+00:00"
+    }
+   ],
+   "locked_at": "2026-10-29T01:11:21+00:00"
+  },
+  "recommended_pairs|B|0": {
+   "section": "recommended_pairs",
+   "first_pitch": "2026-10-29T00:00:00+00:00",
+   "pids": [
+    676356,
+    656775
+   ],
+   "meta": {
+    "type": "STATCAST HR PAIRS",
+    "lane_key": "B",
+    "pair_key": "656775|676356",
+    "pair_score": 9.07,
+    "risk": "Medium",
+    "tags": [
+     "Recent HR"
+    ],
+    "reason": "L7 2HR+1HR"
+   },
+   "stubs": {
+    "676356": {
+     "player_id": 676356,
+     "name": "Jonny DeLuca",
+     "team": "TB",
+     "opponent": "MIL",
+     "game_pk": 849799,
+     "lineup_spot": 5
+    },
+    "656775": {
+     "player_id": 656775,
+     "name": "Cedric Mullins",
+     "team": "TB",
+     "opponent": "MIL",
+     "game_pk": 849799,
+     "lineup_spot": 7
+    }
+   },
+   "at": "2026-10-28T07:56:55+00:00",
+   "locked": false,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      676356,
+      656775
+     ],
+     "at": "2026-10-28T07:56:55+00:00"
+    }
+   ]
+  },
+  "pools_4man|Pool A \u2014 Strongest|0": {
+   "section": "pools_4man",
+   "first_pitch": "2026-10-29T00:00:00+00:00",
+   "pids": [
+    676356
+   ],
+   "meta": {
+    "name": "Pool A \u2014 Strongest",
+    "pool_score": 26.3,
+    "size": 1,
+    "risk": "Lower",
+    "tags": [
+     "Recent HR"
+    ],
+    "reason": "Pool A \u2014 Strongest build \u00b7 optimized for 2+ \u00b7 1/1 players filled"
+   },
+   "stubs": {
+    "676356": {
+     "player_id": 676356,
+     "name": "Jonny DeLuca",
+     "team": "TB",
+     "opponent": "MIL",
+     "game_pk": 849799,
+     "lineup_spot": 5
+    }
+   },
+   "at": "2026-10-28T21:17:28+00:00",
+   "locked": true,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      689414
+     ],
+     "at": "2026-10-28T07:56:55+00:00"
+    },
+    {
+     "pids": [
+      676356
+     ],
+     "at": "2026-10-28T21:17:28+00:00"
+    }
+   ],
+   "locked_at": "2026-10-29T01:11:21+00:00"
+  },
+  "pools_4man|Pool B \u2014 HRR+Power|0": {
+   "section": "pools_4man",
+   "first_pitch": "2026-10-29T00:00:00+00:00",
+   "pids": [
+    686217
+   ],
+   "meta": {
+    "name": "Pool B \u2014 HRR+Power",
+    "pool_score": 0.0,
+    "size": 1,
+    "risk": "Lower",
+    "tags": [],
+    "reason": "Pool B \u2014 HRR+Power build \u00b7 optimized for 2+ \u00b7 1/1 players filled"
+   },
+   "stubs": {
+    "686217": {
+     "player_id": 686217,
+     "name": "Sal Frelick",
+     "team": "MIL",
+     "opponent": "TB",
+     "game_pk": 849799,
+     "lineup_spot": 6
+    }
+   },
+   "at": "2026-10-28T21:17:28+00:00",
+   "locked": true,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      663743
+     ],
+     "at": "2026-10-28T07:56:55+00:00"
+    },
+    {
+     "pids": [
+      686217
+     ],
+     "at": "2026-10-28T21:17:28+00:00"
+    }
+   ],
+   "locked_at": "2026-10-29T01:11:21+00:00"
+  },
+  "pools_4man|Pool C \u2014 Balanced|0": {
+   "section": "pools_4man",
+   "first_pitch": "2026-10-29T00:00:00+00:00",
+   "pids": [
+    666152
+   ],
+   "meta": {
+    "name": "Pool C \u2014 Balanced",
+    "pool_score": 0.0,
+    "size": 1,
+    "risk": "Lower",
+    "tags": [],
+    "reason": "Pool C \u2014 Balanced build \u00b7 optimized for 2+ \u00b7 1/1 players filled"
+   },
+   "stubs": {
+    "666152": {
+     "player_id": 666152,
+     "name": "David Hamilton",
+     "team": "MIL",
+     "opponent": "TB",
+     "game_pk": 849799,
+     "lineup_spot": 9
+    }
+   },
+   "at": "2026-10-28T21:17:28+00:00",
+   "locked": true,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      683734
+     ],
+     "at": "2026-10-28T07:56:55+00:00"
+    },
+    {
+     "pids": [
+      666152
+     ],
+     "at": "2026-10-28T21:17:28+00:00"
+    }
+   ],
+   "locked_at": "2026-10-29T01:11:21+00:00"
+  },
+  "pools_4man|Pool D \u2014 Variance|0": {
+   "section": "pools_4man",
+   "first_pitch": "2026-10-29T00:00:00+00:00",
+   "pids": [
+    689414
+   ],
+   "meta": {
+    "name": "Pool D \u2014 Variance",
+    "pool_score": 22.2,
+    "size": 1,
+    "risk": "Lower",
+    "tags": [],
+    "reason": "Pool D \u2014 Variance build \u00b7 optimized for 2+ \u00b7 1/1 players filled"
+   },
+   "stubs": {
+    "689414": {
+     "player_id": 689414,
+     "name": "Liam Hicks",
+     "team": "TB",
+     "opponent": "MIL",
+     "game_pk": 849799,
+     "lineup_spot": 4
+    }
+   },
+   "at": "2026-10-28T21:17:28+00:00",
+   "locked": true,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      650490
+     ],
+     "at": "2026-10-28T07:56:55+00:00"
+    },
+    {
+     "pids": [
+      689414
+     ],
+     "at": "2026-10-28T21:17:28+00:00"
+    }
+   ],
+   "locked_at": "2026-10-29T01:11:21+00:00"
+  },
+  "pools_3man|Pool A \u2014 Strongest|0": {
+   "section": "pools_3man",
+   "first_pitch": "2026-10-29T00:00:00+00:00",
+   "pids": [
+    691406,
+    694192,
+    668930
+   ],
+   "meta": {
+    "name": "Pool A \u2014 Strongest",
+    "pool_score": 49.4,
+    "size": 3,
+    "risk": "Lower",
+    "tags": [
+     "Recent HR",
+     "HRW"
+    ],
+    "reason": "Pool A \u2014 Strongest build \u00b7 optimized for 2+ \u00b7 includes same-game legs \u00b7 3/3 players filled"
+   },
+   "stubs": {
+    "691406": {
+     "player_id": 691406,
+     "name": "Junior Caminero",
+     "team": "TB",
+     "opponent": "MIL",
+     "game_pk": 849799,
+     "lineup_spot": 3
+    },
+    "694192": {
+     "player_id": 694192,
+     "name": "Jackson Chourio",
+     "team": "MIL",
+     "opponent": "TB",
+     "game_pk": 849799,
+     "lineup_spot": 3
+    },
+    "668930": {
+     "player_id": 668930,
+     "name": "Brice Turang",
+     "team": "MIL",
+     "opponent": "TB",
+     "game_pk": 849799,
+     "lineup_spot": 1
+    }
+   },
+   "at": "2026-10-28T07:56:55+00:00",
+   "locked": true,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      691406,
+      694192,
+      668930
+     ],
+     "at": "2026-10-28T07:56:55+00:00"
+    }
+   ],
+   "locked_at": "2026-10-29T01:11:21+00:00"
+  },
+  "pools_3man|Pool B \u2014 HRR+Var|0": {
+   "section": "pools_3man",
+   "first_pitch": "2026-10-29T00:00:00+00:00",
+   "pids": [
+    670764,
+    641343,
+    676356
+   ],
+   "meta": {
+    "name": "Pool B \u2014 HRR+Var",
+    "pool_score": 20.5,
+    "size": 3,
+    "risk": "Lower",
+    "tags": [
+     "Recent HR"
+    ],
+    "reason": "Pool B \u2014 HRR+Var build \u00b7 optimized for 2+ \u00b7 includes same-game legs \u00b7 3/3 players filled"
+   },
+   "stubs": {
+    "670764": {
+     "player_id": 670764,
+     "name": "Taylor Walls",
+     "team": "TB",
+     "opponent": "MIL",
+     "game_pk": 849799,
+     "lineup_spot": 9
+    },
+    "641343": {
+     "player_id": 641343,
+     "name": "Jake Bauers",
+     "team": "MIL",
+     "opponent": "TB",
+     "game_pk": 849799,
+     "lineup_spot": 2
+    },
+    "676356": {
+     "player_id": 676356,
+     "name": "Jonny DeLuca",
+     "team": "TB",
+     "opponent": "MIL",
+     "game_pk": 849799,
+     "lineup_spot": 5
+    }
+   },
+   "at": "2026-10-28T21:17:28+00:00",
+   "locked": true,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      686217,
+      641343,
+      676356
+     ],
+     "at": "2026-10-28T07:56:55+00:00"
+    },
+    {
+     "pids": [
+      670764,
+      641343,
+      676356
+     ],
+     "at": "2026-10-28T21:17:28+00:00"
+    }
+   ],
+   "locked_at": "2026-10-29T01:11:21+00:00"
+  },
+  "pools_3man|Pool C \u2014 Balanced|0": {
+   "section": "pools_3man",
+   "first_pitch": "2026-10-29T00:00:00+00:00",
+   "pids": [
+    650490,
+    689414,
+    666018
+   ],
+   "meta": {
+    "name": "Pool C \u2014 Balanced",
+    "pool_score": 22.3,
+    "size": 3,
+    "risk": "Lower",
+    "tags": [
+     "Recent HR"
+    ],
+    "reason": "Pool C \u2014 Balanced build \u00b7 optimized for 2+ \u00b7 includes same-game legs \u00b7 3/3 players filled"
+   },
+   "stubs": {
+    "650490": {
+     "player_id": 650490,
+     "name": "Yandy D\u00edaz",
+     "team": "TB",
+     "opponent": "MIL",
+     "game_pk": 849799,
+     "lineup_spot": 1
+    },
+    "689414": {
+     "player_id": 689414,
+     "name": "Liam Hicks",
+     "team": "TB",
+     "opponent": "MIL",
+     "game_pk": 849799,
+     "lineup_spot": 4
+    },
+    "666018": {
+     "player_id": 666018,
+     "name": "Jonathan Aranda",
+     "team": "TB",
+     "opponent": "MIL",
+     "game_pk": 849799,
+     "lineup_spot": 2
+    }
+   },
+   "at": "2026-10-28T21:17:28+00:00",
+   "locked": true,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      596142,
+      650490,
+      661388
+     ],
+     "at": "2026-10-28T07:56:55+00:00"
+    },
+    {
+     "pids": [
+      650490,
+      689414,
+      666018
+     ],
+     "at": "2026-10-28T21:17:28+00:00"
+    }
+   ],
+   "locked_at": "2026-10-29T01:11:21+00:00"
+  },
+  "pools_3man|Pool D \u2014 Variance|0": {
+   "section": "pools_3man",
+   "first_pitch": "2026-10-29T00:00:00+00:00",
+   "pids": [
+    661388,
+    669003,
+    592885
+   ],
+   "meta": {
+    "name": "Pool D \u2014 Variance",
+    "pool_score": 13.5,
+    "size": 3,
+    "risk": "Lower",
+    "tags": [
+     "Recent HR"
+    ],
+    "reason": "Pool D \u2014 Variance build \u00b7 optimized for 2+ \u00b7 includes same-game legs \u00b7 3/3 players filled"
+   },
+   "stubs": {
+    "661388": {
+     "player_id": 661388,
+     "name": "William Contreras",
+     "team": "MIL",
+     "opponent": "TB",
+     "game_pk": 849799,
+     "lineup_spot": 4
+    },
+    "669003": {
+     "player_id": 669003,
+     "name": "Garrett Mitchell",
+     "team": "MIL",
+     "opponent": "TB",
+     "game_pk": 849799,
+     "lineup_spot": 8
+    },
+    "592885": {
+     "player_id": 592885,
+     "name": "Christian Yelich",
+     "team": "MIL",
+     "opponent": "TB",
+     "game_pk": 849799,
+     "lineup_spot": 3
+    }
+   },
+   "at": "2026-10-28T21:17:28+00:00",
+   "locked": true,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      592885,
+      656775,
+      663743
+     ],
+     "at": "2026-10-28T07:56:55+00:00"
+    },
+    {
+     "pids": [
+      661388,
+      669003,
+      592885
+     ],
+     "at": "2026-10-28T21:17:28+00:00"
+    }
+   ],
+   "locked_at": "2026-10-29T01:11:21+00:00"
+  },
+  "pools_6man_legacy|Pool A \u2014 Strongest|0": {
+   "section": "pools_6man_legacy",
+   "first_pitch": "2026-10-29T00:00:00+00:00",
+   "pids": [
+    691406,
+    694192,
+    668930,
+    641343,
+    676356,
+    689414
+   ],
+   "meta": {
+    "name": "Pool A \u2014 Strongest",
+    "pool_score": 38.6,
+    "size": 6,
+    "risk": "Lower",
+    "tags": [
+     "Recent HR",
+     "HRW"
+    ],
+    "reason": "Pool A \u2014 Strongest build \u00b7 optimized for 2+ \u00b7 includes same-game legs \u00b7 6/6 players filled",
+    "model_version": "pools_6man_legacy_v1"
+   },
+   "stubs": {
+    "691406": {
+     "player_id": 691406,
+     "name": "Junior Caminero",
+     "team": "TB",
+     "opponent": "MIL",
+     "game_pk": 849799,
+     "lineup_spot": 3
+    },
+    "694192": {
+     "player_id": 694192,
+     "name": "Jackson Chourio",
+     "team": "MIL",
+     "opponent": "TB",
+     "game_pk": 849799,
+     "lineup_spot": 1
+    },
+    "668930": {
+     "player_id": 668930,
+     "name": "Brice Turang",
+     "team": "MIL",
+     "opponent": "TB",
+     "game_pk": 849799,
+     "lineup_spot": 5
+    },
+    "641343": {
+     "player_id": 641343,
+     "name": "Jake Bauers",
+     "team": "MIL",
+     "opponent": "TB",
+     "game_pk": 849799,
+     "lineup_spot": 2
+    },
+    "676356": {
+     "player_id": 676356,
+     "name": "Jonny DeLuca",
+     "team": "TB",
+     "opponent": "MIL",
+     "game_pk": 849799,
+     "lineup_spot": 5
+    },
+    "689414": {
+     "player_id": 689414,
+     "name": "Liam Hicks",
+     "team": "TB",
+     "opponent": "MIL",
+     "game_pk": 849799,
+     "lineup_spot": 4
+    }
+   },
+   "at": "2026-10-28T21:17:28+00:00",
+   "locked": true,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      691406,
+      694192,
+      668930,
+      641343,
+      676356,
+      650490
+     ],
+     "at": "2026-10-28T07:56:55+00:00"
+    },
+    {
+     "pids": [
+      691406,
+      694192,
+      668930,
+      641343,
+      676356,
+      689414
+     ],
+     "at": "2026-10-28T21:17:28+00:00"
+    }
+   ],
+   "locked_at": "2026-10-29T01:11:21+00:00"
+  },
+  "pools_6man_legacy|Pool B \u2014 Balanced|0": {
+   "section": "pools_6man_legacy",
+   "first_pitch": "2026-10-29T00:00:00+00:00",
+   "pids": [
+    650490,
+    666018,
+    661388,
+    592885,
+    669003,
+    686217
+   ],
+   "meta": {
+    "name": "Pool B \u2014 Balanced",
+    "pool_score": 14.2,
+    "size": 6,
+    "risk": "Lower",
+    "tags": [
+     "Recent HR"
+    ],
+    "reason": "Pool B \u2014 Balanced build \u00b7 optimized for 2+ \u00b7 includes same-game legs \u00b7 6/6 players filled",
+    "model_version": "pools_6man_legacy_v1"
+   },
+   "stubs": {
+    "650490": {
+     "player_id": 650490,
+     "name": "Yandy D\u00edaz",
+     "team": "TB",
+     "opponent": "MIL",
+     "game_pk": 849799,
+     "lineup_spot": 1
+    },
+    "666018": {
+     "player_id": 666018,
+     "name": "Jonathan Aranda",
+     "team": "TB",
+     "opponent": "MIL",
+     "game_pk": 849799,
+     "lineup_spot": 2
+    },
+    "661388": {
+     "player_id": 661388,
+     "name": "William Contreras",
+     "team": "MIL",
+     "opponent": "TB",
+     "game_pk": 849799,
+     "lineup_spot": 4
+    },
+    "592885": {
+     "player_id": 592885,
+     "name": "Christian Yelich",
+     "team": "MIL",
+     "opponent": "TB",
+     "game_pk": 849799,
+     "lineup_spot": 3
+    },
+    "669003": {
+     "player_id": 669003,
+     "name": "Garrett Mitchell",
+     "team": "MIL",
+     "opponent": "TB",
+     "game_pk": 849799,
+     "lineup_spot": 8
+    },
+    "686217": {
+     "player_id": 686217,
+     "name": "Sal Frelick",
+     "team": "MIL",
+     "opponent": "TB",
+     "game_pk": 849799,
+     "lineup_spot": 6
+    }
+   },
+   "at": "2026-10-28T21:17:28+00:00",
+   "locked": true,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      596142,
+      661388,
+      666018,
+      689414,
+      656775,
+      592885
+     ],
+     "at": "2026-10-28T07:56:55+00:00"
+    },
+    {
+     "pids": [
+      650490,
+      666018,
+      661388,
+      592885,
+      669003,
+      686217
+     ],
+     "at": "2026-10-28T21:17:28+00:00"
+    }
+   ],
+   "locked_at": "2026-10-29T01:11:21+00:00"
+  },
+  "pools_6man_legacy|Pool C \u2014 Mid / Var|0": {
+   "section": "pools_6man_legacy",
+   "first_pitch": "2026-10-29T00:00:00+00:00",
+   "pids": [
+    670764,
+    666152,
+    806198,
+    810938,
+    802415
+   ],
+   "meta": {
+    "name": "Pool C \u2014 Mid / Var",
+    "pool_score": 0.6,
+    "size": 5,
+    "risk": "Lower",
+    "tags": [],
+    "reason": "Pool C \u2014 Mid / Var build \u00b7 optimized for 2+ \u00b7 includes same-game legs \u00b7 5/5 players filled",
+    "model_version": "pools_6man_legacy_v1"
+   },
+   "stubs": {
+    "670764": {
+     "player_id": 670764,
+     "name": "Taylor Walls",
+     "team": "TB",
+     "opponent": "MIL",
+     "game_pk": 849799,
+     "lineup_spot": 9
+    },
+    "666152": {
+     "player_id": 666152,
+     "name": "David Hamilton",
+     "team": "MIL",
+     "opponent": "TB",
+     "game_pk": 849799,
+     "lineup_spot": 9
+    },
+    "806198": {
+     "player_id": 806198,
+     "name": "Cooper Pratt",
+     "team": "MIL",
+     "opponent": "TB",
+     "game_pk": 849799,
+     "lineup_spot": 7
+    },
+    "810938": {
+     "player_id": 810938,
+     "name": "Ben Williamson",
+     "team": "TB",
+     "opponent": "MIL",
+     "game_pk": 849799,
+     "lineup_spot": 7
+    },
+    "802415": {
+     "player_id": 802415,
+     "name": "Chandler Simpson",
+     "team": "TB",
+     "opponent": "MIL",
+     "game_pk": 849799,
+     "lineup_spot": 6
+    }
+   },
+   "at": "2026-10-28T21:17:28+00:00",
+   "locked": true,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      686217,
+      663743,
+      683734,
+      680700,
+      687401,
+      802415
+     ],
+     "at": "2026-10-28T07:56:55+00:00"
+    },
+    {
+     "pids": [
+      670764,
+      666152,
+      806198,
+      810938,
+      802415
+     ],
+     "at": "2026-10-28T21:17:28+00:00"
+    }
+   ],
+   "locked_at": "2026-10-29T01:11:21+00:00"
+  },
+  "pools_3man_legacy|Pool A1|0": {
+   "section": "pools_3man_legacy",
+   "first_pitch": "2026-10-29T00:00:00+00:00",
+   "pids": [
+    691406,
+    694192,
+    668930
+   ],
+   "meta": {
+    "name": "Pool A1",
+    "pool_score": 49.4,
+    "size": 3,
+    "risk": "Lower",
+    "tags": [
+     "Recent HR",
+     "HRW"
+    ],
+    "reason": "Pool A1 build \u00b7 optimized for 2+ \u00b7 includes same-game legs \u00b7 3/3 players filled",
+    "model_version": "pools_6man_legacy_v1_half",
+    "parent": "Pool A \u2014 Strongest"
+   },
+   "stubs": {
+    "691406": {
+     "player_id": 691406,
+     "name": "Junior Caminero",
+     "team": "TB",
+     "opponent": "MIL",
+     "game_pk": 849799,
+     "lineup_spot": 3
+    },
+    "694192": {
+     "player_id": 694192,
+     "name": "Jackson Chourio",
+     "team": "MIL",
+     "opponent": "TB",
+     "game_pk": 849799,
+     "lineup_spot": 3
+    },
+    "668930": {
+     "player_id": 668930,
+     "name": "Brice Turang",
+     "team": "MIL",
+     "opponent": "TB",
+     "game_pk": 849799,
+     "lineup_spot": 1
+    }
+   },
+   "at": "2026-10-28T07:56:55+00:00",
+   "locked": true,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      691406,
+      694192,
+      668930
+     ],
+     "at": "2026-10-28T07:56:55+00:00"
+    }
+   ],
+   "locked_at": "2026-10-29T01:11:21+00:00"
+  },
+  "pools_3man_legacy|Pool A2|0": {
+   "section": "pools_3man_legacy",
+   "first_pitch": "2026-10-29T00:00:00+00:00",
+   "pids": [
+    641343,
+    676356,
+    689414
+   ],
+   "meta": {
+    "name": "Pool A2",
+    "pool_score": 27.9,
+    "size": 3,
+    "risk": "Lower",
+    "tags": [
+     "Recent HR"
+    ],
+    "reason": "Pool A2 build \u00b7 optimized for 2+ \u00b7 includes same-game legs \u00b7 3/3 players filled",
+    "model_version": "pools_6man_legacy_v1_half",
+    "parent": "Pool A \u2014 Strongest"
+   },
+   "stubs": {
+    "641343": {
+     "player_id": 641343,
+     "name": "Jake Bauers",
+     "team": "MIL",
+     "opponent": "TB",
+     "game_pk": 849799,
+     "lineup_spot": 2
+    },
+    "676356": {
+     "player_id": 676356,
+     "name": "Jonny DeLuca",
+     "team": "TB",
+     "opponent": "MIL",
+     "game_pk": 849799,
+     "lineup_spot": 5
+    },
+    "689414": {
+     "player_id": 689414,
+     "name": "Liam Hicks",
+     "team": "TB",
+     "opponent": "MIL",
+     "game_pk": 849799,
+     "lineup_spot": 4
+    }
+   },
+   "at": "2026-10-28T21:17:28+00:00",
+   "locked": true,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      641343,
+      676356,
+      650490
+     ],
+     "at": "2026-10-28T07:56:55+00:00"
+    },
+    {
+     "pids": [
+      641343,
+      676356,
+      689414
+     ],
+     "at": "2026-10-28T21:17:28+00:00"
+    }
+   ],
+   "locked_at": "2026-10-29T01:11:21+00:00"
+  },
+  "pools_3man_legacy|Pool B1|0": {
+   "section": "pools_3man_legacy",
+   "first_pitch": "2026-10-29T00:00:00+00:00",
+   "pids": [
+    650490,
+    666018,
+    661388
+   ],
+   "meta": {
+    "name": "Pool B1",
+    "pool_score": 20.8,
+    "size": 3,
+    "risk": "Lower",
+    "tags": [
+     "Recent HR"
+    ],
+    "reason": "Pool B1 build \u00b7 optimized for 2+ \u00b7 includes same-game legs \u00b7 3/3 players filled",
+    "model_version": "pools_6man_legacy_v1_half",
+    "parent": "Pool B \u2014 Balanced"
+   },
+   "stubs": {
+    "650490": {
+     "player_id": 650490,
+     "name": "Yandy D\u00edaz",
+     "team": "TB",
+     "opponent": "MIL",
+     "game_pk": 849799,
+     "lineup_spot": 1
+    },
+    "666018": {
+     "player_id": 666018,
+     "name": "Jonathan Aranda",
+     "team": "TB",
+     "opponent": "MIL",
+     "game_pk": 849799,
+     "lineup_spot": 2
+    },
+    "661388": {
+     "player_id": 661388,
+     "name": "William Contreras",
+     "team": "MIL",
+     "opponent": "TB",
+     "game_pk": 849799,
+     "lineup_spot": 4
+    }
+   },
+   "at": "2026-10-28T21:17:28+00:00",
+   "locked": true,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      596142,
+      661388,
+      666018
+     ],
+     "at": "2026-10-28T07:56:55+00:00"
+    },
+    {
+     "pids": [
+      650490,
+      666018,
+      661388
+     ],
+     "at": "2026-10-28T21:17:28+00:00"
+    }
+   ],
+   "locked_at": "2026-10-29T01:11:21+00:00"
+  },
+  "pools_3man_legacy|Pool B2|0": {
+   "section": "pools_3man_legacy",
+   "first_pitch": "2026-10-29T00:00:00+00:00",
+   "pids": [
+    592885,
+    669003,
+    686217
+   ],
+   "meta": {
+    "name": "Pool B2",
+    "pool_score": 7.6,
+    "size": 3,
+    "risk": "Lower",
+    "tags": [
+     "Recent HR"
+    ],
+    "reason": "Pool B2 build \u00b7 optimized for 2+ \u00b7 includes same-game legs \u00b7 3/3 players filled",
+    "model_version": "pools_6man_legacy_v1_half",
+    "parent": "Pool B \u2014 Balanced"
+   },
+   "stubs": {
+    "592885": {
+     "player_id": 592885,
+     "name": "Christian Yelich",
+     "team": "MIL",
+     "opponent": "TB",
+     "game_pk": 849799,
+     "lineup_spot": 3
+    },
+    "669003": {
+     "player_id": 669003,
+     "name": "Garrett Mitchell",
+     "team": "MIL",
+     "opponent": "TB",
+     "game_pk": 849799,
+     "lineup_spot": 8
+    },
+    "686217": {
+     "player_id": 686217,
+     "name": "Sal Frelick",
+     "team": "MIL",
+     "opponent": "TB",
+     "game_pk": 849799,
+     "lineup_spot": 6
+    }
+   },
+   "at": "2026-10-28T21:17:28+00:00",
+   "locked": true,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      689414,
+      656775,
+      592885
+     ],
+     "at": "2026-10-28T07:56:55+00:00"
+    },
+    {
+     "pids": [
+      592885,
+      669003,
+      686217
+     ],
+     "at": "2026-10-28T21:17:28+00:00"
+    }
+   ],
+   "locked_at": "2026-10-29T01:11:21+00:00"
+  },
+  "pools_3man_legacy|Pool C1|0": {
+   "section": "pools_3man_legacy",
+   "first_pitch": "2026-10-29T00:00:00+00:00",
+   "pids": [
+    670764,
+    666152,
+    806198
+   ],
+   "meta": {
+    "name": "Pool C1",
+    "pool_score": 0.7,
+    "size": 3,
+    "risk": "Lower",
+    "tags": [],
+    "reason": "Pool C1 build \u00b7 optimized for 2+ \u00b7 includes same-game legs \u00b7 3/3 players filled",
+    "model_version": "pools_6man_legacy_v1_half",
+    "parent": "Pool C \u2014 Mid / Var"
+   },
+   "stubs": {
+    "670764": {
+     "player_id": 670764,
+     "name": "Taylor Walls",
+     "team": "TB",
+     "opponent": "MIL",
+     "game_pk": 849799,
+     "lineup_spot": 9
+    },
+    "666152": {
+     "player_id": 666152,
+     "name": "David Hamilton",
+     "team": "MIL",
+     "opponent": "TB",
+     "game_pk": 849799,
+     "lineup_spot": 9
+    },
+    "806198": {
+     "player_id": 806198,
+     "name": "Cooper Pratt",
+     "team": "MIL",
+     "opponent": "TB",
+     "game_pk": 849799,
+     "lineup_spot": 7
+    }
+   },
+   "at": "2026-10-28T21:17:28+00:00",
+   "locked": true,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      686217,
+      663743,
+      683734
+     ],
+     "at": "2026-10-28T07:56:55+00:00"
+    },
+    {
+     "pids": [
+      670764,
+      666152,
+      806198
+     ],
+     "at": "2026-10-28T21:17:28+00:00"
+    }
+   ],
+   "locked_at": "2026-10-29T01:11:21+00:00"
+  },
+  "pools_3man_legacy|Pool C2|0": {
+   "section": "pools_3man_legacy",
+   "first_pitch": "2026-10-29T00:00:00+00:00",
+   "pids": [
+    810938,
+    802415
+   ],
+   "meta": {
+    "name": "Pool C2",
+    "pool_score": 0.5,
+    "size": 2,
+    "risk": "Lower",
+    "tags": [],
+    "reason": "Pool C2 build \u00b7 optimized for 2+ \u00b7 includes same-game legs \u00b7 2/2 players filled",
+    "model_version": "pools_6man_legacy_v1_half",
+    "parent": "Pool C \u2014 Mid / Var"
+   },
+   "stubs": {
+    "810938": {
+     "player_id": 810938,
+     "name": "Ben Williamson",
+     "team": "TB",
+     "opponent": "MIL",
+     "game_pk": 849799,
+     "lineup_spot": 7
+    },
+    "802415": {
+     "player_id": 802415,
+     "name": "Chandler Simpson",
+     "team": "TB",
+     "opponent": "MIL",
+     "game_pk": 849799,
+     "lineup_spot": 6
+    }
+   },
+   "at": "2026-10-28T21:17:28+00:00",
+   "locked": true,
+   "locked_late": false,
+   "history": [
+    {
+     "pids": [
+      680700,
+      687401,
+      802415
+     ],
+     "at": "2026-10-28T07:56:55+00:00"
+    },
+    {
+     "pids": [
+      810938,
+      802415
+     ],
+     "at": "2026-10-28T21:17:28+00:00"
+    }
+   ],
+   "locked_at": "2026-10-29T01:11:21+00:00"
+  }
+ },
+ "prediction_of_record": {
+  "849799": {
+   "run_id": "2026-10-28.221951Z.gha-40778995598",
+   "model_version": "mlb_hr_v4",
+   "config_hash": "sha256:b0639430bd37655d6e383e6f896d84e9f13bfa1324c6543478a8ff5344b4a7d0",
+   "generated_at": "2026-10-28T22:19:51.417886+00:00",
+   "first_pitch": "2026-10-29T00:00:00+00:00",
+   "locked_at": "2026-10-29T01:11:21+00:00",
+   "locked_late": false,
+   "por_source": "pregame_log"
+  }
+ },
+ "rule": "Before a game's first pitch a designation may change and every change is kept in history[]. At first pitch it freezes: the published sheet is rewritten to match the lock and any later change is recorded in rejected[] instead of being applied. locked_late marks games first seen after they had already started. Pools and pairs follow the same rule keyed on their slot (label / lane_key), freezing when their EARLIEST leg starts; a locked ticket is never re-rostered when a leg scratches \u2014 that leg voids, which is what a real ticket does. prediction_of_record locks, per game_pk, the run_id standing at that game's first pitch -- the one official run for every player in that game, not just the picks; a player who joins the slate after that lock has no row in it, which is honest, not a bug."
+}

@@ -1,0 +1,339 @@
+{
+ "built": "2026-08-27T08:31:37+00:00",
+ "through": "2026-08-27",
+ "nights": 32,
+ "rows": 2065,
+ "min_band_n": 40,
+ "method": "Top third vs bottom third of each stat across every graded pick, one row per player per night, void legs excluded. Verdict compares 95% Wilson intervals \u2014 'earned' means the top band's interval sits entirely above the bottom band's. Nothing here changes a weight automatically.",
+ "stats": [
+  {
+   "key": "opp_def_pctile",
+   "label": "Opponent defense percentile",
+   "outcome": "hit",
+   "why": "How leaky the defense behind the arm is. A HIT/TB claim \u2014 it was never a homer claim, so it isn't graded as one.",
+   "result": {
+    "status": "not proven",
+    "n": 1211,
+    "top": {
+     "pct": 69.2,
+     "ok": 279,
+     "n": 403,
+     "ci": [
+      64.6,
+      73.5
+     ]
+    },
+    "bottom": {
+     "pct": 68.0,
+     "ok": 274,
+     "n": 403,
+     "ci": [
+      63.3,
+      72.4
+     ]
+    },
+    "lift": 1.02
+   }
+  },
+  {
+   "key": "park_hr_factor",
+   "label": "Park HR factor",
+   "outcome": "hr",
+   "why": "The building's own home-run multiplier.",
+   "result": {
+    "status": "not proven",
+    "n": 1466,
+    "top": {
+     "pct": 17.0,
+     "ok": 83,
+     "n": 488,
+     "ci": [
+      13.9,
+      20.6
+     ]
+    },
+    "bottom": {
+     "pct": 12.3,
+     "ok": 60,
+     "n": 488,
+     "ci": [
+      9.7,
+      15.5
+     ]
+    },
+    "lift": 1.38
+   }
+  },
+  {
+   "key": "weather_hr_effect_pct",
+   "label": "Weather effect",
+   "outcome": "hr",
+   "why": "The bot's published weather adjustment for the night.",
+   "result": {
+    "status": "not proven",
+    "n": 1058,
+    "top": {
+     "pct": 17.3,
+     "ok": 61,
+     "n": 352,
+     "ci": [
+      13.7,
+      21.6
+     ]
+    },
+    "bottom": {
+     "pct": 19.6,
+     "ok": 69,
+     "n": 352,
+     "ci": [
+      15.8,
+      24.1
+     ]
+    },
+    "lift": 0.88
+   }
+  },
+  {
+   "key": "xpa",
+   "label": "Expected PA (lineup slot)",
+   "outcome": "hit",
+   "why": "More trips to the plate should mean more chances at a hit.",
+   "result": {
+    "status": "thin",
+    "n": 0
+   }
+  },
+  {
+   "key": "lineup_spot",
+   "label": "Lineup spot",
+   "outcome": "hit",
+   "why": "Batting higher in the order. Inverted: spot 1 is the good end.",
+   "result": {
+    "status": "not proven",
+    "n": 2065,
+    "top": {
+     "pct": 70.3,
+     "ok": 484,
+     "n": 688,
+     "ci": [
+      66.8,
+      73.6
+     ]
+    },
+    "bottom": {
+     "pct": 65.0,
+     "ok": 447,
+     "n": 688,
+     "ci": [
+      61.3,
+      68.4
+     ]
+    },
+    "lift": 1.08
+   }
+  },
+  {
+   "key": "pitcher_hr9",
+   "label": "Opposing starter HR/9",
+   "outcome": "hr",
+   "why": "The arm's own leak rate.",
+   "result": {
+    "status": "not proven",
+    "n": 1466,
+    "top": {
+     "pct": 20.1,
+     "ok": 98,
+     "n": 488,
+     "ci": [
+      16.8,
+      23.9
+     ]
+    },
+    "bottom": {
+     "pct": 13.5,
+     "ok": 66,
+     "n": 488,
+     "ci": [
+      10.8,
+      16.8
+     ]
+    },
+    "lift": 1.48
+   }
+  },
+  {
+   "key": "pitch_type_match_score",
+   "label": "Pitch match",
+   "outcome": "hr",
+   "why": "His damage pitches overlapping tonight's arsenal.",
+   "result": {
+    "status": "not proven",
+    "n": 1337,
+    "top": {
+     "pct": 18.9,
+     "ok": 84,
+     "n": 445,
+     "ci": [
+      15.5,
+      22.8
+     ]
+    },
+    "bottom": {
+     "pct": 15.5,
+     "ok": 69,
+     "n": 445,
+     "ci": [
+      12.4,
+      19.2
+     ]
+    },
+    "lift": 1.22
+   }
+  },
+  {
+   "key": "hrw_score",
+   "label": "HR Weather score",
+   "outcome": "hr",
+   "why": "The composite the bot already trusts \u2014 included as a control. If a new stat can't beat this, it hasn't earned anything.",
+   "result": {
+    "status": "earned",
+    "n": 1466,
+    "top": {
+     "pct": 27.0,
+     "ok": 132,
+     "n": 488,
+     "ci": [
+      23.3,
+      31.2
+     ]
+    },
+    "bottom": {
+     "pct": 6.1,
+     "ok": 30,
+     "n": 488,
+     "ci": [
+      4.3,
+      8.6
+     ]
+    },
+    "lift": 4.4
+   }
+  },
+  {
+   "key": "recent_barrel_rate",
+   "label": "Recent barrel rate",
+   "outcome": "hr",
+   "why": "Contact quality, as a sanity check: if barrels don't validate, the harness is broken, not the stat.",
+   "result": {
+    "status": "not proven",
+    "n": 2065,
+    "top": {
+     "pct": 16.1,
+     "ok": 111,
+     "n": 688,
+     "ci": [
+      13.6,
+      19.1
+     ]
+    },
+    "bottom": {
+     "pct": 14.1,
+     "ok": 97,
+     "n": 688,
+     "ci": [
+      11.7,
+      16.9
+     ]
+    },
+    "lift": 1.14
+   }
+  },
+  {
+   "key": "weak_spot_flag",
+   "label": "Weak lineup spot",
+   "outcome": "hr",
+   "why": "The lineup slot this arm is worst against.",
+   "result": {
+    "status": "not proven",
+    "n": 2065,
+    "top": {
+     "pct": 16.7,
+     "ok": 109,
+     "n": 653,
+     "ci": [
+      14.0,
+      19.7
+     ]
+    },
+    "bottom": {
+     "pct": 15.7,
+     "ok": 221,
+     "n": 1412,
+     "ci": [
+      13.8,
+      17.6
+     ]
+    },
+    "lift": 1.07
+   }
+  },
+  {
+   "key": "trap_flag",
+   "label": "Trap flag",
+   "outcome": "hr",
+   "why": "The bot's own warning. A working trap flag should score LOWER, not higher.",
+   "result": {
+    "status": "not proven",
+    "n": 1466,
+    "top": {
+     "pct": 13.4,
+     "ok": 82,
+     "n": 612,
+     "ci": [
+      10.9,
+      16.3
+     ]
+    },
+    "bottom": {
+     "pct": 18.0,
+     "ok": 154,
+     "n": 854,
+     "ci": [
+      15.6,
+      20.8
+     ]
+    },
+    "lift": 0.74
+   }
+  },
+  {
+   "key": "high_confidence_hr_flag",
+   "label": "High confidence",
+   "outcome": "hr",
+   "why": "The bot's own confidence marker.",
+   "result": {
+    "status": "earned",
+    "n": 1337,
+    "top": {
+     "pct": 25.7,
+     "ok": 26,
+     "n": 101,
+     "ci": [
+      18.2,
+      35.0
+     ]
+    },
+    "bottom": {
+     "pct": 15.1,
+     "ok": 187,
+     "n": 1236,
+     "ci": [
+      13.2,
+      17.2
+     ]
+    },
+    "lift": 1.7
+   }
+  }
+ ]
+}

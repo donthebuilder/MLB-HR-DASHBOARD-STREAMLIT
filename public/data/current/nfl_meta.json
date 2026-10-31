@@ -1,0 +1,38 @@
+{
+  "built_at": "2026-10-30T19:08:09.882567-07:00",
+  "built_at_human": "Oct 30, 7:08 PM PHX",
+  "mode": "week",
+  "label": "Week 8",
+  "counts": {
+    "players": 485,
+    "games": 14
+  },
+  "run_meta": {
+    "run_id": "2026-wk08.020816Z.gha-41158552542",
+    "generated_at": "2026-10-31T02:08:16.147487+00:00",
+    "mode": "week",
+    "season": 2026,
+    "week": 8,
+    "trigger": "NFL Bot \u2014 slate + report card (data branch only)",
+    "git_sha": "1ff16fcbdc2e6269f7bc9d2c4baffa31439696a1",
+    "model_family": "moonshot-nfl",
+    "model_versions": {
+      "TD": "nfl_td_v2",
+      "TD_USAGE": "nfl_td_v4",
+      "REC_YDS": "nfl_recyds_v2",
+      "REC": "nfl_rec_v1",
+      "RUSH_YDS": "nfl_rushyds_v2",
+      "RUSH_ATT": "nfl_rushatt_v1",
+      "PASS_YDS": "nfl_passyds_v2",
+      "KICK_PTS": "nfl_kickpts_v1"
+    },
+    "config_hashes": {
+      "nfl": "sha256:6cca46ffeca9260f82462d276001d65afb7b7ceda0020874508388244d04c537"
+    },
+    "schema_version": 1,
+    "env": {
+      "python": "3.11.17",
+      "nflreadpy": "0.1.5"
+    }
+  }
+}
