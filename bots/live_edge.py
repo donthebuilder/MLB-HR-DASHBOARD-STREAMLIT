@@ -246,7 +246,7 @@ def evaluate(g, kind, m, min_edge):
     buy_yes = fair - a - FEE(a)
     buy_no = (1 - fair) - (1 - b) - FEE(1 - b)
     best = ("YES", buy_yes, a) if buy_yes >= buy_no else ("NO", buy_no, 1 - b)
-    if best[1] < min_edge or best[1] > 0.25:                                       # an "edge" over 25 points is a data error, not a bet
+    if best[1] < min_edge or best[1] > 0.12:                                       # an "edge" over 12 points is a state / model error, not a bet: the first night's 12+ point alerts priced 60% and won 45%, the 4-12 point ones priced 59% and won 60%
         return None
     pfair = fair if best[0] == "YES" else 1 - fair
     # paper stake: half-trusted model (no live track record yet), quarter Kelly, 1% cap, on the price after the fee; the report shows the paper bankroll it would have grown
@@ -304,10 +304,16 @@ def loop(out_dir, minutes, every, min_edge):
     print(f"{n} alerts logged")
 
 
+_SUMMARY = {}
+
+
 def settle(alert):
-    """did YES win? from the final score. None if the game is not final yet."""
+    """did YES win? from the final score. None if the game is not final yet. (One summary fetch per game, not per alert: a night logs thousands of alerts.)"""
     cfg = SPORTS[alert["sport"]]
-    d = curl(f"https://site.api.espn.com/apis/site/v2/sports/{cfg['espn']}/summary?event={alert['espn_id']}")
+    k = (alert["sport"], alert["espn_id"])
+    if k not in _SUMMARY:
+        _SUMMARY[k] = curl(f"https://site.api.espn.com/apis/site/v2/sports/{cfg['espn']}/summary?event={alert['espn_id']}")
+    d = _SUMMARY[k]
     comp = ((d.get("header") or {}).get("competitions") or [{}])[0]
     if not comp.get("status", {}).get("type", {}).get("completed"):
         return None
@@ -319,7 +325,8 @@ def settle(alert):
         import re as _re
         mm = _re.search(r"([\d.]+)", sub)
         return (sc["home"] + sc["away"]) > float(mm.group(1)) if mm else None
-    side = "home" if names["home"].split()[-1].lower() in sub.lower() else "away" if names["away"].split()[-1].lower() in sub.lower() else None
+    team_text = sub.split(" wins by")[0].split(" to win")[0].strip()                # "Minnesota wins by over 2.5 points" / "Minnesota to win" -> "Minnesota" (Kalshi uses the city, ESPN's name is "Minnesota Vikings")
+    side = team_side({"home_name": names["home"], "away_name": names["away"]}, team_text)
     if side is None:
         return None
     margin = hm if side == "home" else -hm
@@ -360,12 +367,9 @@ def report(out_dir):
         rs = [r for r in rows if r["kind"] == k]
         if rs:
             print(f"  {k}: {len(rs)} alerts, return {100 * sum(r['profit'] for r in rs) / sum(r['price'] for r in rs):+.1f}%")
-    paper = [r for r in rows if r.get("stake")]
-    if paper:
-        bank = 1.0
-        for r in sorted(paper, key=lambda r: r["t"]):
-            bank *= 1 + r["stake"] * (r["profit"] / r["price"])
-        print(f"  paper bankroll if every alert were staked by staking.py (quarter Kelly, half-trusted model, 1% cap): 1.000 -> {bank:.3f} over {len(paper)} alerts")
+    games = {r["game"] + r["date"] for r in rows}
+    print(f"  these {len(rows)} alerts come from only {len(games)} games, and one game can log hundreds of them (every rung of a ladder, again each time the edge moves): the effective sample is the games, not the alerts")
+    print("  (no paper bankroll is printed: a game's ladder of alerts all win or lose together, so stakes on them cannot be added up as if they were separate bets)")
 
 
 if __name__ == "__main__":

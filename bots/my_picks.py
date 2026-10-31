@@ -11,7 +11,7 @@ PICKS_CSV (my_picks/picks.csv in the repo; edit it on GitHub, no computer needed
     2026-10-25,nfl,Mark Andrews,td,+260,tight end day
     2026-10-24,nhl,Kirill Kaprizov,goal,-110,
     2026-10-24,nba,Luka Doncic,pts25,,
-market: nfl td | first_td | rec_yds | rec | rush_yds | rush_att | pass_yds | pass_td | td2 | long_rec | qb_td ... ;  nhl goal | points | assists | shots3 ;  nba pts25 | reb10 | ast8 | tpm4 | pra35 | dd.
+market: nfl td | first_td | rec_yds | rec | rush_yds | rush_att | pass_yds | pass_td | td2 | long_rec | qb_td ... ;  nhl goal | points | assists | shots3 ;  nba pts25 | reb10 | ast8 | tpm4 | pra35 | dd | first_basket.
 price is the American price you took (blank = unpriced). A pick is graded only if the player is in that day's shadow log with a result (a player who did not play is not graded as a miss).
 The report: hit rate and the return at your prices, against what our model gave each pick (so you can see whether your picks beat the model), split by market, position, price band and note.
 """
@@ -78,7 +78,23 @@ def grade_nfl(p, idx):
     return {"prob": prob, "won": bool(y), "pos": r.get("pos")}
 
 
+def grade_first_basket(p, shadow_dir):
+    """NBA first basket: the player's row in that day's shadow_nbafirst file, once the game is graded (y). A player who was not a listed starter is not graded."""
+    f = Path(shadow_dir) / f"shadow_nbafirst_{p['date']}.json"
+    if not f.exists():
+        return None
+    for g in json.load(open(f))["games"].values():
+        for r in g["rows"]:
+            if key(r["name"]) == key(p["player"]):
+                if "y" not in r:
+                    return None
+                return {"prob": r.get("p_first_basket"), "won": bool(r["y"]), "pos": None}
+    return None
+
+
 def grade_other(p, shadow_dir):
+    if p["sport"] == "nba" and p["market"] == "first_basket":
+        return grade_first_basket(p, shadow_dir)
     f = Path(shadow_dir) / f"shadow_{p['sport']}_{p['date']}.json"
     if not f.exists():
         return None

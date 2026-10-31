@@ -4,6 +4,8 @@ name: Shadow log - NHL lanes
 # Written once, never rewritten. Lives on bbe-history. Changes nothing a pick or a score reads.
 on:
   schedule:
+    - cron: '45 18 * * *'
+    - cron: '45 21 * * *'
     - cron: '45 22 * * *'
     - cron: '30 11 * * *'
   workflow_dispatch:
@@ -45,7 +47,7 @@ jobs:
           H=$(date -u +%H)
           ET=$(python3 -c "from datetime import datetime,timedelta,timezone;print((datetime.now(timezone.utc)-timedelta(hours=5)).date())")
           Y=$(python3 -c "from datetime import datetime,timedelta,timezone;print((datetime.now(timezone.utc)-timedelta(hours=5,days=1)).date())")
-          if [ "$H" -ge 20 ]; then
+          if [ "$H" -ge 17 ]; then
             python3 bots/shadow_log.py snapshot nhl "$ET" $D
             python3 bots/team_live.py snapshot nhl "$ET" $D
             python3 bots/game_sim.py snapshot nhl "$ET" $D

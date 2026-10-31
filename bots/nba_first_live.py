@@ -24,6 +24,9 @@ import nba_first as nf              # noqa: E402
 from nba_live import athlete, parse_spread   # noqa: E402
 
 
+CALL_MIN_P = 0.15      # a game's top starter is a CALLED pick only at or above this p_first_basket (backtest: top pick hits 14.8% overall)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("day", nargs="?", default=dt.date.today().isoformat()); ap.add_argument("--out", default=None)
@@ -111,6 +114,7 @@ def main():
                 r["p_first_basket"] = round(float(p), 4); r.pop("z")
             for i, r in enumerate(sorted(gr, key=lambda r: -r["p_first_basket"])):
                 r["top3_in_game"] = i < 3
+                r["called"] = i == 0 and r["p_first_basket"] >= CALL_MIN_P
             out_rows += gr
     out_rows.sort(key=lambda r: -r["p_first_basket"])
     out = Path(a.out) if a.out else Path(__file__).resolve().parent / "outputs" / "nba_first_board_latest.json"

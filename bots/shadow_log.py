@@ -92,7 +92,7 @@ def snapshot_first(day, out_dir):
                 entry["locked"] = True; kept += 1
             continue
         have["games"][gid] = {"locked": False, "status": rs[0]["game_status"], "starters_source": rs[0]["starters_source"], "saved_utc": __import__("datetime").datetime.now(__import__("datetime").timezone.utc).isoformat(),
-                              "rows": [{"name": r["name"], "team": r["team"], "opp": r["opponent"], "p_first_basket": r["p_first_basket"], "top3": r["top3_in_game"], "no_history": r["no_history"], "ppg": r.get("ppg")} for r in rs]}
+                              "rows": [{"name": r["name"], "team": r["team"], "opp": r["opponent"], "p_first_basket": r["p_first_basket"], "top3": r["top3_in_game"], "called": bool(r.get("called")), "no_history": r["no_history"], "ppg": r.get("ppg")} for r in rs]}
         new += 1
     path.write_text(json.dumps(have))
     print(f"{day} nbafirst: {new} game(s) written/refreshed, {kept} locked at tip, {len(have['games'])} in file")
@@ -131,6 +131,10 @@ def report_first(out_dir):
     t3 = sum(sum(r["y"] for r in sorted(g["rows"], key=lambda r: -r["p_first_basket"])[:3]) for g in games)
     rows = [r for g in games for r in g["rows"]]
     listed = sum(g["first_by_listed_starter"] for g in games)
+    called = [r for g in games for r in g["rows"] if r.get("called")]
+    if called:
+        print(f"  CALLED picks (top starter at/above the cutoff): {sum(r['y'] for r in called)} of {len(called)} = {100 * sum(r['y'] for r in called) / len(called):.1f}%, "
+              f"model gave them {100 * sum(r['p_first_basket'] for r in called) / len(called):.1f}%")
     print(f"  top pick {100 * t1 / len(games):.1f}% (backtest 14.8%)   top 3 {100 * t3 / len(games):.1f}% (backtest 40.0%)   first basket by a listed starter {100 * listed / len(games):.0f}% of games")
     print(f"  mean predicted {100 * sum(r['p_first_basket'] for r in rows) / len(rows):.1f}% vs actual {100 * sum(r['y'] for r in rows) / len(rows):.1f}% per starter")
 
