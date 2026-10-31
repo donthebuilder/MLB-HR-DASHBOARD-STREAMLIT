@@ -290,6 +290,46 @@
    "value": "Expected:Austin Reaves|Quentin Grimes|Luka Don\u010di\u0107|Matisse Thybulle|Walker Kessler",
    "first_seen_utc": "2026-10-30T22:23:08Z",
    "mins_before_start": 217
+  },
+  {
+   "sport": "nba",
+   "game_id": "401909285",
+   "start_utc": "2026-10-31T02:00Z",
+   "team": "GS",
+   "what": "starters",
+   "value": "Confirmed:Brandin Podziemski|Gui Santos|Stephen Curry|Yaxel Lendeborg|Draymond Green",
+   "first_seen_utc": "2026-10-31T02:25:00Z",
+   "mins_before_start": -25
+  },
+  {
+   "sport": "nba",
+   "game_id": "401909285",
+   "start_utc": "2026-10-31T02:00Z",
+   "team": "LAL",
+   "what": "starters",
+   "value": "Confirmed:Austin Reaves|Matisse Thybulle|Luka Don\u010di\u0107|Jake LaRavia|Walker Kessler",
+   "first_seen_utc": "2026-10-31T02:25:00Z",
+   "mins_before_start": -25
+  },
+  {
+   "sport": "nba",
+   "game_id": "401909286",
+   "start_utc": "2026-10-31T02:00Z",
+   "team": "PHX",
+   "what": "starters",
+   "value": "Confirmed:Jalen Green|Dillon Brooks|Devin Booker|Miles Bridges|Khaman Maluach",
+   "first_seen_utc": "2026-10-31T02:25:00Z",
+   "mins_before_start": -25
+  },
+  {
+   "sport": "nba",
+   "game_id": "401909286",
+   "start_utc": "2026-10-31T02:00Z",
+   "team": "DEN",
+   "what": "starters",
+   "value": "Confirmed:Christian Braun|Cameron Johnson|Jamal Murray|Aaron Gordon|Nikola Joki\u0107",
+   "first_seen_utc": "2026-10-31T02:25:00Z",
+   "mins_before_start": -25
   }
  ]
 }
