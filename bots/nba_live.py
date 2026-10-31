@@ -26,7 +26,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import buckets_backtest as bb   # noqa: E402
-import game_lines as G          # noqa: E402
+import game_lines as G
+from headline_lane import headline_lane          # noqa: E402
 import injury_status            # noqa: E402
 import lineups                  # noqa: E402
 
@@ -169,6 +170,8 @@ def main():
     injury_status.apply(out_rows, inj)
     for r in out_rows:
         r["p_25_adj"] = round(r["p_25"] * r["p_play"], 4)
+    for r in out_rows:
+        r["headline_lane"] = headline_lane(r["lanes"], r["lane_base"], "nba")
     order = sorted(r["p_25"] for r in out_rows)
     lo, hi = order[len(order) // 3], order[2 * len(order) // 3]
     for r in out_rows:

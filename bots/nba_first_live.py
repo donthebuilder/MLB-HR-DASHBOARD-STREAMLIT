@@ -119,7 +119,9 @@ def main():
     out_rows.sort(key=lambda r: -r["p_first_basket"])
     out = Path(a.out) if a.out else Path(__file__).resolve().parent / "outputs" / "nba_first_board_latest.json"
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps({"date": day, "model_version": model["model_version"], "starters": "NBA daily lineups (Confirmed/Expected); projected from the last 5 games where the feed has no lineup", "players": out_rows}, indent=1))
+    called = [r for r in out_rows if r.get("called")]
+    called_text = (f"NBA first basket calls {day}\n" + "\n".join(f"{r['name']} ({r['team']} vs {r['opponent']}) {100 * r['p_first_basket']:.0f}%" for r in called)) if called else ""
+    out.write_text(json.dumps({"date": day, "called_text": called_text, "model_version": model["model_version"], "starters": "NBA daily lineups (Confirmed/Expected); projected from the last 5 games where the feed has no lineup", "players": out_rows}, indent=1))
     print(f"{len(tonight)} games, {len(out_rows)} projected starters -> {out}")
     for r in out_rows[:10]:
         print(f"{(r['name'] or '?')[:22]:<23}{r['team']:<5}vs {r['opponent']:<5}{100 * r['p_first_basket']:5.1f}%  {'top3' if r['top3_in_game'] else ''}{'  (carried from last season)' if r['carried_from_last_season'] else ''}")
