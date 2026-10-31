@@ -1,0 +1,205 @@
+{
+ "day": "2026-10-31",
+ "events": [
+  {
+   "sport": "nhl",
+   "game_id": "401892614",
+   "start_utc": "2026-10-31T17:00Z",
+   "team": "BOS",
+   "what": "goalie",
+   "value": "Jeremy Swayman",
+   "first_seen_utc": "2026-10-31T05:54:22Z",
+   "mins_before_start": 666
+  },
+  {
+   "sport": "nhl",
+   "game_id": "401892614",
+   "start_utc": "2026-10-31T17:00Z",
+   "team": "CHI",
+   "what": "goalie",
+   "value": "Arvid Soderblom",
+   "first_seen_utc": "2026-10-31T05:54:22Z",
+   "mins_before_start": 666
+  },
+  {
+   "sport": "nhl",
+   "game_id": "401892615",
+   "start_utc": "2026-10-31T17:00Z",
+   "team": "DET",
+   "what": "goalie",
+   "value": "John Gibson",
+   "first_seen_utc": "2026-10-31T05:54:22Z",
+   "mins_before_start": 666
+  },
+  {
+   "sport": "nhl",
+   "game_id": "401892615",
+   "start_utc": "2026-10-31T17:00Z",
+   "team": "STL",
+   "what": "goalie",
+   "value": "Joel Hofer",
+   "first_seen_utc": "2026-10-31T05:54:22Z",
+   "mins_before_start": 666
+  },
+  {
+   "sport": "nhl",
+   "game_id": "401892616",
+   "start_utc": "2026-10-31T18:00Z",
+   "team": "NSH",
+   "what": "goalie",
+   "value": "Juuse Saros",
+   "first_seen_utc": "2026-10-31T05:54:22Z",
+   "mins_before_start": 726
+  },
+  {
+   "sport": "nhl",
+   "game_id": "401892616",
+   "start_utc": "2026-10-31T18:00Z",
+   "team": "TB",
+   "what": "goalie",
+   "value": "Andrei Vasilevskiy",
+   "first_seen_utc": "2026-10-31T05:54:22Z",
+   "mins_before_start": 726
+  },
+  {
+   "sport": "nhl",
+   "game_id": "401892617",
+   "start_utc": "2026-10-31T18:00Z",
+   "team": "NYI",
+   "what": "goalie",
+   "value": "Ilya Sorokin",
+   "first_seen_utc": "2026-10-31T05:54:22Z",
+   "mins_before_start": 726
+  },
+  {
+   "sport": "nhl",
+   "game_id": "401892617",
+   "start_utc": "2026-10-31T18:00Z",
+   "team": "EDM",
+   "what": "goalie",
+   "value": "Tristan Jarry",
+   "first_seen_utc": "2026-10-31T05:54:22Z",
+   "mins_before_start": 726
+  },
+  {
+   "sport": "nhl",
+   "game_id": "401892618",
+   "start_utc": "2026-10-31T20:00Z",
+   "team": "LA",
+   "what": "goalie",
+   "value": "Darcy Kuemper",
+   "first_seen_utc": "2026-10-31T05:54:22Z",
+   "mins_before_start": 846
+  },
+  {
+   "sport": "nhl",
+   "game_id": "401892618",
+   "start_utc": "2026-10-31T20:00Z",
+   "team": "BUF",
+   "what": "goalie",
+   "value": "Colten Ellis",
+   "first_seen_utc": "2026-10-31T05:54:22Z",
+   "mins_before_start": 846
+  },
+  {
+   "sport": "nhl",
+   "game_id": "401892619",
+   "start_utc": "2026-10-31T20:00Z",
+   "team": "SJ",
+   "what": "goalie",
+   "value": "Yaroslav Askarov",
+   "first_seen_utc": "2026-10-31T05:54:22Z",
+   "mins_before_start": 846
+  },
+  {
+   "sport": "nhl",
+   "game_id": "401892619",
+   "start_utc": "2026-10-31T20:00Z",
+   "team": "OTT",
+   "what": "goalie",
+   "value": "Samuel Ersson",
+   "first_seen_utc": "2026-10-31T05:54:22Z",
+   "mins_before_start": 846
+  },
+  {
+   "sport": "nhl",
+   "game_id": "401892620",
+   "start_utc": "2026-10-31T23:00Z",
+   "team": "MTL",
+   "what": "goalie",
+   "value": "Jacob Fowler",
+   "first_seen_utc": "2026-10-31T05:54:22Z",
+   "mins_before_start": 1026
+  },
+  {
+   "sport": "nhl",
+   "game_id": "401892620",
+   "start_utc": "2026-10-31T23:00Z",
+   "team": "PIT",
+   "what": "goalie",
+   "value": "Arturs Silovs",
+   "first_seen_utc": "2026-10-31T05:54:22Z",
+   "mins_before_start": 1026
+  },
+  {
+   "sport": "nhl",
+   "game_id": "401892621",
+   "start_utc": "2026-10-31T23:00Z",
+   "team": "VAN",
+   "what": "goalie",
+   "value": "Kevin Lankinen",
+   "first_seen_utc": "2026-10-31T05:54:22Z",
+   "mins_before_start": 1026
+  },
+  {
+   "sport": "nhl",
+   "game_id": "401892621",
+   "start_utc": "2026-10-31T23:00Z",
+   "team": "TOR",
+   "what": "goalie",
+   "value": "Anthony Stolarz",
+   "first_seen_utc": "2026-10-31T05:54:22Z",
+   "mins_before_start": 1026
+  },
+  {
+   "sport": "nhl",
+   "game_id": "401892622",
+   "start_utc": "2026-11-01T00:00Z",
+   "team": "DAL",
+   "what": "goalie",
+   "value": "Jake Oettinger",
+   "first_seen_utc": "2026-10-31T05:54:22Z",
+   "mins_before_start": 1086
+  },
+  {
+   "sport": "nhl",
+   "game_id": "401892622",
+   "start_utc": "2026-11-01T00:00Z",
+   "team": "CBJ",
+   "what": "goalie",
+   "value": "Jet Greaves",
+   "first_seen_utc": "2026-10-31T05:54:22Z",
+   "mins_before_start": 1086
+  },
+  {
+   "sport": "nhl",
+   "game_id": "401892623",
+   "start_utc": "2026-11-01T02:00Z",
+   "team": "COL",
+   "what": "goalie",
+   "value": "Mackenzie Blackwood",
+   "first_seen_utc": "2026-10-31T05:54:22Z",
+   "mins_before_start": 1206
+  },
+  {
+   "sport": "nhl",
+   "game_id": "401892623",
+   "start_utc": "2026-11-01T02:00Z",
+   "team": "CGY",
+   "what": "goalie",
+   "value": "Arsenii Sergeev",
+   "first_seen_utc": "2026-10-31T05:54:22Z",
+   "mins_before_start": 1206
+  }
+ ]
+}
