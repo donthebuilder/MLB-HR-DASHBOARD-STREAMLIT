@@ -26,6 +26,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import nhl_backtest as nb      # noqa: E402
 import lineups                 # noqa: E402
 import injury_status           # noqa: E402
+from headline_lane import headline_lane   # noqa: E402
 
 ESPN_TO_NHL = {"NJ": "NJD", "LA": "LAK", "SJ": "SJS", "TB": "TBL", "UTAH": "UTA"}
 SYNTH = 9_000_000_000
@@ -149,6 +150,8 @@ def main():
                      "opp_goalie": ((pair[2] if not r["f"]["is_home"] else pair[1]).get("probable_goalie") if pair else None),
                      "opp_goalie_status": "probable (ESPN)" if pair else "unknown",
                      "book_ml_total": (pair[0].get("spread"), pair[0].get("total")) if pair else None, "start_utc": mt["start"]})
+    for r in rows:
+        r["headline_lane"] = headline_lane({"pts": r.get("p_points"), "ast": r.get("p_assist"), "sog": r.get("p_sog3")}, r["lane_base"], "nhl")
     injury_status.apply(rows, inj)
     for r in rows:
         r["p_goal_adj"] = round(r["p_goal"] * r["p_play"], 4)

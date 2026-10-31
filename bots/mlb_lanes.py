@@ -17,6 +17,7 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import mlb_hits_study as S              # noqa: E402
 from tune_models import fit_logistic   # noqa: E402
+from headline_lane import headline_lane   # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 LANES = {"hit": "1+ hit", "hrr": "2+ hits+runs+RBI", "tb2": "2+ total bases", "hr": "1+ home run"}
@@ -172,6 +173,7 @@ def board(cache, day):
                         z = m["intercept"] + sum(w * (f[n] - mu) / sd for n, w, mu, sd in zip(m["features"], m["weights"], m["mu"], m["sd"]))
                         r[f"p_{lane}"] = round(calibrate(m, z), 4)
                     r["lane_base"] = {"hit": round(f["hit100"], 4), "hrr": round(f["hrr100"], 4), "tb2": round(f["tb2100"], 4), "hr": round(f["hrpa"] * f["pa_pg"], 4)}
+                    r["headline_lane"] = headline_lane({k: r.get(f"p_{k}") for k in r["lane_base"]}, r["lane_base"], "mlb")
                     rows.append(r)
     rows.sort(key=lambda r: -r["p_hr"])
     return rows
