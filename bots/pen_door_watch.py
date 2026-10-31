@@ -575,11 +575,21 @@ def live_sweep(st: dict, fold_mode: bool = False) -> tuple[int, int]:
             time.sleep(LIVE_SWEEP_GAP_S)
         t0 = time.monotonic()
 
-        picks = slate_picks()
-        sched = get_json(f"{API}/schedule?sportId=1&date={dt.datetime.now(dt.UTC).date().isoformat()}"
+        # WHICH GAMES ARE LIVE (2026-10-26, known-issues #88). This asked for the UTC date's games only. MLB files a game under its
+        # LOCAL date, so after 00:00 UTC (8 pm ET) every game of the evening slate sits under the PREVIOUS date: a pitching change in the
+        # World Series opener (official date 10-23, first pitch 10-24 00:00Z) was never seen, because 10-24 listed only the next night's game.
+        # A two-day window (yesterday..today, the same one main() uses) holds every game that can be live.
+        _now = dt.datetime.now(dt.UTC)
+        sched = get_json(f"{API}/schedule?sportId=1&startDate={(_now.date() - dt.timedelta(days=1)).isoformat()}&endDate={_now.date().isoformat()}"
                          "&fields=dates,games,gamePk,status,abstractGameState")
         live_pks = [g["gamePk"] for d in (sched or {}).get("dates", []) for g in d.get("games", [])
                     if (g.get("status") or {}).get("abstractGameState") == "Live"]
+        # NOTHING LIVE: STOP, DON'T WAIT (2026-10-26). The run used to sleep 90 s twice and download the site's slate file three more
+        # times to look at an empty field. A game that starts in the next minutes is picked up by the next run (10 min), and its first
+        # pitching change is hours away. Fewer billed minutes, same alerts.
+        if not live_pks:
+            break
+        picks = slate_picks()
 
         orders: dict[int, dict[str, list[int]]] = {}   # posted batting orders, fetched once per game per sweep
         for pk in live_pks:
