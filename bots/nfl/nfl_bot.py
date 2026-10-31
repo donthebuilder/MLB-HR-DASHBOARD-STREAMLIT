@@ -1018,6 +1018,7 @@ def build_payload(mode: str, season: int, week: int | None, out_dir: Path) -> di
         # so plotting them as a timeline draws a monotone line whether or not
         # anything changed. Display only, and named so.
         ("dvp_trend", nfl_dvp.trend, stat_season),
+        ("dvp_total", nfl_dvp.build_total, stat_season),
         ("roles", nfl_dvp.current_roles, stat_season),
         ("coverage_team", nfl_coverage.team_profile, chart_season),
         ("coverage_player", nfl_coverage.player_vs_coverage, chart_season),
@@ -1466,7 +1467,7 @@ def write_nfl_signal_log(run_meta: dict, players: list[dict], out_dir: Path, pre
 # only the keys they read (~340 KB), rewritten by each run until the week's
 # first Sunday kickoff and never after, so the copy left standing is the last
 # one built before the main slate. Best effort: a failure prints and returns.
-MATCHUP_WEEK_KEYS = ("season", "alt_season", "dvp", "dvp_trend", "dvp_roles", "dvp_stats", "dvp_labels", "roles", "red_zone", "snaps")
+MATCHUP_WEEK_KEYS = ("season", "alt_season", "dvp", "dvp_trend", "dvp_total", "dvp_roles", "dvp_stats", "dvp_labels", "roles", "red_zone", "snaps")
 
 
 def first_sunday_kickoff(games: list[dict]) -> "dt.datetime | None":
@@ -1639,8 +1640,10 @@ def main() -> int:
     # table (#24).
     try:
         alt_dvp = nfl_dvp.build(alt_season)
+        alt_total = nfl_dvp.build_total(alt_season)
     except Exception as exc:
         alt_dvp = {}
+        alt_total = {}
         print(f"  dvp_prev({alt_season}) unavailable: {type(exc).__name__}: {exc}")
     if alt_dvp:
         # The other season's red-zone touches ride along (2026-09-29) so the
@@ -1654,6 +1657,8 @@ def main() -> int:
         (out / f"{a.prefix}matchup_prev.json").write_text(json.dumps({
             "season": alt_season,
             "dvp": alt_dvp,
+            "dvp_total": alt_total,
+            "dvp_total_labels": nfl_dvp.TOTAL_LABELS,
             "dvp_roles": nfl_dvp.ROLE_ORDER,
             "dvp_stats": nfl_dvp.DVP_STATS,
             "dvp_labels": nfl_dvp.STAT_LABELS,
@@ -1679,6 +1684,8 @@ def main() -> int:
         "alt_season": alt_season if alt_dvp else None,
         "dvp": extras.get("dvp", {}),
         "dvp_trend": extras.get("dvp_trend", {}),
+        "dvp_total": extras.get("dvp_total", {}),
+        "dvp_total_labels": nfl_dvp.TOTAL_LABELS,
         "dvp_roles": nfl_dvp.ROLE_ORDER,
         "dvp_stats": nfl_dvp.DVP_STATS,
         "dvp_labels": nfl_dvp.STAT_LABELS,
