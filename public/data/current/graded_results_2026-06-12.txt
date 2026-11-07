@@ -1,0 +1,182 @@
+RESULTS TRACKER - 2026-06-12
+------------------------------------------
+BETTABLE RESULTS
+Top 15 HR: 3/15 (20.0%)
+HR Picks: 2/15 (13.3%)
+Top Picks: 5/15 (33.3%)
+
+FULL SHEET BASE HIT PERFORMANCE
+Base Hit Accuracy: 61.7%
+
+HR CAPTURE (BETTABLE)
+Total Slate HRs: 39
+Caught in Top 15: 3
+Caught in HR Picks: 2
+Top 15 Capture Rate: 7.7%
+HR Pick Capture Rate: 5.1%
+
+MODEL VISION (Top 40)
+Model Caught HRs: 9 / 39
+Vision Rate: 23.1%
+
+UNIQUE PLAYER HR ACCURACY
+Unique Players Tracked: 106
+Players Who Homered: 21
+Unique HR Accuracy: 19.8%
+
+HR CATEGORY BREAKDOWN
+------------------------------------------
+🏆 TOP 15 BOARD → 3 HR
+🔥 TOP PICKS → 5 HR
+🧨 HR PICKS → 2 HR
+🏁 HRR PICKS → 8 HR
+💠 HIT PICKS → 3 HR
+⚾ CONTACT PICKS → 2 HR
+Best HR-producing category: 🏁 HRR PICKS
+
+HR RESULTS BY PLAYER
+------------------------------------------
+- Alec Burleson — 🏆#15 + 🔥 + ⭐
+- Matt Olson — 🏆#12 + 🔥 + ⭐
+- Spencer Torkelson — 🏆#11
+- Dominic Canzone — 🧨 + ⭐
+- Nick Kurtz — 🧨
+- Brandon Lowe — 🔥
+- Willson Contreras — 🔥
+- Yordan Alvarez — 🔥
+- Andrew Benintendi — 🏁
+- Bo Bichette — 🏁
+- Bryce Eldridge — 🏁 + ⭐
+- Ceddanne Rafaela — 🏁 + ⭐
+- Christian Walker — 🏁
+- James Wood — 🏁
+- Josh Naylor — 🏁 + ⭐
+- Kody Clemens — 🏁
+- Byron Buxton — 💠
+- Cody Bellinger — 💠
+- Jake Bauers — 💠
+- Juan Soto — ⚾
+- Kazuma Okamoto — ⚾ + ⭐
+
+MISSED HRs (NOT IN MODEL SHEET)
+------------------------------------------
+- Noelvi Marte (CIN) — not in model sheet / lineup pool
+- Cole Carrigg (COL) — not in model sheet / lineup pool
+- James Outman (DET) — not in model sheet / lineup pool
+- Brice Matthews (HOU) — not in model sheet / lineup pool
+- Endy Rodríguez (PIT) — not in model sheet / lineup pool
+- Colt Emerson (SEA) — not in model sheet / lineup pool
+- Dylan Crews (WSH) — not in model sheet / lineup pool
+
+POOL PERFORMANCE
+------------------------------------------
+4-MAN HR POOL A → 1/4 HR (Spencer Torkelson)
+4-MAN HR POOL B → 2/4 HR (Matt Olson, Nick Kurtz)
+4-MAN HR POOL C → 1/4 HR (Dominic Canzone)
+4-MAN HR POOL D → 0/4 HR (none)
+6-MAN HR POOL A → 0/6 HR (none)
+6-MAN HR POOL B → 2/6 HR (Byron Buxton, James Wood)
+6-MAN HR POOL C → 1/6 HR (Yordan Alvarez)
+6-MAN HR POOL D → 2/6 HR (Jake Bauers, Kody Clemens)
+
+PAIR PERFORMANCE
+------------------------------------------
+Pair 1 → 0/2 HR (none) | Dillon Dingler + Hunter Goodman
+Pair 2 → 1/2 HR (Alec Burleson) | Coby Mayo + Alec Burleson
+Pair 3 → 0/2 HR (none) | Kerry Carpenter + Colton Cowser
+Pair 4 → 0/2 HR (none) | Ian Happ + Andy Pages
+
+PLAYER TYPE PERFORMANCE
+------------------------------------------
+🏁 HRR PICKS (30)
+2+ HRR: 56.7% | 3+ HRR: 46.7%
+
+💠 HIT PICKS (30)
+1+ Hit: 66.7% | HR: 10.0%
+
+⚾ CONTACT PICKS (15)
+XBH: 46.7% | 2+ TB: 46.7% | HR: 13.3%
+
+HIT RESULTS BY CATEGORY
+------------------------------------------
+
+🔥 TOP PICKS (1+ Hit)
+- Willson Contreras — 3H 🔥
+- Yordan Alvarez — 3H 🔥
+- Alec Burleson — 1H
+- Brandon Lowe — 1H
+- Corbin Carroll — 1H
+- Matt Olson — 1H
+- Trent Grisham — 1H
+- Zach Neto — 1H
+
+🧨 HR PICKS (1+ Hit)
+- Miguel Vargas — 3H 🔥
+- Dominic Canzone — 2H ⭐
+- Nick Kurtz — 2H ⭐
+- JJ Bleday — 1H
+- Jordan Walker — 1H
+- Kyle Schwarber — 1H
+- Mauricio Dubón — 1H
+- Mike Trout — 1H
+- Paul Goldschmidt — 1H
+
+🏁 HRR PICKS (1+ Hit)
+- Bryce Eldridge — 3H 🔥
+- Ceddanne Rafaela — 3H 🔥
+- Chase Meidroth — 3H 🔥
+- Salvador Perez — 3H 🔥
+- Bo Bichette — 2H ⭐
+- Iván Herrera — 2H ⭐
+- James Wood — 2H ⭐
+- Ozzie Albies — 2H ⭐
+- Andrew Benintendi — 1H
+- Brice Turang — 1H
+- Bryan Reynolds — 1H
+- Christian Walker — 1H
+- Jazz Chisholm Jr. — 1H
+- Jo Adell — 1H
+- Jonah Heim — 1H
+- Josh Naylor — 1H
+- Ketel Marte — 1H
+- Kody Clemens — 1H
+- Nick Gonzales — 1H
+- Pete Alonso — 1H
+- Pete Crow-Armstrong — 1H
+- William Contreras — 1H
+
+💠 HIT PICKS (1+ Hit)
+- Byron Buxton — 3H 🔥
+- Cole Young — 2H ⭐
+- Ernie Clement — 2H ⭐
+- Heriberto Hernández — 2H ⭐
+- JJ Wetherholt — 2H ⭐
+- Cody Bellinger — 1H
+- Fernando Tatis Jr. — 1H
+- Gabriel Moreno — 1H
+- Geraldo Perdomo — 1H
+- Jackson Chourio — 1H
+- Jake Bauers — 1H
+- Josh Jung — 1H
+- Michael Harris II — 1H
+- Otto Lopez — 1H
+- Randy Arozarena — 1H
+- Sam Antonacci — 1H
+- Taylor Ward — 1H
+- Vinnie Pasquantino — 1H
+- Willi Castro — 1H
+- Yandy Díaz — 1H
+
+⚾ CONTACT PICKS (1+ Hit)
+- Joc Pederson — 2H ⭐
+- Juan Soto — 2H ⭐
+- Kyle Stowers — 2H ⭐
+- Logan O'Hoppe — 2H ⭐
+- Angel Martínez — 1H
+- Carter Jensen — 1H
+- Kazuma Okamoto — 1H
+- Victor Caratini — 1H
+- Zack Gelof — 1H
+
+MODEL DIAGNOSTIC (LOW PRIORITY)
+Full Sheet HR Coverage: 32 / 39 (82.1%)

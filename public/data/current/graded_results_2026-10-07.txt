@@ -1,0 +1,147 @@
+RESULTS TRACKER - 2026-10-07
+------------------------------------------
+BETTABLE RESULTS
+Top 15 HR: 1/15 (6.7%)
+HR Picks: 0/4 (0.0%)
+Top Picks: 0/4 (0.0%)
+
+FULL SHEET BASE HIT PERFORMANCE
+Base Hit Accuracy: 73.0%
+
+HR CAPTURE (BETTABLE)
+Total Slate HRs: 4
+Caught in Top 15: 1
+Caught in HR Picks: 0
+Top 15 Capture Rate: 25.0%
+HR Pick Capture Rate: 0.0%
+
+MODEL VISION (Top 40)
+Model Caught HRs: 3 / 4
+Vision Rate: 75.0%
+
+UNIQUE PLAYER HR ACCURACY
+Unique Players Tracked: 25
+Players Who Homered: 3
+Unique HR Accuracy: 12.0%
+
+HR CATEGORY BREAKDOWN
+------------------------------------------
+🏆 TOP 15 BOARD → 1 HR
+🔥 TOP PICKS → 0 HR
+🧨 HR PICKS → 0 HR
+🏁 HRR PICKS → 1 HR
+💠 HIT PICKS → 1 HR
+⚾ CONTACT PICKS → 0 HR
+Best HR-producing category: 🏆 TOP 15 BOARD
+
+LONGEST HR (BOARD)
+------------------------------------------
+- Fernando Tatis Jr. — 429 ft · 110.6 mph · 27.0°
+- Victor Mesa Jr. — 401 ft · 107.3 mph · 34.0°
+- Max Muncy — 389 ft · 104.3 mph · 29.0°
+Longest on the board: Fernando Tatis Jr. (429 ft)
+
+
+HR RESULTS BY PLAYER
+------------------------------------------
+- Max Muncy — 🏆#10
+- Victor Mesa Jr. — 🏁
+- Fernando Tatis Jr. — 💠 + ⭐
+
+POOL PERFORMANCE
+------------------------------------------
+4-MAN Pool A — Strongest → 1/4 HR (Fernando Tatis Jr.)
+4-MAN Pool B — HRR+Power → 0/4 HR (none)
+4-MAN Pool C — Balanced → 0/4 HR (none)
+4-MAN Pool D — Variance → 0/4 HR (none)
+3-MAN Pool A — Strongest → 0/3 HR (none)
+3-MAN Pool B — HRR+Var → 0/3 HR (none)
+3-MAN Pool C — Balanced → 0/3 HR (none)
+3-MAN Pool D — Variance → 0/3 HR (none)
+SIX-MAN LEGACY Pool A — Strongest → 0/6 HR (none)
+SIX-MAN LEGACY Pool B — Balanced → 0/6 HR (none)
+SIX-MAN LEGACY Pool C — Mid / Var → 1/6 HR (Max Muncy)
+SIX-MAN LEGACY Pool D — Contrarian → 0/6 HR (none)
+OLD-RECIPE 3-MAN Pool A1 → 0/3 HR (none)
+OLD-RECIPE 3-MAN Pool A2 → 0/3 HR (none)
+OLD-RECIPE 3-MAN Pool B1 → 0/3 HR (none)
+OLD-RECIPE 3-MAN Pool B2 → 0/3 HR (none)
+OLD-RECIPE 3-MAN Pool C1 → 0/3 HR (none)
+OLD-RECIPE 3-MAN Pool C2 → 0/3 HR (none)
+OLD-RECIPE 3-MAN Pool D1 → 1/3 HR (Max Muncy)
+OLD-RECIPE 3-MAN Pool D2 → 0/3 HR (none)
+
+PAIR PERFORMANCE
+------------------------------------------
+Pair 1 → 0/2 HR (none) | Munetaka Murakami + Ben Rice
+Pair 2 → 0/2 HR (none) | Randal Grichuk + Junior Caminero
+Pair 3 → 0/2 HR (none) | Manny Machado + Jackson Chourio
+Pair 4 → 0/2 HR (none) | Mookie Betts + Will Smith
+Pair 5 → 0/2 HR (none) | Matt Olson + George Lombard Jr.
+Pair 6 → 1/2 HR (Max Muncy) | Max Muncy + Andy Pages
+Pair 7 → 1/2 HR (Fernando Tatis Jr.) | Fernando Tatis Jr. + Teoscar Hernández
+Pair 8 → 0/2 HR (none) | Chase DeLauter + William Contreras
+Pair 9 → 0/2 HR (none) | Miguel Vargas + Austin Wells
+Pair 10 → 0/2 HR (none) | Chase Meidroth + Drake Baldwin
+
+PLAYER TYPE PERFORMANCE
+------------------------------------------
+🏆 TOP 15 BOARD (15)
+HR: 6.7% | 1+ Hit: 80.0% | XBH: 20.0% | 2+ TB: 40.0% | 2+ HRR: 60.0% | 3+ HRR: 33.3%
+
+🔥 TOP PICKS (4)
+HR: 0.0% | 1+ Hit: 50.0% | XBH: 0.0% | 2+ TB: 0.0% | 2+ HRR: 50.0% | 3+ HRR: 0.0%
+
+🧨 HR PICKS (4)
+HR: 0.0% | 1+ Hit: 75.0% | XBH: 0.0% | 2+ TB: 0.0% | 2+ HRR: 25.0% | 3+ HRR: 0.0%
+
+🏁 HRR PICKS (4)
+HR: 25.0% | 1+ Hit: 75.0% | XBH: 50.0% | 2+ TB: 50.0% | 2+ HRR: 50.0% | 3+ HRR: 25.0%
+
+💠 HIT PICKS (4)
+HR: 25.0% | 1+ Hit: 75.0% | XBH: 25.0% | 2+ TB: 25.0% | 2+ HRR: 50.0% | 3+ HRR: 50.0%
+
+⚾ CONTACT PICKS (4)
+HR: 0.0% | 1+ Hit: 75.0% | XBH: 25.0% | 2+ TB: 25.0% | 2+ HRR: 50.0% | 3+ HRR: 25.0%
+
+
+DESIGNED OUTCOME (did the pick do its job)
+------------------------------------------
+🏆 TOP 15 BOARD (15) -> 1/15 (6.7%)  ·  needs: HR
+🔥 TOP PICKS (4) -> 0/4 (0.0%)  ·  needs: most productive of our picks in his game (HRR or TB)
+🧨 HR PICKS (4) -> 0/4 (0.0%)  ·  needs: HR
+🏁 HRR PICKS (4) -> 2/4 (50.0%)  ·  needs: 2+ hits+runs+RBI
+💠 HIT PICKS (4) -> 3/4 (75.0%)  ·  needs: 1+ hit
+⚾ CONTACT PICKS (4) -> 1/4 (25.0%)  ·  needs: 2+ TB or XBH
+ALL PICKS -> 7/37 (18.9%)
+
+HIT RESULTS BY CATEGORY
+------------------------------------------
+
+🔥 TOP PICKS (1+ Hit)
+- Ben Rice — 1H
+- Jackson Chourio — 1H
+
+🧨 HR PICKS (1+ Hit)
+- Junior Caminero — 1H
+- Manny Machado — 1H
+- Randal Grichuk — 1H
+
+🏁 HRR PICKS (1+ Hit)
+- Brice Turang — 1H
+- Chase Meidroth — 1H
+- Victor Mesa Jr. — 1H
+
+💠 HIT PICKS (1+ Hit)
+- Fernando Tatis Jr. — 1H
+- Sam Antonacci — 1H
+- Yandy Díaz — 1H
+
+⚾ CONTACT PICKS (1+ Hit)
+- Michael Harris II — 2H ⭐
+- Ben Rice — 1H
+- Brice Turang — 1H
+
+MODEL DIAGNOSTIC (LOW PRIORITY)
+Full Sheet HR Coverage: 4 / 4 (100.0%)
+Pregame Pool HR Coverage: 4 / 4 (100.0%) over 4 locked games; 0 HR by late adds

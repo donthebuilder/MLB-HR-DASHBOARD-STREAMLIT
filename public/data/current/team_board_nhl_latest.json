@@ -1,0 +1,47 @@
+{
+ "date": "2026-11-06",
+ "games": [
+  {
+   "espn_id": "401892659",
+   "home": "BUF",
+   "away": "CBJ",
+   "start": "2026-11-07T00:00Z",
+   "status": "Final",
+   "model_spread_home": -1.2,
+   "model_p_home": 0.6804,
+   "book_spread_home": null,
+   "book_total": null,
+   "gap_pts": null,
+   "history_games": 260,
+   "model_version": "nhl_team_v1"
+  },
+  {
+   "espn_id": "401892660",
+   "home": "MIN",
+   "away": "SJS",
+   "start": "2026-11-07T01:00Z",
+   "status": "In Progress",
+   "model_spread_home": -1.0,
+   "model_p_home": 0.6526,
+   "book_spread_home": null,
+   "book_total": null,
+   "gap_pts": null,
+   "history_games": 262,
+   "model_version": "nhl_team_v1"
+  },
+  {
+   "espn_id": "401892661",
+   "home": "CGY",
+   "away": "ANA",
+   "start": "2026-11-07T01:00Z",
+   "status": "In Progress",
+   "model_spread_home": -0.7,
+   "model_p_home": 0.6021,
+   "book_spread_home": null,
+   "book_total": null,
+   "gap_pts": null,
+   "history_games": 260,
+   "model_version": "nhl_team_v1"
+  }
+ ]
+}

@@ -1,0 +1,182 @@
+RESULTS TRACKER - 2026-09-12
+------------------------------------------
+BETTABLE RESULTS
+Top 15 HR: 6/15 (40.0%)
+HR Picks: 3/15 (20.0%)
+Top Picks: 5/14 (35.7%)
+
+FULL SHEET BASE HIT PERFORMANCE
+Base Hit Accuracy: 69.7%
+
+HR CAPTURE (BETTABLE)
+Total Slate HRs: 46
+Caught in Top 15: 6
+Caught in HR Picks: 3
+Top 15 Capture Rate: 13.0%
+HR Pick Capture Rate: 6.5%
+
+MODEL VISION (Top 40)
+Model Caught HRs: 14 / 46
+Vision Rate: 30.4%
+
+UNIQUE PLAYER HR ACCURACY
+Unique Players Tracked: 72
+Players Who Homered: 18
+Unique HR Accuracy: 25.0%
+
+HR CATEGORY BREAKDOWN
+------------------------------------------
+🏆 TOP 15 BOARD → 6 HR
+🔥 TOP PICKS → 5 HR
+🧨 HR PICKS → 3 HR
+🏁 HRR PICKS → 4 HR
+💠 HIT PICKS → 4 HR
+⚾ CONTACT PICKS → 3 HR
+Best HR-producing category: 🏆 TOP 15 BOARD
+
+HR RESULTS BY PLAYER
+------------------------------------------
+- Carter Jensen — 🏆#6 + 🔥 + ⚾
+- Eugenio Suárez — 🏆#10 + 🧨 + ⭐
+- Max Muncy — 🏆#11 + 🔥
+- Mookie Betts — 🏆#13 + 🏁
+- Rafael Devers — 🏆#1 + 🔥 + ⚾
+- Randal Grichuk — 🏆#14
+- Jackson Merrill — 🧨
+- Juan Soto — 🧨
+- Francisco Lindor — 🔥
+- Hunter Goodman — 🔥
+- Bryce Harper — 🏁
+- Cody Bellinger — 🏁 + ⚾
+- Pete Alonso — 🏁
+- Brett Bateman — 💠
+- Brice Turang — 💠 + ⭐
+- Fernando Tatis Jr. — 💠
+- Leo Bernal — 💠
+- Kevin McGonigle — 
+
+MISSED HRs (NOT IN MODEL SHEET)
+------------------------------------------
+- Emmanuel Rodriguez (MIN) — not in model sheet / lineup pool
+- Dominic Canzone (SEA) — not in model sheet / lineup pool
+- Michael Arroyo (SEA) — not in model sheet / lineup pool
+- Randy Arozarena (SEA) — not in model sheet / lineup pool
+
+POOL PERFORMANCE
+------------------------------------------
+4-MAN Pool A — Strongest → 2/4 HR (Randal Grichuk, Francisco Lindor)
+4-MAN Pool B — HRR+Power → 2/4 HR (Carter Jensen, Jackson Merrill)
+4-MAN Pool C — Balanced → 3/4 HR (Mookie Betts, Carter Jensen, Pete Alonso)
+4-MAN Pool D — Variance → 0/4 HR (none)
+3-MAN Pool A — Strongest → 1/3 HR (Eugenio Suárez)
+3-MAN Pool B — HRR+Var → 0/3 HR (none)
+3-MAN Pool C — Balanced → 0/3 HR (none)
+3-MAN Pool D — Variance → 0/3 HR (none)
+
+PAIR PERFORMANCE
+------------------------------------------
+Pair 1 → 0/2 HR (none) | Kyle Schwarber + Junior Caminero
+Pair 2 → 1/2 HR (Rafael Devers) | Rafael Devers + Junior Caminero
+Pair 3 → 0/2 HR (none) | Victor Mesa Jr. + Elly De La Cruz
+Pair 4 → 1/2 HR (Max Muncy) | Elly De La Cruz + Max Muncy
+Pair 5 → 0/2 HR (none) | Joc Pederson + Munetaka Murakami
+Pair 6 → 1/2 HR (Hunter Goodman) | Hunter Goodman + Lazaro Montes
+Pair 7 → 1/2 HR (Max Muncy) | Max Muncy + Coby Mayo
+Pair 8 → 1/2 HR (Randal Grichuk) | Randal Grichuk + Joshua Báez
+Pair 9 → 0/2 HR (none) | Lazaro Montes + Matt Olson
+Pair 10 → 1/2 HR (Juan Soto) | Juan Soto + Esmerlyn Valdez
+
+PLAYER TYPE PERFORMANCE
+------------------------------------------
+🏆 TOP 15 BOARD (15)
+HR: 40.0% | 1+ Hit: 80.0% | XBH: 53.3% | 2+ TB: 53.3% | 2+ HRR: 60.0% | 3+ HRR: 46.7%
+
+🔥 TOP PICKS (14)
+HR: 35.7% | 1+ Hit: 78.6% | XBH: 50.0% | 2+ TB: 50.0% | 2+ HRR: 71.4% | 3+ HRR: 57.1%
+
+🧨 HR PICKS (15)
+HR: 20.0% | 1+ Hit: 60.0% | XBH: 33.3% | 2+ TB: 40.0% | 2+ HRR: 46.7% | 3+ HRR: 40.0%
+
+🏁 HRR PICKS (15)
+HR: 26.7% | 1+ Hit: 66.7% | XBH: 33.3% | 2+ TB: 40.0% | 2+ HRR: 53.3% | 3+ HRR: 46.7%
+
+💠 HIT PICKS (14)
+HR: 28.6% | 1+ Hit: 64.3% | XBH: 28.6% | 2+ TB: 35.7% | 2+ HRR: 57.1% | 3+ HRR: 42.9%
+
+⚾ CONTACT PICKS (14)
+HR: 21.4% | 1+ Hit: 64.3% | XBH: 21.4% | 2+ TB: 28.6% | 2+ HRR: 50.0% | 3+ HRR: 35.7%
+
+
+DESIGNED OUTCOME (did the pick do its job)
+------------------------------------------
+🏆 TOP 15 BOARD (15) -> 6/15 (40.0%)  ·  needs: HR
+🔥 TOP PICKS (14) -> 8/14 (57.1%)  ·  needs: most productive of our picks in his game (HRR or TB)
+🧨 HR PICKS (15) -> 3/15 (20.0%)  ·  needs: HR
+🏁 HRR PICKS (15) -> 8/15 (53.3%)  ·  needs: 2+ hits+runs+RBI
+💠 HIT PICKS (14) -> 9/14 (64.3%)  ·  needs: 1+ hit
+⚾ CONTACT PICKS (14) -> 4/14 (28.6%)  ·  needs: 2+ TB or XBH
+ALL PICKS -> 38/99 (38.4%)
+
+HIT RESULTS BY CATEGORY
+------------------------------------------
+
+🔥 TOP PICKS (1+ Hit)
+- Francisco Lindor — 3H 🔥
+- Elly De La Cruz — 2H ⭐
+- Carter Jensen — 1H
+- Coby Mayo — 1H
+- Corey Seager — 1H
+- Hunter Goodman — 1H
+- Kody Clemens — 1H
+- Max Muncy — 1H
+- Munetaka Murakami — 1H
+- Rafael Devers — 1H
+- Victor Mesa Jr. — 1H
+
+🧨 HR PICKS (1+ Hit)
+- Eugenio Suárez — 3H 🔥
+- CJ Abrams — 2H ⭐
+- Juan Soto — 2H ⭐
+- Riley Greene — 2H ⭐
+- Alex Bregman — 1H
+- Angel Martínez — 1H
+- Jackson Merrill — 1H
+- Kazuma Okamoto — 1H
+- Wilyer Abreu — 1H
+
+🏁 HRR PICKS (1+ Hit)
+- TJ Rumfield — 3H 🔥
+- Cody Bellinger — 2H ⭐
+- Gabriel Moreno — 2H ⭐
+- Bobby Witt Jr. — 1H
+- Bryce Harper — 1H
+- Jackson Chourio — 1H
+- James Wood — 1H
+- Junior Caminero — 1H
+- Mookie Betts — 1H
+- Pete Alonso — 1H
+
+💠 HIT PICKS (1+ Hit)
+- Brice Turang — 2H ⭐
+- Fernando Tatis Jr. — 2H ⭐
+- Otto Lopez — 2H ⭐
+- Brett Bateman — 1H
+- Bryan Reynolds — 1H
+- Jake McCarthy — 1H
+- Leo Bernal — 1H
+- Salvador Perez — 1H
+- Steven Kwan — 1H
+
+⚾ CONTACT PICKS (1+ Hit)
+- Cody Bellinger — 2H ⭐
+- Riley Greene — 2H ⭐
+- Bryan Reynolds — 1H
+- Carter Jensen — 1H
+- Jackson Chourio — 1H
+- Kazuma Okamoto — 1H
+- Rafael Devers — 1H
+- Trea Turner — 1H
+- Victor Mesa Jr. — 1H
+
+MODEL DIAGNOSTIC (LOW PRIORITY)
+Full Sheet HR Coverage: 42 / 46 (91.3%)

@@ -1,0 +1,122 @@
+RESULTS TRACKER - 2026-10-05
+------------------------------------------
+BETTABLE RESULTS
+Top 15 HR: 1/15 (6.7%)
+HR Picks: 0/2 (0.0%)
+Top Picks: 1/2 (50.0%)
+
+FULL SHEET BASE HIT PERFORMANCE
+Base Hit Accuracy: 61.5%
+
+HR CAPTURE (BETTABLE)
+Total Slate HRs: 2
+Caught in Top 15: 1
+Caught in HR Picks: 0
+Top 15 Capture Rate: 50.0%
+HR Pick Capture Rate: 0.0%
+
+MODEL VISION (Top 40)
+Model Caught HRs: 2 / 2
+Vision Rate: 100.0%
+
+UNIQUE PLAYER HR ACCURACY
+Unique Players Tracked: 20
+Players Who Homered: 1
+Unique HR Accuracy: 5.0%
+
+HR CATEGORY BREAKDOWN
+------------------------------------------
+🏆 TOP 15 BOARD → 1 HR
+🔥 TOP PICKS → 1 HR
+🧨 HR PICKS → 0 HR
+🏁 HRR PICKS → 0 HR
+💠 HIT PICKS → 0 HR
+⚾ CONTACT PICKS → 1 HR
+Best HR-producing category: 🏆 TOP 15 BOARD
+
+LONGEST HR (BOARD)
+------------------------------------------
+- Ben Rice — 372 ft · 100.1 mph · 33.0°
+Longest on the board: Ben Rice (372 ft)
+
+
+HR RESULTS BY PLAYER
+------------------------------------------
+- Ben Rice — 🏆#2 + 🔥 + ⚾ + ⭐
+
+POOL PERFORMANCE
+------------------------------------------
+4-MAN Pool A — Strongest → 0/2 HR (none)
+4-MAN Pool B — HRR+Power → 0/2 HR (none)
+4-MAN Pool C — Balanced → 0/2 HR (none)
+4-MAN Pool D — Variance → 0/2 HR (none)
+3-MAN Pool A — Strongest → 1/3 HR (Ben Rice)
+3-MAN Pool B — HRR+Var → 0/3 HR (none)
+3-MAN Pool C — Balanced → 0/3 HR (none)
+3-MAN Pool D — Variance → 0/3 HR (none)
+
+PAIR PERFORMANCE
+------------------------------------------
+Pair 1 → 1/2 HR (Ben Rice) | Munetaka Murakami + Ben Rice
+Pair 2 → 0/2 HR (none) | Junior Caminero + Miguel Vargas
+Pair 3 → 0/2 HR (none) | Chase Meidroth + Chase DeLauter
+Pair 4 → 0/2 HR (none) | George Lombard Jr. + Luis García Jr.
+Pair 5 → 0/2 HR (none) | Angel Martínez + Austin Wells
+Pair 6 → 0/2 HR (none) | Jo Adell + Kyle Teel
+Pair 7 → 0/2 HR (none) | Spencer Jones + Patrick Bailey
+
+PLAYER TYPE PERFORMANCE
+------------------------------------------
+🏆 TOP 15 BOARD (15)
+HR: 6.7% | 1+ Hit: 53.3% | XBH: 33.3% | 2+ TB: 40.0% | 2+ HRR: 40.0% | 3+ HRR: 20.0%
+
+🔥 TOP PICKS (2)
+HR: 50.0% | 1+ Hit: 100.0% | XBH: 50.0% | 2+ TB: 50.0% | 2+ HRR: 100.0% | 3+ HRR: 50.0%
+
+🧨 HR PICKS (2)
+HR: 0.0% | 1+ Hit: 100.0% | XBH: 100.0% | 2+ TB: 100.0% | 2+ HRR: 100.0% | 3+ HRR: 50.0%
+
+🏁 HRR PICKS (2)
+HR: 0.0% | 1+ Hit: 50.0% | XBH: 0.0% | 2+ TB: 0.0% | 2+ HRR: 50.0% | 3+ HRR: 0.0%
+
+💠 HIT PICKS (2)
+HR: 0.0% | 1+ Hit: 50.0% | XBH: 0.0% | 2+ TB: 0.0% | 2+ HRR: 50.0% | 3+ HRR: 0.0%
+
+⚾ CONTACT PICKS (2)
+HR: 50.0% | 1+ Hit: 100.0% | XBH: 50.0% | 2+ TB: 50.0% | 2+ HRR: 100.0% | 3+ HRR: 50.0%
+
+
+DESIGNED OUTCOME (did the pick do its job)
+------------------------------------------
+🏆 TOP 15 BOARD (15) -> 1/15 (6.7%)  ·  needs: HR
+🔥 TOP PICKS (2) -> 1/2 (50.0%)  ·  needs: most productive of our picks in his game (HRR or TB)
+🧨 HR PICKS (2) -> 0/2 (0.0%)  ·  needs: HR
+🏁 HRR PICKS (2) -> 1/2 (50.0%)  ·  needs: 2+ hits+runs+RBI
+💠 HIT PICKS (2) -> 1/2 (50.0%)  ·  needs: 1+ hit
+⚾ CONTACT PICKS (2) -> 1/2 (50.0%)  ·  needs: 2+ TB or XBH
+ALL PICKS -> 5/26 (19.2%)
+
+HIT RESULTS BY CATEGORY
+------------------------------------------
+
+🔥 TOP PICKS (1+ Hit)
+- Ben Rice — 2H ⭐
+- Munetaka Murakami — 1H
+
+🧨 HR PICKS (1+ Hit)
+- Junior Caminero — 2H ⭐
+- Jo Adell — 1H
+
+🏁 HRR PICKS (1+ Hit)
+- Miguel Vargas — 1H
+
+💠 HIT PICKS (1+ Hit)
+- Yandy Díaz — 1H
+
+⚾ CONTACT PICKS (1+ Hit)
+- Ben Rice — 2H ⭐
+- Munetaka Murakami — 1H
+
+MODEL DIAGNOSTIC (LOW PRIORITY)
+Full Sheet HR Coverage: 2 / 2 (100.0%)
+Pregame Pool HR Coverage: 2 / 2 (100.0%) over 2 locked games; 0 HR by late adds

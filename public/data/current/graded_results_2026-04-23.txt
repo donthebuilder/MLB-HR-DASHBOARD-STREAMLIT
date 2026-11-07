@@ -1,0 +1,104 @@
+RESULTS TRACKER - 2026-04-23
+------------------------------------------
+FULL SHEET TRACKED PICKS: 78 | HR Accuracy: 19.2%
+FULL SHEET BASE HIT PICKS: 78 | Base Hit Accuracy: 75.6%
+
+PAIRS TRACKED: 4 | HR Accuracy: 0.0%
+4-MAN POOLS TRACKED: 4 | HR Accuracy: 0.0%
+6-MAN POOLS TRACKED: 4 | HR Accuracy: 0.0%
+
+TOP 15 TRACKED: 15 | HR Accuracy: 26.7%
+HR PICKS TRACKED: 9 | HR Accuracy: 11.1%
+TOP PICKS TRACKED: 9 | HR Accuracy: 11.1%
+
+HRR PICKS TRACKED: 18 | 2+ HRR Accuracy: 55.6% | 3+ HRR Accuracy: 55.6%
+HIT PICKS TRACKED: 18 | Hit Accuracy: 72.2% | HR Accuracy: 11.1%
+CONTACT PICKS TRACKED: 9 | XBH Accuracy: 55.6% | 2+ TB Accuracy: 55.6% | HR Accuracy: 22.2%
+
+TRACKED PICKS THAT HOMERED
+- 🏆#12 ⚾ CJ Abrams - HR 33.8
+  BA(S) 0.292 | BA vs RHP 0.327 | ISO 0.270 | 350+ 4/21 | L5 2H/1HR/1XBH
+- 🏆#2 🧨 James Wood - HR 47.4
+  BA(S) 0.255 | BA vs RHP 0.262 | ISO 0.353 | 350+ 7/17 | L5 4H/3HR/3XBH
+- 🏆#7 🔥 Mickey Moniak - HR 39.7
+  BA(S) 0.303 | BA vs RHP 0.340 | ISO 0.394 | 350+ 4/23 | L5 8H/2HR/5XBH
+- 🏆#10 🏁 Oneil Cruz - HR 35.6
+  BA(S) 0.286 | BA vs RHP 0.239 | ISO 0.265 | 350+ 5/20 | L5 4H/2HR/3XBH
+- 🏁 Ian Happ - HR 22.1
+  BA(S) 0.253 | BA vs LHP 0.192 | ISO 0.274 | 350+ 3/21 | L5 7H/1HR/1XBH
+- 🏁 Ozzie Albies - HR 16.1
+  BA(S) 0.297 | BA vs RHP 0.298 | ISO 0.178 | 350+ 1/28 | L5 7H/1HR/2XBH
+- 🏁 Ryan Jeffers - HR 16.6
+  BA(S) 0.263 | BA vs RHP 0.250 | ISO 0.176 | 350+ 3/20 | L5 2H/0HR/1XBH
+- 🏁 Xander Bogaerts - HR 27.9
+  BA(S) 0.284 | BA vs RHP 0.275 | ISO 0.159 | 350+ 2/24 | L5 6H/1HR/1XBH
+- 💠 Riley Greene - HR 19.6
+  BA(S) 0.289 | BA vs RHP 0.261 | ISO 0.155 | 350+ 0/16 | L5 8H/1HR/3XBH
+- 💠 Seiya Suzuki - HR 17.7
+  BA(S) 0.319 | BA vs LHP 0.500 | ISO 0.213 | 350+ 1/20 | L5 7H/3HR/3XBH
+- ⚾ Jahmai Jones - HR 27.5
+  BA(S) 0.240 | BA vs RHP 0.000 | ISO 0.280 | 350+ 3/14 | L5 3H/2HR/2XBH
+
+TRACKED PICKS THAT GOT A BASE HIT
+- Mickey Moniak (COL) | TOP15#7 | 4 H
+- Matt Olson (ATL) | TOP15#11 | 3 H
+- Ramón Laureano (SD) | TOP15#9 | 3 H
+- Aaron Judge (NYY) | TOP15#8 | 1 H
+- Ben Rice (NYY) | TOP15#6 | 1 H
+- Byron Buxton (MIN) | TOP15#13 | 1 H
+- CJ Abrams (WSH) | TOP15#12 | 1 H
+- Dalton Rushing (LAD) | TOP15#3 | 1 H
+- Dillon Dingler (DET) | TOP15#4 | 1 H
+- James Wood (WSH) | TOP15#2 | 1 H
+- Kevin McGonigle (DET) | TOP15#14 | 1 H
+- Munetaka Murakami (CWS) | TOP15#1 | 1 H
+- Oneil Cruz (PIT) | TOP15#10 | 1 H
+- Ramón Laureano (SD) | HR | 3 H
+- Aaron Judge (NYY) | HR | 1 H
+- Byron Buxton (MIN) | HR | 1 H
+- Dillon Dingler (DET) | HR | 1 H
+- James Wood (WSH) | HR | 1 H
+- Max Muncy (LAD) | HR | 1 H
+- Munetaka Murakami (CWS) | HR | 1 H
+- Mickey Moniak (COL) | TOP | 4 H
+- Ben Rice (NYY) | TOP | 1 H
+- Dalton Rushing (LAD) | TOP | 1 H
+- Drake Baldwin (ATL) | TOP | 1 H
+- Ildemaro Vargas (ARI) | TOP | 1 H
+- Josh Jung (TEX) | TOP | 1 H
+- Kevin McGonigle (DET) | TOP | 1 H
+- Matt Olson (ATL) | HRR | 3 H
+- Ozzie Albies (ATL) | HRR | 3 H
+- Gary Sánchez (MIL) | HRR | 2 H
+- Ian Happ (CHC) | HRR | 2 H
+- Kyle Tucker (LAD) | HRR | 2 H
+- TJ Rumfield (COL) | HRR | 2 H
+- Xander Bogaerts (SD) | HRR | 2 H
+- Alex Bregman (CHC) | HRR | 1 H
+- Amed Rosario (NYY) | HRR | 1 H
+- Geraldo Perdomo (ARI) | HRR | 1 H
+- Josh Bell (MIN) | HRR | 1 H
+- Oneil Cruz (PIT) | HRR | 1 H
+- Ryan Jeffers (MIN) | HRR | 1 H
+- Wilyer Abreu (BOS) | HRR | 1 H
+- Austin Martin (MIN) | HIT | 3 H
+- Carson Kelly (CHC) | HIT | 3 H
+- Seiya Suzuki (CHC) | HIT | 3 H
+- Troy Johnston (COL) | HIT | 3 H
+- Daylen Lile (WSH) | HIT | 2 H
+- Dominic Smith (ATL) | HIT | 2 H
+- Miguel Andujar (SD) | HIT | 2 H
+- Riley Greene (DET) | HIT | 2 H
+- Aramis Garcia (ARI) | HIT | 1 H
+- Freddie Freeman (LAD) | HIT | 1 H
+- Luis Arraez (SF) | HIT | 1 H
+- Ryan O'Hearn (PIT) | HIT | 1 H
+- William Contreras (MIL) | HIT | 1 H
+- Colson Montgomery (CWS) | CONTACT | 3 H
+- Brandon Nimmo (TEX) | CONTACT | 2 H
+- Moisés Ballesteros (CHC) | CONTACT | 2 H
+- CJ Abrams (WSH) | CONTACT | 1 H
+- Jahmai Jones (DET) | CONTACT | 1 H
+
+PAIRS / POOLS THAT CLEARED
+- none

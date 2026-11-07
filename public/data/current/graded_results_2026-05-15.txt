@@ -1,0 +1,75 @@
+RESULTS TRACKER — 2026-05-15
+------------------------------------------
+HR Picks: 15 | HR Accuracy: 6.7%
+Base Hit Picks: 60 | Base Hit Accuracy: 60.0%
+HRR Picks: 30 | HRR 2+ Accuracy: 53.3%
+HRR Picks: 30 | HRR 3+ Accuracy: 43.3%
+
+HR PICKS THAT HOMERED
+- Marcell Ozuna (PIT) | HR Score 59.53
+
+TRACKED PICKS THAT GOT A BASE HIT
+- Kyle Schwarber (PHI) | TOP | 3 H
+- Marcell Ozuna (PIT) | HR | 1 H
+- Brandon Lowe (PIT) | HRR | 2 H
+- Oneil Cruz (PIT) | HRR | 2 H
+- Bryce Harper (PHI) | CONTACT | 4 H
+- Coby Mayo (BAL) | HR | 1 H
+- Daylen Lile (WSH) | HIT | 3 H
+- Samuel Basallo (BAL) | HIT | 1 H
+- Curtis Mead (WSH) | HRR | 1 H
+- James Wood (WSH) | CONTACT | 1 H
+- Dillon Dingler (DET) | TOP | 2 H
+- Matt Vierling (DET) | HR | 1 H
+- Riley Greene (DET) | HIT | 1 H
+- Kazuma Okamoto (TOR) | HRR | 1 H
+- Spencer Steer (CIN) | TOP | 2 H
+- Elly De La Cruz (CIN) | HIT | 1 H
+- Kyle Manzardo (CLE) | HRR | 1 H
+- Matt McLain (CIN) | CONTACT | 2 H
+- Xavier Edwards (MIA) | HIT | 2 H
+- Otto Lopez (MIA) | HIT | 1 H
+- Yandy Díaz (TB) | HRR | 1 H
+- Kody Clemens (MIN) | HR | 1 H
+- Austin Martin (MIN) | HIT | 1 H
+- Brice Turang (MIL) | HIT | 1 H
+- Jake Bauers (MIL) | HRR | 2 H
+- Brooks Lee (MIN) | HRR | 1 H
+- William Contreras (MIL) | CONTACT | 1 H
+- Drake Baldwin (ATL) | TOP | 2 H
+- Mike Yastrzemski (ATL) | HR | 1 H
+- Ceddanne Rafaela (BOS) | HIT | 2 H
+- Austin Riley (ATL) | CONTACT | 1 H
+- Marcus Semien (NYM) | HR | 1 H
+- Ben Rice (NYY) | HIT | 3 H
+- Aaron Judge (NYY) | HIT | 1 H
+- Cody Bellinger (NYY) | HRR | 1 H
+- Brett Baty (NYM) | HRR | 2 H
+- Juan Soto (NYM) | CONTACT | 1 H
+- Colson Montgomery (CWS) | TOP | 2 H
+- Ian Happ (CHC) | HR | 2 H
+- Miguel Vargas (CWS) | HIT | 2 H
+- Alex Bregman (CHC) | HRR | 2 H
+- Munetaka Murakami (CWS) | CONTACT | 1 H
+- Yordan Alvarez (HOU) | TOP | 1 H
+- Bobby Witt Jr. (KC) | TOP | 2 H
+- Alec Burleson (STL) | HIT | 2 H
+- Jordan Walker (STL) | HRR | 3 H
+- Mickey Moniak (COL) | TOP | 1 H
+- Corbin Carroll (ARI) | HR | 2 H
+- Ildemaro Vargas (ARI) | HIT | 4 H
+- Nolan Arenado (ARI) | HRR | 1 H
+- Hunter Goodman (COL) | HRR | 1 H
+- Max Muncy (LAD) | TOP | 2 H
+- Zach Neto (LAA) | HR | 1 H
+- Andy Pages (LAD) | HIT | 1 H
+- Teoscar Hernández (LAD) | HRR | 2 H
+- Miguel Andujar (SD) | TOP | 2 H
+- Randy Arozarena (SEA) | HIT | 2 H
+- Brendan Donovan (SEA) | HIT | 1 H
+- Josh Naylor (SEA) | HRR | 1 H
+- Brent Rooker (ATH) | HR | 1 H
+- Shea Langeliers (ATH) | HIT | 1 H
+- Luis Arraez (SF) | HIT | 4 H
+- Nick Kurtz (ATH) | HRR | 1 H
+- Tyler Soderstrom (ATH) | HRR | 1 H

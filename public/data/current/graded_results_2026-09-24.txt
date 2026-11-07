@@ -1,0 +1,151 @@
+RESULTS TRACKER - 2026-09-24
+------------------------------------------
+BETTABLE RESULTS
+Top 15 HR: 3/15 (20.0%)
+HR Picks: 0/12 (0.0%)
+Top Picks: 3/12 (25.0%)
+
+FULL SHEET BASE HIT PERFORMANCE
+Base Hit Accuracy: 57.8%
+
+HR CAPTURE (BETTABLE)
+Total Slate HRs: 29
+Caught in Top 15: 3
+Caught in HR Picks: 0
+Top 15 Capture Rate: 10.3%
+HR Pick Capture Rate: 0.0%
+
+MODEL VISION (Top 40)
+Model Caught HRs: 7 / 29
+Vision Rate: 24.1%
+
+UNIQUE PLAYER HR ACCURACY
+Unique Players Tracked: 65
+Players Who Homered: 10
+Unique HR Accuracy: 15.4%
+
+HR CATEGORY BREAKDOWN
+------------------------------------------
+🏆 TOP 15 BOARD → 3 HR
+🔥 TOP PICKS → 3 HR
+🧨 HR PICKS → 0 HR
+🏁 HRR PICKS → 3 HR
+💠 HIT PICKS → 1 HR
+⚾ CONTACT PICKS → 3 HR
+Best HR-producing category: 🏆 TOP 15 BOARD
+
+HR RESULTS BY PLAYER
+------------------------------------------
+- Angel Martínez — 🏆#5 + 🔥 + ⚾
+- Isaac Paredes — 🏆#10 + 🏁 + ⭐
+- Zack Gelof — 🏆#9 + 🔥
+- Nolan Arenado — 🔥 + ⭐
+- Josh Jung — 🏁 + ⚾ + ⭐
+- Seiya Suzuki — 🏁
+- Gabriel Moreno — 💠
+- Julio Rodríguez — ⚾ + ⭐
+- Corey Seager — 
+- James McCann — 
+
+POOL PERFORMANCE
+------------------------------------------
+4-MAN HR POOL A → 1/4 HR (Zack Gelof)
+4-MAN HR POOL B → 1/4 HR (Isaac Paredes)
+4-MAN HR POOL C → 1/4 HR (George Lombard Jr.)
+4-MAN HR POOL D → 1/4 HR (Elly De La Cruz)
+3-MAN HR POOL A → 1/3 HR (James McCann)
+3-MAN HR POOL B → 0/3 HR (none)
+3-MAN HR POOL C → 1/3 HR (Austin Wells)
+3-MAN HR POOL D → 0/2 HR (none)
+
+PAIR PERFORMANCE
+------------------------------------------
+Pair 1 → 0/2 HR (none) | Vinnie Pasquantino + Brandon Lowe
+Pair 2 → 0/2 HR (none) | Ben Rice + Yainer Diaz
+Pair 3 → 0/2 HR (none) | Pete Crow-Armstrong + Matt Olson
+Pair 4 → 1/2 HR (Angel Martínez) | Angel Martínez + Fernando Tatis Jr.
+
+PLAYER TYPE PERFORMANCE
+------------------------------------------
+🏆 TOP 15 BOARD (15)
+HR: 20.0% | 1+ Hit: 46.7% | XBH: 26.7% | 2+ TB: 33.3% | 2+ HRR: 40.0% | 3+ HRR: 33.3%
+
+🔥 TOP PICKS (12)
+HR: 25.0% | 1+ Hit: 66.7% | XBH: 41.7% | 2+ TB: 50.0% | 2+ HRR: 58.3% | 3+ HRR: 50.0%
+
+🧨 HR PICKS (12)
+HR: 0.0% | 1+ Hit: 58.3% | XBH: 16.7% | 2+ TB: 33.3% | 2+ HRR: 33.3% | 3+ HRR: 25.0%
+
+🏁 HRR PICKS (12)
+HR: 25.0% | 1+ Hit: 58.3% | XBH: 50.0% | 2+ TB: 58.3% | 2+ HRR: 50.0% | 3+ HRR: 50.0%
+
+💠 HIT PICKS (12)
+HR: 8.3% | 1+ Hit: 50.0% | XBH: 8.3% | 2+ TB: 25.0% | 2+ HRR: 33.3% | 3+ HRR: 25.0%
+
+⚾ CONTACT PICKS (12)
+HR: 25.0% | 1+ Hit: 75.0% | XBH: 33.3% | 2+ TB: 41.7% | 2+ HRR: 50.0% | 3+ HRR: 41.7%
+
+
+DESIGNED OUTCOME (did the pick do its job)
+------------------------------------------
+🏆 TOP 15 BOARD (15) -> 3/15 (20.0%)  ·  needs: HR
+🔥 TOP PICKS (12) -> 6/12 (50.0%)  ·  needs: most productive of our picks in his game (HRR or TB)
+🧨 HR PICKS (12) -> 0/12 (0.0%)  ·  needs: HR
+🏁 HRR PICKS (12) -> 6/12 (50.0%)  ·  needs: 2+ hits+runs+RBI
+💠 HIT PICKS (12) -> 6/12 (50.0%)  ·  needs: 1+ hit
+⚾ CONTACT PICKS (12) -> 5/12 (41.7%)  ·  needs: 2+ TB or XBH
+ALL PICKS -> 26/102 (25.5%)
+
+HIT RESULTS BY CATEGORY
+------------------------------------------
+
+🔥 TOP PICKS (1+ Hit)
+- Mookie Betts — 3H 🔥
+- Nolan Arenado — 3H 🔥
+- Kyle Schwarber — 2H ⭐
+- Miguel Vargas — 2H ⭐
+- Zack Gelof — 2H ⭐
+- Angel Martínez — 1H
+- Brandon Lowe — 1H
+- Pete Crow-Armstrong — 1H
+
+🧨 HR PICKS (1+ Hit)
+- Jake Bauers — 2H ⭐
+- Lazaro Montes — 2H ⭐
+- Oneil Cruz — 2H ⭐
+- Ronald Acuña Jr. — 2H ⭐
+- Corbin Carroll — 1H
+- Victor Mesa Jr. — 1H
+- Yordan Alvarez — 1H
+
+🏁 HRR PICKS (1+ Hit)
+- Geraldo Perdomo — 3H 🔥
+- Josh Jung — 3H 🔥
+- Drake Baldwin — 2H ⭐
+- Seiya Suzuki — 2H ⭐
+- Yandy Díaz — 2H ⭐
+- Bobby Witt Jr. — 1H
+- Isaac Paredes — 1H
+
+💠 HIT PICKS (1+ Hit)
+- Fernando Tatis Jr. — 2H ⭐
+- Mauricio Dubón — 2H ⭐
+- Carson Benge — 1H
+- Gabriel Moreno — 1H
+- Iván Herrera — 1H
+- Otto Lopez — 1H
+
+⚾ CONTACT PICKS (1+ Hit)
+- Josh Jung — 3H 🔥
+- Mookie Betts — 3H 🔥
+- Julio Rodríguez — 2H ⭐
+- Ronald Acuña Jr. — 2H ⭐
+- Angel Martínez — 1H
+- Brandon Lowe — 1H
+- Corbin Carroll — 1H
+- Pete Crow-Armstrong — 1H
+- Yordan Alvarez — 1H
+
+MODEL DIAGNOSTIC (LOW PRIORITY)
+Full Sheet HR Coverage: 29 / 29 (100.0%)
+Pregame Pool HR Coverage: 27 / 29 (93.1%) over 12 locked games; 2 HR by late adds

@@ -1,0 +1,135 @@
+RESULTS TRACKER - 2026-10-12
+------------------------------------------
+BETTABLE RESULTS
+Top 15 HR: 2/15 (13.3%)
+HR Picks: 0/2 (0.0%)
+Top Picks: 0/2 (0.0%)
+
+FULL SHEET BASE HIT PERFORMANCE
+Base Hit Accuracy: 64.0%
+
+HR CAPTURE (BETTABLE)
+Total Slate HRs: 4
+Caught in Top 15: 2
+Caught in HR Picks: 0
+Top 15 Capture Rate: 50.0%
+HR Pick Capture Rate: 0.0%
+
+MODEL VISION (Top 40)
+Model Caught HRs: 2 / 4
+Vision Rate: 50.0%
+
+UNIQUE PLAYER HR ACCURACY
+Unique Players Tracked: 17
+Players Who Homered: 2
+Unique HR Accuracy: 11.8%
+
+HR CATEGORY BREAKDOWN
+------------------------------------------
+🏆 TOP 15 BOARD → 2 HR
+🔥 TOP PICKS → 0 HR
+🧨 HR PICKS → 0 HR
+🏁 HRR PICKS → 1 HR
+💠 HIT PICKS → 0 HR
+⚾ CONTACT PICKS → 0 HR
+Best HR-producing category: 🏆 TOP 15 BOARD
+
+LONGEST HR (BOARD)
+------------------------------------------
+- Patrick Bailey — 436 ft · 105.3 mph · 26.0°
+- William Contreras — 436 ft · 106.3 mph · 28.0°
+Longest on the board: Patrick Bailey (436 ft)
+
+
+HR RESULTS BY PLAYER
+------------------------------------------
+- Patrick Bailey — 🏆#1
+- William Contreras — 🏆#11 + 🏁
+
+POOL PERFORMANCE
+------------------------------------------
+4-MAN Pool A — Strongest → 0/2 HR (none)
+4-MAN Pool B — HRR+Power → 0/2 HR (none)
+4-MAN Pool C — Balanced → 1/2 HR (Cedric Mullins)
+4-MAN Pool D — Variance → 1/2 HR (William Contreras)
+3-MAN Pool A — Strongest → 0/3 HR (none)
+3-MAN Pool B — HRR+Var → 0/3 HR (none)
+3-MAN Pool C — Balanced → 0/3 HR (none)
+3-MAN Pool D — Variance → 1/3 HR (Patrick Bailey)
+SIX-MAN LEGACY Pool A — Strongest → 0/6 HR (none)
+SIX-MAN LEGACY Pool B — Balanced → 0/6 HR (none)
+SIX-MAN LEGACY Pool C — Mid / Var → 1/6 HR (Patrick Bailey)
+SIX-MAN LEGACY Pool D — Contrarian → 0/6 HR (none)
+OLD-RECIPE 3-MAN Pool A1 → 0/3 HR (none)
+OLD-RECIPE 3-MAN Pool A2 → 0/3 HR (none)
+OLD-RECIPE 3-MAN Pool B1 → 0/3 HR (none)
+OLD-RECIPE 3-MAN Pool B2 → 0/3 HR (none)
+OLD-RECIPE 3-MAN Pool C1 → 1/3 HR (Patrick Bailey)
+OLD-RECIPE 3-MAN Pool C2 → 0/3 HR (none)
+OLD-RECIPE 3-MAN Pool D1 → 0/3 HR (none)
+OLD-RECIPE 3-MAN Pool D2 → 0/3 HR (none)
+
+PAIR PERFORMANCE
+------------------------------------------
+Pair 1 → 0/2 HR (none) | Max Muncy + Junior Caminero
+Pair 2 → 0/2 HR (none) | Jackson Chourio + Angel Martínez
+Pair 3 → 0/2 HR (none) | Brice Turang + Jonny DeLuca
+Pair 4 → 0/2 HR (none) | Will Smith + Teoscar Hernández
+Pair 5 → 0/2 HR (none) | Andy Pages + Mookie Betts
+Pair 6 → 0/2 HR (none) | Jonny DeLuca + Jo Adell
+Pair 7 → 1/2 HR (Patrick Bailey) | Jonathan Aranda + Patrick Bailey
+
+PLAYER TYPE PERFORMANCE
+------------------------------------------
+🏆 TOP 15 BOARD (15)
+HR: 13.3% | 1+ Hit: 60.0% | XBH: 26.7% | 2+ TB: 33.3% | 2+ HRR: 53.3% | 3+ HRR: 40.0%
+
+🔥 TOP PICKS (2)
+HR: 0.0% | 1+ Hit: 50.0% | XBH: 0.0% | 2+ TB: 0.0% | 2+ HRR: 50.0% | 3+ HRR: 50.0%
+
+🧨 HR PICKS (2)
+HR: 0.0% | 1+ Hit: 50.0% | XBH: 50.0% | 2+ TB: 50.0% | 2+ HRR: 50.0% | 3+ HRR: 50.0%
+
+🏁 HRR PICKS (2)
+HR: 50.0% | 1+ Hit: 100.0% | XBH: 100.0% | 2+ TB: 100.0% | 2+ HRR: 100.0% | 3+ HRR: 100.0%
+
+💠 HIT PICKS (2)
+HR: 0.0% | 1+ Hit: 100.0% | XBH: 50.0% | 2+ TB: 50.0% | 2+ HRR: 50.0% | 3+ HRR: 50.0%
+
+⚾ CONTACT PICKS (2)
+HR: 0.0% | 1+ Hit: 50.0% | XBH: 50.0% | 2+ TB: 50.0% | 2+ HRR: 50.0% | 3+ HRR: 50.0%
+
+
+DESIGNED OUTCOME (did the pick do its job)
+------------------------------------------
+🏆 TOP 15 BOARD (15) -> 2/15 (13.3%)  ·  needs: HR
+🔥 TOP PICKS (2) -> 0/2 (0.0%)  ·  needs: most productive of our picks in his game (HRR or TB)
+🧨 HR PICKS (2) -> 0/2 (0.0%)  ·  needs: HR
+🏁 HRR PICKS (2) -> 2/2 (100.0%)  ·  needs: 2+ hits+runs+RBI
+💠 HIT PICKS (2) -> 2/2 (100.0%)  ·  needs: 1+ hit
+⚾ CONTACT PICKS (2) -> 1/2 (50.0%)  ·  needs: 2+ TB or XBH
+ALL PICKS -> 7/25 (28.0%)
+
+HIT RESULTS BY CATEGORY
+------------------------------------------
+
+🔥 TOP PICKS (1+ Hit)
+- Junior Caminero — 1H
+
+🧨 HR PICKS (1+ Hit)
+- Jo Adell — 1H
+
+🏁 HRR PICKS (1+ Hit)
+- William Contreras — 3H 🔥
+- Yandy Díaz — 2H ⭐
+
+💠 HIT PICKS (1+ Hit)
+- Brice Turang — 2H ⭐
+- Victor Mesa Jr. — 1H
+
+⚾ CONTACT PICKS (1+ Hit)
+- Brice Turang — 2H ⭐
+
+MODEL DIAGNOSTIC (LOW PRIORITY)
+Full Sheet HR Coverage: 4 / 4 (100.0%)
+Pregame Pool HR Coverage: 3 / 4 (75.0%) over 2 locked games; 1 HR by late adds

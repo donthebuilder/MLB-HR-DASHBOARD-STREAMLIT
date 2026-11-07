@@ -1,0 +1,1 @@
+{"checked_at":"2026-10-29T02:12:18.941658+00:00","checked_at_human":"Oct 29, 2:12 AM UTC","state":"skipped","reason":"A snapshot from 15 minutes ago is still fresh (the lock allows one fetch every 25 minutes).","last_fetch":"2026-10-29T01:56:57.551209+00:00","next_eligible_at":"2026-10-29T02:21:57.551209+00:00","fetches_this_slate":8,"players":16,"last_attempt_forensics":[]}

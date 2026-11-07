@@ -1,0 +1,8 @@
+nfl odds probe — 2026-08-28T17:30:53Z
+run: https://github.com/donthebuilder/MLB-HR-DASHBOARD-STREAMLIT/actions/runs/33194969360
+
+probing https://api.theoddsapi.com sport_key=americanfootball_nfl markets=player_1st_td,player_anytime_td,player_kicking_points,player_longest_reception,player_pass_yds,player_reception_yds,player_receptions,player_rush_attempts,player_rush_yds …
+    ↳ theoddsapi /props/ → 403: {"detail":"Player props require a Business plan or higher. Upgrade at https://theoddsapi.com/#pricing"}
+  theoddsapi /props/: HTTP 403: 
+  theoddsapi: player props need their Business tier -- this key can't serve them. Skipping /odds/ (game lines only).
+no quotes came back — see the forensics above for the real reason

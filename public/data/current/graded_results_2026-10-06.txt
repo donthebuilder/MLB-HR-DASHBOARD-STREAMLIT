@@ -1,0 +1,117 @@
+RESULTS TRACKER - 2026-10-06
+------------------------------------------
+BETTABLE RESULTS
+Top 15 HR: 0/15 (0.0%)
+HR Picks: 0/2 (0.0%)
+Top Picks: 0/2 (0.0%)
+
+FULL SHEET BASE HIT PERFORMANCE
+Base Hit Accuracy: 61.5%
+
+HR CAPTURE (BETTABLE)
+Total Slate HRs: 4
+Caught in Top 15: 0
+Caught in HR Picks: 0
+Top 15 Capture Rate: 0.0%
+HR Pick Capture Rate: 0.0%
+
+MODEL VISION (Top 40)
+Model Caught HRs: 0 / 4
+Vision Rate: 0.0%
+
+UNIQUE PLAYER HR ACCURACY
+Unique Players Tracked: 18
+Players Who Homered: 0
+Unique HR Accuracy: 0.0%
+
+HR CATEGORY BREAKDOWN
+------------------------------------------
+🏆 TOP 15 BOARD → 0 HR
+🔥 TOP PICKS → 0 HR
+🧨 HR PICKS → 0 HR
+🏁 HRR PICKS → 0 HR
+💠 HIT PICKS → 0 HR
+⚾ CONTACT PICKS → 0 HR
+Best HR-producing category: 🏆 TOP 15 BOARD
+
+HR RESULTS BY PLAYER
+------------------------------------------
+- none
+
+POOL PERFORMANCE
+------------------------------------------
+4-MAN Pool A — Strongest → 1/2 HR (William Contreras)
+4-MAN Pool B — HRR+Power → 0/2 HR (none)
+4-MAN Pool C — Balanced → 0/2 HR (none)
+4-MAN Pool D — Variance → 0/2 HR (none)
+3-MAN Pool A — Strongest → 0/3 HR (none)
+3-MAN Pool B — HRR+Var → 1/3 HR (Enrique Hernández)
+3-MAN Pool C — Balanced → 1/3 HR (Freddie Freeman)
+3-MAN Pool D — Variance → 0/3 HR (none)
+
+PAIR PERFORMANCE
+------------------------------------------
+Pair 1 → 0/2 HR (none) | Manny Machado + Matt Olson
+Pair 2 → 0/2 HR (none) | Jackson Chourio + Andy Pages
+Pair 3 → 0/2 HR (none) | Brice Turang + Fernando Tatis Jr.
+Pair 4 → 0/2 HR (none) | Will Smith + Teoscar Hernández
+Pair 5 → 0/2 HR (none) | Ronald Acuña Jr. + Xander Bogaerts
+Pair 6 → 0/2 HR (none) | Gavin Sheets + Xander Bogaerts
+Pair 7 → 0/2 HR (none) | Austin Riley + Gary Sánchez
+Pair 8 → 1/2 HR (Jake Cronenworth) | Gavin Sheets + Jake Cronenworth
+
+PLAYER TYPE PERFORMANCE
+------------------------------------------
+🏆 TOP 15 BOARD (15)
+HR: 0.0% | 1+ Hit: 60.0% | XBH: 6.7% | 2+ TB: 20.0% | 2+ HRR: 33.3% | 3+ HRR: 6.7%
+
+🔥 TOP PICKS (2)
+HR: 0.0% | 1+ Hit: 100.0% | XBH: 0.0% | 2+ TB: 0.0% | 2+ HRR: 50.0% | 3+ HRR: 0.0%
+
+🧨 HR PICKS (2)
+HR: 0.0% | 1+ Hit: 0.0% | XBH: 0.0% | 2+ TB: 0.0% | 2+ HRR: 0.0% | 3+ HRR: 0.0%
+
+🏁 HRR PICKS (2)
+HR: 0.0% | 1+ Hit: 100.0% | XBH: 0.0% | 2+ TB: 0.0% | 2+ HRR: 0.0% | 3+ HRR: 0.0%
+
+💠 HIT PICKS (2)
+HR: 0.0% | 1+ Hit: 50.0% | XBH: 0.0% | 2+ TB: 0.0% | 2+ HRR: 0.0% | 3+ HRR: 0.0%
+
+⚾ CONTACT PICKS (2)
+HR: 0.0% | 1+ Hit: 100.0% | XBH: 0.0% | 2+ TB: 0.0% | 2+ HRR: 0.0% | 3+ HRR: 0.0%
+
+
+DESIGNED OUTCOME (did the pick do its job)
+------------------------------------------
+🏆 TOP 15 BOARD (15) -> 0/15 (0.0%)  ·  needs: HR
+🔥 TOP PICKS (2) -> 1/2 (50.0%)  ·  needs: most productive of our picks in his game (HRR or TB)
+🧨 HR PICKS (2) -> 0/2 (0.0%)  ·  needs: HR
+🏁 HRR PICKS (2) -> 0/2 (0.0%)  ·  needs: 2+ hits+runs+RBI
+💠 HIT PICKS (2) -> 1/2 (50.0%)  ·  needs: 1+ hit
+⚾ CONTACT PICKS (2) -> 0/2 (0.0%)  ·  needs: 2+ TB or XBH
+ALL PICKS -> 2/26 (7.7%)
+
+HIT RESULTS BY CATEGORY
+------------------------------------------
+
+🔥 TOP PICKS (1+ Hit)
+- Manny Machado — 1H
+- Matt Olson — 1H
+
+🧨 HR PICKS (1+ Hit)
+- none
+
+🏁 HRR PICKS (1+ Hit)
+- Brice Turang — 1H
+- Will Smith — 1H
+
+💠 HIT PICKS (1+ Hit)
+- Michael Harris II — 1H
+
+⚾ CONTACT PICKS (1+ Hit)
+- Brice Turang — 1H
+- Michael Harris II — 1H
+
+MODEL DIAGNOSTIC (LOW PRIORITY)
+Full Sheet HR Coverage: 4 / 4 (100.0%)
+Pregame Pool HR Coverage: 4 / 4 (100.0%) over 2 locked games; 0 HR by late adds

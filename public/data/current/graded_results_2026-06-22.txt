@@ -1,0 +1,142 @@
+RESULTS TRACKER - 2026-06-22
+------------------------------------------
+BETTABLE RESULTS
+Top 15 HR: 1/14 (7.1%)
+HR Picks: 1/12 (8.3%)
+Top Picks: 1/12 (8.3%)
+
+FULL SHEET BASE HIT PERFORMANCE
+Base Hit Accuracy: 58.2%
+
+HR CAPTURE (BETTABLE)
+Total Slate HRs: 16
+Caught in Top 15: 1
+Caught in HR Picks: 1
+Top 15 Capture Rate: 6.2%
+HR Pick Capture Rate: 6.2%
+
+MODEL VISION (Top 40)
+Model Caught HRs: 4 / 16
+Vision Rate: 25.0%
+
+UNIQUE PLAYER HR ACCURACY
+Unique Players Tracked: 86
+Players Who Homered: 6
+Unique HR Accuracy: 7.0%
+
+HR CATEGORY BREAKDOWN
+------------------------------------------
+🏆 TOP 15 BOARD → 1 HR
+🔥 TOP PICKS → 1 HR
+🧨 HR PICKS → 1 HR
+🏁 HRR PICKS → 3 HR
+💠 HIT PICKS → 0 HR
+⚾ CONTACT PICKS → 1 HR
+Best HR-producing category: 🏁 HRR PICKS
+
+HR RESULTS BY PLAYER
+------------------------------------------
+- Shohei Ohtani — 🏆#11 + ⚾
+- Kazuma Okamoto — 🧨
+- Byron Buxton — 🔥 + ⭐
+- Curtis Mead — 🏁
+- Freddie Freeman — 🏁
+- Manny Machado — 🏁 + ⭐
+
+MISSED HRs (NOT IN MODEL SHEET)
+------------------------------------------
+- Randal Grichuk (CWS) — not in model sheet / lineup pool
+
+POOL PERFORMANCE
+------------------------------------------
+4-MAN HR POOL A → 1/4 HR (Shohei Ohtani)
+4-MAN HR POOL B → 0/4 HR (none)
+4-MAN HR POOL C → 0/4 HR (none)
+4-MAN HR POOL D → 1/4 HR (Byron Buxton)
+6-MAN HR POOL A → 1/6 HR (Freddie Freeman)
+6-MAN HR POOL B → 0/6 HR (none)
+6-MAN HR POOL C → 1/6 HR (Kazuma Okamoto)
+6-MAN HR POOL D → 0/6 HR (none)
+
+PAIR PERFORMANCE
+------------------------------------------
+Pair 1 → 0/2 HR (none) | Kyle Schwarber + Zach Neto
+Pair 2 → 0/2 HR (none) | Colson Montgomery + Pete Crow-Armstrong
+Pair 3 → 0/2 HR (none) | Ben Rice + Hunter Goodman
+Pair 4 → 0/2 HR (none) | Royce Lewis + Jac Caglianone
+
+PLAYER TYPE PERFORMANCE
+------------------------------------------
+🏁 HRR PICKS (24)
+2+ HRR: 54.2% | 3+ HRR: 33.3%
+
+💠 HIT PICKS (24)
+1+ Hit: 41.7% | HR: 0.0%
+
+⚾ CONTACT PICKS (12)
+XBH: 25.0% | 2+ TB: 25.0% | HR: 8.3%
+
+HIT RESULTS BY CATEGORY
+------------------------------------------
+
+🔥 TOP PICKS (1+ Hit)
+- Brandon Nimmo — 3H 🔥
+- JJ Wetherholt — 2H ⭐
+- Byron Buxton — 1H
+- Hunter Goodman — 1H
+- Yordan Alvarez — 1H
+- Zach Neto — 1H
+
+🧨 HR PICKS (1+ Hit)
+- Bryce Harper — 2H ⭐
+- Kazuma Okamoto — 2H ⭐
+- Colt Keith — 1H
+- Donovan Walton — 1H
+- Iván Herrera — 1H
+- Lane Thomas — 1H
+- Royce Lewis — 1H
+- Travis Bazzana — 1H
+- Wilyer Abreu — 1H
+
+🏁 HRR PICKS (1+ Hit)
+- Gunnar Henderson — 3H 🔥
+- Tyler Freeman — 3H 🔥
+- Anthony Volpe — 2H ⭐
+- Brice Turang — 2H ⭐
+- Dylan Crews — 2H ⭐
+- George Springer — 2H ⭐
+- Manny Machado — 2H ⭐
+- Paul Goldschmidt — 2H ⭐
+- Vladimir Guerrero Jr. — 2H ⭐
+- Curtis Mead — 1H
+- Freddie Freeman — 1H
+- Jonathan Aranda — 1H
+- Kyle Stowers — 1H
+- Matt Olson — 1H
+- Miguel Vargas — 1H
+- TJ Rumfield — 1H
+
+💠 HIT PICKS (1+ Hit)
+- Brayan Rocchio — 3H 🔥
+- Sam Antonacci — 2H ⭐
+- Alec Burleson — 1H
+- CJ Abrams — 1H
+- Fernando Tatis Jr. — 1H
+- Isaac Paredes — 1H
+- Jake McCarthy — 1H
+- Jeremy Peña — 1H
+- Masyn Winn — 1H
+- Yandy Díaz — 1H
+
+⚾ CONTACT PICKS (1+ Hit)
+- James Wood — 2H ⭐
+- Ketel Marte — 2H ⭐
+- Braxton Fulford — 1H
+- Jazz Chisholm Jr. — 1H
+- Jose Altuve — 1H
+- Nick Loftin — 1H
+- Shohei Ohtani — 1H
+- Tyler O'Neill — 1H
+
+MODEL DIAGNOSTIC (LOW PRIORITY)
+Full Sheet HR Coverage: 15 / 16 (93.8%)

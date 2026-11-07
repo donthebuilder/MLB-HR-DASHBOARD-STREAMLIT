@@ -1,0 +1,74 @@
+archive health — 2026-11-02T21:48:25Z
+run: https://github.com/donthebuilder/MLB-HR-DASHBOARD-STREAMLIT/actions/runs/41531632680
+
+==============================================================================
+LEAK SCAN — is a feature column remembering tonight instead of predicting it?
+==============================================================================
+nights   131  (2026-04-16 … 2026-10-28)
+rows     10427   locked=3539  not-locked=6888
+
+`locked` means apply_locked_features() overlaid the pre-game snapshot onto
+the row. A row without it carries whatever the value was at GRADING time,
+which for a form field is after the game it is supposed to predict.
+
+------------------------------------------------------------------------------
+NOT LOCKED: 6888 rows, base HR rate 15.6%, 18 fields testable
+  no field's zero bucket is impossible at this sample.
+  Read that carefully: with 6888 rows this scan could only have
+  caught a zero bucket at or below 14.2%. It is not a clean bill.
+
+  Far below base, but a strong honest signal could produce it. Worth reading,
+  not worth throwing a night away over:
+  last5_hr                    120/1848   6.49%    287.6     -32.2   watch
+  last5_xbh                    24/411    5.84%     64.0      -9.0   watch
+  last10_hr                    44/554    7.94%     86.2      -7.2   watch
+  season_hr                     4/154    2.60%     24.0      -6.8   watch
+  recent_350_num               18/228    7.89%     35.5      -3.4   watch
+
+------------------------------------------------------------------------------
+LOCKED: 3539 rows, base HR rate 14.5%, 94 fields testable
+  no field's zero bucket is impossible at this sample.
+  Read that carefully: with 3539 rows this scan could only have
+  caught a zero bucket at or below 12.7%. It is not a clean bill.
+
+  Far below base, but a strong honest signal could produce it. Worth reading,
+  not worth throwing a night away over:
+  top_beat_game                41/774    5.30%    112.0     -15.6   watch
+  last5_hr                     81/820    9.88%    118.6      -4.2   watch
+  recent_squared_up_sample     17/229    7.42%     33.1      -3.1   watch
+
+==============================================================================
+
+==============================================================================
+DUE SCORE — DOES DUENESS EARN ITS PLACE?
+==============================================================================
+archive        10427 rows over 131 nights (2026-04-16 … 2026-10-28)
+usable         3539 rows over 59 nights (2026-08-22 … 2026-10-28)
+
+BOARD                            N  HR RATE         95% CI
+------------------------------------------------------------------------------
+every graded pick             3539    14.5%    13.3–15.7 
+
+1. hr_due_score — the published 'he is owed one' number
+------------------------------------------------------------------------------
+on pace or ahead (0)          2537    14.9%    13.5–16.3 
+overdue (> 0)                 1002    13.5%    11.5–15.7 
+
+  overdue 0.1–4.9              250    18.8%    14.4–24.1 
+  overdue 4.9–10.9             250    11.6%     8.2–16.2 
+  overdue 11.0–19.1            250    10.0%     6.9–14.3 
+  overdue 19.1–39.0            252    13.5%     9.8–18.3 
+
+2. Within hr_score terciles — does dueness split what the model already knows?
+------------------------------------------------------------------------------
+hr_score 0.3–41.6             1179    10.9%     9.2–12.8 
+    …on pace                   616    11.2%     8.9–13.9 
+    …overdue                   563    10.5%     8.2–13.3 
+hr_score 41.6–57.0            1179    12.6%    10.9–14.7 
+    …on pace                   876    12.6%    10.5–14.9 
+    …overdue                   303    12.9%     9.6–17.1 
+hr_score 57.0–86.6            1181    19.9%    17.7–22.3 
+    …on pace                  1045    18.9%    16.7–21.4 
+    …overdue                   136    27.2%    20.4–35.2 
+
+==============================================================================

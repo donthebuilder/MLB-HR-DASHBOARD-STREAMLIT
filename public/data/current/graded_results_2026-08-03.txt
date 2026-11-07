@@ -1,0 +1,151 @@
+RESULTS TRACKER - 2026-08-03
+------------------------------------------
+BETTABLE RESULTS
+Top 15 HR: 3/15 (20.0%)
+HR Picks: 0/8 (0.0%)
+Top Picks: 3/8 (37.5%)
+
+FULL SHEET BASE HIT PERFORMANCE
+Base Hit Accuracy: 63.6%
+
+HR CAPTURE (BETTABLE)
+Total Slate HRs: 30
+Caught in Top 15: 3
+Caught in HR Picks: 0
+Top 15 Capture Rate: 10.0%
+HR Pick Capture Rate: 0.0%
+
+MODEL VISION (Top 40)
+Model Caught HRs: 11 / 30
+Vision Rate: 36.7%
+
+UNIQUE PLAYER HR ACCURACY
+Unique Players Tracked: 42
+Players Who Homered: 7
+Unique HR Accuracy: 16.7%
+
+HR CATEGORY BREAKDOWN
+------------------------------------------
+🏆 TOP 15 BOARD → 3 HR
+🔥 TOP PICKS → 3 HR
+🧨 HR PICKS → 0 HR
+🏁 HRR PICKS → 0 HR
+💠 HIT PICKS → 2 HR
+⚾ CONTACT PICKS → 1 HR
+Best HR-producing category: 🏆 TOP 15 BOARD
+
+LONGEST HR (BOARD)
+------------------------------------------
+- Mickey Moniak — 447 ft · 104.3 mph · 30.0°
+- Junior Caminero — 442 ft · 112.4 mph · 22.0°
+- Bryce Harper — 433 ft · 112.6 mph · 22.0°
+- Luis García Jr. — 424 ft · 109.0 mph · 19.0°
+- Alec Burleson — 418 ft · 109.1 mph · 29.0°
+Longest on the board: Mickey Moniak (447 ft)
+
+
+HR RESULTS BY PLAYER
+------------------------------------------
+- Daylen Lile — 🏆#8
+- Junior Caminero — 🏆#6 + 🔥
+- Luis García Jr. — 🏆#3 + 🔥
+- Bryce Harper — 🔥
+- Alec Burleson — 💠 + ⭐
+- Jung Hoo Lee — 💠 + ⭐
+- Mickey Moniak — ⚾
+
+MISSED HRs (NOT IN MODEL SHEET)
+------------------------------------------
+- Kevin Alcántara (CHC) — not in model sheet / lineup pool
+- Abimelec Ortiz (WSH) — not in model sheet / lineup pool
+
+POOL PERFORMANCE
+------------------------------------------
+4-MAN HR POOL A → 1/4 HR (Daylen Lile)
+4-MAN HR POOL B → 0/4 HR (none)
+4-MAN HR POOL C → 2/4 HR (Bryce Harper, Mickey Moniak)
+4-MAN HR POOL D → 1/4 HR (Alec Burleson)
+6-MAN HR POOL A → 3/6 HR (Teoscar Hernández, Austin Wells, Derek Hill)
+6-MAN HR POOL B → 1/6 HR (Seiya Suzuki)
+6-MAN HR POOL C → 1/6 HR (Ryan McMahon)
+6-MAN HR POOL D → 1/6 HR (Jimmy Crooks)
+
+PAIR PERFORMANCE
+------------------------------------------
+Pair 1 → 0/2 HR (none) | Spencer Jones + Hunter Goodman
+Pair 2 → 1/2 HR (Luis García Jr.) | Luis García Jr. + Yordan Alvarez
+Pair 3 → 0/2 HR (none) | Osleivis Basabe + Jake Bauers
+Pair 4 → 1/2 HR (Junior Caminero) | Junior Caminero + Andrés Chaparro
+
+PLAYER TYPE PERFORMANCE
+------------------------------------------
+🏆 TOP 15 BOARD (15)
+HR: 20.0% | 1+ Hit: 60.0% | XBH: 26.7% | 2+ TB: 33.3% | 2+ HRR: 60.0% | 3+ HRR: 33.3%
+
+🔥 TOP PICKS (8)
+HR: 37.5% | 1+ Hit: 100.0% | XBH: 37.5% | 2+ TB: 50.0% | 2+ HRR: 75.0% | 3+ HRR: 62.5%
+
+🧨 HR PICKS (8)
+HR: 0.0% | 1+ Hit: 25.0% | XBH: 0.0% | 2+ TB: 0.0% | 2+ HRR: 25.0% | 3+ HRR: 12.5%
+
+🏁 HRR PICKS (8)
+HR: 0.0% | 1+ Hit: 62.5% | XBH: 25.0% | 2+ TB: 50.0% | 2+ HRR: 50.0% | 3+ HRR: 37.5%
+
+💠 HIT PICKS (8)
+HR: 25.0% | 1+ Hit: 75.0% | XBH: 37.5% | 2+ TB: 50.0% | 2+ HRR: 75.0% | 3+ HRR: 50.0%
+
+⚾ CONTACT PICKS (8)
+HR: 12.5% | 1+ Hit: 62.5% | XBH: 37.5% | 2+ TB: 37.5% | 2+ HRR: 37.5% | 3+ HRR: 25.0%
+
+
+DESIGNED OUTCOME (did the pick do its job)
+------------------------------------------
+🏆 TOP 15 BOARD (15) -> 3/15 (20.0%)  ·  needs: HR
+🔥 TOP PICKS (8) -> 3/8 (37.5%)  ·  needs: most productive of our picks in his game (HRR or TB)
+🧨 HR PICKS (8) -> 0/8 (0.0%)  ·  needs: HR
+🏁 HRR PICKS (8) -> 4/8 (50.0%)  ·  needs: 2+ hits+runs+RBI
+💠 HIT PICKS (8) -> 6/8 (75.0%)  ·  needs: 1+ hit
+⚾ CONTACT PICKS (8) -> 3/8 (37.5%)  ·  needs: 2+ TB or XBH
+ALL PICKS -> 19/55 (34.5%)
+
+HIT RESULTS BY CATEGORY
+------------------------------------------
+
+🔥 TOP PICKS (1+ Hit)
+- Junior Caminero — 2H ⭐
+- Luis García Jr. — 2H ⭐
+- Shohei Ohtani — 2H ⭐
+- Bryce Harper — 1H
+- Jackson Merrill — 1H
+- Jake Bauers — 1H
+- Osleivis Basabe — 1H
+- Yordan Alvarez — 1H
+
+🧨 HR PICKS (1+ Hit)
+- Jeremy Peña — 1H
+- Pete Crow-Armstrong — 1H
+
+🏁 HRR PICKS (1+ Hit)
+- Cole Carrigg — 2H ⭐
+- Geraldo Perdomo — 2H ⭐
+- Jordan Walker — 2H ⭐
+- Freddie Freeman — 1H
+- Spencer Horwitz — 1H
+
+💠 HIT PICKS (1+ Hit)
+- Jonathan Aranda — 4H 🔥
+- Alec Burleson — 3H 🔥
+- Jung Hoo Lee — 3H 🔥
+- Yainer Diaz — 2H ⭐
+- Andy Pages — 1H
+- Brandon Lowe — 1H
+
+⚾ CONTACT PICKS (1+ Hit)
+- James McCann — 2H ⭐
+- Mickey Moniak — 2H ⭐
+- Alex Bregman — 1H
+- Christian Walker — 1H
+- Joc Pederson — 1H
+
+MODEL DIAGNOSTIC (LOW PRIORITY)
+Full Sheet HR Coverage: 28 / 30 (93.3%)

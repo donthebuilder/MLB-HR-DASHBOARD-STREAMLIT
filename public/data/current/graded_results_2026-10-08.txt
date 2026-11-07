@@ -1,0 +1,126 @@
+RESULTS TRACKER - 2026-10-08
+------------------------------------------
+BETTABLE RESULTS
+Top 15 HR: 2/9 (22.2%)
+HR Picks: 0/1 (0.0%)
+Top Picks: 0/1 (0.0%)
+
+FULL SHEET BASE HIT PERFORMANCE
+Base Hit Accuracy: 71.4%
+
+HR CAPTURE (BETTABLE)
+Total Slate HRs: 3
+Caught in Top 15: 2
+Caught in HR Picks: 0
+Top 15 Capture Rate: 66.7%
+HR Pick Capture Rate: 0.0%
+
+MODEL VISION (Top 40)
+Model Caught HRs: 2 / 3
+Vision Rate: 66.7%
+
+UNIQUE PLAYER HR ACCURACY
+Unique Players Tracked: 10
+Players Who Homered: 2
+Unique HR Accuracy: 20.0%
+
+HR CATEGORY BREAKDOWN
+------------------------------------------
+🏆 TOP 15 BOARD → 2 HR
+🔥 TOP PICKS → 0 HR
+🧨 HR PICKS → 0 HR
+🏁 HRR PICKS → 0 HR
+💠 HIT PICKS → 0 HR
+⚾ CONTACT PICKS → 0 HR
+Best HR-producing category: 🏆 TOP 15 BOARD
+
+LONGEST HR (BOARD)
+------------------------------------------
+- Miguel Vargas — 386 ft · 103.3 mph · 34.0°
+- Patrick Bailey — 376 ft · 110.0 mph · 22.0°
+Longest on the board: Miguel Vargas (386 ft)
+
+
+HR RESULTS BY PLAYER
+------------------------------------------
+- Miguel Vargas — 🏆#15
+- Patrick Bailey — 🏆#7
+
+POOL PERFORMANCE
+------------------------------------------
+4-MAN Pool A — Strongest → 0/1 HR (none)
+4-MAN Pool B — HRR+Power → 0/1 HR (none)
+4-MAN Pool C — Balanced → 0/1 HR (none)
+4-MAN Pool D — Variance → 0/1 HR (none)
+3-MAN Pool A — Strongest → 0/3 HR (none)
+3-MAN Pool B — HRR+Var → 1/3 HR (Miguel Vargas)
+3-MAN Pool C — Balanced → 0/3 HR (none)
+3-MAN Pool D — Variance → 1/3 HR (José Ramírez)
+SIX-MAN LEGACY Pool A — Strongest → 1/6 HR (Miguel Vargas)
+SIX-MAN LEGACY Pool B — Balanced → 0/6 HR (none)
+SIX-MAN LEGACY Pool C — Mid / Var → 1/5 HR (José Ramírez)
+OLD-RECIPE 3-MAN Pool A1 → 0/3 HR (none)
+OLD-RECIPE 3-MAN Pool A2 → 1/3 HR (Miguel Vargas)
+OLD-RECIPE 3-MAN Pool B1 → 0/3 HR (none)
+OLD-RECIPE 3-MAN Pool B2 → 0/3 HR (none)
+OLD-RECIPE 3-MAN Pool C1 → 1/3 HR (José Ramírez)
+OLD-RECIPE 3-MAN Pool C2 → 0/2 HR (none)
+
+PAIR PERFORMANCE
+------------------------------------------
+Pair 1 → 0/2 HR (none) | Randal Grichuk + Chase Meidroth
+Pair 2 → 1/2 HR (Miguel Vargas) | Munetaka Murakami + Miguel Vargas
+Pair 3 → 0/2 HR (none) | Angel Martínez + Brenton Doyle
+
+PLAYER TYPE PERFORMANCE
+------------------------------------------
+🏆 TOP 15 BOARD (9)
+HR: 22.2% | 1+ Hit: 66.7% | XBH: 33.3% | 2+ TB: 44.4% | 2+ HRR: 66.7% | 3+ HRR: 55.6%
+
+🔥 TOP PICKS (1)
+HR: 0.0% | 1+ Hit: 100.0% | XBH: 0.0% | 2+ TB: 0.0% | 2+ HRR: 100.0% | 3+ HRR: 0.0%
+
+🧨 HR PICKS (1)
+HR: 0.0% | 1+ Hit: 100.0% | XBH: 0.0% | 2+ TB: 0.0% | 2+ HRR: 100.0% | 3+ HRR: 100.0%
+
+🏁 HRR PICKS (1)
+HR: 0.0% | 1+ Hit: 100.0% | XBH: 100.0% | 2+ TB: 100.0% | 2+ HRR: 100.0% | 3+ HRR: 100.0%
+
+💠 HIT PICKS (1)
+HR: 0.0% | 1+ Hit: 0.0% | XBH: 0.0% | 2+ TB: 0.0% | 2+ HRR: 0.0% | 3+ HRR: 0.0%
+
+⚾ CONTACT PICKS (1)
+HR: 0.0% | 1+ Hit: 100.0% | XBH: 0.0% | 2+ TB: 0.0% | 2+ HRR: 100.0% | 3+ HRR: 0.0%
+
+
+DESIGNED OUTCOME (did the pick do its job)
+------------------------------------------
+🏆 TOP 15 BOARD (9) -> 2/9 (22.2%)  ·  needs: HR
+🔥 TOP PICKS (1) -> 0/1 (0.0%)  ·  needs: most productive of our picks in his game (HRR or TB)
+🧨 HR PICKS (1) -> 0/1 (0.0%)  ·  needs: HR
+🏁 HRR PICKS (1) -> 1/1 (100.0%)  ·  needs: 2+ hits+runs+RBI
+💠 HIT PICKS (1) -> 0/1 (0.0%)  ·  needs: 1+ hit
+⚾ CONTACT PICKS (1) -> 0/1 (0.0%)  ·  needs: 2+ TB or XBH
+ALL PICKS -> 3/14 (21.4%)
+
+HIT RESULTS BY CATEGORY
+------------------------------------------
+
+🔥 TOP PICKS (1+ Hit)
+- Munetaka Murakami — 1H
+
+🧨 HR PICKS (1+ Hit)
+- Jo Adell — 1H
+
+🏁 HRR PICKS (1+ Hit)
+- Chase Meidroth — 1H
+
+💠 HIT PICKS (1+ Hit)
+- none
+
+⚾ CONTACT PICKS (1+ Hit)
+- Munetaka Murakami — 1H
+
+MODEL DIAGNOSTIC (LOW PRIORITY)
+Full Sheet HR Coverage: 3 / 3 (100.0%)
+Pregame Pool HR Coverage: 2 / 3 (66.7%) over 1 locked games; 1 HR by late adds

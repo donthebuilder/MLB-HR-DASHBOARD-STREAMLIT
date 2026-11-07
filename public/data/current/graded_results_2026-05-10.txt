@@ -1,0 +1,163 @@
+📊 Results — May 10 Results
+------------------------------------------------
+TOTAL SLATE HRS: 20
+MODEL COVERAGE: 90.0% | 18/20 HRs on sheet
+🧨 HR Picks HR: 3/15 (20.0%)
+🔥 Top Pick HR: 3/15 (20.0%)
+🔥 Top Pick Hit: 10/15 (66.7%)
+💠 Hit Picks: 22/30 (73.3%)
+Base Hit Accuracy: 58/105 (55.2%)
+🏁 HRR 2+: 9/30 (30.0%)
+🏁 HRR 3+: 5/30 (16.7%)
+⚾ Contact XBH: 2/15 (13.3%)
+
+💥 HRs Caught
+- Kyle Schwarber (PHI) · 🧨 HR Pick · HR 2 · 3 H
+- Jo Adell (LAA) · Full Model Sheet · HR 2 · 3 H
+- Matt Olson (ATL) · 🧨 HR Pick · HR 1 · 1 H
+- Aaron Judge (NYY) · 🔥 Top Pick · HR 1 · 1 H
+- Bryce Harper (PHI) · 🔥 Top Pick · HR 1 · 1 H
+- Drake Baldwin (ATL) · 💠 Hit Pick · HR 1 · 1 H
+- Jordan Walker (STL) · 🔥 Top Pick · HR 1 · 1 H
+- Spencer Steer (CIN) · Full Model Sheet · HR 1 · 1 H
+- Max Muncy (LAD) · Full Model Sheet · HR 1 · 1 H
+- Junior Caminero (TB) · 🧨 HR Pick · HR 1 · 1 H
+- Evan Carter (TEX) · Full Model Sheet · HR 1 · 1 H
+- Oneil Cruz (PIT) · Full Model Sheet · HR 1 · 1 H
+- Heliot Ramos (SF) · Full Model Sheet · HR 1 · 2 H
+- Brice Turang (MIL) · 🏁 HRR Pick · HR 1 · 2 H
+- Konnor Griffin (PIT) · Full Model Sheet · HR 1 · 1 H
+- Oswald Peraza (LAA) · Full Model Sheet · HR 1 · 1 H
+
+💠 Base Hits
+- Brandon Marsh (PHI) · 💠 Hit Pick · 4 H · 4 TB
+- Kyle Schwarber (PHI) · 🧨 HR Pick · 3 H · 9 TB
+- Elly De La Cruz (CIN) · ⚾ Contact Anchor · 3 H · 3 TB
+- Josh Jung (TEX) · 💠 Hit Pick · 3 H · 3 TB
+- Luis García Jr. (WSH) · 🏁 HRR Pick · 2 H · 5 TB
+- Brice Turang (MIL) · 🏁 HRR Pick · 2 H · 5 TB
+- Spencer Horwitz (PIT) · ⚾ Contact Anchor · 2 H · 4 TB
+- Josh Naylor (SEA) · 🏁 HRR Pick · 2 H · 3 TB
+- Xander Bogaerts (SD) · 🧨 HR Pick · 2 H · 3 TB
+- Daulton Varsho (TOR) · 🏁 HRR Pick · 2 H · 2 TB
+- Chase DeLauter (CLE) · 💠 Hit Pick · 2 H · 2 TB
+- Austin Martin (MIN) · 💠 Hit Pick · 2 H · 2 TB
+- Bobby Witt Jr. (KC) · 🔥 Top Pick · 2 H · 2 TB
+- Junior Caminero (TB) · 🧨 HR Pick · 1 H · 4 TB
+- Bryce Harper (PHI) · 🔥 Top Pick · 1 H · 4 TB
+- Aaron Judge (NYY) · 🔥 Top Pick · 1 H · 4 TB
+- Jordan Walker (STL) · 🔥 Top Pick · 1 H · 4 TB
+- Matt Olson (ATL) · 🧨 HR Pick · 1 H · 4 TB
+- Drake Baldwin (ATL) · 💠 Hit Pick · 1 H · 4 TB
+- James Wood (WSH) · 🧨 HR Pick · 1 H · 2 TB
+- Samuel Basallo (BAL) · ⚾ Contact Anchor · 1 H · 2 TB
+- Kazuma Okamoto (TOR) · 🔥 Top Pick · 1 H · 2 TB
+- Ryan Jeffers (MIN) · 🧨 HR Pick · 1 H · 2 TB
+- Julio Rodríguez (SEA) · 💠 Hit Pick · 1 H · 2 TB
+- Miguel Vargas (CWS) · 🏁 HRR Pick ⭐ · 1 H · 2 TB
+- Matt Vierling (DET) · 🏁 HRR Pick · 1 H · 2 TB
+- Liam Hicks (MIA) · 🔥 Top Pick · 1 H · 1 TB
+- Xavier Edwards (MIA) · 💠 Hit Pick · 1 H · 1 TB
+- Carlos Cortes (ATH) · 💠 Hit Pick ⭐ · 1 H · 1 TB
+- Yandy Díaz (TB) · 💠 Hit Pick · 1 H · 1 TB
+- Chandler Simpson (TB) · 💠 Hit Pick · 1 H · 1 TB
+- Ben Williamson (TB) · 🏁 HRR Pick · 1 H · 1 TB
+- Jake McCarthy (COL) · 💠 Hit Pick · 1 H · 1 TB
+- Mickey Moniak (COL) · ⚾ Contact Anchor · 1 H · 1 TB
+- Ernie Clement (TOR) · 💠 Hit Pick · 1 H · 1 TB
+- Isaac Paredes (HOU) · 💠 Hit Pick · 1 H · 1 TB
+- Jose Altuve (HOU) · 💠 Hit Pick · 1 H · 1 TB
+- Byron Buxton (MIN) · 🔥 Top Pick · 1 H · 1 TB
+- José Ramírez (CLE) · 🏁 HRR Pick · 1 H · 1 TB
+- Munetaka Murakami (CWS) · 🔥 Top Pick ⭐ · 1 H · 1 TB
+- Cody Bellinger (NYY) · 💠 Hit Pick · 1 H · 1 TB
+- William Contreras (MIL) · 💠 Hit Pick · 1 H · 1 TB
+- Trent Grisham (NYY) · ⚾ Contact Anchor · 1 H · 1 TB
+- Ezequiel Duran (TEX) · 💠 Hit Pick · 1 H · 1 TB
+- Michael Busch (CHC) · 🏁 HRR Pick · 1 H · 1 TB
+- Nick Gonzales (PIT) · 💠 Hit Pick · 1 H · 1 TB
+- Luis Arraez (SF) · 💠 Hit Pick · 1 H · 1 TB
+- Ryan O'Hearn (PIT) · 🏁 HRR Pick · 1 H · 1 TB
+- Mark Vientos (NYM) · 🔥 Top Pick · 1 H · 1 TB
+- Carson Benge (NYM) · ⚾ Contact Anchor · 1 H · 1 TB
+- Alec Burleson (STL) · 💠 Hit Pick · 1 H · 1 TB
+- JJ Wetherholt (STL) · 🏁 HRR Pick · 1 H · 1 TB
+- Jackson Merrill (SD) · ⚾ Contact Anchor ⭐ · 1 H · 1 TB
+- Andy Pages (LAD) · 🔥 Top Pick · 1 H · 1 TB
+- Austin Riley (ATL) · ⚾ Contact Anchor · 1 H · 1 TB
+- Vinnie Pasquantino (KC) · 🧨 HR Pick · 1 H · 1 TB
+- Riley Greene (DET) · 💠 Hit Pick ⭐ · 1 H · 1 TB
+- Kevin McGonigle (DET) · 💠 Hit Pick · 1 H · 1 TB
+
+⭐ Weak Spot Results
+Weak Spot Picks: 10 | HRs: 0 (0.0%) | Hits: 5 (50.0%)
+
+🏆 Top 15 HR Board
+HRs Caught: 4/15 | Hits: 9/15 | XBH: 5/15
+- #3 Kyle Schwarber (PHI) | HR Score 81.73 | HR 2
+- #4 Matt Olson (ATL) | HR Score 78.94 | HR 1
+- #7 Aaron Judge (NYY) | HR Score 72.74 | HR 1
+- #9 Bryce Harper (PHI) | HR Score 70.95 | HR 1
+
+🧩 Pair Results
+- 🧩 Best HR Pair: Byron Buxton (MIN) + Munetaka Murakami (CWS) ⭐ | 0/2 HR
+- 🧩 Best HR Pair: Kyle Schwarber (PHI) + Matt Olson (ATL) | 2/2 HR
+- 🔥 Hot + Due Pair: Andy Pages (LAD) + Mark Vientos (NYM) | 0/2 HR
+- 🔥 Hot + Due Pair: Byron Buxton (MIN) + Munetaka Murakami (CWS) ⭐ | 0/2 HR
+- 🎯 Best Matchup Tag: Shea Langeliers (ATH) + Gary Sánchez (MIL) | 0/2 HR
+- 🎯 Best Matchup Tag: Josh Jung (TEX) + Carlos Cortes (ATH) ⭐ | 0/2 HR
+- 🎯 Weak Pitcher Pair: Munetaka Murakami (CWS) ⭐ + Shea Langeliers (ATH) | 0/2 HR
+- 🎯 Weak Pitcher Pair: Brent Rooker (ATH) + Corey Seager (TEX) | 0/2 HR
+- 🌡️ Environment Pair: Kyle Schwarber (PHI) + Yordan Alvarez (HOU) | 1/2 HR
+- 🌡️ Environment Pair: Christian Walker (HOU) + Wilyer Abreu (BOS) | 0/2 HR
+- 🧬 Statcast Pair: Munetaka Murakami (CWS) ⭐ + Mark Vientos (NYM) | 0/2 HR
+- 🧬 Statcast Pair: Byron Buxton (MIN) + Colson Montgomery (CWS) | 0/2 HR
+- 🎲 Contrarian Pair: Mark Vientos (NYM) + Mickey Moniak (COL) | 0/2 HR
+- 🎲 Contrarian Pair: Munetaka Murakami (CWS) ⭐ + Adrian Del Castillo (ARI) | 0/2 HR
+- 🔢 Numerology Pair: Pete Alonso (BAL) ⭐ + Manny Machado (SD) | 0/2 HR
+- 🔢 Numerology Pair: Kyle Manzardo (CLE) + Michael Harris II (ATL) | 0/2 HR
+- 📅 Same-Date Homer Tag: Byron Buxton (MIN) + Luke Raley (SEA) | 0/2 HR
+- 📅 Same-Date Homer Tag: Kyle Schwarber (PHI) + Miguel Vargas (CWS) ⭐ | 1/2 HR
+
+🧺 Pool Results
+- 🧺 4-MAN HR POOL A: 1/4 HR | 3/4 H | one-leg
+  · Byron Buxton (MIN) | HR 0 | H 1
+  · Munetaka Murakami (CWS) ⭐ | HR 0 | H 1
+  · Kyle Schwarber (PHI) | HR 2 | H 3
+  · Shea Langeliers (ATH) | HR 0 | H 0
+- 🧺 4-MAN HR POOL B: 0/4 HR | 2/4 H | miss
+  · Andy Pages (LAD) | HR 0 | H 1
+  · Brandon Lowe (PIT) | HR 0 | H 0
+  · Luke Raley (SEA) | HR 0 | H 0
+  · Mark Vientos (NYM) | HR 0 | H 1
+- 🧺 6-MAN HR POOL A: 2/6 HR | 4/6 H | good
+  · Matt Olson (ATL) | HR 1 | H 1
+  · Colson Montgomery (CWS) | HR 0 | H 0
+  · Bryce Harper (PHI) | HR 1 | H 1
+  · Pete Alonso (BAL) ⭐ | HR 0 | H 0
+  · Ryan Jeffers (MIN) | HR 0 | H 1
+  · Kazuma Okamoto (TOR) | HR 0 | H 1
+- 🧺 6-MAN HR POOL B: 1/6 HR | 4/6 H | one-leg
+  · Aaron Judge (NYY) | HR 1 | H 1
+  · Miguel Vargas (CWS) ⭐ | HR 0 | H 1
+  · Ian Happ (CHC) | HR 0 | H 0
+  · Liam Hicks (MIA) | HR 0 | H 1
+  · Bobby Witt Jr. (KC) | HR 0 | H 2
+  · Yordan Alvarez (HOU) | HR 0 | H 0
+- 🧺 4-MAN BALANCED POOL: 0/4 HR | 1/4 H | miss
+  · Adley Rutschman (BAL) | HR 0 | H 0
+  · CJ Abrams (WSH) | HR 0 | H 0
+  · Ben Rice (NYY) | HR 0 | H 0
+  · Ezequiel Duran (TEX) | HR 0 | H 1
+- 🧺 4-MAN CONTRARIAN POOL: 0/4 HR | 2/4 H | miss
+  · Mickey Moniak (COL) | HR 0 | H 1
+  · Adrian Del Castillo (ARI) | HR 0 | H 0
+  · Julio Rodríguez (SEA) | HR 0 | H 1
+  · Kyle Manzardo (CLE) | HR 0 | H 0
+
+📈 Score Bands
+- HR Score 80+: 1/3 HR (33.3%)
+- HR Score 70-79: 3/7 HR (42.9%)
+- HR Score 60-69: 0/14 HR (0.0%)
+- HR Score 50-59: 1/19 HR (5.3%)
+- HR Score <50: 11/171 HR (6.4%)

@@ -1,0 +1,79 @@
+RESULTS TRACKER — 2026-04-17
+------------------------------------------
+HR Picks: 15 | HR Accuracy: 13.3%
+Base Hit Picks: 60 | Base Hit Accuracy: 68.3%
+HRR Picks: 30 | HRR 2+ Accuracy: 53.3%
+HRR Picks: 30 | HRR 3+ Accuracy: 43.3%
+
+HR PICKS THAT HOMERED
+- Dominic Smith (ATL) | HR Score 53.11
+- Yordan Alvarez (HOU) | HR Score 59.45
+
+TRACKED PICKS THAT GOT A BASE HIT
+- Nico Hoerner (CHC) | TOP | 3 H
+- MJ Melendez (NYM) | HR | 2 H
+- Carson Kelly (CHC) | HIT | 1 H
+- Francisco Alvarez (NYM) | HIT | 2 H
+- Dansby Swanson (CHC) | HRR | 1 H
+- Alex Bregman (CHC) | HRR | 1 H
+- Seiya Suzuki (CHC) | CONTACT | 2 H
+- Jeremiah Jackson (BAL) | TOP | 1 H
+- Leody Taveras (BAL) | HIT | 1 H
+- Angel Martínez (CLE) | HIT | 1 H
+- Daniel Schneemann (CLE) | HRR | 2 H
+- Matt Olson (ATL) | TOP | 1 H
+- Dominic Smith (ATL) | HR | 1 H
+- Drake Baldwin (ATL) | HIT | 2 H
+- Bryce Harper (PHI) | HRR | 3 H
+- CJ Abrams (WSH) | TOP | 1 H
+- Willy Adames (SF) | HR | 2 H
+- Daniel Susac (SF) | HIT | 2 H
+- Luis Arraez (SF) | HIT | 2 H
+- James Wood (WSH) | HRR | 1 H
+- Casey Schmitt (SF) | HRR | 2 H
+- Joey Wiemer (WSH) | CONTACT | 1 H
+- Brandon Lowe (PIT) | TOP | 3 H
+- Junior Caminero (TB) | HR | 1 H
+- Yandy Díaz (TB) | HIT | 1 H
+- Chandler Simpson (TB) | HIT | 1 H
+- Oneil Cruz (PIT) | HRR | 1 H
+- Ben Rice (NYY) | TOP | 2 H
+- Aaron Judge (NYY) | HR | 1 H
+- Jac Caglianone (KC) | CONTACT | 1 H
+- William Contreras (MIL) | HIT | 1 H
+- Otto Lopez (MIA) | HRR | 3 H
+- Xavier Edwards (MIA) | CONTACT | 2 H
+- Kevin McGonigle (DET) | TOP | 1 H
+- Connor Wong (BOS) | HIT | 1 H
+- Jordan Walker (STL) | TOP | 1 H
+- Yordan Alvarez (HOU) | HR | 2 H
+- Christian Vázquez (HOU) | HIT | 2 H
+- Alec Burleson (STL) | HIT | 2 H
+- Jose Altuve (HOU) | HRR | 1 H
+- Sal Stewart (CIN) | TOP | 1 H
+- Austin Martin (MIN) | HIT | 1 H
+- Ryan Jeffers (MIN) | HIT | 1 H
+- Elly De La Cruz (CIN) | HRR | 1 H
+- Byron Buxton (MIN) | HRR | 1 H
+- Eugenio Suárez (CIN) | CONTACT | 2 H
+- Andy Pages (LAD) | TOP | 1 H
+- Will Smith (LAD) | HIT | 2 H
+- Shohei Ohtani (LAD) | HRR | 2 H
+- Mickey Moniak (COL) | HRR | 1 H
+- Freddie Freeman (LAD) | CONTACT | 2 H
+- Jo Adell (LAA) | HIT | 1 H
+- Adam Frazier (LAA) | HIT | 2 H
+- Oswald Peraza (LAA) | HRR | 2 H
+- Corey Seager (TEX) | HR | 2 H
+- Brandon Nimmo (TEX) | HRR | 1 H
+- Josh Jung (TEX) | HRR | 3 H
+- Jake Burger (TEX) | CONTACT | 3 H
+- Ildemaro Vargas (ARI) | TOP | 1 H
+- Corbin Carroll (ARI) | HR | 1 H
+- Vladimir Guerrero Jr. (TOR) | HIT | 1 H
+- Andrés Giménez (TOR) | HIT | 1 H
+- Ketel Marte (ARI) | HRR | 2 H
+- Jose Fernandez (ARI) | CONTACT | 1 H
+- Shea Langeliers (ATH) | HR | 1 H
+- Jeff McNeil (ATH) | HIT | 1 H
+- Nick Kurtz (ATH) | CONTACT | 1 H

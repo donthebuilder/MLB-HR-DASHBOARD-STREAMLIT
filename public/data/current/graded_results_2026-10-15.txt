@@ -1,0 +1,132 @@
+RESULTS TRACKER - 2026-10-15
+------------------------------------------
+BETTABLE RESULTS
+Top 15 HR: 0/15 (0.0%)
+HR Picks: 1/2 (50.0%)
+Top Picks: 0/2 (0.0%)
+
+FULL SHEET BASE HIT PERFORMANCE
+Base Hit Accuracy: 36.0%
+
+HR CAPTURE (BETTABLE)
+Total Slate HRs: 4
+Caught in Top 15: 0
+Caught in HR Picks: 1
+Top 15 Capture Rate: 0.0%
+HR Pick Capture Rate: 25.0%
+
+MODEL VISION (Top 40)
+Model Caught HRs: 1 / 4
+Vision Rate: 25.0%
+
+UNIQUE PLAYER HR ACCURACY
+Unique Players Tracked: 17
+Players Who Homered: 1
+Unique HR Accuracy: 5.9%
+
+HR CATEGORY BREAKDOWN
+------------------------------------------
+🏆 TOP 15 BOARD → 0 HR
+🔥 TOP PICKS → 0 HR
+🧨 HR PICKS → 1 HR
+🏁 HRR PICKS → 0 HR
+💠 HIT PICKS → 0 HR
+⚾ CONTACT PICKS → 0 HR
+Best HR-producing category: 🧨 HR PICKS
+
+LONGEST HR (BOARD)
+------------------------------------------
+- Shohei Ohtani — 428 ft · 113.1 mph · 34.0°
+Longest on the board: Shohei Ohtani (428 ft)
+
+
+HR RESULTS BY PLAYER
+------------------------------------------
+- Shohei Ohtani — 🧨
+
+POOL PERFORMANCE
+------------------------------------------
+4-MAN Pool A — Strongest → 0/2 HR (none)
+4-MAN Pool B — HRR+Power → 0/2 HR (none)
+4-MAN Pool C — Balanced → 0/2 HR (none)
+4-MAN Pool D — Variance → 0/2 HR (none)
+3-MAN Pool A — Strongest → 0/3 HR (none)
+3-MAN Pool B — HRR+Var → 0/3 HR (none)
+3-MAN Pool C — Balanced → 0/3 HR (none)
+3-MAN Pool D — Variance → 0/3 HR (none)
+SIX-MAN LEGACY Pool A — Strongest → 0/6 HR (none)
+SIX-MAN LEGACY Pool B — Balanced → 0/6 HR (none)
+SIX-MAN LEGACY Pool C — Mid / Var → 0/6 HR (none)
+SIX-MAN LEGACY Pool D — Contrarian → 0/6 HR (none)
+OLD-RECIPE 3-MAN Pool A1 → 0/3 HR (none)
+OLD-RECIPE 3-MAN Pool A2 → 0/3 HR (none)
+OLD-RECIPE 3-MAN Pool B1 → 0/3 HR (none)
+OLD-RECIPE 3-MAN Pool B2 → 0/3 HR (none)
+OLD-RECIPE 3-MAN Pool C1 → 0/3 HR (none)
+OLD-RECIPE 3-MAN Pool C2 → 0/3 HR (none)
+OLD-RECIPE 3-MAN Pool D1 → 0/3 HR (none)
+OLD-RECIPE 3-MAN Pool D2 → 0/3 HR (none)
+
+PAIR PERFORMANCE
+------------------------------------------
+Pair 1 → 0/2 HR (none) | Max Muncy + Junior Caminero
+Pair 2 → 0/2 HR (none) | Victor Mesa Jr. + Jackson Chourio
+Pair 3 → 0/2 HR (none) | Mookie Betts + Will Smith
+Pair 4 → 0/2 HR (none) | Will Smith + Chase DeLauter
+Pair 5 → 0/2 HR (none) | Jo Adell + Patrick Bailey
+Pair 6 → 0/2 HR (none) | Gary Sánchez + Jonny DeLuca
+Pair 7 → 0/2 HR (none) | Mookie Betts + Brayan Rocchio
+
+PLAYER TYPE PERFORMANCE
+------------------------------------------
+🏆 TOP 15 BOARD (15)
+HR: 0.0% | 1+ Hit: 40.0% | XBH: 26.7% | 2+ TB: 26.7% | 2+ HRR: 33.3% | 3+ HRR: 13.3%
+
+🔥 TOP PICKS (2)
+HR: 0.0% | 1+ Hit: 0.0% | XBH: 0.0% | 2+ TB: 0.0% | 2+ HRR: 0.0% | 3+ HRR: 0.0%
+
+🧨 HR PICKS (2)
+HR: 50.0% | 1+ Hit: 50.0% | XBH: 50.0% | 2+ TB: 50.0% | 2+ HRR: 50.0% | 3+ HRR: 50.0%
+
+🏁 HRR PICKS (2)
+HR: 0.0% | 1+ Hit: 0.0% | XBH: 0.0% | 2+ TB: 0.0% | 2+ HRR: 0.0% | 3+ HRR: 0.0%
+
+💠 HIT PICKS (2)
+HR: 0.0% | 1+ Hit: 100.0% | XBH: 100.0% | 2+ TB: 100.0% | 2+ HRR: 50.0% | 3+ HRR: 0.0%
+
+⚾ CONTACT PICKS (2)
+HR: 0.0% | 1+ Hit: 0.0% | XBH: 0.0% | 2+ TB: 0.0% | 2+ HRR: 0.0% | 3+ HRR: 0.0%
+
+
+DESIGNED OUTCOME (did the pick do its job)
+------------------------------------------
+🏆 TOP 15 BOARD (15) -> 0/15 (0.0%)  ·  needs: HR
+🔥 TOP PICKS (2) -> 0/2 (0.0%)  ·  needs: most productive of our picks in his game (HRR or TB)
+🧨 HR PICKS (2) -> 1/2 (50.0%)  ·  needs: HR
+🏁 HRR PICKS (2) -> 0/2 (0.0%)  ·  needs: 2+ hits+runs+RBI
+💠 HIT PICKS (2) -> 2/2 (100.0%)  ·  needs: 1+ hit
+⚾ CONTACT PICKS (2) -> 0/2 (0.0%)  ·  needs: 2+ TB or XBH
+ALL PICKS -> 3/25 (12.0%)
+
+HIT RESULTS BY CATEGORY
+------------------------------------------
+
+🔥 TOP PICKS (1+ Hit)
+- none
+
+🧨 HR PICKS (1+ Hit)
+- Shohei Ohtani — 1H
+
+🏁 HRR PICKS (1+ Hit)
+- none
+
+💠 HIT PICKS (1+ Hit)
+- Will Smith — 1H
+- Yandy Díaz — 1H
+
+⚾ CONTACT PICKS (1+ Hit)
+- none
+
+MODEL DIAGNOSTIC (LOW PRIORITY)
+Full Sheet HR Coverage: 4 / 4 (100.0%)
+Pregame Pool HR Coverage: 4 / 4 (100.0%) over 2 locked games; 0 HR by late adds
